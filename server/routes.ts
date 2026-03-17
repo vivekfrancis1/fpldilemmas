@@ -4514,6 +4514,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate transfer recommendations for this gameweek
         const transferRecommendations: any[] = [];
+        // Budget-relaxed candidate pool for combo search only.
+        // Contains all positive-gain, team-valid transfers regardless of individual affordability.
+        // isValidCombo() is the sole budget gate when evaluating combos from this pool.
+        const comboTransferCandidates: any[] = [];
         
         // Get IDs of players involved in previous primary transfers
         const previouslyTransferredOutIds = new Set(executedTransfers.map(t => t.playerOut.id));
@@ -4545,87 +4549,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const transferCost = playerIn.now_cost - playerOut.sellingPrice;
             const budget = currentBank + playerOut.sellingPrice;
             
-            if (playerIn.now_cost <= budget) {
-              // Check team constraint: Can't have more than 3 players from the same team
-              // Count how many players from playerIn's team are currently in the squad
-              const playersFromIncomingTeam = currentTeam.filter(p => p.team === playerIn.team).length;
-              
-              // If transferring out a player from the same team, we're replacing them, so constraint is fine
-              // If transferring from different team AND we already have 3 from incoming team, skip
-              const wouldViolateTeamConstraint = playerOut.team !== playerIn.team && playersFromIncomingTeam >= 3;
-              
-              if (wouldViolateTeamConstraint) {
-                // Skip this transfer - would exceed 3 players from same team
-                continue;
-              }
-              
-              const pointsGain = playerInPoints - playerOut.projectedPoints;
-              const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
-              const fourGWPointsGain = playerInFourGWPoints - playerOut.fourGWPoints;
-              
-              // Debug logging for Sarr → Mbeumo transfer
-              if (targetGW === 14 && playerOut.webName === 'Sarr' && playerIn.web_name === 'Mbeumo') {
-                console.log(`🔍 SARR → MBEUMO GW${targetGW}: Sarr OUT=${playerOut.projectedPoints.toFixed(2)}, Mbeumo IN=${playerInPoints.toFixed(2)}, Gain=${pointsGain.toFixed(2)}`);
-              }
-              
-              // SPECIAL CASE: GW15 - Use all free transfers regardless of threshold
-              // Since GW16 will be topped up to 5 FTs anyway, no reason to save them
-              const isGW15 = targetGW === 15;
-              
-              // Dynamic threshold based on free transfers available
-              // 1 FT: 0.5 pts/game, 2 FT: 0.4 pts/game, 3 FT: 0.3 pts/game, 4 FT: 0.2 pts/game, 5 FT: 0.1 pts/game
-              const thresholdByFreeTransfers: { [key: number]: number } = {
-                1: 0.5,
-                2: 0.4,
-                3: 0.3,
-                4: 0.2,
-                5: 0.1
+            // Check team constraint: Can't have more than 3 players from the same team
+            // Count how many players from playerIn's team are currently in the squad
+            const playersFromIncomingTeam = currentTeam.filter(p => p.team === playerIn.team).length;
+            
+            // If transferring out a player from the same team, we're replacing them, so constraint is fine
+            // If transferring from different team AND we already have 3 from incoming team, skip
+            const wouldViolateTeamConstraint = playerOut.team !== playerIn.team && playersFromIncomingTeam >= 3;
+            
+            if (wouldViolateTeamConstraint) {
+              continue;
+            }
+            
+            const pointsGain = playerInPoints - playerOut.projectedPoints;
+            const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
+            const fourGWPointsGain = playerInFourGWPoints - playerOut.fourGWPoints;
+            
+            // Debug logging for Sarr → Mbeumo transfer
+            if (targetGW === 14 && playerOut.webName === 'Sarr' && playerIn.web_name === 'Mbeumo') {
+              console.log(`🔍 SARR → MBEUMO GW${targetGW}: Sarr OUT=${playerOut.projectedPoints.toFixed(2)}, Mbeumo IN=${playerInPoints.toFixed(2)}, Gain=${pointsGain.toFixed(2)}`);
+            }
+            
+            // SPECIAL CASE: GW15 - Use all free transfers regardless of threshold
+            // Since GW16 will be topped up to 5 FTs anyway, no reason to save them
+            const isGW15 = targetGW === 15;
+            
+            // Dynamic threshold based on free transfers available
+            // 1 FT: 0.5 pts/game, 2 FT: 0.4 pts/game, 3 FT: 0.3 pts/game, 4 FT: 0.2 pts/game, 5 FT: 0.1 pts/game
+            const thresholdByFreeTransfers: { [key: number]: number } = {
+              1: 0.5,
+              2: 0.4,
+              3: 0.3,
+              4: 0.2,
+              5: 0.1
+            };
+            const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.0;
+            const fourGameweeks = Math.min(4, fourGWEnd - targetGW + 1);
+            const minPointsGainFourGW = fourGameweeks * thresholdMultiplier;
+            
+            // Determine if this transfer meets the normal threshold
+            // Only check next 4 gameweeks points gain
+            const meetsNormalThreshold = 
+              fourGWPointsGain >= minPointsGainFourGW;
+            
+            if (fourGWPointsGain > 0) {
+              const transferEntry = {
+                playerOut: {
+                  id: playerOut.id,
+                  webName: playerOut.webName,
+                  team: playerOut.team,
+                  sellingPrice: playerOut.sellingPrice,
+                  projectedPoints: playerOut.projectedPoints,
+                  fourGWPoints: playerOut.fourGWPoints
+                },
+                playerIn: {
+                  id: playerIn.id,
+                  webName: playerIn.web_name,
+                  team: playerIn.team,
+                  nowCost: playerIn.now_cost,
+                  projectedPoints: playerInPoints,
+                  fourGWPoints: playerInFourGWPoints
+                },
+                pointsGain: pointsGain,
+                singleGWPointsGain: singleGWPointsGain,
+                fourGWPointsGain: fourGWPointsGain,
+                endGW: planningEnd,
+                cost: transferCost,
+                budgetAfter: budget - playerIn.now_cost,
+                position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown',
+                meetsNormalThreshold: meetsNormalThreshold
               };
-              const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.0;
-              const fourGameweeks = Math.min(4, fourGWEnd - targetGW + 1);
-              const minPointsGainFourGW = fourGameweeks * thresholdMultiplier;
               
-              // Determine if this transfer meets the normal threshold
-              // Only check next 4 gameweeks points gain
-              const meetsNormalThreshold = 
-                fourGWPointsGain >= minPointsGainFourGW;
-              
-              // Add all transfers with positive points gain to the pool
-              // We'll apply threshold filtering later when selecting which to show
-              if (fourGWPointsGain > 0) {
-                transferRecommendations.push({
-                  playerOut: {
-                    id: playerOut.id,
-                    webName: playerOut.webName,
-                    team: playerOut.team,
-                    sellingPrice: playerOut.sellingPrice,
-                    projectedPoints: playerOut.projectedPoints,
-                    fourGWPoints: playerOut.fourGWPoints
-                  },
-                  playerIn: {
-                    id: playerIn.id,
-                    webName: playerIn.web_name,
-                    team: playerIn.team,
-                    nowCost: playerIn.now_cost,
-                    projectedPoints: playerInPoints,
-                    fourGWPoints: playerInFourGWPoints
-                  },
-                  pointsGain: pointsGain,
-                  singleGWPointsGain: singleGWPointsGain,
-                  fourGWPointsGain: fourGWPointsGain,
-                  endGW: planningEnd,
-                  cost: transferCost,
-                  budgetAfter: budget - playerIn.now_cost,
-                  position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown',
-                  meetsNormalThreshold: meetsNormalThreshold
-                });
+              // Only add to single-transfer recommendations if individually affordable
+              if (playerIn.now_cost <= budget) {
+                transferRecommendations.push(transferEntry);
               }
+              // Add all positive-gain, team-valid transfers to the combo pool regardless of individual budget.
+              // isValidCombo() enforces the actual budget constraint when evaluating combos.
+              comboTransferCandidates.push(transferEntry);
             }
           }
         }
         
         // Sort by point gain (descending) - no limit, show all that meet minimum threshold
         transferRecommendations.sort((a, b) => b.fourGWPointsGain - a.fourGWPointsGain);
+        comboTransferCandidates.sort((a, b) => b.fourGWPointsGain - a.fourGWPointsGain);
         
         // Select N primary transfers where N = number of free transfers for this gameweek
         // Important: Primary transfers must not conflict with each other
@@ -4813,8 +4821,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         let bestCombination: any[] | null = null;
-        if (freeTransfersForGW >= 2 && transferRecommendations.length >= 2) {
-          const candidates = transferRecommendations.slice(0, 30);
+        if (freeTransfersForGW >= 2 && comboTransferCandidates.length >= 2) {
+          // Use the budget-relaxed combo pool so premium players can appear in combos
+          // where a companion transfer offsets the extra cost. isValidCombo() validates
+          // the total net cost of the combo against the actual bank balance.
+          const candidates = comboTransferCandidates.slice(0, 50);
           const comboSize = Math.min(freeTransfersForGW, 5);
           
           const initialTeamCounts = new Map<number, number>();
