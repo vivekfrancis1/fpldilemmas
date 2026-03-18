@@ -662,16 +662,16 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[80px] md:min-w-[120px]',
+      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[68px] md:min-w-[120px]',
       render: (_, player) => (
-        <div className="min-w-[80px] md:min-w-[120px]">
+        <div className="min-w-[68px] md:min-w-[120px]">
           <div className="flex items-center gap-0.5 flex-wrap">
             {myTeamPlayerIds?.has(player.playerId) && (
               <span className="text-purple-600 flex-shrink-0" title="In My Team">
                 <Users className="h-3 w-3" />
               </span>
             )}
-            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">
+            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[68px] md:max-w-none">
               {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
             </span>
             <PlayerAvailabilityBadge player={player} />
@@ -721,7 +721,7 @@ function createPlayerTotalPointsColumns(
         header: `${gw}`,
         sortable: true,
         align: 'center' as const,
-        className: 'min-w-[40px] md:min-w-[48px] bg-blue-50/30 px-1',
+        className: 'min-w-[34px] md:min-w-[48px] bg-blue-50/30 px-0.5 md:px-1',
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
@@ -774,7 +774,7 @@ function createPlayerTotalPointsColumns(
       header: `Total`,
       sortable: true,
       align: 'center',
-      className: 'min-w-[56px] md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1 sticky right-14 md:static z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'w-14 overflow-hidden md:w-auto md:overflow-visible md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1 sticky right-12 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-lg">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -807,7 +807,7 @@ function createPlayerTotalPointsColumns(
       header: 'Value',
       sortable: true,
       align: 'center',
-      className: 'w-14 md:w-auto md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1 sticky right-0 md:static z-10',
+      className: 'w-12 overflow-hidden md:w-auto md:overflow-visible md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1 sticky right-0 md:static z-[5]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
