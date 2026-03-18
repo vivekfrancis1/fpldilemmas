@@ -774,7 +774,7 @@ function createPlayerTotalPointsColumns(
       header: `Total`,
       sortable: true,
       align: 'center',
-      className: 'min-w-[60px] md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1',
+      className: 'min-w-[56px] md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1 sticky right-14 md:static z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-lg">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -807,7 +807,7 @@ function createPlayerTotalPointsColumns(
       header: 'Value',
       sortable: true,
       align: 'center',
-      className: 'min-w-[50px] md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1',
+      className: 'w-14 md:w-auto md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1 sticky right-0 md:static z-10',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
