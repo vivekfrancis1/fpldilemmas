@@ -16995,16 +16995,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // Mild fixture difficulty adjustment: easier opponents (lower FDR) = slightly more bonus
-              // FDR ranges 1-5 where 2 is easy, 5 is hardest
-              // Use opponent's strength rating from FPL
-              const opponentStrength = isHome 
-                ? (opponentTeam?.strength_away_overall || 1200) 
-                : (opponentTeam?.strength_home_overall || 1200);
-              const avgStrength = 1200;
-              // Scale factor: 0.85 for very hard fixtures, 1.15 for very easy fixtures
-              const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
-              const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
+              // Fixture difficulty adjustment using FDR (1-5 scale from FPL fixtures data).
+              // FDR 1 = very easy → more bonus; FDR 5 = very hard → less bonus.
+              // This produces visible GW-to-GW variation (vs the old strength_overall approach
+              // which only varied ±4% and looked identical after rounding).
+              const fdr = isHome
+                ? (fixture.team_h_difficulty || 3)
+                : (fixture.team_a_difficulty || 3);
+              const fdrMultiplierMap: Record<number, number> = { 1: 1.30, 2: 1.15, 3: 1.00, 4: 0.80, 5: 0.65 };
+              const clampedFactor = fdrMultiplierMap[fdr] ?? 1.00;
               
               const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
               gwBonusPoints += fixtureBonus;
