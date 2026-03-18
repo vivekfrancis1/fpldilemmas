@@ -662,9 +662,9 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[68px] md:min-w-[120px]',
+      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[68px] md:min-w-[96px]',
       render: (_, player) => (
-        <div className="min-w-[68px] md:min-w-[120px]">
+        <div className="min-w-[68px] md:min-w-[96px]">
           <div className="flex items-center gap-0.5 flex-wrap">
             {myTeamPlayerIds?.has(player.playerId) && (
               <span className="text-purple-600 flex-shrink-0" title="In My Team">
