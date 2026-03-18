@@ -662,28 +662,23 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[68px] md:min-w-[96px]',
+      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[56px] md:min-w-[80px]',
       render: (_, player) => (
-        <div className="min-w-[68px] md:min-w-[96px]">
+        <div className="min-w-[56px] md:min-w-[80px]">
           <div className="flex items-center gap-0.5 flex-wrap">
             {myTeamPlayerIds?.has(player.playerId) && (
               <span className="text-purple-600 flex-shrink-0" title="In My Team">
                 <Users className="h-3 w-3" />
               </span>
             )}
-            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[68px] md:max-w-none">
+            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-none">
               {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
             </span>
             <PlayerAvailabilityBadge player={player} />
           </div>
-          <div className="flex items-center gap-0.5 mt-0.5 mb-0.5">
+          <div className="flex items-center gap-0.5 mt-0.5">
             <PositionBadge position={player.position} compact={true} />
             <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
-          </div>
-          <div className="text-[9px] md:text-xs text-gray-500 space-x-0.5">
-            <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}</span>
-            <span className="text-gray-400">•</span>
-            <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
           </div>
         </div>
       )

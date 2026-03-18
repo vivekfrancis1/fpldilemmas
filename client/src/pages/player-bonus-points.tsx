@@ -485,7 +485,7 @@ export default function PlayerBonusPoints() {
                   <table className="w-full">
                     <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
                       <tr>
-                        <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px] text-xs md:text-sm">
+                        <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px] text-xs md:text-sm">
                           <button
                             onClick={() => handleSort('name')}
                             className="flex items-center gap-1 hover:text-blue-600 transition-colors"
@@ -540,13 +540,14 @@ export default function PlayerBonusPoints() {
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
-                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
                             <div className="flex items-center gap-0.5 flex-wrap">
                               <PlayerNameCell 
                                 name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
                                 position={projection.position}
                                 team={projection.teamName}
                                 compact={true}
+                                className="text-xs md:text-sm"
                               />
                               {playerAvailabilityMap && playerAvailabilityMap.get(projection.playerId) && (
                                 <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} />
