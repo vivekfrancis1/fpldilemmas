@@ -11034,8 +11034,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const goalsConcededInFlight = new Map<string, Promise<any[]>>();
   const yellowCardsCache = new Map<string, { data: any[]; timestamp: number }>();
   const yellowCardsInFlight = new Map<string, Promise<any[]>>();
+  // Explicitly clear on every server startup so any stale pre-FDR-fix entries
+  // from a prior process are never served after a code deployment.
+  yellowCardsCache.clear();
+  yellowCardsInFlight.clear();
   const redCardsCache = new Map<string, { data: any[]; timestamp: number }>();
   const redCardsInFlight = new Map<string, Promise<any[]>>();
+  // Explicitly clear on every server startup so any stale pre-FDR-fix entries
+  // from a prior process are never served after a code deployment.
+  redCardsCache.clear();
+  redCardsInFlight.clear();
   const bonusPointsCache = new Map<string, { data: any[]; timestamp: number }>();
   const bonusPointsInFlight = new Map<string, Promise<any[]>>();
   // Explicitly clear on every server startup so any stale pre-FDR-fix entries
@@ -16383,11 +16391,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
 
-        // League average AGR for opponent difficulty scaling
-        const totalLeagueGoalsYC = fplData.elements.reduce(
-          (s: number, p: any) => s + (p.goals_scored || 0), 0
-        );
-        const leagueAvgAGR_YC = totalLeagueGoalsYC / Math.max(1, fplData.teams.length * currentGameweek);
+        // FDR multiplier map for opponent difficulty scaling
+        const fdrMultiplierYC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
         // Position-level YC baselines (per game)
         const positionYCBaseline: Record<string, number> = {
@@ -16435,14 +16440,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
 
-              // Opponent attack rate: stronger attack = more pressure on defenders = more cards
-              const opponentGoals = fplData.elements
-                .filter((p: any) => p.team === opponentId)
-                .reduce((s: number, p: any) => s + (p.goals_scored || 0), 0);
-              const opponentAGR = opponentGoals / Math.max(1, currentGameweek);
-              const opponentMult = Math.max(0.85, Math.min(1.20,
-                1 + 0.25 * (opponentAGR / Math.max(leagueAvgAGR_YC, 0.01) - 1)
-              ));
+              // FDR-based opponent difficulty multiplier
+              const fdr = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+              const opponentMult = fdrMultiplierYC[fdr] ?? 1.00;
 
               const fixtureYC = blendedYCRate * opponentMult * availabilityProb;
               gwYellowCards += fixtureYC;
@@ -16537,11 +16537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
 
-        // T005: League-average AGR for opponent pressure scaling in RC
-        const totalLeagueGoalsRC = fplData.elements.reduce(
-          (s: number, p: any) => s + (p.goals_scored || 0), 0
-        );
-        const leagueAvgAGR_RC = totalLeagueGoalsRC / Math.max(1, fplData.teams.length * currentGameweek);
+        // FDR multiplier map for opponent difficulty scaling (red cards)
+        const fdrMultiplierRC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
         // Position-level RC baselines (per game) — most players have 0 this season so we anchor to position
         const positionRCBaseline: Record<string, number> = {
@@ -16589,20 +16586,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
 
-              // T005: Mild opponent pressure multiplier (half sensitivity of YC)
-              const opponentGoalsRC = fplData.elements
-                .filter((p: any) => p.team === opponentId)
-                .reduce((s: number, p: any) => s + (p.goals_scored || 0), 0);
-              const opponentAGR_RC = opponentGoalsRC / Math.max(1, currentGameweek);
-              const rcOpponentMult = Math.max(0.90, Math.min(1.15,
-                1 + 0.12 * (opponentAGR_RC / Math.max(leagueAvgAGR_RC, 0.01) - 1)
-              ));
+              // FDR-based opponent difficulty multiplier
+              const fdrRC = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+              const rcOpponentMult = fdrMultiplierRC[fdrRC] ?? 1.00;
 
-              gwRedCards += blendedRCRate * availabilityProb * rcOpponentMult;
+              const fixtureRC = blendedRCRate * availabilityProb * rcOpponentMult;
+              gwRedCards += fixtureRC;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
-                redCards: parseFloat(blendedRCRate.toFixed(3))
+                redCards: parseFloat(fixtureRC.toFixed(3))
               });
             });
             
