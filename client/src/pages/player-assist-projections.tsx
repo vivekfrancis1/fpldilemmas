@@ -905,7 +905,7 @@ export default function PlayerAssistProjections() {
                               const multiplier = gwMultipliers[gw] ?? 1;
                               const displayValue = projValue * multiplier;
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
-                              const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
+                              const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(1);
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
                                   <div className="flex flex-col items-center">
@@ -959,21 +959,21 @@ export default function PlayerAssistProjections() {
                             <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal) : originalTotal.toFixed(2)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal) : originalTotal.toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
                               )}
                             </td>
                             <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalPointsTotal) : originalPointsTotal.toFixed(2)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(1)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalPointsTotal) : originalPointsTotal.toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(1)}</span>
                               )}
                             </td>
                           </tr>

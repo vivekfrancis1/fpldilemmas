@@ -511,9 +511,9 @@ export default function PlayerGoalsScoredProjections() {
       return goals.toString();
     }
     if (viewMode === "pastXg") {
-      return goals.toFixed(2);
+      return goals.toFixed(1);
     }
-    return goals.toFixed(2);
+    return goals.toFixed(1);
   };
 
   const formatPoints = (points: number) => {

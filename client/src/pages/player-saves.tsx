@@ -735,7 +735,7 @@ export default function PlayerSaves() {
                             const multiplier = gwMultipliers[gw] ?? 1;
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
-                            const formatValue = (val: number) => viewMode === "past" ? val.toFixed(0) : val.toFixed(2);
+                            const formatValue = (val: number) => viewMode === "past" ? val.toFixed(0) : val.toFixed(1);
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             return (
@@ -759,7 +759,7 @@ export default function PlayerSaves() {
                                             <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                               {f.opponent} ({f.isHome ? 'H' : 'A'})
                                             </span>
-                                            <span className="font-medium text-xs">{f.saves.toFixed(2)}</span>
+                                            <span className="font-medium text-xs">{f.saves.toFixed(1)}</span>
                                           </div>
                                         ))}
                                         <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
@@ -788,21 +788,21 @@ export default function PlayerSaves() {
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? originalTotal.toFixed(0) : originalTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(1)}</span>
+                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? originalTotal.toFixed(0) : originalTotal.toFixed(1)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(1)}</span>
                             )}
                           </td>
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(2)}</span>
+                                <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>
+                                <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(1)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm font-medium text-green-900">{adjustedAverage.toFixed(2)}</span>
+                              <span className="text-sm font-medium text-green-900">{adjustedAverage.toFixed(1)}</span>
                             )}
                           </td>
                         </tr>

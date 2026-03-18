@@ -567,9 +567,9 @@ export default function PlayerBonusPoints() {
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
                                         {hasGwAdjustment && rawValue ? (
-                                          <span className="text-purple-700">{displayValue.toFixed(2)}</span>
+                                          <span className="text-purple-700">{displayValue.toFixed(1)}</span>
                                         ) : (
-                                          <span>{rawValue ? rawValue.toFixed(2) : '-'}</span>
+                                          <span>{rawValue ? rawValue.toFixed(1) : '-'}</span>
                                         )}
                                       </button>
                                     </PopoverTrigger>
@@ -580,22 +580,22 @@ export default function PlayerBonusPoints() {
                                           <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                             {f.opponent} ({f.isHome ? 'H' : 'A'})
                                           </span>
-                                          <span className="font-medium text-xs">{f.bonusPoints.toFixed(2)}</span>
+                                          <span className="font-medium text-xs">{f.bonusPoints.toFixed(1)}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                         <span>Total</span>
-                                        <span>{rawValue.toFixed(2)}</span>
+                                        <span>{rawValue.toFixed(1)}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
                                 ) : hasGwAdjustment && rawValue ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
-                                    <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(2)}</span>
+                                    <span className="text-purple-700 font-medium">{displayValue.toFixed(1)}</span>
+                                    <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(1)}</span>
                                   </div>
                                 ) : (
-                                  <span>{rawValue ? rawValue.toFixed(2) : '-'}</span>
+                                  <span>{rawValue ? rawValue.toFixed(1) : '-'}</span>
                                 )}
                               </td>
                             );
@@ -603,21 +603,21 @@ export default function PlayerBonusPoints() {
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(1)}</span>
+                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(1)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(1)}</span>
                             )}
                           </td>
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(2)}</span>
+                                <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>
+                                <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(1)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm font-medium text-green-900">{adjustedAverage.toFixed(2)}</span>
+                              <span className="text-sm font-medium text-green-900">{adjustedAverage.toFixed(1)}</span>
                             )}
                           </td>
                         </tr>

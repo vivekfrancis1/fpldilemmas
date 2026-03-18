@@ -57,7 +57,7 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
         <ValueCell 
           value={value} 
           format="number" 
-          decimals={2}
+          decimals={1}
           className="font-semibold text-green-700"
         />
       )
@@ -442,13 +442,13 @@ export default function PlayerGoalProjections() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-blue-600">
-                  {Math.max(...sortedPlayers.map(p => p.projectedGoals)).toFixed(2)}
+                  {Math.max(...sortedPlayers.map(p => p.projectedGoals)).toFixed(1)}
                 </p>
                 <p className="text-sm text-gray-600">Highest Projection</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">
-                  {(sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0) / sortedPlayers.length).toFixed(2)}
+                  {(sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0) / sortedPlayers.length).toFixed(1)}
                 </p>
                 <p className="text-sm text-gray-600">Average Projection</p>
               </div>

@@ -271,7 +271,7 @@ export default function PlayerRedCards() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
-                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                        {typeof value === 'number' ? value.toFixed(1) : value}
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -281,23 +281,23 @@ export default function PlayerRedCards() {
                                           <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                             {f.opponent} ({f.isHome ? 'H' : 'A'})
                                           </span>
-                                          <span className="font-medium text-xs">{f.redCards.toFixed(2)}</span>
+                                          <span className="font-medium text-xs">{f.redCards.toFixed(1)}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                         <span>Total</span>
-                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(1) : value}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
                                 ) : (
-                                  typeof value === 'number' ? value.toFixed(2) : value
+                                  typeof value === 'number' ? value.toFixed(1) : value
                                 )}
                               </td>
                             );
                           })}
                           <td className="text-center font-semibold text-red-600">
-                            {typeof projection.totalRedCards === 'number' ? projection.totalRedCards.toFixed(2) : projection.totalRedCards}
+                            {typeof projection.totalRedCards === 'number' ? projection.totalRedCards.toFixed(1) : projection.totalRedCards}
                           </td>
                           <td className="text-center text-sm text-gray-600">
                             {projection.averagePerGameweek}
@@ -354,7 +354,7 @@ export default function PlayerRedCards() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
-                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                        {typeof value === 'number' ? value.toFixed(1) : value}
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -364,26 +364,26 @@ export default function PlayerRedCards() {
                                           <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                             {f.opponent} ({f.isHome ? 'H' : 'A'})
                                           </span>
-                                          <span className="font-medium text-xs">{(-f.redCards * 3).toFixed(2)}</span>
+                                          <span className="font-medium text-xs">{(-f.redCards * 3).toFixed(1)}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                         <span>Total</span>
-                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(1) : value}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
                                 ) : (
-                                  typeof value === 'number' ? value.toFixed(2) : value
+                                  typeof value === 'number' ? value.toFixed(1) : value
                                 )}
                               </td>
                             );
                           })}
                           <td className="text-center font-semibold text-red-600">
-                            {typeof projection.totalPoints === 'number' ? projection.totalPoints.toFixed(2) : projection.totalPoints}
+                            {typeof projection.totalPoints === 'number' ? projection.totalPoints.toFixed(1) : projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(2) : '0.00'}
+                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(1) : '0.0'}
                           </td>
                         </tr>
                       ))}

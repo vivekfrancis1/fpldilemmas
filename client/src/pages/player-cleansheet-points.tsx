@@ -406,7 +406,7 @@ export default function PlayerCleanSheetPoints() {
                                       value >= 0.5 ? 'text-yellow-700' :
                                       'text-gray-600'
                                     }`}>
-                                      {value.toFixed(2)}
+                                      {value.toFixed(1)}
                                     </button>
                                   </PopoverTrigger>
                                   <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -416,12 +416,12 @@ export default function PlayerCleanSheetPoints() {
                                         <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                           {f.opponent} ({f.isHome ? 'H' : 'A'})
                                         </span>
-                                        <span className="font-medium text-xs">{f.cleanSheetPoints.toFixed(2)}</span>
+                                        <span className="font-medium text-xs">{f.cleanSheetPoints.toFixed(1)}</span>
                                       </div>
                                     ))}
                                     <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                       <span>Total</span>
-                                      <span>{value.toFixed(2)}</span>
+                                      <span>{value.toFixed(1)}</span>
                                     </div>
                                   </PopoverContent>
                                 </Popover>
@@ -431,7 +431,7 @@ export default function PlayerCleanSheetPoints() {
                                   value >= 0.5 ? 'text-yellow-700' :
                                   'text-gray-600'
                                 }`}>
-                                  {value.toFixed(2)}
+                                  {value.toFixed(1)}
                                 </span>
                               )}
                             </td>
@@ -439,7 +439,7 @@ export default function PlayerCleanSheetPoints() {
                         })}
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {player.totalExpectedPoints.toFixed(2)}
+                            {player.totalExpectedPoints.toFixed(1)}
                           </span>
                         </td>
                       </tr>

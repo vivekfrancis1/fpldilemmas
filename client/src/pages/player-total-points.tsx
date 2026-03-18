@@ -141,9 +141,9 @@ function AvailabilityAdjustmentNote({ availAdj }: { availAdj: { original: number
           {!isZeroed && (
             <>
               <span className="text-gray-600">Full-fit projection:</span>
-              <span className="font-medium text-right">{availAdj.original.toFixed(2)} pts</span>
+              <span className="font-medium text-right">{availAdj.original.toFixed(1)} pts</span>
               <span className="text-gray-600">Adjusted to:</span>
-              <span className="font-semibold text-amber-700 text-right">{availAdj.adjusted.toFixed(2)} pts</span>
+              <span className="font-semibold text-amber-700 text-right">{availAdj.adjusted.toFixed(1)} pts</span>
             </>
           )}
         </div>
@@ -188,7 +188,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               <ValueCell 
                 value={gwPoints || 0} 
                 format="points" 
-                decimals={2} 
+                decimals={1} 
                 colorScheme="points"
                 fontWeight="medium"
               />
@@ -208,7 +208,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               <ValueCell 
                 value={0} 
                 format="points" 
-                decimals={2} 
+                decimals={1} 
                 colorScheme="points"
                 fontWeight="medium"
               />
@@ -224,7 +224,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
       <ValueCell 
         value={gwPoints || 0} 
         format="points" 
-        decimals={2} 
+        decimals={1} 
         colorScheme="points"
         fontWeight="medium"
       />
@@ -238,7 +238,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
           <ValueCell 
             value={gwPoints} 
             format="points" 
-            decimals={2} 
+            decimals={1} 
             colorScheme="points"
             fontWeight="medium"
           />
@@ -265,7 +265,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                       {fixture.isHome ? 'H' : 'A'}
                     </span>
                     <span className="font-semibold text-gray-800">{fixture.opponent}</span>
-                    <span className="ml-auto text-sm font-bold text-purple-700">{fixture.totalPoints.toFixed(2)} pts</span>
+                    <span className="ml-auto text-sm font-bold text-purple-700">{fixture.totalPoints.toFixed(1)} pts</span>
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                     {componentDefs.map(comp => {
@@ -275,7 +275,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                       return (
                         <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
                           <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
-                          <span className={`${comp.color} font-medium`}>{isExcluded ? '0.00' : value.toFixed(2)}</span>
+                          <span className={`${comp.color} font-medium`}>{isExcluded ? '0.0' : value.toFixed(1)}</span>
                         </div>
                       );
                     })}
@@ -314,7 +314,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                           <ValueCell 
                             value={currentValue} 
                             format="points" 
-                            decimals={2} 
+                            decimals={1} 
                             className={comp.color}
                             fontWeight="medium"
                           />
@@ -334,7 +334,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               <ValueCell 
                 value={gwPoints} 
                 format="points" 
-                decimals={2} 
+                decimals={1} 
                 className="text-green-800"
                 fontWeight="semibold"
               />
@@ -501,7 +501,7 @@ function RangeTotalBreakdownTooltip({
       <ValueCell 
         value={player.totalExpectedPoints || 0} 
         format="points" 
-        decimals={2} 
+        decimals={1} 
         className="text-green-800 text-sm"
         fontWeight="bold"
       />
@@ -529,7 +529,7 @@ function RangeTotalBreakdownTooltip({
           <ValueCell 
             value={player.totalExpectedPoints || 0} 
             format="points" 
-            decimals={2} 
+            decimals={1} 
             className="text-green-800 text-sm"
             fontWeight="bold"
           />
@@ -566,7 +566,7 @@ function RangeTotalBreakdownTooltip({
                     <ValueCell 
                       value={isExcluded ? 0 : currentValue} 
                       format="points" 
-                      decimals={2} 
+                      decimals={1} 
                       className={isExcluded ? 'text-gray-400' : comp.color}
                       fontWeight="medium"
                     />
@@ -584,7 +584,7 @@ function RangeTotalBreakdownTooltip({
               <ValueCell 
                 value={player.totalExpectedPoints || 0} 
                 format="points" 
-                decimals={2} 
+                decimals={1} 
                 className="text-green-800"
                 fontWeight="semibold"
               />
@@ -797,7 +797,7 @@ function createPlayerTotalPointsColumns(
         <ValueCell 
           value={value || 0} 
           format="points" 
-          decimals={2}
+          decimals={1}
           className="font-bold text-orange-800 text-sm"
         />
       )
@@ -812,7 +812,7 @@ function createPlayerTotalPointsColumns(
         <ValueCell 
           value={value || 0} 
           format="number" 
-          decimals={2}
+          decimals={1}
           className="font-bold text-purple-800 text-sm"
         />
       )
