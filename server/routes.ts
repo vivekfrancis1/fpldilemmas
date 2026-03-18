@@ -11038,6 +11038,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const redCardsInFlight = new Map<string, Promise<any[]>>();
   const bonusPointsCache = new Map<string, { data: any[]; timestamp: number }>();
   const bonusPointsInFlight = new Map<string, Promise<any[]>>();
+  // Explicitly clear on every server startup so any stale pre-FDR-fix entries
+  // from a prior process are never served after a code deployment.
+  bonusPointsCache.clear();
+  bonusPointsInFlight.clear();
 
   // Cache for xGF live data (expensive: 27 GW fetches). Refreshes once per hour.
   let xgfLiveDataCache: { liveDataMap: Map<number, any>; timestamp: number } | null = null;
