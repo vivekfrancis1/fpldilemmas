@@ -445,7 +445,10 @@ export default function TeamCSProjections() {
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(avgCS)}`}>
                               {!hasFixtures ? (
-                                <span className="text-gray-400">-</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-gray-400">-</span>
+                                  {showOpponent && <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">&nbsp;</div>}
+                                </div>
                               ) : isDGW ? (
                                 <Popover>
                                   <PopoverTrigger asChild>

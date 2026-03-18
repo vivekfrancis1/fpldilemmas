@@ -943,10 +943,12 @@ export default function PlayerAssistProjections() {
                                     ) : (
                                       <span>{projValue > 0 ? formatValue(projValue) : "-"}</span>
                                     )}
-                                    {showOpponent && opponentInfo && !isDGW && (
-                                      <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
-                                        {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
-                                      </span>
+                                    {showOpponent && !isDGW && (
+                                      opponentInfo ? (
+                                        <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                        </span>
+                                      ) : <span className="text-xs">&nbsp;</span>
                                     )}
                                   </div>
                                 </td>

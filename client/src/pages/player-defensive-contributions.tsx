@@ -995,7 +995,10 @@ export default function PlayerDefensiveContributions() {
                         if (!gw) {
                           return (
                             <TableCell key={gwNum} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-gray-50">
-                              <span className="text-gray-400">-</span>
+                              <div className="flex flex-col items-center">
+                                <span className="text-gray-400">-</span>
+                                {showOpponent && <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">&nbsp;</span>}
+                              </div>
                             </TableCell>
                           );
                         }

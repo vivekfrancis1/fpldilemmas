@@ -537,7 +537,7 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[30px] md:min-w-[44px]"
+                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -588,7 +588,7 @@ export default function TeamGoalsAgainstProjections() {
                           if (viewMode === "past") {
                             const value = team.gameweekProjections[gwNumber] ?? 0;
                             return (
-                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[30px] md:min-w-[44px] ${getGoalsAgainstColor(value)}`}>
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${getGoalsAgainstColor(value)}`}>
                                 <span>{value}</span>
                               </td>
                             );
@@ -603,9 +603,12 @@ export default function TeamGoalsAgainstProjections() {
                           const avgGA = hasFixtures ? totalGA / fixtures.length : 0;
                           
                           return (
-                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[30px] md:min-w-[44px] ${getGoalsAgainstColor(avgGA)}`}>
+                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${getGoalsAgainstColor(avgGA)}`}>
                               {!hasFixtures ? (
-                                <span className="text-gray-400">-</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-gray-400">-</span>
+                                  {showOpponent && <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">&nbsp;</span>}
+                                </div>
                               ) : isDGW ? (
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -684,7 +687,7 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={gwNumber} className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[30px] md:min-w-[44px]">
+                          <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
                             {gwTotal > 0 ? (viewMode === "past" ? Math.round(gwTotal) : gwTotal.toFixed(2)) : "-"}
                           </td>
                         );

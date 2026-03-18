@@ -777,10 +777,12 @@ export default function PlayerSaves() {
                                   ) : (
                                     <span>{rawValue ? formatValue(rawValue) : '-'}</span>
                                   )}
-                                  {showOpponent && opponentInfo && (
-                                    <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
-                                      {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
-                                    </span>
+                                  {showOpponent && (
+                                    opponentInfo ? (
+                                      <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                        {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                      </span>
+                                    ) : <span className="text-xs mt-0.5">&nbsp;</span>
                                   )}
                                 </div>
                               </td>
