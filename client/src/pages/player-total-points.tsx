@@ -716,7 +716,7 @@ function createPlayerTotalPointsColumns(
         header: `${gw}`,
         sortable: true,
         align: 'center' as const,
-        className: 'min-w-[30px] md:min-w-[40px] bg-blue-50/30 px-0.5',
+        className: 'min-w-[36px] md:min-w-[44px] bg-blue-50/30 px-0.5',
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
