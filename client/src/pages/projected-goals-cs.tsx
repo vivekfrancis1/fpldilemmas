@@ -61,7 +61,7 @@ export default function ProjectedGoalsCS() {
       return { startGameweek: String(startGW), endGameweek: String(lastFinishedGW) };
     }
     if (!bootstrapData?.events) {
-      return { startGameweek: "7", endGameweek: "12" }; // Fallback to likely next 6 gameweeks
+      return { startGameweek: "7", endGameweek: "14" }; // Fallback to likely next 8 gameweeks
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 

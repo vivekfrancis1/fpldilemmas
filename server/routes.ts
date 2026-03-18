@@ -7246,7 +7246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Runtime-configurable: default view weeks shown to users + total calculation horizon
   // Edit shared/gameweek-utils.ts to change the compile-time fallbacks (PROJECTION_DEFAULT_WEEKS / PROJECTION_TOTAL_WEEKS)
   let projectionWindowSettings = {
-    defaultWeeks: 10,  // mirrors PROJECTION_DEFAULT_WEEKS in shared/gameweek-utils.ts
+    defaultWeeks: 8,   // mirrors PROJECTION_DEFAULT_WEEKS in shared/gameweek-utils.ts
     totalWeeks: 12,    // mirrors PROJECTION_TOTAL_WEEKS in shared/gameweek-utils.ts
     lastUpdated: null as string | null,
     updatedBy: null as string | null,
@@ -7380,7 +7380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalWeeks: projectionWindowSettings.totalWeeks,
         lastUpdated: projectionWindowSettings.lastUpdated,
         updatedBy: projectionWindowSettings.updatedBy,
-        defaults: { defaultWeeks: 10, totalWeeks: 12 }
+        defaults: { defaultWeeks: 8, totalWeeks: 12 }
       });
     } catch (error) {
       console.error("Error fetching projection window settings:", error);
@@ -7424,7 +7424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/projection-window-settings/reset", requireAdmin, async (_req, res) => {
     try {
       projectionWindowSettings = {
-        defaultWeeks: 10,
+        defaultWeeks: 8,
         totalWeeks: 12,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin",

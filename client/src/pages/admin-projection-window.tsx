@@ -24,7 +24,7 @@ function AdminProjectionWindowContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [defaultWeeks, setDefaultWeeks] = useState<number>(10);
+  const [defaultWeeks, setDefaultWeeks] = useState<number>(8);
   const [totalWeeks, setTotalWeeks] = useState<number>(12);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -124,7 +124,7 @@ function AdminProjectionWindowContent() {
                   />
                   <p className="text-xs text-muted-foreground">
                     GWs shown when a projection page first loads. Compile-time default:{" "}
-                    <code className="text-xs bg-muted px-1 rounded">{settings?.defaults.defaultWeeks ?? 10}</code>
+                    <code className="text-xs bg-muted px-1 rounded">{settings?.defaults.defaultWeeks ?? 8}</code>
                   </p>
                 </div>
 

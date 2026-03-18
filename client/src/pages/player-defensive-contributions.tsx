@@ -139,7 +139,7 @@ export default function PlayerDefensiveContributions() {
       const end = Math.min(nextGameweek + 11, 38);
       setGameweekRange({ start, end });
       setStartGameweek(start);
-      setEndGameweek(Math.min(start + 5, 38));
+      setEndGameweek(Math.min(start + 7, 38));
       setExcludedGameweeks(new Set());
     }
   }, [nextGameweek, viewMode, historyData?.lastFinishedGW]);

@@ -30,7 +30,7 @@ export default function PlayerMinutes() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
-  const [endGameweek, setEndGameweek] = useState<number>(9); // Default to 6 gameweeks ahead
+  const [endGameweek, setEndGameweek] = useState<number>(11); // Default to 8 gameweeks ahead
   const [sortField, setSortField] = useState<SortField>('expectedMinutes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter

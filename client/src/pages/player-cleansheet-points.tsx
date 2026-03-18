@@ -37,7 +37,7 @@ type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
 export default function PlayerCleanSheetPoints() {
   const { defaultWeeks } = useProjectionSettings();
   const [startGameweek, setStartGameweek] = useState(6);
-  const [endGameweek, setEndGameweek] = useState(11); // Default 6 gameweeks
+  const [endGameweek, setEndGameweek] = useState(13); // Default 8 gameweeks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");

@@ -89,7 +89,7 @@ export default function TeamGoalProjections() {
     }
     // Future mode: use existing logic
     if (!bootstrapData?.events) {
-      return { startGameweek: "1", endGameweek: "6" }; // Fallback
+      return { startGameweek: "1", endGameweek: "8" }; // Fallback
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);

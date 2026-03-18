@@ -78,7 +78,7 @@ export default function TeamGoalsAgainstProjections() {
       return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
     }
     if (!bootstrapData?.events) {
-      return { startGameweek: "6", endGameweek: "11" }; // Fallback
+      return { startGameweek: "6", endGameweek: "13" }; // Fallback
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);

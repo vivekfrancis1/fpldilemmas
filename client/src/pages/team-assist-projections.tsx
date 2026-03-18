@@ -42,7 +42,7 @@ export default function TeamAssistProjections() {
     const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
     return {
       defaultStart: range.startGameweek || "6",
-      defaultEnd: range.endGameweek || "11"
+      defaultEnd: range.endGameweek || "13"
     };
   }, [bootstrapData]);
   
@@ -51,7 +51,7 @@ export default function TeamAssistProjections() {
   );
 
   const [startGameweek, setStartGameweek] = useState<string>("6");
-  const [endGameweek, setEndGameweek] = useState<string>("11");
+  const [endGameweek, setEndGameweek] = useState<string>("13");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
   // Filter section collapse state - collapsed by default on all devices

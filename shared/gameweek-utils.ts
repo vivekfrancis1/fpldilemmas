@@ -11,8 +11,8 @@
  * default view and full calculation horizon across every projection tool at once.
  */
 
-/** How many gameweeks are shown by default when a projection page loads (e.g. GW29–38) */
-export const PROJECTION_DEFAULT_WEEKS = 10;
+/** How many gameweeks are shown by default when a projection page loads (e.g. GW29–36) */
+export const PROJECTION_DEFAULT_WEEKS = 8;
 
 /** Full calculation horizon — how many gameweeks APIs compute and serve (e.g. GW29–38+2 buffer) */
 export const PROJECTION_TOTAL_WEEKS = 12;
