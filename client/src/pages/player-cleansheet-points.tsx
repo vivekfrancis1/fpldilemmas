@@ -437,7 +437,7 @@ export default function PlayerCleanSheetPoints() {
                             </td>
                           );
                         })}
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {player.totalExpectedPoints.toFixed(1)}
                           </span>

@@ -978,7 +978,7 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
@@ -988,7 +988,7 @@ export default function PlayerGoalsScoredProjections() {
                             <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal)}</span>
                           )}
                         </td>
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatPoints(totalPoints)}</span>
@@ -1012,12 +1012,12 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-16 md:w-auto sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-16 md:w-auto border-l border-gray-300 sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-orange-900">
                         {formatGoals(totalGoals.overallTotal)}
                       </span>
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100 w-16 md:w-auto sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100 w-16 md:w-auto border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-blue-900">
                         {formatPoints(totalGoals.pointsOverallTotal)}
                       </span>
