@@ -666,13 +666,18 @@ export default function TeamGoalProjections() {
                           const teamWithDetails = team as TeamGoalProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const isDGW = fixtures.length > 1;
+                          const teamOpponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
                           
                           const cellContent = (
                             <div className="flex flex-col items-center">
                               <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                               {showOpponent && (
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
-                                  {fixtures.length > 0 ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ') : '\u00A0'}
+                                  {fixtures.length > 0
+                                    ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')
+                                    : teamOpponentInfo
+                                      ? `${teamOpponentInfo.opponent}(${teamOpponentInfo.isHome ? 'H' : 'A'})`
+                                      : '\u00A0'}
                                 </span>
                               )}
                             </div>

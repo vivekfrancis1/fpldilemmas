@@ -587,9 +587,17 @@ export default function TeamGoalsAgainstProjections() {
                           // Past mode: read directly from gameweekProjections (fixtureDetails not available)
                           if (viewMode === "past") {
                             const value = team.gameweekProjections[gwNumber] ?? 0;
+                            const pastOpponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
                             return (
                               <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${getGoalsAgainstColor(value)}`}>
-                                <span>{value}</span>
+                                <div className="flex flex-col items-center">
+                                  <span>{value}</span>
+                                  {showOpponent && (
+                                    <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
+                                      {pastOpponentInfo ? `${pastOpponentInfo.opponent}(${pastOpponentInfo.isHome ? 'H' : 'A'})` : '\u00A0'}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                             );
                           }
