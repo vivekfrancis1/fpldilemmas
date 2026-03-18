@@ -195,7 +195,7 @@ export default function PlayerAssistProjections() {
   useEffect(() => {
     if ((viewMode === "past" || viewMode === "pastXa") && (historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW)) {
       const lastFinished = historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW || 24;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
       setExcludedGameweeks(new Set());
@@ -851,7 +851,7 @@ export default function PlayerAssistProjections() {
                               </Button>
                             </th>
                           ))}
-                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-12 md:w-auto md:min-w-[56px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
                               {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
                             </Button>
@@ -952,7 +952,7 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-12 md:w-auto md:min-w-[56px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>

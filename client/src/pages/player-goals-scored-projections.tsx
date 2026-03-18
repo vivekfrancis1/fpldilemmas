@@ -192,7 +192,7 @@ export default function PlayerGoalsScoredProjections() {
   useEffect(() => {
     if ((viewMode === "past" || viewMode === "pastXg") && (historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || bootstrapData?.events)) {
       const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
       setExcludedGameweeks(new Set());
@@ -861,7 +861,7 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-12 md:w-auto md:min-w-[56px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
@@ -970,7 +970,7 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-12 md:w-auto md:min-w-[56px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
@@ -994,7 +994,7 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-12 md:w-auto border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-orange-900">
                         {formatGoals(totalGoals.overallTotal)}
                       </span>
