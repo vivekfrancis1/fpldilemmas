@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
@@ -738,6 +738,10 @@ export default function PlayerGoalsScoredProjections() {
 
               <TabsContent value="gws" className="mt-0">
                 <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+                  <button onClick={() => setShowOpponent(!showOpponent)}
+                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                    <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                  </button>
                   <button
                     onClick={() => setApplyAvailability(!applyAvailability)}
                     className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
