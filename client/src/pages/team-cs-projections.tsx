@@ -447,8 +447,7 @@ export default function TeamCSProjections() {
                                   <PopoverTrigger asChild>
                                     <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                       <div className="flex flex-col items-center">
-                                        <span className="md:hidden">{Math.round(totalCS)}%</span>
-                                        <span className="hidden md:inline">{totalCS.toFixed(1)}%</span>
+                                        <span>{Math.round(totalCS)}%</span>
                                         {showOpponent && (
                                           <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                                             {fixtures.map(f => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
@@ -465,20 +464,19 @@ export default function TeamCSProjections() {
                                       {fixtures.map((f, idx) => (
                                         <div key={idx} className="flex justify-between items-center text-sm">
                                           <span className="text-gray-600">vs {f.opponent} ({f.isHome ? 'H' : 'A'})</span>
-                                          <span className="font-medium text-blue-700">{f.cleanSheetOdds.toFixed(1)}%</span>
+                                          <span className="font-medium text-blue-700">{Math.round(f.cleanSheetOdds)}%</span>
                                         </div>
                                       ))}
                                       <div className="border-t pt-2 flex justify-between items-center text-sm font-semibold">
                                         <span className="text-gray-900">Total</span>
-                                        <span className="text-blue-800">{totalCS.toFixed(1)}%</span>
+                                        <span className="text-blue-800">{Math.round(totalCS)}%</span>
                                       </div>
                                     </div>
                                   </PopoverContent>
                                 </Popover>
                               ) : (
                                 <div>
-                                  <span className="md:hidden">{Math.round(fixtures[0].cleanSheetOdds)}%</span>
-                                  <span className="hidden md:inline">{fixtures[0].cleanSheetOdds}%</span>
+                                  <span>{Math.round(fixtures[0].cleanSheetOdds)}%</span>
                                   {showOpponent && (
                                     <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">
                                       {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
@@ -500,8 +498,7 @@ export default function TeamCSProjections() {
                               : 0;
                             return (
                               <>
-                                <span className="text-sm font-bold text-blue-900 md:hidden">{Math.round(periodAvg)}%</span>
-                                <span className="hidden md:inline text-lg font-bold text-blue-900">{periodAvg.toFixed(1)}%</span>
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{Math.round(periodAvg)}%</span>
                               </>
                             );
                           })()}
