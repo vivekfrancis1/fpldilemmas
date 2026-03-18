@@ -502,7 +502,7 @@ function RangeTotalBreakdownTooltip({
         value={player.totalExpectedPoints || 0} 
         format="points" 
         decimals={2} 
-        className="text-green-800"
+        className="text-green-800 text-sm"
         fontWeight="bold"
       />
     );
@@ -530,7 +530,7 @@ function RangeTotalBreakdownTooltip({
             value={player.totalExpectedPoints || 0} 
             format="points" 
             decimals={2} 
-            className="text-green-800"
+            className="text-green-800 text-sm"
             fontWeight="bold"
           />
         </button>
@@ -777,7 +777,7 @@ function createPlayerTotalPointsColumns(
       className: 'w-16 md:w-auto md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1 sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
-          <span className="font-bold text-green-800 text-lg">{Math.round(player.totalExpectedPoints || 0)}</span>
+          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
         ) : (
           <RangeTotalBreakdownTooltip 
             player={player} 
@@ -798,7 +798,7 @@ function createPlayerTotalPointsColumns(
           value={value || 0} 
           format="points" 
           decimals={2}
-          className="font-bold text-orange-800 text-xs md:text-sm"
+          className="font-bold text-orange-800 text-sm"
         />
       )
     },
@@ -813,7 +813,7 @@ function createPlayerTotalPointsColumns(
           value={value || 0} 
           format="number" 
           decimals={2}
-          className="font-bold text-purple-800 text-sm md:text-lg"
+          className="font-bold text-purple-800 text-sm"
         />
       )
     },
@@ -828,7 +828,7 @@ function createPlayerTotalPointsColumns(
           value={value || 0} 
           format="number" 
           decimals={0}
-          className="font-bold text-blue-800 text-xs md:text-sm"
+          className="font-bold text-blue-800 text-sm"
         />
       )
     }
