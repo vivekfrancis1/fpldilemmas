@@ -90,7 +90,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
         { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false },
         { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
-        { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
+        { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false },
+        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
+        { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
+        { path: "/results-and-fixtures", label: "Match Results", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
+        { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
+        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
       ]
     },
     {
@@ -98,16 +103,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
         { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
-      ]
-    },
-    {
-      section: "STATS",
-      items: [
-        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
-        { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
-        { path: "/results-and-fixtures", label: "Match Results", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
-        { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
-        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
       ]
     },
     ];
