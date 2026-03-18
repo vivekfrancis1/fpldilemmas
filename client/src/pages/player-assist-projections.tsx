@@ -839,7 +839,7 @@ export default function PlayerAssistProjections() {
                       <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                          <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
                               Player {getSortIcon('name')}
                             </Button>
@@ -851,14 +851,9 @@ export default function PlayerAssistProjections() {
                               </Button>
                             </th>
                           ))}
-                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-16 md:w-auto md:min-w-[70px] sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-12 md:w-auto md:min-w-[56px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
                               {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
-                            </Button>
-                          </th>
-                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangePoints')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
-                              {viewMode === "pastXa" ? "xPts" : "Pts"} {getSortIcon('rangePoints')}
                             </Button>
                           </th>
                         </tr>
@@ -884,7 +879,7 @@ export default function PlayerAssistProjections() {
                           
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
-                            <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                            <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
                               <div className="flex items-center gap-0.5 flex-wrap">
                                 <PlayerNameCell 
                                   name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
@@ -956,7 +951,7 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-12 md:w-auto md:min-w-[56px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
@@ -964,16 +959,6 @@ export default function PlayerAssistProjections() {
                                 </div>
                               ) : (
                                 <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
-                              )}
-                            </td>
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                              {hasAnyAdjustment ? (
-                                <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(1)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalPointsTotal) : originalPointsTotal.toFixed(1)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(1)}</span>
                               )}
                             </td>
                           </tr>

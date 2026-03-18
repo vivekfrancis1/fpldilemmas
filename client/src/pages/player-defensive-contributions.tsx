@@ -898,7 +898,7 @@ export default function PlayerDefensiveContributions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px] px-1 md:px-3 text-xs md:text-sm">
+                  <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px] px-1 md:px-3 text-xs md:text-sm">
                     Player
                   </TableHead>
 
@@ -933,7 +933,7 @@ export default function PlayerDefensiveContributions() {
                     </TableHead>
                   ))}
                   <TableHead 
-                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-12 md:w-auto md:min-w-[56px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -967,7 +967,7 @@ export default function PlayerDefensiveContributions() {
                   
                   return (
                   <TableRow key={player.playerId}>
-                    <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 min-w-[64px] md:min-w-[96px]">
+                    <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 min-w-[56px] md:min-w-[80px]">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-0.5 flex-wrap">
                           <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
@@ -1021,7 +1021,7 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-12 md:w-auto md:min-w-[56px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
