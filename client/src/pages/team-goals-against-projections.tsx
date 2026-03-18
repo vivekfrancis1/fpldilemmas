@@ -580,7 +580,17 @@ export default function TeamGoalsAgainstProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          // Use string key to match API response format
+                          // Past mode: read directly from gameweekProjections (fixtureDetails not available)
+                          if (viewMode === "past") {
+                            const value = team.gameweekProjections[gwNumber] ?? 0;
+                            return (
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[30px] md:min-w-[44px] ${getGoalsAgainstColor(value)}`}>
+                                <span>{value}</span>
+                              </td>
+                            );
+                          }
+
+                          // Future mode: use fixtureDetails for DGW Popover and opponent info
                           const teamWithDetails = team as TeamGoalsAgainstProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const hasFixtures = fixtures.length > 0;
@@ -639,18 +649,17 @@ export default function TeamGoalsAgainstProjections() {
                         })}
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                          {(() => {
-                            // Calculate average GA per fixture across all active gameweeks (use string keys)
-                            const teamWithDetails = team as TeamGoalsAgainstProjection;
-                            const allFixtures = activeGameweeks.flatMap(gw => teamWithDetails.fixtureDetails?.[gw.toString()] || []);
-                            const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
-                            const avgGA = allFixtures.length > 0 ? totalGA / allFixtures.length : 0;
-                            return (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">
-                                {viewMode === "past" ? Math.round(avgGA) : avgGA.toFixed(2)}
-                              </span>
-                            );
-                          })()}
+                          <span className="text-sm md:text-lg font-bold text-blue-900">
+                            {viewMode === "past"
+                              ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
+                              : (() => {
+                                  const teamWithDetails = team as TeamGoalsAgainstProjection;
+                                  const allFixtures = activeGameweeks.flatMap(gw => teamWithDetails.fixtureDetails?.[gw.toString()] || []);
+                                  const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
+                                  const avgGA = allFixtures.length > 0 ? totalGA / allFixtures.length : 0;
+                                  return avgGA.toFixed(2);
+                                })()}
+                          </span>
                         </td>
                         
                       </tr>
