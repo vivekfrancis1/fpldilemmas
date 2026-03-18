@@ -82,9 +82,9 @@ export default function TeamGoalProjections() {
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
-      // Past modes: default to last 6 finished gameweeks
+      // Past modes: default from GW 1 to latest finished gameweek
       const lastFinished = historyData?.lastFinishedGW || 24;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
     }
     // Future mode: use existing logic
@@ -175,7 +175,7 @@ export default function TeamGoalProjections() {
   useEffect(() => {
     if ((viewMode === "past" || viewMode === "pastXg") && (historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW)) {
       const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
       setExcludedGameweeks(new Set());
@@ -615,7 +615,7 @@ export default function TeamGoalProjections() {
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
+                          className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[30px] md:min-w-[44px]"
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -626,7 +626,7 @@ export default function TeamGoalProjections() {
                         </th>
                       ))}
                       <th 
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[50px] md:min-w-[70px]"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                         onClick={() => setSortBy('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -681,7 +681,7 @@ export default function TeamGoalProjections() {
                           return (
                             <td 
                               key={`${team.id}-gw${gwNumber}`} 
-                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
+                              className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[30px] md:min-w-[44px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
                             >
                               {isDGW ? (
                                 <Popover>
@@ -720,7 +720,7 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {viewMode === "past" 
                               ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
@@ -746,13 +746,13 @@ export default function TeamGoalProjections() {
                       {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={`total-gw${gwNumber}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
+                          <td key={`total-gw${gwNumber}`} className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[30px] md:min-w-[44px]">
                             {viewMode === "past" ? gwTotal : gwTotal.toFixed(2)}
                           </td>
                         );
                       })}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 min-w-[50px] md:min-w-[70px]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-orange-900">
                           {viewMode === "past" ? totalGoals.overallTotal : totalGoals.overallTotal.toFixed(2)}
                         </span>

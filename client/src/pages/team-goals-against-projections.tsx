@@ -73,8 +73,9 @@ export default function TeamGoalsAgainstProjections() {
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past") {
+      // Past mode: default from GW 1 to latest finished gameweek
       const lastFinished = historyData?.lastFinishedGW || 24;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
     }
     if (!bootstrapData?.events) {
@@ -188,7 +189,7 @@ export default function TeamGoalsAgainstProjections() {
   useEffect(() => {
     if (viewMode === "past" && historyData?.lastFinishedGW) {
       const lastFinished = historyData.lastFinishedGW;
-      const startGW = Math.max(1, lastFinished - 5);
+      const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
       setExcludedGameweeks(new Set());
@@ -532,7 +533,7 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
+                          className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[30px] md:min-w-[44px]"
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -543,7 +544,7 @@ export default function TeamGoalsAgainstProjections() {
                         </th>
                       ))}
                       <th 
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                         onClick={() => setSortBy('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -588,7 +589,7 @@ export default function TeamGoalsAgainstProjections() {
                           const avgGA = hasFixtures ? totalGA / fixtures.length : 0;
                           
                           return (
-                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsAgainstColor(avgGA)}`}>
+                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[30px] md:min-w-[44px] ${getGoalsAgainstColor(avgGA)}`}>
                               {!hasFixtures ? (
                                 <span className="text-gray-400">-</span>
                               ) : isDGW ? (
@@ -637,7 +638,7 @@ export default function TeamGoalsAgainstProjections() {
                           );
                         })}
                         
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           {(() => {
                             // Calculate average GA per fixture across all active gameweeks (use string keys)
                             const teamWithDetails = team as TeamGoalsAgainstProjection;
@@ -670,13 +671,13 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
+                          <td key={gwNumber} className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[30px] md:min-w-[44px]">
                             {gwTotal > 0 ? (viewMode === "past" ? Math.round(gwTotal) : gwTotal.toFixed(2)) : "-"}
                           </td>
                         );
                       })}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 min-w-[50px] md:min-w-[70px]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {viewMode === "past" 
                             ? Math.round(totalGoalsAgainst.overallTotal || 0)
