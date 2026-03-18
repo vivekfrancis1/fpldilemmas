@@ -505,7 +505,7 @@ export default function PlayerBonusPoints() {
                             </button>
                           </th>
                         ))}
-                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 min-w-[50px] md:min-w-[70px]">
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
                             className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
@@ -600,7 +600,7 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(1)}</span>

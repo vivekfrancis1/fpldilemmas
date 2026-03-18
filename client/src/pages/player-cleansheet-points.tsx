@@ -359,7 +359,7 @@ export default function PlayerCleanSheetPoints() {
                       {gameweekRange.map(gw => (
                         <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">{gw}</th>
                       ))}
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 min-w-[50px] md:min-w-[70px] text-xs md:text-sm"
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 w-16 md:w-auto md:min-w-[70px] text-xs md:text-sm sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                           onClick={() => handleSort('totalExpectedPoints')}>
                         <div className="flex items-center justify-center gap-1">
                           Total {getSortIcon('totalExpectedPoints')}
@@ -437,7 +437,7 @@ export default function PlayerCleanSheetPoints() {
                             </td>
                           );
                         })}
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {player.totalExpectedPoints.toFixed(1)}
                           </span>

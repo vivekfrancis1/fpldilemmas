@@ -861,7 +861,7 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[50px] md:min-w-[70px]">
+                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-16 md:w-auto md:min-w-[70px] sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
@@ -870,7 +870,7 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                       </div>
                     </th>
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]">
+                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("totalPoints")}>
                         {viewMode === "pastXg" ? "xPts" : "Pts"}
                         {sortBy === "totalPoints" && (
@@ -978,7 +978,7 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
@@ -988,7 +988,7 @@ export default function PlayerGoalsScoredProjections() {
                             <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal)}</span>
                           )}
                         </td>
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatPoints(totalPoints)}</span>
@@ -1012,12 +1012,12 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-16 md:w-auto sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-orange-900">
                         {formatGoals(totalGoals.overallTotal)}
                       </span>
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100 w-16 md:w-auto sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-blue-900">
                         {formatPoints(totalGoals.pointsOverallTotal)}
                       </span>
