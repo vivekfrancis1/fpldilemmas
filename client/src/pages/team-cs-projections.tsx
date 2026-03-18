@@ -447,7 +447,7 @@ export default function TeamCSProjections() {
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>
-                                  {showOpponent && <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">&nbsp;</div>}
+                                  {showOpponent && <div className="text-[9px] md:text-[10px] text-gray-400 mt-0.5 hidden md:block">&nbsp;</div>}
                                 </div>
                               ) : isDGW ? (
                                 <Popover>
@@ -456,7 +456,7 @@ export default function TeamCSProjections() {
                                       <div className="flex flex-col items-center">
                                         <span>{Math.round(totalCS)}%</span>
                                         {showOpponent && (
-                                          <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                          <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                             {fixtures.map(f => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
                                           </span>
                                         )}
@@ -485,7 +485,7 @@ export default function TeamCSProjections() {
                                 <div>
                                   <span>{Math.round(fixtures[0].cleanSheetOdds)}%</span>
                                   {showOpponent && (
-                                    <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">
+                                    <div className="text-[9px] md:text-[10px] text-gray-400 mt-0.5 hidden md:block">
                                       {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
                                     </div>
                                   )}

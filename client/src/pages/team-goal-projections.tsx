@@ -671,7 +671,7 @@ export default function TeamGoalProjections() {
                             <div className="flex flex-col items-center">
                               <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                               {showOpponent && (
-                                <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                   {fixtures.length > 0 ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ') : '\u00A0'}
                                 </span>
                               )}
@@ -690,7 +690,7 @@ export default function TeamGoalProjections() {
                                       <div className="flex flex-col items-center">
                                         <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
                                         {showOpponent && (
-                                          <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                          <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                             {fixtures.length > 0 ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ') : '\u00A0'}
                                           </span>
                                         )}

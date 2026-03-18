@@ -779,10 +779,10 @@ export default function PlayerSaves() {
                                   )}
                                   {showOpponent && (
                                     opponentInfo ? (
-                                      <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                      <span className={`text-[9px] md:text-[10px] mt-0.5 ${opponentInfo.isHome ? 'text-green-400' : 'text-blue-400'}`}>
                                         {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                       </span>
-                                    ) : <span className="text-xs mt-0.5">&nbsp;</span>
+                                    ) : <span className="text-[9px] md:text-[10px] mt-0.5">&nbsp;</span>
                                   )}
                                 </div>
                               </td>

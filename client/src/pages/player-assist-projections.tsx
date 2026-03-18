@@ -945,10 +945,10 @@ export default function PlayerAssistProjections() {
                                     )}
                                     {showOpponent && !isDGW && (
                                       opponentInfo ? (
-                                        <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                        <span className={`text-[9px] md:text-[10px] ${opponentInfo.isHome ? 'text-green-400' : 'text-blue-400'}`}>
                                           {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                         </span>
-                                      ) : <span className="text-xs">&nbsp;</span>
+                                      ) : <span className="text-[9px] md:text-[10px]">&nbsp;</span>
                                     )}
                                   </div>
                                 </td>

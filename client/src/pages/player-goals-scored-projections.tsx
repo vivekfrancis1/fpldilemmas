@@ -967,10 +967,10 @@ export default function PlayerGoalsScoredProjections() {
                                 )}
                                 {showOpponent && !isDGW && (
                                   opponentInfo ? (
-                                    <div className={`text-xs ${isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                    <div className={`text-[9px] md:text-[10px] ${isHome ? 'text-green-400' : 'text-blue-400'}`}>
                                       {opponent} ({isHome ? 'H' : 'A'})
                                     </div>
-                                  ) : <div className="text-xs">&nbsp;</div>
+                                  ) : <div className="text-[9px] md:text-[10px]">&nbsp;</div>
                                 )}
                               </div>
                             </td>

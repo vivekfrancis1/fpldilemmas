@@ -607,7 +607,7 @@ export default function TeamGoalsAgainstProjections() {
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>
-                                  {showOpponent && <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">&nbsp;</span>}
+                                  {showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">&nbsp;</span>}
                                 </div>
                               ) : isDGW ? (
                                 <Popover>
@@ -616,7 +616,7 @@ export default function TeamGoalsAgainstProjections() {
                                       <div className="flex flex-col items-center">
                                         <span>{viewMode === "past" ? Math.round(totalGA) : totalGA.toFixed(2)}</span>
                                         {showOpponent && (
-                                          <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                          <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                             {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
                                           </span>
                                         )}
@@ -645,7 +645,7 @@ export default function TeamGoalsAgainstProjections() {
                                 <div className="flex flex-col items-center">
                                   <span>{viewMode === "past" ? Math.round(fixtures[0].goalsAgainst) : fixtures[0].goalsAgainst.toFixed(2)}</span>
                                   {showOpponent && (
-                                    <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                    <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                       {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
                                     </span>
                                   )}
