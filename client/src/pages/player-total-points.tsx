@@ -716,7 +716,7 @@ function createPlayerTotalPointsColumns(
         header: `${gw}`,
         sortable: true,
         align: 'center' as const,
-        className: 'min-w-[34px] md:min-w-[48px] bg-blue-50/30 px-0.5 md:px-1',
+        className: 'min-w-[30px] md:min-w-[40px] bg-blue-50/30 px-0.5',
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
@@ -769,7 +769,7 @@ function createPlayerTotalPointsColumns(
       header: `Total`,
       sortable: true,
       align: 'center',
-      className: 'w-16 md:w-auto md:min-w-[64px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1 sticky right-16 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'w-12 md:w-14 bg-green-50 border-l-2 border-gray-300 px-1 sticky right-12 md:right-[168px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -787,7 +787,7 @@ function createPlayerTotalPointsColumns(
       header: 'Avg',
       sortable: true,
       align: 'center',
-      className: 'hidden md:table-cell min-w-[64px] bg-gradient-to-r from-orange-50 to-amber-50 border-l border-gray-300 px-1',
+      className: 'hidden md:table-cell md:w-14 bg-amber-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -802,7 +802,7 @@ function createPlayerTotalPointsColumns(
       header: 'Value',
       sortable: true,
       align: 'center',
-      className: 'w-16 md:w-auto md:min-w-[64px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1 sticky right-0 md:static z-[5]',
+      className: 'w-12 md:w-14 bg-purple-50 border-l border-gray-300 px-1 sticky right-0 md:right-14 z-[5]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -817,7 +817,7 @@ function createPlayerTotalPointsColumns(
       header: 'Mins',
       sortable: true,
       align: 'center',
-      className: 'hidden md:table-cell min-w-[64px] bg-gradient-to-r from-blue-50 to-sky-50 border-l border-gray-300 px-1',
+      className: 'hidden md:table-cell md:w-14 bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -1021,8 +1021,8 @@ export default function PlayerTotalPoints() {
     if (!bootstrapData?.events || lastFinishedGW === 0) return;
     
     if (viewMode === "past") {
-      // Past mode: default to last 6 finished gameweeks
-      const defaultStart = Math.max(1, lastFinishedGW - 5);
+      // Past mode: default from GW 1 to latest finished gameweek
+      const defaultStart = 1;
       setStartGameweek(defaultStart);
       setEndGameweek(lastFinishedGW);
     } else {
