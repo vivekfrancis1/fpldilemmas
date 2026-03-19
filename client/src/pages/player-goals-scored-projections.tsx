@@ -591,17 +591,19 @@ export default function PlayerGoalsScoredProjections() {
   return (
     <div className="fpl-page-container">
       {/* Loading overlay when refetching data after gameweek change */}
-      {initialized && (isLoading || playerGoalLoading || historyLoading) && (
+      {initialized && (isLoading || playerGoalLoading || historyLoading || xgHistoryLoading) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="overlay-loading-goals">
           <LoadingExperience
             variant="analysis"
-            title={viewMode === "future" ? "Updating Goal Projections" : "Updating Historical Goals"}
+            title={viewMode === "future" ? "Updating Goal Projections" : viewMode === "pastXg" ? "Updating Historical xG" : "Updating Historical Goals"}
             description={viewMode === "future" 
               ? "Recalculating projected goals for the selected gameweek range..."
-              : "Loading actual goals scored in the selected gameweek range..."}
+              : viewMode === "pastXg"
+                ? "Loading expected goals (xG) data for the selected gameweek range..."
+                : "Loading actual goals scored in the selected gameweek range..."}
             steps={[
-              { text: viewMode === "future" ? "Loading team goal projections" : "Loading gameweek results", delay: "0s" },
-              { text: viewMode === "future" ? "Updating player goal shares" : "Aggregating player goals", delay: "0.2s" },
+              { text: viewMode === "future" ? "Loading team goal projections" : viewMode === "pastXg" ? "Loading xG data" : "Loading gameweek results", delay: "0s" },
+              { text: viewMode === "future" ? "Updating player goal shares" : viewMode === "pastXg" ? "Aggregating player xG" : "Aggregating player goals", delay: "0.2s" },
               { text: viewMode === "future" ? "Computing player projections" : "Preparing data display", delay: "0.4s" },
             ]}
           />
