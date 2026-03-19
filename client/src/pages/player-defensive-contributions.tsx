@@ -599,36 +599,26 @@ export default function PlayerDefensiveContributions() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Defensive Contributions {viewMode === "future" ? "Projections" : "History"}</h1>
+            <h1>Player Defensive Contributions</h1>
           </div>
           <p className="fpl-page-subtitle">
-            {viewMode === "future" 
-              ? "Comprehensive defensive stats and FPL points projections with fixture-aware analysis"
-              : "Actual defensive contribution stats from past gameweeks"}
+            Comprehensive defensive stats and FPL points projections with fixture-aware analysis
           </p>
-          {/* Past/Future Toggle */}
-          <div className="flex gap-2 mt-3">
-            <Button
-              variant={viewMode === "past" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("past")}
-              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <History className="h-4 w-4" />
-              Past GW Data
-            </Button>
-            <Button
-              variant={viewMode === "future" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("future")}
-              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <Calendar className="h-4 w-4" />
-              Future GW Projections
-            </Button>
-          </div>
         </div>
       </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Past Data
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="fpl-section-spacing">
         {/* Quick Stats Overview */}

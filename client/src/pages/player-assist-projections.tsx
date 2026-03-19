@@ -568,47 +568,30 @@ export default function PlayerAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>{viewMode === "future" ? "Player Assist Projections" : viewMode === "pastXa" ? "Player xA History" : "Player Assist History"}</h1>
+            <h1>Player Assists</h1>
           </div>
           <p className="fpl-page-subtitle">
-            {viewMode === "future" 
-              ? "Projected assists for each player across upcoming gameweeks"
-              : viewMode === "pastXa"
-                ? "Expected Assists (xA) for each player in past gameweeks"
-                : "Actual assists recorded by each player in past gameweeks"}
+            Projected assists and historical data by player across selected gameweeks
           </p>
-          {/* Past/Future Toggle */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Button
-              variant={viewMode === "past" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("past")}
-              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <History className="h-4 w-4" />
-              Past GW Assists
-            </Button>
-            <Button
-              variant={viewMode === "pastXa" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("pastXa")}
-              className={`flex items-center gap-1.5 ${viewMode === "pastXa" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <TrendingUp className="h-4 w-4" />
-              Past GW xA
-            </Button>
-            <Button
-              variant={viewMode === "future" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("future")}
-              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <Calendar className="h-4 w-4" />
-              Future GW Projections
-            </Button>
-          </div>
         </div>
       </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Past Assists
+          </TabsTrigger>
+          <TabsTrigger value="pastXa" className="flex items-center gap-1.5 flex-1">
+            <TrendingUp className="h-4 w-4" />
+            Past xA
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="fpl-section-spacing">
 

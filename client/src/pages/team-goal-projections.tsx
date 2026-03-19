@@ -416,44 +416,27 @@ export default function TeamGoalProjections() {
             <h1>Team Goals</h1>
           </div>
           <p className="fpl-page-subtitle">
-            {viewMode === "future" 
-              ? "Projected goals for each team across upcoming gameweeks"
-              : viewMode === "pastXg"
-                ? "Expected Goals (xG) for each team in past gameweeks"
-                : "Actual goals scored by each team in past gameweeks"}
+            Projected and historical goals for each team across selected gameweeks
           </p>
-          {/* Past/Future Toggle */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Button
-              variant={viewMode === "past" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("past")}
-              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <History className="h-4 w-4" />
-              Past GW Goal Data
-            </Button>
-            <Button
-              variant={viewMode === "pastXg" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("pastXg")}
-              className={`flex items-center gap-1.5 ${viewMode === "pastXg" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <TrendingUp className="h-4 w-4" />
-              Past GW xG
-            </Button>
-            <Button
-              variant={viewMode === "future" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("future")}
-              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <Calendar className="h-4 w-4" />
-              Future GW Projections
-            </Button>
-          </div>
         </div>
       </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Past Goals
+          </TabsTrigger>
+          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
+            <TrendingUp className="h-4 w-4" />
+            Past xG
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="fpl-section-spacing">
 
