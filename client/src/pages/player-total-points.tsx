@@ -739,21 +739,23 @@ function createPlayerTotalPointsColumns(
             : '';
 
           return (
-            <div className={`relative ${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''} ${ringClass}`}>
-              {availAdj && (
-                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-amber-400 -translate-y-0.5 translate-x-0.5" />
-              )}
-              {!availAdj && isDGWCell && (
-                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-purple-400 -translate-y-0.5 translate-x-0.5" />
-              )}
-              {!availAdj && !isDGWCell && isBGWCell && (
-                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-gray-400 -translate-y-0.5 translate-x-0.5" />
-              )}
-              {isPastMode ? (
-                <PastGameweekBreakdownTooltip player={player} gameweek={gw} />
-              ) : (
-                <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
-              )}
+            <div className="flex flex-col items-center">
+              <div className={`relative inline-flex items-center justify-center ${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded px-0.5 md:p-0.5' : ''} ${ringClass}`}>
+                {availAdj && (
+                  <span className="absolute top-0 right-0 w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-amber-400 -translate-y-0.5 translate-x-0.5" />
+                )}
+                {!availAdj && isDGWCell && (
+                  <span className="absolute top-0 right-0 w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-purple-400 -translate-y-0.5 translate-x-0.5" />
+                )}
+                {!availAdj && !isDGWCell && isBGWCell && (
+                  <span className="absolute top-0 right-0 w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gray-400 -translate-y-0.5 translate-x-0.5" />
+                )}
+                {isPastMode ? (
+                  <PastGameweekBreakdownTooltip player={player} gameweek={gw} />
+                ) : (
+                  <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
+                )}
+              </div>
               {showOpponent && opponentInfo && (
                 <div className="text-[9px] text-gray-500 mt-0.5">
                   {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
