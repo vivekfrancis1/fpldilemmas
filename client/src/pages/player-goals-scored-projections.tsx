@@ -625,16 +625,16 @@ export default function PlayerGoalsScoredProjections() {
 
       {/* View Mode Tabs */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-6">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1 sm:flex-none">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
             Projections
           </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1 sm:flex-none">
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
             Past Goals
           </TabsTrigger>
-          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1 sm:flex-none">
+          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
             Past xG
           </TabsTrigger>
