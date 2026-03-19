@@ -1363,8 +1363,13 @@ export default function PlayerTotalPoints() {
     
     // Past mode - transform history data to match projection format
     if (!historyData?.players || !startGameweek || !endGameweek) return null;
-    
-    const numGameweeks = endGameweek - startGameweek + 1;
+
+    const hasComponentFilter = excludedComponents.size > 0;
+
+    // Inline helpers for component-level point calculation from raw stats
+    const getGoalPts = (et: number) => et === 1 || et === 2 ? 6 : et === 3 ? 5 : 4;
+    const getCSPts = (et: number) => et === 1 || et === 2 ? 4 : et === 3 ? 1 : 0;
+    const getGCPenalty = (et: number, conceded: number) => (et === 1 || et === 2) ? Math.floor(conceded / 2) * -1 : 0;
     
     return historyData.players.map(player => {
       // Calculate totals for selected range
@@ -1374,8 +1379,36 @@ export default function PlayerTotalPoints() {
       const gameweekProjections: { [gw: string]: number } = {};
       
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
-        const pts = player.gameweekPoints[gw] || 0;
         const mins = player.gameweekMinutes?.[gw] || 0;
+        let pts: number;
+
+        if (hasComponentFilter) {
+          const gwStats = player.gameweekStats?.[gw.toString()];
+          if (gwStats) {
+            const et = player.elementType;
+            pts = 0;
+            // Always include non-filterable items
+            pts += gwStats.ownGoals * -2;
+            pts += gwStats.penaltiesSaved * 5;
+            pts += gwStats.penaltiesMissed * -2;
+            // Include each filterable component only if not excluded
+            if (!excludedComponents.has('minutes')) pts += gwStats.minutes >= 60 ? 2 : gwStats.minutes > 0 ? 1 : 0;
+            if (!excludedComponents.has('goals')) pts += gwStats.goals * getGoalPts(et);
+            if (!excludedComponents.has('assists')) pts += gwStats.assists * 3;
+            if (!excludedComponents.has('cleanSheets')) pts += gwStats.cleanSheets * getCSPts(et);
+            if (!excludedComponents.has('goalsConceded')) pts += getGCPenalty(et, gwStats.goalsConceded);
+            if (!excludedComponents.has('saves')) pts += et === 1 ? Math.floor(gwStats.saves / 3) : 0;
+            if (!excludedComponents.has('yellowCards')) pts += gwStats.yellowCards * -1;
+            if (!excludedComponents.has('redCards')) pts += gwStats.redCards * -3;
+            if (!excludedComponents.has('bonus')) pts += gwStats.bonus;
+            // 'defensiveContributions' is not tracked in historical FPL data — always 0
+          } else {
+            pts = player.gameweekPoints[gw] || 0;
+          }
+        } else {
+          pts = player.gameweekPoints[gw] || 0;
+        }
+
         gameweekProjections[gw] = pts;
         rangeTotal += pts;
         rangeMinutes += mins;
@@ -1403,8 +1436,8 @@ export default function PlayerTotalPoints() {
         gameweekProjections,
         gameweekStats: player.gameweekStats,
       } as unknown as PlayerTotalPointsData;
-    }).filter(p => p.totalExpectedPoints > 0);
-  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek]);
+    }).filter(p => p.totalExpectedPoints > 0 || hasComponentFilter);
+  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek, excludedComponents]);
 
   // Generate full gameweek range (for toggle display)
   const fullGameweekRange = useMemo(() => {
