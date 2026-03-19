@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
@@ -654,10 +655,11 @@ function createPlayerTotalPointsColumns(
   showOpponent?: boolean,
   excludedComponents?: Set<string>,
   myTeamPlayerIds?: Set<number>,
-  viewMode?: "past" | "future"
+  viewMode?: "past" | "future",
+  isMobile?: boolean
 ): TableColumn<PlayerTotalPointsData>[] {
   const isPastMode = viewMode === "past";
-  return [
+  const allColumns: TableColumn<PlayerTotalPointsData>[] = [
     {
       key: 'name',
       header: 'Player',
@@ -804,7 +806,7 @@ function createPlayerTotalPointsColumns(
       header: 'Value',
       sortable: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5]',
+      className: 'w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -830,6 +832,7 @@ function createPlayerTotalPointsColumns(
       )
     }
   ];
+  return isMobile ? allColumns.filter(c => c.key !== 'averageValue') : allColumns;
 }
 
 const GW_COMPONENT_KEYS = [
@@ -855,6 +858,7 @@ export default function PlayerTotalPoints() {
   const { defaultWeeks } = useProjectionSettings();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -1982,7 +1986,8 @@ export default function PlayerTotalPoints() {
                       showOpponent,
                       excludedComponents,
                       myTeamPlayerIds,
-                      viewMode
+                      viewMode,
+                      isMobile
                     )}
                     onSort={handleSort}
                     sortField={sortField}
