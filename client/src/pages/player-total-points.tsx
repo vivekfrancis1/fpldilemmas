@@ -1661,36 +1661,27 @@ export default function PlayerTotalPoints() {
             <div className="fpl-page-header-content">
               <div className="fpl-page-title">
                 <Target className="h-8 w-8" />
-                <h1>{viewMode === "future" ? "Player Points Projections" : "Player Points History"}</h1>
+                <h1>Player Points</h1>
               </div>
               <p className="fpl-page-subtitle">
-                {viewMode === "future" 
-                  ? "Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points"
-                  : "Actual FPL points scored by players in past gameweeks"}
+                FPL points across all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
-              {/* Past/Future Toggle */}
-              <div className="flex gap-2 mt-3">
-                <Button
-                  variant={viewMode === "past" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("past")}
-                  className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-                >
-                  <History className="h-4 w-4" />
-                  Past GW Points
-                </Button>
-                <Button
-                  variant={viewMode === "future" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("future")}
-                  className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-                >
-                  <Calendar className="h-4 w-4" />
-                  Future GW Projections
-                </Button>
-              </div>
             </div>
           </div>
+
+          {/* View Mode Tabs */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "past" | "future")} className="mb-6">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1 sm:flex-none">
+                <Calendar className="h-4 w-4" />
+                Projections
+              </TabsTrigger>
+              <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1 sm:flex-none">
+                <History className="h-4 w-4" />
+                Past GW Points
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           {/* Filters and Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
