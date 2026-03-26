@@ -253,7 +253,6 @@ function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destruct
 
 
 const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => {
-  const xPtsGW = projectionGW ?? upcomingGameweek;
   const nameColumn: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'name',
     header: 'Creator',
@@ -300,10 +299,10 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const chipCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'active_chip',
-    header: xPtsGW ? <span className="leading-tight">Chip<br/>GW{xPtsGW}</span> : 'Chip',
+    header: currentGameweek ? <span className="leading-tight">Chip<br/>GW{currentGameweek}</span> : 'Chip',
     priority: 'secondary',
     align: 'center',
-    mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
+    mobileLabel: currentGameweek ? `Chip GW${currentGameweek}` : 'Chip',
     cardOrder: 60,
     render: (value, creator) => (
       <div className="text-center">

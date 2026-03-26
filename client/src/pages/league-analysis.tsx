@@ -485,13 +485,12 @@ export default function LeagueAnalysisPage() {
       }
     };
 
-    const chipGW = liveStandingsData?.projection_gameweek || upcomingGameweek;
     const chipCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'active_chip',
-      header: chipGW ? <span className="text-center leading-tight">Chip<br/>GW{chipGW}</span> : 'Chip',
+      header: currentGameweek ? <span className="text-center leading-tight">Chip<br/>GW{currentGameweek}</span> : 'Chip',
       priority: 'secondary',
       align: 'center',
-      mobileLabel: chipGW ? `Chip GW${chipGW}` : 'Chip',
+      mobileLabel: currentGameweek ? `Chip GW${currentGameweek}` : 'Chip',
       cardOrder: 6,
       sortable: false,
       render: (value, entry) => {
@@ -624,7 +623,7 @@ export default function LeagueAnalysisPage() {
       )
     };
 
-    const liveChipGW = liveStandingsData?.projection_gameweek || upcomingGameweek;
+    const liveChipGW = liveStandingsData?.current_gameweek || currentGameweek;
     const liveChipCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'active_chip',
       header: liveChipGW ? <span className="text-center leading-tight">Chip<br/>GW{liveChipGW}</span> : 'Chip',

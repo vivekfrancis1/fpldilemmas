@@ -89,7 +89,6 @@ const TOP_25_MANAGERS: Top25Manager[] = [
 ];
 
 const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<Top25Manager>[] => {
-  const xPtsGW = projectionGW ?? upcomingGameweek;
   const allTimeRankCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'rank',
     header: 'Rank',
@@ -120,10 +119,10 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
 
   const chipCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'active_chip',
-    header: xPtsGW ? <span className="leading-tight">Chip<br/>GW{xPtsGW}</span> : 'Chip',
+    header: currentGameweek ? <span className="leading-tight">Chip<br/>GW{currentGameweek}</span> : 'Chip',
     priority: 'secondary',
     align: 'center',
-    mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
+    mobileLabel: currentGameweek ? `Chip GW${currentGameweek}` : 'Chip',
     cardOrder: 60,
     render: (value, manager) => (
       <div className="text-center">
