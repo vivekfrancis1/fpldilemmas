@@ -377,7 +377,7 @@ export default function TeamGoalsAgainstProjections() {
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
-            Past Data
+            History
           </TabsTrigger>
         </TabsList>
       </Tabs>
