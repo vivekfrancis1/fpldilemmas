@@ -1707,11 +1707,11 @@ export default function PlayerTotalPoints() {
             <TabsList className="w-full">
               <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
                 <Calendar className="h-4 w-4" />
-                Projections
+                Points Projections
               </TabsTrigger>
               <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
                 <History className="h-4 w-4" />
-                Past GW Points
+                Points History
               </TabsTrigger>
             </TabsList>
           </Tabs>
