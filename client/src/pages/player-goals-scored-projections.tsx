@@ -628,15 +628,15 @@ export default function PlayerGoalsScoredProjections() {
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
-            Projections
+            Goals Projections
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
-            Past Goals
+            Goals History
           </TabsTrigger>
           <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
-            Past xG
+            xG History
           </TabsTrigger>
         </TabsList>
       </Tabs>
