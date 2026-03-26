@@ -4019,6 +4019,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add chips array to the response
         data.chips = historyData.chips || [];
         console.log("DEBUG: Chips data added to team response:", JSON.stringify(data.chips));
+
+        // Compute correct free transfer limit from history when FPL API returns 0
+        // FPL's picks endpoint for a future/upcoming GW often returns limit=0 which we must not blindly use
+        if (!data.transfers || data.transfers.limit === 0) {
+          const chipsByGWTeam = new Map<number, string>();
+          (historyData.chips || []).forEach((chip: any) => chipsByGWTeam.set(chip.event, String(chip.name).toLowerCase()));
+
+          let runningFTsTeam = 1;
+          for (const gw of (historyData.current || [])) {
+            if (gw.event >= currentGameweek!) break;
+            const chipUsed = chipsByGWTeam.get(gw.event);
+            if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
+              runningFTsTeam = 1;
+              continue;
+            }
+            const tmGW = gw.event_transfers || 0;
+            const tcGW = gw.event_transfers_cost || 0;
+            const hitsGW = Math.floor(tcGW / 4);
+            const ftUsedGW = Math.max(0, tmGW - hitsGW);
+            const unusedGW = Math.max(0, runningFTsTeam - ftUsedGW);
+            runningFTsTeam = Math.min(5, unusedGW + 1);
+          }
+
+          if (!data.transfers) {
+            data.transfers = { cost: 0, status: "complete", limit: runningFTsTeam, made: 0, bank: 0, value: 0 };
+          } else {
+            data.transfers.limit = runningFTsTeam;
+          }
+          console.log(`DEBUG: Computed FT limit from history for GW${currentGameweek}: ${runningFTsTeam}`);
+        }
       } else {
         // If history fetch fails, set chips to empty array
         data.chips = [];
@@ -4323,25 +4353,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           freeTransfers = 1;
         }
       } else if (historyData.current && historyData.current.length > 0) {
-        // Standard calculation for other gameweeks
-        // Look back through recent gameweeks to calculate accumulated FTs
-        let accumulatedFTs = 1; // Start with 1 new FT for next gameweek
-        
-        // Look back through history (up to 4 previous gameweeks since max is 5 FTs)
-        for (let i = historyData.current.length - 1; i >= Math.max(0, historyData.current.length - 4); i--) {
-          const gw = historyData.current[i];
-          const transfersMade = gw.event_transfers || 0;
-          
-          if (transfersMade === 0 && accumulatedFTs < 5) {
-            // No transfers made, so 1 FT was banked
-            accumulatedFTs++;
-          } else if (transfersMade > 0) {
-            // Transfers were made, stop looking back
-            break;
-          }
+        // Standard calculation: walk FORWARD through history (correct FPL rules)
+        // Backward-scan is wrong — making transfers doesn't mean you had only 1 FT;
+        // you could have banked extras and still used some.
+        const chipsByGWFT = new Map<number, string>();
+        if (historyData.chips) {
+          historyData.chips.forEach((chip: any) => chipsByGWFT.set(chip.event, String(chip.name).toLowerCase()));
         }
-        
-        freeTransfers = Math.min(5, accumulatedFTs); // Cap at 5
+
+        let runningFTs = 1;
+        for (const gw of historyData.current) {
+          if (gw.event >= planningStartGW) break;
+
+          const chipUsed = chipsByGWFT.get(gw.event);
+          if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
+            runningFTs = 1;
+            continue;
+          }
+
+          const transfersMadeGW = gw.event_transfers || 0;
+          const transferCostGW = gw.event_transfers_cost || 0;
+          const hitsTakenGW = Math.floor(transferCostGW / 4);
+          const freeTransfersUsedGW = Math.max(0, transfersMadeGW - hitsTakenGW);
+          const unusedFTs = Math.max(0, runningFTs - freeTransfersUsedGW);
+          runningFTs = Math.min(5, unusedFTs + 1);
+        }
+
+        freeTransfers = runningFTs;
       }
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
