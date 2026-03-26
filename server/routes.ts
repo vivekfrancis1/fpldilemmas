@@ -3916,6 +3916,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch initial picks for current gameweek
       let response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       
+      // If the requested GW picks are not yet available (future GW), fall back to the previous GW
+      let resolvedPicksGW = currentGameweek;
+      if (!response.ok && response.status === 404 && currentGameweek > 1) {
+        console.log(`DEBUG: GW${currentGameweek} picks not available (404), falling back to GW${currentGameweek - 1}`);
+        resolvedPicksGW = currentGameweek - 1;
+        response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${resolvedPicksGW}/picks/`);
+      }
+
       if (!response.ok) {
         if (response.status === 404) {
           return res.status(404).json({ message: "Manager team not found for this gameweek" });
