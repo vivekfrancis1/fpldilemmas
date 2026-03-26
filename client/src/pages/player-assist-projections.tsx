@@ -580,15 +580,15 @@ export default function PlayerAssistProjections() {
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
-            Projections
+            Assists Projections
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
-            Past Assists
+            Assists History
           </TabsTrigger>
           <TabsTrigger value="pastXa" className="flex items-center gap-1.5 flex-1">
             <TrendingUp className="h-4 w-4" />
-            Past xA
+            xA History
           </TabsTrigger>
         </TabsList>
       </Tabs>
