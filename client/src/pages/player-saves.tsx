@@ -485,11 +485,11 @@ export default function PlayerSaves() {
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
-            Projections
+            Saves Projections
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
             <History className="h-4 w-4" />
-            Past Data
+            Saves History
           </TabsTrigger>
         </TabsList>
       </Tabs>
