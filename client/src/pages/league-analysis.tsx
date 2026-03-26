@@ -518,15 +518,22 @@ export default function LeagueAnalysisPage() {
       }
     };
 
-    const sharedCols = getSharedColumns<EnrichedLeagueEntry>({
+    const allSharedCols = getSharedColumns<EnrichedLeagueEntry>({
       currentGameweek,
       upcomingGameweek,
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',
-    }).filter(col => col.key !== 'latestTracking.overallPoints' && col.key !== 'latestTracking.gameweekPoints' && col.key !== 'rankChange');
+    });
+    const overallRankCol = allSharedCols.find(col => col.key === 'latestTracking.overallRank')!;
+    const sharedCols = allSharedCols.filter(col =>
+      col.key !== 'latestTracking.overallPoints' &&
+      col.key !== 'latestTracking.gameweekPoints' &&
+      col.key !== 'rankChange' &&
+      col.key !== 'latestTracking.overallRank'
+    );
 
-    return [managerCol, leagueRankCol, totalPtsCol, gwPtsCol, chipCol, gwRankCol, ...sharedCols];
+    return [leagueRankCol, managerCol, totalPtsCol, overallRankCol, gwPtsCol, chipCol, gwRankCol, ...sharedCols];
   };
 
   const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => {
@@ -658,15 +665,17 @@ export default function LeagueAnalysisPage() {
       }
     };
 
-    const sharedCols = getSharedColumns<EnrichedLiveEntry>({
+    const allSharedCols = getSharedColumns<EnrichedLiveEntry>({
       currentGameweek,
       upcomingGameweek,
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',
     });
+    const overallRankCol = allSharedCols.find(col => col.key === 'latestTracking.overallRank')!;
+    const sharedCols = allSharedCols.filter(col => col.key !== 'latestTracking.overallRank');
 
-    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, liveChipCol, gwRankCol, ...sharedCols];
+    return [liveRankCol, managerCol, liveTotalCol, overallRankCol, livePointsCol, liveChipCol, gwRankCol, ...sharedCols];
   };
 
   if (isLoading) {
