@@ -505,10 +505,10 @@ export default function LeagueAnalysisPage() {
 
     const gwRankCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'gameweekRank',
-      header: <span className="text-center">GW<br/>Rank</span>,
+      header: <span className="text-center">GW{currentGameweek}<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
-      mobileLabel: 'GWR',
+      mobileLabel: `GW${currentGameweek} Rank`,
       cardOrder: 6,
       sortable: true,
       className: 'font-mono text-xs',
@@ -642,12 +642,13 @@ export default function LeagueAnalysisPage() {
       }
     };
 
+    const liveGW = liveStandingsData?.current_gameweek || currentGameweek;
     const gwRankCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'gameweekRank',
-      header: <span className="text-center">GW<br/>Rank</span>,
+      header: <span className="text-center">GW{liveGW}<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
-      mobileLabel: 'GWR',
+      mobileLabel: `GW${liveGW} Rank`,
       cardOrder: 6,
       sortable: true,
       className: 'font-mono text-xs',
