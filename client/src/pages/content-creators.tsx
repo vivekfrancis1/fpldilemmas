@@ -298,22 +298,6 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     )
   };
 
-  const xPtsCol: ResponsiveTableColumn<CreatorWithLatestData> = {
-    key: 'projected_points',
-    header: xPtsGW ? <span className="leading-tight">xPts<br/>GW{xPtsGW}</span> : 'xPts',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
-    cardOrder: 50,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, creator) => (
-      <div className="text-purple-600">
-        <span>{creator.projected_points != null ? creator.projected_points.toFixed(1) : '-'}</span>
-      </div>
-    )
-  };
-
   const chipCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'active_chip',
     header: xPtsGW ? <span className="leading-tight">Chip<br/>GW{xPtsGW}</span> : 'Chip',
@@ -340,8 +324,8 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     gwTransfersKeyField: 'id',
   });
 
-  // Column order: Creator | Overall Rank | Rank Gain | Total Pts | Pts (GW) | xPts (GW) | Chip (GW) | ...rest
-  return [nameColumn, ...sharedCols.slice(0, 4), xPtsCol, chipCol, ...sharedCols.slice(4)];
+  // Column order: Creator | Overall Rank | Rank Gain | Total Pts | Pts (GW) | Chip (GW) | ...rest
+  return [nameColumn, ...sharedCols.slice(0, 4), chipCol, ...sharedCols.slice(4)];
 };
 
 // Main Content Creators Component

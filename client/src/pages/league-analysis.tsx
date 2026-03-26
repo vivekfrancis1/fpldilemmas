@@ -485,22 +485,6 @@ export default function LeagueAnalysisPage() {
       }
     };
 
-    const xPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
-      key: 'projected_points',
-      header: <span className="text-center">GW{liveStandingsData?.projection_gameweek || upcomingGameweek}<br/>xPts</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'xPts',
-      cardOrder: 5,
-      sortable: true,
-      className: 'font-mono',
-      render: (value, entry) => (
-        <div className="text-purple-600">
-          <span>{entry.projected_points !== undefined ? entry.projected_points.toFixed(1) : '-'}</span>
-        </div>
-      )
-    };
-
     const chipCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'active_chip',
       header: 'Chip',
@@ -542,7 +526,7 @@ export default function LeagueAnalysisPage() {
       gwTransfersKeyField: 'managerId',
     }).filter(col => col.key !== 'latestTracking.overallPoints' && col.key !== 'latestTracking.gameweekPoints' && col.key !== 'rankChange');
 
-    return [managerCol, leagueRankCol, totalPtsCol, gwPtsCol, xPtsCol, chipCol, gwRankCol, ...sharedCols];
+    return [managerCol, leagueRankCol, totalPtsCol, gwPtsCol, chipCol, gwRankCol, ...sharedCols];
   };
 
   const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => {
@@ -639,22 +623,6 @@ export default function LeagueAnalysisPage() {
       )
     };
 
-    const xPtsCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
-      key: 'projected_points',
-      header: <span className="text-center">GW{liveStandingsData?.projection_gameweek || upcomingGameweek}<br/>xPts</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'xPts',
-      cardOrder: 5,
-      sortable: true,
-      className: 'font-mono',
-      render: (value, entry) => (
-        <div className="text-purple-600">
-          <span>{entry.projected_points?.toFixed(1) || '-'}</span>
-        </div>
-      )
-    };
-
     const liveChipCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'active_chip',
       header: 'Chip',
@@ -696,7 +664,7 @@ export default function LeagueAnalysisPage() {
       gwTransfersKeyField: 'managerId',
     });
 
-    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, xPtsCol, liveChipCol, gwRankCol, ...sharedCols];
+    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, liveChipCol, gwRankCol, ...sharedCols];
   };
 
   if (isLoading) {

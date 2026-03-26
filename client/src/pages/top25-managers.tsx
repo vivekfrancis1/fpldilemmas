@@ -118,22 +118,6 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     )
   };
 
-  const xPtsCol: ResponsiveTableColumn<Top25Manager> = {
-    key: 'projected_points',
-    header: xPtsGW ? <span className="leading-tight">xPts<br/>GW{xPtsGW}</span> : 'xPts',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
-    cardOrder: 50,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => (
-      <div className="text-purple-600">
-        <span>{manager.projected_points != null ? manager.projected_points.toFixed(1) : '-'}</span>
-      </div>
-    )
-  };
-
   const chipCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'active_chip',
     header: xPtsGW ? <span className="leading-tight">Chip<br/>GW{xPtsGW}</span> : 'Chip',
@@ -160,8 +144,8 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     gwTransfersKeyField: 'managerId',
   });
 
-  // Column order: Rank | Manager | Overall Rank | Rank Gain | Total Pts | Pts (GW) | xPts (GW) | Chip (GW) | ...rest
-  return [allTimeRankCol, nameCol, ...sharedCols.slice(0, 4), xPtsCol, chipCol, ...sharedCols.slice(4)];
+  // Column order: Rank | Manager | Overall Rank | Rank Gain | Total Pts | Pts (GW) | Chip (GW) | ...rest
+  return [allTimeRankCol, nameCol, ...sharedCols.slice(0, 4), chipCol, ...sharedCols.slice(4)];
 };
 
 interface BootstrapData {
