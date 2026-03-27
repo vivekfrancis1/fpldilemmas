@@ -199,22 +199,21 @@ export class DeadlineTweetScheduler {
 
   async postTransferTweets(gwNumber: number): Promise<void> {
     if (this.lastTransferPostedGW === gwNumber) {
-      console.log(`🔄 Transfer tweets for GW${gwNumber} already posted — skipping duplicate`);
+      console.log(`🔄 Transfer tweet for GW${gwNumber} already posted — skipping duplicate`);
       return;
     }
 
-    console.log(`🔄 Posting transfer tweets for GW${gwNumber}...`);
+    console.log(`🔄 Posting transfer tweet for GW${gwNumber}...`);
 
     try {
       const bootstrapResp = await internalFetch('api/bootstrap-static');
       if (!bootstrapResp.ok) {
-        console.error(`❌ Transfer tweets: failed to fetch bootstrap (${bootstrapResp.status})`);
+        console.error(`❌ Transfer tweet: failed to fetch bootstrap (${bootstrapResp.status})`);
         return;
       }
 
       const bootstrap = await bootstrapResp.json();
 
-      // Build teamId → short_name map directly from bootstrap
       const teamShortNames: Record<number, string> = {};
       for (const team of bootstrap.teams as any[]) {
         teamShortNames[team.id] = team.short_name;
@@ -222,70 +221,62 @@ export class DeadlineTweetScheduler {
 
       const players: any[] = bootstrap.elements;
 
-      // Top 5 transfers in
       const topIn = [...players]
         .filter(p => (p.transfers_in_event || 0) > 0)
         .sort((a, b) => (b.transfers_in_event || 0) - (a.transfers_in_event || 0))
         .slice(0, 5);
 
-      // Top 5 transfers out
       const topOut = [...players]
         .filter(p => (p.transfers_out_event || 0) > 0)
         .sort((a, b) => (b.transfers_out_event || 0) - (a.transfers_out_event || 0))
         .slice(0, 5);
 
       if (topIn.length === 0 && topOut.length === 0) {
-        console.warn(`⚠️ Transfer tweets: no transfer data available for GW${gwNumber}, skipping`);
+        console.warn(`⚠️ Transfer tweet: no transfer data available for GW${gwNumber}, skipping`);
         return;
       }
 
-      // Tweet 1: Transfers In
+      const footer = `\nFull list 👉 ${TRANSFER_TRACKER_URL}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      let body = `🔄 GW${gwNumber} Deadline Passed!`;
+
+      // Transfers In section
       if (topIn.length > 0) {
-        const inLines = topIn
-          .map((p, idx) => `${RANK_EMOJIS[idx]} ${p.web_name} (${teamShortNames[p.team] || '???'}) — ${(p.transfers_in_event as number).toLocaleString()}`)
-          .join('\n');
-
-        const tweetIn =
-          `🔄 GW${gwNumber} Deadline Passed!\n\n` +
-          `📈 Top Transfers In\n\n` +
-          `${inLines}\n\n` +
-          `Full list 👉 ${TRANSFER_TRACKER_URL}\n` +
-          `#FPL #FantasyPremierLeague #FPLCommunity`;
-
-        try {
-          console.log(`📤 Posting transfers-in tweet (${tweetIn.length} chars)...`);
-          await twitterService.postTweet(tweetIn);
-          console.log(`✅ GW${gwNumber} transfers-in tweet posted`);
-        } catch (err) {
-          console.error(`❌ Failed to post GW${gwNumber} transfers-in tweet:`, err);
+        body += `\n\n📈 Top Transfers In`;
+        for (let i = 0; i < topIn.length; i++) {
+          const p = topIn[i];
+          const line = `\n${RANK_EMOJIS[i]} ${p.web_name} (${teamShortNames[p.team] || '???'}) — ${(p.transfers_in_event as number).toLocaleString()}`;
+          const reservedForOut = topOut.length > 0 ? `\n\n📉 Top Transfers Out` : '';
+          if ((body + line + reservedForOut + footer).length > 280) break;
+          body += line;
         }
-
-        await sleep(3000);
       }
 
-      // Tweet 2: Transfers Out
+      // Transfers Out section
       if (topOut.length > 0) {
-        const outLines = topOut
-          .map((p, idx) => `${RANK_EMOJIS[idx]} ${p.web_name} (${teamShortNames[p.team] || '???'}) — ${(p.transfers_out_event as number).toLocaleString()}`)
-          .join('\n');
-
-        const tweetOut =
-          `📉 GW${gwNumber} Top Transfers Out\n\n` +
-          `${outLines}\n\n` +
-          `Full list 👉 ${TRANSFER_TRACKER_URL}\n` +
-          `#FPL #FantasyPremierLeague #FPLCommunity`;
-
-        try {
-          console.log(`📤 Posting transfers-out tweet (${tweetOut.length} chars)...`);
-          await twitterService.postTweet(tweetOut);
-          console.log(`✅ GW${gwNumber} transfers-out tweet posted`);
-        } catch (err) {
-          console.error(`❌ Failed to post GW${gwNumber} transfers-out tweet:`, err);
+        const outHeader = `\n\n📉 Top Transfers Out`;
+        if ((body + outHeader + footer).length <= 280) {
+          body += outHeader;
+          for (let i = 0; i < topOut.length; i++) {
+            const p = topOut[i];
+            const line = `\n${RANK_EMOJIS[i]} ${p.web_name} (${teamShortNames[p.team] || '???'}) — ${(p.transfers_out_event as number).toLocaleString()}`;
+            if ((body + line + footer).length > 280) break;
+            body += line;
+          }
         }
+      }
+
+      const tweet = body + footer;
+
+      try {
+        console.log(`📤 Posting transfer tweet (${tweet.length} chars)...`);
+        await twitterService.postTweet(tweet);
+        console.log(`✅ GW${gwNumber} transfer tweet posted`);
+      } catch (err) {
+        console.error(`❌ Failed to post GW${gwNumber} transfer tweet:`, err);
       }
 
       this.lastTransferPostedGW = gwNumber;
-      console.log(`✅ All transfer tweets posted for GW${gwNumber}`);
+      console.log(`✅ Transfer tweet posted for GW${gwNumber}`);
 
     } catch (err) {
       console.error(`❌ Transfer tweet posting failed for GW${gwNumber}:`, err);

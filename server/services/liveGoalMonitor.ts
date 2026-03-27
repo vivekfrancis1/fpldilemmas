@@ -92,8 +92,14 @@ export class LiveGoalMonitor {
   private readonly POLL_INTERVAL_MS = 60_000;
   private readonly BOOTSTRAP_REFRESH_MS = 10 * 60_000;
   private readonly OWNERSHIP_THRESHOLD = 1.0;
-  private readonly BONUS_MONITOR_HOURS = 12;
+  private readonly BONUS_MONITOR_HOURS = 24;
+  private readonly BATCH_DELAY_MS = 5 * 60_000;
   private readonly SITE_URL = 'https://fpldilemmas.com';
+
+  private pendingDCBatch: Map<number, { matchLine: string; fixtureId: number; players: DCEntry[] }> = new Map();
+  private pendingBonusBatch: Map<number, { matchLine: string; fixtureId: number; entries: BonusEntry[] }> = new Map();
+  private dcBatchTimer: NodeJS.Timeout | null = null;
+  private bonusBatchTimer: NodeJS.Timeout | null = null;
 
   start() {
     console.log('⚽ Live match monitor starting...');
@@ -112,6 +118,14 @@ export class LiveGoalMonitor {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
       console.log('⏹️ Live match monitor stopped');
+    }
+    if (this.dcBatchTimer) {
+      clearTimeout(this.dcBatchTimer);
+      this.dcBatchTimer = null;
+    }
+    if (this.bonusBatchTimer) {
+      clearTimeout(this.bonusBatchTimer);
+      this.bonusBatchTimer = null;
     }
   }
 
@@ -240,15 +254,17 @@ export class LiveGoalMonitor {
 
     const dcPlayers = this.extractDCFromState(state, fixture);
     if (dcPlayers.length > 0) {
-      await this.postEventTweet(this.formatDCSummaryTweet(dcPlayers, matchCtx));
+      this.pendingDCBatch.set(fixtureId, { matchLine: this.matchLine(matchCtx), fixtureId, players: dcPlayers });
       finishedState.dcTweeted = true;
-      console.log(`🛡️ DC summary tweet posted for fixture ${fixtureId} (${dcPlayers.length} players)`);
+      this.scheduleDCBatch();
+      console.log(`🛡️ DC data queued for fixture ${fixtureId} (${dcPlayers.length} players)`);
     }
 
     if (bonusEntries.length > 0) {
-      await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, false));
+      this.pendingBonusBatch.set(fixtureId, { matchLine: this.matchLine(matchCtx), fixtureId, entries: bonusEntries });
       finishedState.bonusTweeted = true;
-      console.log(`🌟 Bonus tweet posted for fixture ${fixtureId}`);
+      this.scheduleBonusBatch();
+      console.log(`🌟 Bonus data queued for fixture ${fixtureId}`);
     } else {
       console.log(`🌟 No bonus data yet for fixture ${fixtureId}, will monitor`);
     }
@@ -298,10 +314,11 @@ export class LiveGoalMonitor {
           minute: 'FT',
           fixtureId,
         };
-        await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, false));
+        this.pendingBonusBatch.set(fixtureId, { matchLine: this.matchLine(matchCtx), fixtureId, entries: bonusEntries });
         state.bonusTweeted = true;
         state.bonusAllocation = newBonusKey;
-        console.log(`🌟 Initial bonus tweet posted for fixture ${fixtureId}`);
+        this.scheduleBonusBatch();
+        console.log(`🌟 Bonus data queued for fixture ${fixtureId} (from monitoring)`);
       } else if (newBonusKey !== state.bonusAllocation) {
         const matchCtx: MatchContext = {
           homeTeamName: this.bootstrapTeams.get(state.homeTeamId)?.name || 'Home',
@@ -557,12 +574,84 @@ export class LiveGoalMonitor {
     return tweet;
   }
 
-  private formatDCSummaryTweet(dcPlayers: DCEntry[], ctx: MatchContext): string {
-    let tweet = `🛡️ Defensive Contribution Points!\n\n${this.matchLine(ctx)}`;
-    for (const entry of dcPlayers) {
-      tweet += `\n${entry.playerName} - ${entry.dc} DC`;
+  private scheduleDCBatch() {
+    if (this.dcBatchTimer) clearTimeout(this.dcBatchTimer);
+    this.dcBatchTimer = setTimeout(() => this.flushDCBatch(), this.BATCH_DELAY_MS);
+  }
+
+  private scheduleBonusBatch() {
+    if (this.bonusBatchTimer) clearTimeout(this.bonusBatchTimer);
+    this.bonusBatchTimer = setTimeout(() => this.flushBonusBatch(), this.BATCH_DELAY_MS);
+  }
+
+  private async flushDCBatch() {
+    this.dcBatchTimer = null;
+    const batch = Array.from(this.pendingDCBatch.values());
+    this.pendingDCBatch.clear();
+    if (batch.length === 0) return;
+    const tweet = this.formatBatchedDCTweet(batch);
+    await this.postEventTweet(tweet);
+    console.log(`🛡️ Batched DC tweet posted (${batch.length} fixture(s))`);
+  }
+
+  private async flushBonusBatch() {
+    this.bonusBatchTimer = null;
+    const batch = Array.from(this.pendingBonusBatch.values());
+    this.pendingBonusBatch.clear();
+    if (batch.length === 0) return;
+    const tweet = this.formatBatchedBonusTweet(batch);
+    await this.postEventTweet(tweet);
+    console.log(`🌟 Batched bonus tweet posted (${batch.length} fixture(s))`);
+  }
+
+  private formatBatchedDCTweet(batch: Array<{ matchLine: string; fixtureId: number; players: DCEntry[] }>): string {
+    const genericFooter = `\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
+
+    if (batch.length === 1) {
+      const { matchLine, fixtureId, players } = batch[0];
+      let tweet = `🛡️ Defensive Contributions\n\n${matchLine}`;
+      for (const entry of players) {
+        tweet += `\n${entry.playerName} - ${entry.dc} DC`;
+      }
+      tweet += `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${fixtureId}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      return tweet;
     }
-    tweet += this.footer(ctx);
+
+    let tweet = `🛡️ Defensive Contributions`;
+    for (const { matchLine, players } of batch) {
+      const section = `\n\n${matchLine}\n` + players.map(e => `${e.playerName} - ${e.dc} DC`).join('\n');
+      if ((tweet + section + genericFooter).length > 280) break;
+      tweet += section;
+    }
+    tweet += genericFooter;
+    return tweet;
+  }
+
+  private formatBatchedBonusTweet(batch: Array<{ matchLine: string; fixtureId: number; entries: BonusEntry[] }>): string {
+    const genericFooter = `\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
+
+    if (batch.length === 1) {
+      const { matchLine, fixtureId, entries } = batch[0];
+      let tweet = `🌟 Bonus Points Confirmed!\n\n${matchLine}\n`;
+      for (const entry of entries) {
+        const ptLabel = entry.bonus === 1 ? 'pt' : 'pts';
+        tweet += `\n${entry.bonus} ${ptLabel} - ${entry.playerName}`;
+      }
+      tweet += `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${fixtureId}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      return tweet;
+    }
+
+    let tweet = `🌟 Bonus Points Confirmed!`;
+    for (const { matchLine, entries } of batch) {
+      const lines = entries.map(e => {
+        const ptLabel = e.bonus === 1 ? 'pt' : 'pts';
+        return `${e.bonus} ${ptLabel} - ${e.playerName}`;
+      }).join('\n');
+      const section = `\n\n${matchLine}\n${lines}`;
+      if ((tweet + section + genericFooter).length > 280) break;
+      tweet += section;
+    }
+    tweet += genericFooter;
     return tweet;
   }
 
@@ -618,11 +707,14 @@ export class LiveGoalMonitor {
       { playerId: 6, playerName: 'Gabriel', dc: 11, position: 'DEF', ownership: 15.8 },
     ];
 
+    const sampleDCMatchLine = this.getTeamAbbr(sampleCtx2.homeTeamName) + ` ${sampleCtx2.homeScore}-${sampleCtx2.awayScore} ` + this.getTeamAbbr(sampleCtx2.awayTeamName);
+    const sampleBonusMatchLine = this.getTeamAbbr(sampleCtxFT.homeTeamName) + ` ${sampleCtxFT.homeScore}-${sampleCtxFT.awayScore} ` + this.getTeamAbbr(sampleCtxFT.awayTeamName);
+
     const tweets = [
       { type: 'goal', tweet: this.formatGoalTweet('Salah', 42.3, 'Alexander-Arnold', 18.7, sampleCtx) },
       { type: 'red_card', tweet: this.formatRedCardTweet('Rice', 31.2, { ...sampleCtx, minute: 78 }) },
-      { type: 'dc_summary', tweet: this.formatDCSummaryTweet(sampleDCPlayers, { ...sampleCtx2, minute: 'FT' }) },
-      { type: 'bonus_confirmed', tweet: this.formatBonusTweet(bonusEntries, sampleCtxFT, false) },
+      { type: 'dc_summary', tweet: this.formatBatchedDCTweet([{ matchLine: sampleDCMatchLine, fixtureId: sampleCtx2.fixtureId, players: sampleDCPlayers }]) },
+      { type: 'bonus_confirmed', tweet: this.formatBatchedBonusTweet([{ matchLine: sampleBonusMatchLine, fixtureId: sampleCtxFT.fixtureId, entries: bonusEntries }]) },
       { type: 'bonus_updated', tweet: this.formatBonusTweet(updatedBonusEntries, sampleCtxFT, true) },
     ];
 

@@ -113,79 +113,58 @@ export class TwitterService {
     return `${date.getDate()} ${months[date.getMonth()]}`;
   }
 
-  private formatPriceChangeTweet(
-    changes: PriceChange[],
-    type: 'RISERS' | 'FALLERS',
-    emoji: string,
-    date: string
-  ): string {
-    const formattedDate = this.formatDateWithoutYear(date);
-    const header = `💰 FPL Price Changes - ${formattedDate}\n${emoji} ${type}`;
-    
-    const playerLines = changes.map(change => {
-      const teamAbbr = this.getTeamAbbreviation(change.team_name);
-      const posAbbr = this.getPositionAbbreviation(change.position);
-      return `${change.player_name} (${teamAbbr}, ${posAbbr}): ${change.new_price.toFixed(1)}`;
-    });
-
-    const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague #FPLCommunity`;
-
-    let tweet = header;
-    for (const line of playerLines) {
-      const testTweet = `${tweet}\n${line}${footer}`;
-      if (testTweet.length > 280) {
-        break;
-      }
-      tweet += `\n${line}`;
-    }
-    tweet += footer;
-
-    return tweet;
-  }
-
   async postPriceChangeTweets(data: TweetData, date: string): Promise<void> {
-    const client = this.getClient();
     const risersSorted = [...data.risers].sort((a, b) => b.ownership - a.ownership);
     const fallersSorted = [...data.fallers].sort((a, b) => b.ownership - a.ownership);
 
-    let risersSuccess = false;
-    let fallersSuccess = false;
+    if (risersSorted.length === 0 && fallersSorted.length === 0) {
+      console.log('ℹ️ No price changes to post');
+      return;
+    }
+
+    const formattedDate = this.formatDateWithoutYear(date);
+    const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague #FPLCommunity`;
+
+    const formatLine = (change: PriceChange) => {
+      const teamAbbr = this.getTeamAbbreviation(change.team_name);
+      const posAbbr = this.getPositionAbbreviation(change.position);
+      return `${change.player_name} (${teamAbbr}, ${posAbbr}): ${change.new_price.toFixed(1)}`;
+    };
+
+    let body = `💰 FPL Price Changes - ${formattedDate}`;
 
     if (risersSorted.length > 0) {
-      try {
-        const risersTweet = this.formatPriceChangeTweet(risersSorted, 'RISERS', '📈', date);
-        console.log(`📤 Posting risers tweet (${risersTweet.length} chars, ${risersSorted.length} players)...`);
-        const risersResponse = await client.v2.tweet(risersTweet);
-        console.log('✅ Posted risers tweet:', risersResponse.data.id);
-        risersSuccess = true;
-      } catch (error) {
-        console.error('❌ Error posting risers tweet:', error);
+      body += `\n\n📈 Risers`;
+      for (const change of risersSorted) {
+        const line = `\n${formatLine(change)}`;
+        const reservedForFallers = fallersSorted.length > 0 ? `\n\n📉 Fallers` : '';
+        if ((body + line + reservedForFallers + footer).length > 280) break;
+        body += line;
       }
-    } else {
-      console.log('ℹ️ No risers to post');
     }
 
     if (fallersSorted.length > 0) {
-      try {
-        const fallersTweet = this.formatPriceChangeTweet(fallersSorted, 'FALLERS', '📉', date);
-        console.log(`📤 Posting fallers tweet (${fallersTweet.length} chars, ${fallersSorted.length} players)...`);
-        const fallersResponse = await client.v2.tweet(fallersTweet);
-        console.log('✅ Posted fallers tweet:', fallersResponse.data.id);
-        fallersSuccess = true;
-      } catch (error) {
-        console.error('❌ Error posting fallers tweet:', error);
+      const fallersHeader = `\n\n📉 Fallers`;
+      if ((body + fallersHeader + footer).length <= 280) {
+        body += fallersHeader;
+        for (const change of fallersSorted) {
+          const line = `\n${formatLine(change)}`;
+          if ((body + line + footer).length > 280) break;
+          body += line;
+        }
       }
-    } else {
-      console.log('ℹ️ No fallers to post');
     }
 
-    if ((risersSorted.length === 0 || risersSuccess) && (fallersSorted.length === 0 || fallersSuccess)) {
-      console.log('🎉 Successfully posted all price change tweets');
-    } else {
-      const failures = [];
-      if (risersSorted.length > 0 && !risersSuccess) failures.push('risers');
-      if (fallersSorted.length > 0 && !fallersSuccess) failures.push('fallers');
-      throw new Error(`Failed to post ${failures.join(' and ')} tweets`);
+    const tweet = body + footer;
+
+    try {
+      console.log(`📤 Posting price changes tweet (${tweet.length} chars, ${risersSorted.length} risers, ${fallersSorted.length} fallers)...`);
+      const client = this.getClient();
+      const response = await client.v2.tweet(tweet);
+      console.log('✅ Posted price changes tweet:', response.data.id);
+    } catch (error) {
+      console.error('❌ Error posting price changes tweet:', error);
+      throw new Error('Failed to post price changes tweet');
     }
   }
 
