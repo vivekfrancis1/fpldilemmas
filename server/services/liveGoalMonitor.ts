@@ -609,7 +609,7 @@ export class LiveGoalMonitor {
 
     if (batch.length === 1) {
       const { matchLine, fixtureId, players } = batch[0];
-      let tweet = `🛡️ Defensive Contributions\n\n${matchLine}`;
+      let tweet = `🛡️ Defensive Contribution Points!\n\n${matchLine}`;
       for (const entry of players) {
         tweet += `\n${entry.playerName} - ${entry.dc} DC`;
       }
