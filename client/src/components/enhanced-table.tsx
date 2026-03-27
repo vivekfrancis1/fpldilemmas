@@ -176,9 +176,8 @@ export function EnhancedTable<T = any>({
           )}>
             <tr>
               {columns.map((column, colIndex) => {
-                // First column (Player) needs highest z-index for sticky behavior
                 const isFirstColumn = colIndex === 0;
-                const stickyZIndex = isFirstColumn ? 'z-30' : '';
+                const isStickyCol = isFirstColumn && column.className?.includes('sticky');
                 
                 return (
                 <th
@@ -189,8 +188,8 @@ export function EnhancedTable<T = any>({
                     getAlignment(column.align),
                     column.className,
                     column.width && `w-${column.width}`,
-                    isFirstColumn && column.className?.includes('sticky') && stickyZIndex
                   )}
+                  style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 30, backgroundColor: 'white' } : undefined}
                 >
                   {column.sortable && onSort ? (
                     <Button
@@ -240,9 +239,8 @@ export function EnhancedTable<T = any>({
                       ? column.render(value, item, index)
                       : value;
                     
-                    // First column needs higher z-index for sticky behavior
                     const isFirstColumn = colIndex === 0;
-                    const stickyZIndex = isFirstColumn && column.className?.includes('sticky') ? 'z-20' : '';
+                    const isStickyCol = isFirstColumn && column.className?.includes('sticky');
 
                     return (
                       <td
@@ -252,8 +250,8 @@ export function EnhancedTable<T = any>({
                           compact ? "px-2 py-1.5" : "px-4 py-3",
                           getAlignment(column.align),
                           column.className,
-                          stickyZIndex
                         )}
+                        style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: highlightRow && highlightRow(item, index) ? '#eef2ff' : 'white' } : undefined}
                       >
                         {renderedValue as React.ReactNode}
                       </td>
