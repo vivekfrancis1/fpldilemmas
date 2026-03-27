@@ -98,8 +98,10 @@ export class LiveGoalMonitor {
 
   private pendingDCBatch: Map<number, { matchLine: string; fixtureId: number; players: DCEntry[] }> = new Map();
   private pendingBonusBatch: Map<number, { matchLine: string; fixtureId: number; entries: BonusEntry[] }> = new Map();
+  private pendingBonusUpdateBatch: Map<number, { matchLine: string; fixtureId: number; entries: BonusEntry[] }> = new Map();
   private dcBatchTimer: NodeJS.Timeout | null = null;
   private bonusBatchTimer: NodeJS.Timeout | null = null;
+  private bonusUpdateBatchTimer: NodeJS.Timeout | null = null;
 
   start() {
     console.log('⚽ Live match monitor starting...');
@@ -126,6 +128,10 @@ export class LiveGoalMonitor {
     if (this.bonusBatchTimer) {
       clearTimeout(this.bonusBatchTimer);
       this.bonusBatchTimer = null;
+    }
+    if (this.bonusUpdateBatchTimer) {
+      clearTimeout(this.bonusUpdateBatchTimer);
+      this.bonusUpdateBatchTimer = null;
     }
   }
 
@@ -328,9 +334,10 @@ export class LiveGoalMonitor {
           minute: 'FT',
           fixtureId,
         };
-        await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, true));
         state.bonusAllocation = newBonusKey;
-        console.log(`🔄 Bonus update tweet posted for fixture ${fixtureId}`);
+        this.pendingBonusUpdateBatch.set(fixtureId, { matchLine: this.matchLine(matchCtx), fixtureId, entries: bonusEntries });
+        this.scheduleBonusUpdateBatch();
+        console.log(`🔄 Bonus update queued for fixture ${fixtureId}`);
       }
     }
   }
@@ -604,6 +611,47 @@ export class LiveGoalMonitor {
     console.log(`🌟 Batched bonus tweet posted (${batch.length} fixture(s))`);
   }
 
+  private scheduleBonusUpdateBatch() {
+    if (this.bonusUpdateBatchTimer) clearTimeout(this.bonusUpdateBatchTimer);
+    this.bonusUpdateBatchTimer = setTimeout(() => this.flushBonusUpdateBatch(), this.BATCH_DELAY_MS);
+  }
+
+  private async flushBonusUpdateBatch() {
+    this.bonusUpdateBatchTimer = null;
+    const batch = Array.from(this.pendingBonusUpdateBatch.values());
+    this.pendingBonusUpdateBatch.clear();
+    if (batch.length === 0) return;
+    const tweet = this.formatBatchedBonusUpdateTweet(batch);
+    await this.postEventTweet(tweet);
+    console.log(`🔄 Batched bonus update tweet posted (${batch.length} fixture(s))`);
+  }
+
+  private formatBatchedBonusUpdateTweet(batch: Array<{ matchLine: string; fixtureId: number; entries: BonusEntry[] }>): string {
+    const genericFooter = `\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
+
+    if (batch.length === 1) {
+      const { matchLine, fixtureId, entries } = batch[0];
+      let tweet = `🔄 Bonus Points Updated!\n\n${matchLine}`;
+      for (const e of entries) {
+        tweet += `\n${e.playerName} - ${e.bonusPoints} pts`;
+      }
+      tweet += `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${fixtureId}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      return tweet.slice(0, 280);
+    }
+
+    const header = `🔄 Bonus Points Updated!\n\n`;
+    const reservedFooter = genericFooter.length;
+    let body = '';
+
+    for (const { matchLine, entries } of batch) {
+      const section = `${matchLine}\n` + entries.map(e => `${e.playerName} - ${e.bonusPoints} pts`).join('\n') + `\n\n`;
+      if ((header + body + section).length + reservedFooter > 280) break;
+      body += section;
+    }
+
+    return (header + body.trimEnd() + genericFooter).slice(0, 280);
+  }
+
   private formatBatchedDCTweet(batch: Array<{ matchLine: string; fixtureId: number; players: DCEntry[] }>): string {
     const genericFooter = `\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
 
@@ -715,7 +763,7 @@ export class LiveGoalMonitor {
       { type: 'red_card', tweet: this.formatRedCardTweet('Rice', 31.2, { ...sampleCtx, minute: 78 }) },
       { type: 'dc_summary', tweet: this.formatBatchedDCTweet([{ matchLine: sampleDCMatchLine, fixtureId: sampleCtx2.fixtureId, players: sampleDCPlayers }]) },
       { type: 'bonus_confirmed', tweet: this.formatBatchedBonusTweet([{ matchLine: sampleBonusMatchLine, fixtureId: sampleCtxFT.fixtureId, entries: bonusEntries }]) },
-      { type: 'bonus_updated', tweet: this.formatBonusTweet(updatedBonusEntries, sampleCtxFT, true) },
+      { type: 'bonus_updated', tweet: this.formatBatchedBonusUpdateTweet([{ matchLine: sampleBonusMatchLine, fixtureId: sampleCtxFT.fixtureId, entries: updatedBonusEntries }]) },
     ];
 
     return tweets.map(t => ({ ...t, length: t.tweet.length }));
