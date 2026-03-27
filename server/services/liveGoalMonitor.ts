@@ -633,7 +633,7 @@ export class LiveGoalMonitor {
       const { matchLine, fixtureId, entries } = batch[0];
       let tweet = `🔄 Bonus Points Updated!\n\n${matchLine}`;
       for (const e of entries) {
-        tweet += `\n${e.playerName} - ${e.bonusPoints} pts`;
+        tweet += `\n${e.playerName} - ${e.bonus} pts`;
       }
       tweet += `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${fixtureId}\n#FPL #FantasyPremierLeague #FPLCommunity`;
       return tweet.slice(0, 280);
@@ -644,7 +644,7 @@ export class LiveGoalMonitor {
     let body = '';
 
     for (const { matchLine, entries } of batch) {
-      const section = `${matchLine}\n` + entries.map(e => `${e.playerName} - ${e.bonusPoints} pts`).join('\n') + `\n\n`;
+      const section = `${matchLine}\n` + entries.map(e => `${e.playerName} - ${e.bonus} pts`).join('\n') + `\n\n`;
       if ((header + body + section).length + reservedFooter > 280) break;
       body += section;
     }
