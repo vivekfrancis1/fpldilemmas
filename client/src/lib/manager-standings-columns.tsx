@@ -287,15 +287,10 @@ export function getSharedColumns<T extends ManagerStandingsData>(
           <div className="space-y-1">
             {details && details.length > 0 ? (
               details.map((t, i) => (
-                <div key={i} className="text-xs leading-tight">
-                  <div>
-                    <span className="text-green-600 font-medium">{t.playerIn.split(' ').slice(-1)[0]}</span>
-                    <span className="text-gray-400 text-[10px]"> ({t.teamIn})</span>
-                  </div>
-                  <div>
-                    <span className="text-red-500">{t.playerOut.split(' ').slice(-1)[0]}</span>
-                    <span className="text-gray-400 text-[10px]"> ({t.teamOut})</span>
-                  </div>
+                <div key={i} className="text-xs leading-tight whitespace-nowrap">
+                  <span className="text-green-600 font-medium">{t.playerIn.split(' ').slice(-1)[0]}</span>
+                  <span className="text-gray-400 mx-0.5">→</span>
+                  <span className="text-red-500">{t.playerOut.split(' ').slice(-1)[0]}</span>
                 </div>
               ))
             ) : (
