@@ -307,8 +307,10 @@ export function ResponsiveTable<T = any>({
   // When mobileCompactTable is active, force horizontal scroll and show all columns
   const isCompactMobile = mobileCompactTable && isMobile;
   const cellPadding = isCompactMobile ? "px-1.5 py-1" : compact ? "px-2 py-2" : "px-4 py-3";
-  const getVisibilityClass = (priority: ResponsiveTableColumn['priority'], hideOnMobile?: boolean) =>
-    isCompactMobile ? '' : getColumnVisibilityClass(priority, hideOnMobile);
+  const getVisibilityClass = (priority: ResponsiveTableColumn['priority'], hideOnMobile?: boolean) => {
+    if (isCompactMobile) return hideOnMobile ? 'hidden' : '';
+    return getColumnVisibilityClass(priority, hideOnMobile);
+  };
 
   return (
     <div 

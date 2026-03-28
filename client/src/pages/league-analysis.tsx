@@ -512,6 +512,7 @@ export default function LeagueAnalysisPage() {
       cardOrder: 6,
       sortable: true,
       className: 'font-mono text-xs',
+      hideOnMobile: true,
       render: (value, entry) => {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';
@@ -659,6 +660,7 @@ export default function LeagueAnalysisPage() {
       cardOrder: 6,
       sortable: true,
       className: 'font-mono text-xs',
+      hideOnMobile: true,
       render: (value, entry) => {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';

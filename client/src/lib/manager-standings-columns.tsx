@@ -168,6 +168,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       cardOrder: 90,
       sortable: true,
       className: 'font-mono',
+      hideOnMobile: true,
       render: (_, item: T) => {
         const teamValue = item.latestTracking?.teamValue;
         const bank = item.latestTracking?.bank;
@@ -186,6 +187,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       cardOrder: 120,
       sortable: true,
       className: 'font-mono',
+      hideOnMobile: true,
       render: (_, item: T) => {
         const bank = item.latestTracking?.bank;
         if (bank === undefined || bank === null) return "£0.0m";
@@ -259,6 +261,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       cardOrder: 100,
       sortable: true,
       className: 'font-mono',
+      hideOnMobile: true,
       render: (_, item: T) => {
         const history = item.historyData?.current;
         const chips = item.historyData?.chips || [];
