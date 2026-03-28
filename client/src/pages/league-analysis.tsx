@@ -453,7 +453,7 @@ export default function LeagueAnalysisPage() {
 
     const totalPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'latestTracking.overallPoints',
-      header: 'Total Pts',
+      header: <span className="leading-tight">Total<br/>Pts</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Total',
@@ -599,7 +599,7 @@ export default function LeagueAnalysisPage() {
 
     const liveTotalCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'live_total',
-      header: <span className="whitespace-nowrap">Total Pts</span>,
+      header: <span className="leading-tight">Total<br/>Pts</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Total',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -221,9 +221,7 @@ export function ResponsiveTable<T = any>({
   const isMobile = useIsMobile();
 
   const getSortIcon = (field: string) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 opacity-50" />;
-    }
+    if (sortField !== field) return null;
     return sortDirection === 'asc' 
       ? <ChevronUp className="w-3 h-3" /> 
       : <ChevronDown className="w-3 h-3" />;
