@@ -276,7 +276,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'freeTransfers',
-      header: <span className="leading-tight">Free Transfers<br/>GW{ftGameweek}</span>,
+      header: <span className="leading-tight">Free<br/>Transfers<br/>GW{ftGameweek}</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: `FT GW${ftGameweek}`,
@@ -292,7 +292,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'chipsAvailable',
-      header: <span className="leading-tight">Chips Available<br/>GW{ftGameweek}</span>,
+      header: <span className="leading-tight">Chips<br/>Available<br/>GW{ftGameweek}</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: `Chips GW${ftGameweek}`,
