@@ -48,6 +48,7 @@ export interface ResponsiveTableProps<T = any> {
   // Responsive behavior
   enableMobileCards?: boolean;
   mobileCardTitle?: (item: T) => string; // Main title for mobile cards
+  mobileCompactTable?: boolean; // Show full table on mobile (compact, scrollable) instead of cards
   
   // Table behavior
   loading?: boolean;
@@ -203,6 +204,7 @@ export function ResponsiveTable<T = any>({
   sortDirection,
   enableMobileCards = true,
   mobileCardTitle,
+  mobileCompactTable = false,
   loading = false,
   emptyMessage = "No data available",
   stickyHeader = false,
@@ -251,8 +253,8 @@ export function ResponsiveTable<T = any>({
     );
   }
 
-  // Mobile card layout
-  if (isMobile && enableMobileCards) {
+  // Mobile card layout (skipped when mobileCompactTable is active)
+  if (isMobile && enableMobileCards && !mobileCompactTable) {
     return (
       <div 
         className={cn("responsive-table-mobile-container", className)}
@@ -302,13 +304,19 @@ export function ResponsiveTable<T = any>({
     }
   };
 
+  // When mobileCompactTable is active, force horizontal scroll and show all columns
+  const isCompactMobile = mobileCompactTable && isMobile;
+  const cellPadding = isCompactMobile ? "px-1.5 py-1" : compact ? "px-2 py-2" : "px-4 py-3";
+  const getVisibilityClass = (priority: ResponsiveTableColumn['priority'], hideOnMobile?: boolean) =>
+    isCompactMobile ? '' : getColumnVisibilityClass(priority, hideOnMobile);
+
   return (
     <div 
       className={cn("responsive-table-container fpl-table-container", className)}
-      data-testid="responsive-table-desktop"
+      data-testid={isCompactMobile ? "responsive-table-compact-mobile" : "responsive-table-desktop"}
     >
-      {/* Scroll Controls - Only on mobile when horizontal scroll is enabled */}
-      {enableHorizontalScroll && (
+      {/* Scroll Controls - Only on non-desktop when horizontal scroll is enabled */}
+      {(enableHorizontalScroll || isCompactMobile) && (
         <div className="flex justify-between items-center px-2 sm:px-4 py-2 bg-gray-50 border-b lg:hidden">
           <div className="flex gap-1 sm:gap-2">
             <Button 
@@ -345,7 +353,7 @@ export function ResponsiveTable<T = any>({
               <span className="sm:hidden">→</span>
             </Button>
           </div>
-          <span className="text-xs text-gray-500">Scroll table →</span>
+          <span className="text-xs text-gray-500">Scroll →</span>
         </div>
       )}
 
@@ -354,14 +362,14 @@ export function ResponsiveTable<T = any>({
         ref={scrollContainerRef}
         className={cn(
           "responsive-table-scroll",
-          enableHorizontalScroll && "overflow-x-auto",
-          !enableHorizontalScroll && "overflow-x-hidden",
+          (enableHorizontalScroll || isCompactMobile) && "overflow-x-auto",
+          !enableHorizontalScroll && !isCompactMobile && "overflow-x-hidden",
           maxHeight && "overflow-y-auto"
         )}
         style={maxHeight ? { maxHeight } : undefined}
         data-testid="table-scroll-container"
       >
-        <Table className="w-full">
+        <Table className={cn("w-full", isCompactMobile && "text-xs")}>
           <TableHeader 
             className={cn(
               "responsive-table-header",
@@ -375,10 +383,10 @@ export function ResponsiveTable<T = any>({
                   className={cn(
                     "responsive-table-head",
                     getAlignment(column.align),
-                    getColumnVisibilityClass(column.priority, column.hideOnMobile),
+                    getVisibilityClass(column.priority, column.hideOnMobile),
                     stickyFirstColumn && columnIndex === 0 && "sticky left-0 bg-white z-30 shadow-sm",
                     stickyHeader && stickyFirstColumn && columnIndex === 0 && "z-40",
-                    compact ? "px-2 py-2" : "px-4 py-3",
+                    cellPadding,
                     column.className,
                     column.width && `w-${column.width}`
                   )}
@@ -390,7 +398,10 @@ export function ResponsiveTable<T = any>({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort(column.key)}
-                      className="h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent flex items-center gap-1 transition-colors"
+                      className={cn(
+                        "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent flex items-center gap-1 transition-colors",
+                        isCompactMobile && "text-xs"
+                      )}
                       data-testid={`sort-${column.key}`}
                       aria-label={`Sort by ${column.header} ${sortField === column.key ? (sortDirection === 'asc' ? 'descending' : 'ascending') : ''}`}
                     >
@@ -398,7 +409,7 @@ export function ResponsiveTable<T = any>({
                       {getSortIcon(column.key)}
                     </Button>
                   ) : (
-                    <span className="font-semibold text-gray-700">
+                    <span className={cn("font-semibold text-gray-700", isCompactMobile && "text-xs")}>
                       {column.header}
                     </span>
                   )}
@@ -441,9 +452,9 @@ export function ResponsiveTable<T = any>({
                         className={cn(
                           "responsive-table-cell",
                           getAlignment(column.align),
-                          getColumnVisibilityClass(column.priority, column.hideOnMobile),
+                          getVisibilityClass(column.priority, column.hideOnMobile),
                           stickyFirstColumn && columnIndex === 0 && "sticky left-0 bg-white z-10 shadow-sm",
-                          compact ? "px-2 py-2" : "px-4 py-3",
+                          cellPadding,
                           column.className
                         )}
                         data-priority={column.priority}

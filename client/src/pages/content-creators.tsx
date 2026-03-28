@@ -894,7 +894,7 @@ export default function ContentCreators() {
               <ResponsiveTable
                 data={sortedCreators || []}
                 columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
-                enableMobileCards={true}
+                mobileCompactTable={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}
                 emptyMessage="No content creators available"
@@ -955,10 +955,10 @@ export default function ContentCreators() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-gray-50/80">
-                          <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12">#</th>
+                        <tr className="border-b bg-gray-50/80 text-xs">
+                          <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
                           <th
-                            className="px-3 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'player_name') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -971,7 +971,7 @@ export default function ContentCreators() {
                             Creator {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
                           </th>
                           <th
-                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'total_points') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -981,10 +981,10 @@ export default function ContentCreators() {
                               }
                             }}
                           >
-                            Total Points {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                            Pts {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
                           </th>
                           <th
-                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'rank') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -994,7 +994,7 @@ export default function ContentCreators() {
                               }
                             }}
                           >
-                            Overall Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                            Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
                           </th>
                         </tr>
                       </thead>
@@ -1002,12 +1002,12 @@ export default function ContentCreators() {
                         {historicalStandings.map((entry: any, index: number) => (
                           <tr
                             key={entry.managerId}
-                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
+                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer text-xs"
                             onClick={() => navigate(`/manager-team/${entry.managerId}`)}
                           >
-                            <td className="px-3 py-2.5">
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5">
                               {entry.played ? (
-                                <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
+                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] font-semibold ${
                                   index === 0 ? 'bg-yellow-100 text-yellow-800' :
                                   index === 1 ? 'bg-gray-100 text-gray-800' :
                                   index === 2 ? 'bg-orange-100 text-orange-800' :
@@ -1016,20 +1016,20 @@ export default function ContentCreators() {
                                   {index + 1}
                                 </div>
                               ) : (
-                                <span className="text-gray-400 text-xs">-</span>
+                                <span className="text-gray-400">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-2.5">
-                              <div className="font-medium">{entry.playerName}</div>
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5">
+                              <div className="font-medium truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono font-semibold">
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5 text-right font-mono font-semibold">
                               {entry.played ? entry.totalPoints?.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">Did not play</span>
+                                <span className="text-gray-400">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-sm">
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5 text-right font-mono">
                               {entry.played && entry.rank ? entry.rank.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">N/A</span>
+                                <span className="text-gray-400">N/A</span>
                               )}
                             </td>
                           </tr>
