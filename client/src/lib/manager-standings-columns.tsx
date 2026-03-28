@@ -289,11 +289,11 @@ export function getSharedColumns<T extends ManagerStandingsData>(
               details.map((t, i) => (
                 <div key={i} className="text-xs leading-tight">
                   <div>
-                    <span className="text-green-600 font-medium">{t.playerIn}</span>
+                    <span className="text-green-600 font-medium">{t.playerIn.split(' ').slice(-1)[0]}</span>
                     <span className="text-gray-400 text-[10px]"> ({t.teamIn})</span>
                   </div>
                   <div>
-                    <span className="text-red-500">{t.playerOut}</span>
+                    <span className="text-red-500">{t.playerOut.split(' ').slice(-1)[0]}</span>
                     <span className="text-gray-400 text-[10px]"> ({t.teamOut})</span>
                   </div>
                 </div>

@@ -894,6 +894,7 @@ export default function ContentCreators() {
               <ResponsiveTable
                 data={sortedCreators || []}
                 columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                compact={true}
                 mobileCompactTable={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}

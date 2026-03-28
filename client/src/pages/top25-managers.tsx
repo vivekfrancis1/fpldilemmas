@@ -475,6 +475,7 @@ export default function Top25Managers() {
                 <ResponsiveTable
                   data={sortedManagersData}
                   columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                  compact={true}
                   mobileCompactTable={true}
                   mobileCardTitle={(manager) => manager.name}
                   loading={isRefreshing}

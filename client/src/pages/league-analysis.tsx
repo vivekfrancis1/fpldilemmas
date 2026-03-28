@@ -792,6 +792,7 @@ export default function LeagueAnalysisPage() {
                 <ResponsiveTable
                   data={enrichedLiveEntries}
                   columns={getLiveColumns()}
+                  compact={true}
                   mobileCompactTable={true}
                   mobileCardTitle={(entry) => entry.player_name}
                   loading={false}
@@ -814,6 +815,7 @@ export default function LeagueAnalysisPage() {
               <ResponsiveTable
                 data={sortedEntries}
                 columns={getColumns()}
+                compact={true}
                 mobileCompactTable={true}
                 mobileCardTitle={(entry) => entry.player_name}
                 loading={sortedEntries.length === 0}

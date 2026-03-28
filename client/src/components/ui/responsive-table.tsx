@@ -306,7 +306,8 @@ export function ResponsiveTable<T = any>({
 
   // When mobileCompactTable is active, force horizontal scroll and show all columns
   const isCompactMobile = mobileCompactTable && isMobile;
-  const cellPadding = isCompactMobile ? "px-1.5 py-1" : compact ? "px-2 py-2" : "px-4 py-3";
+  const isCompact = compact || isCompactMobile;
+  const cellPadding = isCompactMobile ? "px-1.5 py-1" : compact ? "px-2 py-1.5" : "px-4 py-3";
   const getVisibilityClass = (priority: ResponsiveTableColumn['priority'], hideOnMobile?: boolean) => {
     if (isCompactMobile) return hideOnMobile ? 'hidden' : '';
     return getColumnVisibilityClass(priority, hideOnMobile);
@@ -371,7 +372,7 @@ export function ResponsiveTable<T = any>({
         style={maxHeight ? { maxHeight } : undefined}
         data-testid="table-scroll-container"
       >
-        <Table className={cn("w-full", isCompactMobile && "text-xs")}>
+        <Table className={cn("w-full", isCompact && "text-xs")}>
           <TableHeader 
             className={cn(
               "responsive-table-header",
@@ -401,8 +402,8 @@ export function ResponsiveTable<T = any>({
                       size="sm"
                       onClick={() => handleSort(column.key)}
                       className={cn(
-                        "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent flex items-center gap-1 transition-colors",
-                        isCompactMobile && "text-xs"
+                        "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent flex items-center gap-0.5 transition-colors",
+                        isCompact && "text-xs"
                       )}
                       data-testid={`sort-${column.key}`}
                       aria-label={`Sort by ${column.header} ${sortField === column.key ? (sortDirection === 'asc' ? 'descending' : 'ascending') : ''}`}
@@ -411,7 +412,7 @@ export function ResponsiveTable<T = any>({
                       {getSortIcon(column.key)}
                     </Button>
                   ) : (
-                    <span className={cn("font-semibold text-gray-700", isCompactMobile && "text-xs")}>
+                    <span className={cn("font-semibold text-gray-700", isCompact && "text-xs")}>
                       {column.header}
                     </span>
                   )}
