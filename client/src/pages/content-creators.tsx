@@ -259,7 +259,6 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     priority: 'essential',
     align: 'left',
     mobileLabel: 'Creator',
-    hideOnMobile: true,
     render: (value, creator) => (
       <div className="flex items-center gap-3">
         <div>
