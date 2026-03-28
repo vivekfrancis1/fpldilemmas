@@ -537,7 +537,7 @@ export default function Top25Managers() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-gray-50/80 text-xs">
+                        <tr className="border-b bg-gray-50/80">
                           <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
                           <th
                             className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
@@ -563,7 +563,7 @@ export default function Top25Managers() {
                               }
                             }}
                           >
-                            Pts {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                            <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
                           </th>
                           <th
                             className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
@@ -576,7 +576,7 @@ export default function Top25Managers() {
                               }
                             }}
                           >
-                            Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                            <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
                           </th>
                         </tr>
                       </thead>
@@ -584,12 +584,12 @@ export default function Top25Managers() {
                         {historicalStandings.map((entry: any, index: number) => (
                           <tr
                             key={entry.managerId}
-                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer text-xs"
+                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
                             onClick={() => navigate(`/manager-team/${entry.managerId}`)}
                           >
                             <td className="px-1.5 sm:px-3 py-1 sm:py-2">
                               {entry.played ? (
-                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] font-semibold ${
+                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-xs font-semibold ${
                                   index === 0 ? 'bg-yellow-100 text-yellow-800' :
                                   index === 1 ? 'bg-gray-100 text-gray-800' :
                                   index === 2 ? 'bg-orange-100 text-orange-800' :
@@ -598,20 +598,20 @@ export default function Top25Managers() {
                                   {index + 1}
                                 </div>
                               ) : (
-                                <span className="text-gray-400">-</span>
+                                <span className="text-gray-400 text-xs">-</span>
                               )}
                             </td>
                             <td className="px-1.5 sm:px-3 py-1 sm:py-2">
-                              <div className="font-medium truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
+                              <div className="font-medium text-sm truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
                             </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono font-semibold">
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono font-semibold text-xs sm:text-sm">
                               {entry.played ? entry.totalPoints?.toLocaleString() : (
-                                <span className="text-gray-400">-</span>
+                                <span className="text-gray-400 text-[10px] sm:text-xs">Did not play</span>
                               )}
                             </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono">
+                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono text-xs sm:text-sm">
                               {entry.played && entry.rank ? entry.rank.toLocaleString() : (
-                                <span className="text-gray-400">N/A</span>
+                                <span className="text-gray-400 text-[10px] sm:text-xs">N/A</span>
                               )}
                             </td>
                           </tr>
