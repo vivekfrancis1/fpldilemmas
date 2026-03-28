@@ -210,49 +210,6 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       }
     },
     {
-      key: 'gwTransfers',
-      header: currentGameweek ? <span className="leading-tight">Transfers<br/>GW{currentGameweek}</span> : 'GW Transfers',
-      priority: 'secondary',
-      align: 'left',
-      mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
-      cardOrder: 80,
-      sortable: true,
-      width: '220px',
-      render: (_, item: T) => {
-        const history = item.historyData?.current;
-        if (!history || history.length === 0) return "N/A";
-        const gwData = history.find(gw => gw.event === (currentGameweek || 0));
-        if (!gwData) return "-";
-        const transferCount = gwData.event_transfers || 0;
-        const cost = gwData.event_transfers_cost || 0;
-        const key = gwTransfersKeyField === 'id' ? item.id : item.managerId;
-        const details = key !== undefined ? gwTransfersMap?.[key] : undefined;
-
-        if (transferCount === 0) return <span className="text-gray-400">-</span>;
-
-        return (
-          <div className="space-y-0.5">
-            {details && details.length > 0 ? (
-              details.map((t, i) => (
-                <div key={i} className="flex items-center gap-1 text-xs whitespace-nowrap">
-                  <span className="text-green-600 font-medium">{t.playerIn}</span>
-                  <span className="text-gray-400 text-[10px]">({t.teamIn})</span>
-                  <span className="text-gray-400 mx-0.5">←</span>
-                  <span className="text-red-500">{t.playerOut}</span>
-                  <span className="text-gray-400 text-[10px]">({t.teamOut})</span>
-                </div>
-              ))
-            ) : (
-              <span className="text-xs">{transferCount} transfer{transferCount !== 1 ? 's' : ''}</span>
-            )}
-            {cost > 0 && (
-              <div className="text-red-500 text-[10px] font-medium">-{cost} pts hit</div>
-            )}
-          </div>
-        );
-      }
-    },
-    {
       key: 'transfersMade',
       header: <span className="leading-tight">Total<br/>Transfers</span>,
       priority: 'optional',
@@ -304,6 +261,51 @@ export function getSharedColumns<T extends ManagerStandingsData>(
         const secondHalfChipsUsed = (item.latestTracking as any)?.secondHalfChipsUsed ??
           chips.filter(c => c.event >= 20).length;
         return Math.max(0, 4 - secondHalfChipsUsed);
+      }
+    },
+    {
+      key: 'gwTransfers',
+      header: currentGameweek ? <span className="leading-tight">Transfers<br/>GW{currentGameweek}</span> : 'GW Transfers',
+      priority: 'secondary',
+      align: 'left',
+      mobileLabel: currentGameweek ? `GW${currentGameweek} TF` : 'GW TF',
+      cardOrder: 80,
+      sortable: true,
+      render: (_, item: T) => {
+        const history = item.historyData?.current;
+        if (!history || history.length === 0) return "N/A";
+        const gwData = history.find(gw => gw.event === (currentGameweek || 0));
+        if (!gwData) return "-";
+        const transferCount = gwData.event_transfers || 0;
+        const cost = gwData.event_transfers_cost || 0;
+        const key = gwTransfersKeyField === 'id' ? item.id : item.managerId;
+        const details = key !== undefined ? gwTransfersMap?.[key] : undefined;
+
+        if (transferCount === 0) return <span className="text-gray-400">-</span>;
+
+        return (
+          <div className="space-y-1">
+            {details && details.length > 0 ? (
+              details.map((t, i) => (
+                <div key={i} className="text-xs leading-tight">
+                  <div>
+                    <span className="text-green-600 font-medium">{t.playerIn}</span>
+                    <span className="text-gray-400 text-[10px]"> ({t.teamIn})</span>
+                  </div>
+                  <div>
+                    <span className="text-red-500">{t.playerOut}</span>
+                    <span className="text-gray-400 text-[10px]"> ({t.teamOut})</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <span className="text-xs">{transferCount} transfer{transferCount !== 1 ? 's' : ''}</span>
+            )}
+            {cost > 0 && (
+              <div className="text-red-500 text-[10px] font-medium">-{cost} pts hit</div>
+            )}
+          </div>
+        );
       }
     },
   ];
