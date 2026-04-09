@@ -19278,13 +19278,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      // Group by position and sort by projected points
-      const gkps = enrichedPlayers.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
-      const defs = enrichedPlayers.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
-      const mids = enrichedPlayers.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
-      const fwds = enrichedPlayers.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+      const BUDGET = 1000; // £100.0m in raw units (tenths of £)
+      const MAX_PLAYERS_PER_TEAM = 3;
+      const POSITION_QUOTAS: Record<number, number> = { 1: 2, 2: 5, 3: 5, 4: 3 };
 
-      // Valid formations
+      // Global greedy: sort all players by projected points descending.
+      // Pick the best 15-player squad in one pass — no position-first ordering.
+      // This ensures premium players (Haaland etc.) compete on equal footing
+      // with midfielders rather than being evaluated last when budget is exhausted.
+      const sortedAll = enrichedPlayers
+        .filter((p: any) => p.projectedPoints > 0)
+        .sort((a: any, b: any) => b.projectedPoints - a.projectedPoints);
+
+      const squad: any[] = [];
+      const posCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+      const teamCounts = new Map<number, number>();
+      let totalCost = 0;
+
+      for (const player of sortedAll) {
+        if (squad.length >= 15) break;
+        const quota = POSITION_QUOTAS[player.position as number];
+        if (!quota || posCounts[player.position] >= quota) continue;
+        const tc = teamCounts.get(player.team) || 0;
+        if (tc >= MAX_PLAYERS_PER_TEAM) continue;
+        if (totalCost + player.now_cost > BUDGET) continue;
+        squad.push(player);
+        posCounts[player.position]++;
+        teamCounts.set(player.team, tc + 1);
+        totalCost += player.now_cost;
+      }
+
+      if (squad.length < 15) {
+        return res.status(400).json({ error: "Unable to build full Free Hit squad within budget" });
+      }
+
+      // Derive best starting XI by trying all valid formations against the selected squad
       const validFormations = [
         { def: 3, mid: 4, fwd: 3 },
         { def: 3, mid: 5, fwd: 2 },
@@ -19295,74 +19323,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { def: 5, mid: 4, fwd: 1 }
       ];
 
-      const BUDGET = 1000; // £100.0m
-      const MAX_PLAYERS_PER_TEAM = 3;
+      const squadByPos = {
+        gkp: squad.filter((p: any) => p.position === 1).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
+        def: squad.filter((p: any) => p.position === 2).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
+        mid: squad.filter((p: any) => p.position === 3).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
+        fwd: squad.filter((p: any) => p.position === 4).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
+      };
 
       let bestTeam: any = null;
       let bestPoints = -1;
 
-      // Try each formation
       for (const formation of validFormations) {
-        // Greedy selection with budget and team constraints
-        const selected: any[] = [];
-        let totalCost = 0;
-        const teamCounts = new Map<number, number>();
+        if (squadByPos.def.length < formation.def) continue;
+        if (squadByPos.mid.length < formation.mid) continue;
+        if (squadByPos.fwd.length < formation.fwd) continue;
 
-        // Helper to check if player can be added
-        const canAdd = (player: any) => {
-          const teamCount = teamCounts.get(player.team) || 0;
-          return teamCount < MAX_PLAYERS_PER_TEAM && totalCost + player.now_cost <= BUDGET;
-        };
+        const xi = [
+          squadByPos.gkp[0],
+          ...squadByPos.def.slice(0, formation.def),
+          ...squadByPos.mid.slice(0, formation.mid),
+          ...squadByPos.fwd.slice(0, formation.fwd)
+        ];
 
-        // Select 1 GKP
-        const gk = gkps.find(canAdd);
-        if (!gk) continue;
-        selected.push(gk);
-        totalCost += gk.now_cost;
-        teamCounts.set(gk.team, (teamCounts.get(gk.team) || 0) + 1);
-
-        // Select defenders
-        let defCount = 0;
-        for (const def of defs) {
-          if (defCount >= formation.def) break;
-          if (canAdd(def)) {
-            selected.push(def);
-            totalCost += def.now_cost;
-            teamCounts.set(def.team, (teamCounts.get(def.team) || 0) + 1);
-            defCount++;
-          }
-        }
-        if (defCount < formation.def) continue;
-
-        // Select midfielders
-        let midCount = 0;
-        for (const mid of mids) {
-          if (midCount >= formation.mid) break;
-          if (canAdd(mid)) {
-            selected.push(mid);
-            totalCost += mid.now_cost;
-            teamCounts.set(mid.team, (teamCounts.get(mid.team) || 0) + 1);
-            midCount++;
-          }
-        }
-        if (midCount < formation.mid) continue;
-
-        // Select forwards
-        let fwdCount = 0;
-        for (const fwd of fwds) {
-          if (fwdCount >= formation.fwd) break;
-          if (canAdd(fwd)) {
-            selected.push(fwd);
-            totalCost += fwd.now_cost;
-            teamCounts.set(fwd.team, (teamCounts.get(fwd.team) || 0) + 1);
-            fwdCount++;
-          }
-        }
-        if (fwdCount < formation.fwd) continue;
-
-        // Calculate total points (with captain doubling best player)
-        const captain = selected.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best);
-        const totalPoints = selected.reduce((sum, p) => 
+        const captain = xi.reduce((best: any, p: any) => p.projectedPoints > best.projectedPoints ? p : best);
+        const totalPoints = xi.reduce((sum: number, p: any) =>
           sum + p.projectedPoints + (p.id === captain.id ? p.projectedPoints : 0), 0
         );
 
@@ -19370,7 +19354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bestPoints = totalPoints;
           bestTeam = {
             formation: `${formation.def}-${formation.mid}-${formation.fwd}`,
-            starting11: selected,
+            starting11: xi,
             captain,
             totalPoints,
             totalCost
@@ -19379,7 +19363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!bestTeam) {
-        return res.status(400).json({ error: "Unable to build optimal Free Hit team" });
+        return res.status(400).json({ error: "Unable to derive starting XI from Free Hit squad" });
       }
 
       console.log(`✅ Free Hit optimization complete: ${bestTeam.formation} formation, ${bestPoints.toFixed(1)} projected points`);
