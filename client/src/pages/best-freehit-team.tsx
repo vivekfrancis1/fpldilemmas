@@ -948,23 +948,31 @@ export default function BestFreehitTeam() {
           Forward:    allCandidates.filter(p => normalizePosition(p.position) === 'Forward') as PlayerSnapshot[],
         };
 
-        const sortByPriceAsc = (arr: PlayerSnapshot[]) => [...arr].sort((a, b) => a.price - b.price);
-
         let bestBudgetXIPoints = -1;
 
-        for (const f of VALID_FORMATIONS) {
-          // Minimum bench cost for this formation:
-          //   bench needs 1 GKP + (5−f.def) DEF + (5−f.mid) MID + (3−f.fwd) FWD
-          const benchNeedGKP = 1;
-          const benchNeedDEF = 5 - f.def;
-          const benchNeedMID = 5 - f.mid;
-          const benchNeedFWD = 3 - f.fwd;
+        // Comparators reused inside the formation loop
+        const byPtsDesc = (a: PlayerSnapshot, b: PlayerSnapshot) =>
+          getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+        const byPriceAsc = (a: PlayerSnapshot, b: PlayerSnapshot) => a.price - b.price;
 
+        for (const f of VALID_FORMATIONS) {
+          // Estimate minimum bench cost from the non-XI candidate pool.
+          // groupedByPos arrays are sorted by GW points desc (inherited from allCandidates).
+          // Skip the top XI slots for each position before finding cheapest bench fillers —
+          // this prevents understating bench cost by counting players who will be in the XI.
           const minBenchCost =
-            sortByPriceAsc(groupedByPos.Goalkeeper).slice(0, benchNeedGKP).reduce((s, p) => s + p.price, 0) +
-            sortByPriceAsc(groupedByPos.Defender).slice(0, benchNeedDEF).reduce((s, p) => s + p.price, 0) +
-            sortByPriceAsc(groupedByPos.Midfielder).slice(0, benchNeedMID).reduce((s, p) => s + p.price, 0) +
-            sortByPriceAsc(groupedByPos.Forward).slice(0, benchNeedFWD).reduce((s, p) => s + p.price, 0);
+            // 1 bench GKP: cheapest from GKPs ranked #2+ by projected pts
+            [...groupedByPos.Goalkeeper].sort(byPtsDesc).slice(1).sort(byPriceAsc).slice(0, 1)
+              .reduce((s, p) => s + p.price, 0) +
+            // bench DEFs: cheapest from DEFs ranked f.def+1 onwards
+            [...groupedByPos.Defender].sort(byPtsDesc).slice(f.def).sort(byPriceAsc).slice(0, 5 - f.def)
+              .reduce((s, p) => s + p.price, 0) +
+            // bench MIDs: cheapest from MIDs ranked f.mid+1 onwards
+            [...groupedByPos.Midfielder].sort(byPtsDesc).slice(f.mid).sort(byPriceAsc).slice(0, 5 - f.mid)
+              .reduce((s, p) => s + p.price, 0) +
+            // bench FWDs: cheapest from FWDs ranked f.fwd+1 onwards
+            [...groupedByPos.Forward].sort(byPtsDesc).slice(f.fwd).sort(byPriceAsc).slice(0, 3 - f.fwd)
+              .reduce((s, p) => s + p.price, 0);
 
           const xiBudget = budgetConstraint - minBenchCost;
           if (xiBudget <= 0) continue;

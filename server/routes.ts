@@ -19280,39 +19280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const BUDGET = 1000; // £100.0m in raw units (tenths of £)
       const MAX_PLAYERS_PER_TEAM = 3;
-      const POSITION_QUOTAS: Record<number, number> = { 1: 2, 2: 5, 3: 5, 4: 3 };
 
-      // Global greedy: sort all players by projected points descending.
-      // Pick the best 15-player squad in one pass — no position-first ordering.
-      // This ensures premium players (Haaland etc.) compete on equal footing
-      // with midfielders rather than being evaluated last when budget is exhausted.
-      const sortedAll = enrichedPlayers
+      // Candidates: all players with a positive projected points for this gameweek.
+      // Sorted globally by projected points descending so that global greedy picks the
+      // best players across all positions in one unified ranking (Haaland competes fairly
+      // against midfielders rather than being evaluated after budget is partially spent).
+      const candidatesAll = enrichedPlayers
         .filter((p: any) => p.projectedPoints > 0)
         .sort((a: any, b: any) => b.projectedPoints - a.projectedPoints);
 
-      const squad: any[] = [];
-      const posCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
-      const teamCounts = new Map<number, number>();
-      let totalCost = 0;
+      // Position-grouped pools (all sorted by projectedPoints desc from above)
+      const byPos = {
+        1: candidatesAll.filter((p: any) => p.position === 1), // GKP
+        2: candidatesAll.filter((p: any) => p.position === 2), // DEF
+        3: candidatesAll.filter((p: any) => p.position === 3), // MID
+        4: candidatesAll.filter((p: any) => p.position === 4), // FWD
+      } as Record<number, any[]>;
 
-      for (const player of sortedAll) {
-        if (squad.length >= 15) break;
-        const quota = POSITION_QUOTAS[player.position as number];
-        if (!quota || posCounts[player.position] >= quota) continue;
-        const tc = teamCounts.get(player.team) || 0;
-        if (tc >= MAX_PLAYERS_PER_TEAM) continue;
-        if (totalCost + player.now_cost > BUDGET) continue;
-        squad.push(player);
-        posCounts[player.position]++;
-        teamCounts.set(player.team, tc + 1);
-        totalCost += player.now_cost;
-      }
-
-      if (squad.length < 15) {
-        return res.status(400).json({ error: "Unable to build full Free Hit squad within budget" });
-      }
-
-      // Derive best starting XI by trying all valid formations against the selected squad
       const validFormations = [
         { def: 3, mid: 4, fwd: 3 },
         { def: 3, mid: 5, fwd: 2 },
@@ -19323,32 +19307,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { def: 5, mid: 4, fwd: 1 }
       ];
 
-      const squadByPos = {
-        gkp: squad.filter((p: any) => p.position === 1).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
-        def: squad.filter((p: any) => p.position === 2).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
-        mid: squad.filter((p: any) => p.position === 3).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
-        fwd: squad.filter((p: any) => p.position === 4).sort((a: any, b: any) => b.projectedPoints - a.projectedPoints),
-      };
-
       let bestTeam: any = null;
       let bestPoints = -1;
 
-      for (const formation of validFormations) {
-        if (squadByPos.def.length < formation.def) continue;
-        if (squadByPos.mid.length < formation.mid) continue;
-        if (squadByPos.fwd.length < formation.fwd) continue;
+      // Per-formation two-phase budget-aware optimization:
+      //   Phase 1: estimate minimum bench cost from non-XI candidates (skip top XI-slot
+      //            players per position, then take cheapest from remainder).
+      //   Phase 2: build starting XI (11 players) using global greedy within
+      //            (BUDGET − minBenchCost).
+      //   Phase 3: fill bench (4 players) cheapest-first from remaining budget.
+      // Pick the formation that yields the highest total starting-XI projected points.
+      const byPriceAsc = (a: any, b: any) => a.now_cost - b.now_cost;
 
-        const xi = [
-          squadByPos.gkp[0],
-          ...squadByPos.def.slice(0, formation.def),
-          ...squadByPos.mid.slice(0, formation.mid),
-          ...squadByPos.fwd.slice(0, formation.fwd)
+      for (const formation of validFormations) {
+        // Minimum bench cost from players ranked AFTER the XI slots for each position.
+        // This avoids understating bench costs by accidentally including XI starters.
+        const minBenchCost =
+          // 1 bench GKP: cheapest GKP ranked #2+ by projected pts
+          [...byPos[1]].slice(1).sort(byPriceAsc).slice(0, 1).reduce((s: number, p: any) => s + p.now_cost, 0) +
+          // bench DEFs: cheapest DEFs ranked formation.def+1 onwards
+          [...byPos[2]].slice(formation.def).sort(byPriceAsc).slice(0, 5 - formation.def).reduce((s: number, p: any) => s + p.now_cost, 0) +
+          // bench MIDs: cheapest MIDs ranked formation.mid+1 onwards
+          [...byPos[3]].slice(formation.mid).sort(byPriceAsc).slice(0, 5 - formation.mid).reduce((s: number, p: any) => s + p.now_cost, 0) +
+          // bench FWDs: cheapest FWDs ranked formation.fwd+1 onwards
+          [...byPos[4]].slice(formation.fwd).sort(byPriceAsc).slice(0, 3 - formation.fwd).reduce((s: number, p: any) => s + p.now_cost, 0);
+
+        const xiBudget = BUDGET - minBenchCost;
+        if (xiBudget <= 0) continue;
+
+        // Phase 2: build starting XI (11 players) — global greedy within xiBudget.
+        const xiPosQuotas: Record<number, number> = { 1: 1, 2: formation.def, 3: formation.mid, 4: formation.fwd };
+        const xiPosCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+        const xiTeamCounts = new Map<number, number>();
+        const xi: any[] = [];
+        let xiCost = 0;
+
+        for (const p of candidatesAll) {
+          if (xi.length >= 11) break;
+          const quota = xiPosQuotas[p.position as number];
+          if (!quota || xiPosCounts[p.position] >= quota) continue;
+          const tc = xiTeamCounts.get(p.team) || 0;
+          if (tc >= MAX_PLAYERS_PER_TEAM) continue;
+          if (xiCost + p.now_cost > xiBudget) continue;
+          xi.push(p);
+          xiPosCounts[p.position]++;
+          xiTeamCounts.set(p.team, tc + 1);
+          xiCost += p.now_cost;
+        }
+
+        if (xi.length < 11) continue;
+
+        // Phase 3: fill bench (4 players) cheapest-first from remaining budget.
+        // Position needs: 1 GKP + (5-f.def) DEF + (5-f.mid) MID + (3-f.fwd) FWD
+        const usedIds = new Set(xi.map((p: any) => p.id));
+        const benchTeamCounts = new Map(xiTeamCounts);
+        const bench: any[] = [];
+        let remainingBudget = BUDGET - xiCost;
+        let benchOk = true;
+
+        const benchNeeds = [
+          { pos: 1, count: 1 },
+          { pos: 2, count: 5 - formation.def },
+          { pos: 3, count: 5 - formation.mid },
+          { pos: 4, count: 3 - formation.fwd },
         ];
+
+        for (const { pos, count } of benchNeeds) {
+          // Sort candidates for this bench position cheapest-first
+          const candidates = [...byPos[pos]]
+            .filter((p: any) => !usedIds.has(p.id))
+            .sort(byPriceAsc);
+          let added = 0;
+          for (const p of candidates) {
+            if (added >= count) break;
+            if (usedIds.has(p.id)) continue;
+            const tc = benchTeamCounts.get(p.team) || 0;
+            if (tc >= MAX_PLAYERS_PER_TEAM) continue;
+            if (p.now_cost > remainingBudget) continue;
+            bench.push(p);
+            usedIds.add(p.id);
+            benchTeamCounts.set(p.team, tc + 1);
+            remainingBudget -= p.now_cost;
+            added++;
+          }
+          if (added < count) { benchOk = false; break; }
+        }
+
+        if (!benchOk || bench.length < 4) continue;
 
         const captain = xi.reduce((best: any, p: any) => p.projectedPoints > best.projectedPoints ? p : best);
         const totalPoints = xi.reduce((sum: number, p: any) =>
           sum + p.projectedPoints + (p.id === captain.id ? p.projectedPoints : 0), 0
         );
+        const totalCost = xiCost + bench.reduce((s: number, p: any) => s + p.now_cost, 0);
 
         if (totalPoints > bestPoints) {
           bestPoints = totalPoints;
@@ -19363,7 +19414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!bestTeam) {
-        return res.status(400).json({ error: "Unable to derive starting XI from Free Hit squad" });
+        return res.status(400).json({ error: "Unable to build optimal Free Hit team within budget" });
       }
 
       console.log(`✅ Free Hit optimization complete: ${bestTeam.formation} formation, ${bestPoints.toFixed(1)} projected points`);
