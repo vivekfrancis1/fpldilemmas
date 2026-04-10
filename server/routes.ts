@@ -13660,14 +13660,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn(`⚠️ CACHE PROTECTION: Refusing to cache suspiciously low player count (${projections.length}) for GW${start}-${end} - likely data corruption`);
         return res.status(503).json({ error: 'Insufficient projection data - system initializing, please try again' });
       }
+
+      // Append any registered FPL players not already in the projection results.
+      // This covers 0-minute backup players, new signings, and cup-only players who have
+      // no historical data to drive projections. They appear with 0 projected points so
+      // they sort to the bottom but are findable by name search in the Transfer Planner.
+      const projectedPlayerIds = new Set(projections.map((p: any) => p.playerId));
+      const positionNames = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+
+      const bootstrapOnlyPlayers = bootstrapData ? (bootstrapData.elements || [])
+        .filter((el: any) => !projectedPlayerIds.has(el.id))
+        .map((el: any) => {
+          const team = (bootstrapData.teams || []).find((t: any) => t.id === el.team);
+          const position = positionNames[(el.element_type || 1) - 1] || 'Unknown';
+          return {
+            playerId: el.id,
+            playerName: `${el.first_name} ${el.second_name}`,
+            name: el.web_name,
+            fullName: `${el.first_name} ${el.second_name}`,
+            team: team?.name || '',
+            position,
+            price: (el.now_cost || 0) / 10,
+            ownership: parseFloat(el.selected_by_percent || '0'),
+            form: parseFloat(el.form || '0'),
+            gameweekProjections: {},
+            totalExpectedPoints: 0,
+            averagePerGameweek: 0,
+            averageValue: 0,
+            avgMinutesPerGameweek: 0,
+            chanceOfPlayingNextRound: el.chance_of_playing_next_round ?? 100,
+            status: el.status || 'a',
+            news: el.news || '',
+            availabilityAdjustments: {},
+            pointsFromGoals: {}, pointsFromAssists: {}, pointsFromCleanSheets: {},
+            pointsFromMinutes: {}, pointsFromGoalsConceded: {}, pointsFromYellowCards: {},
+            pointsFromRedCards: {}, pointsFromBonus: {}, pointsFromSaves: {},
+            pointsFromDefensiveContributions: {},
+            rawGoalCounts: {}, rawAssistCounts: {}, rawSaveCounts: {},
+            rawGCCounts: {}, rawYCCounts: {}, rawRCCounts: {},
+            fixtureDetails: {},
+            totalPointsFromGoals: 0, totalPointsFromAssists: 0, totalPointsFromCleanSheets: 0,
+            totalPointsFromMinutes: 0, totalPointsFromGoalsConceded: 0, totalPointsFromYellowCards: 0,
+            totalPointsFromRedCards: 0, totalPointsFromBonus: 0, totalPointsFromSaves: 0,
+            totalPointsFromDefensiveContributions: 0,
+          };
+        }) : [];
+
+      console.log(`DEBUG: Added ${bootstrapOnlyPlayers.length} bootstrap-only players (0-minute/no-projection) to the response`);
+      const result = [...projections, ...bootstrapOnlyPlayers];
       
       // Cache the result for 15 minutes only if data is valid (always cache RAW projections)
       totalPointsCache.set(cacheKey, {
-        data: projections,
+        data: result,
         timestamp: Date.now()
       });
       
-      res.json(projections);
+      res.json(result);
       
     } catch (error) {
       console.error("Error in player total points:", error);
