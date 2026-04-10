@@ -13673,6 +13673,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map((el: any) => {
           const team = (bootstrapData.teams || []).find((t: any) => t.id === el.team);
           const position = positionNames[(el.element_type || 1) - 1] || 'Unknown';
+
+          // Build explicit zero entries for each GW in the requested range.
+          // This ensures API consumers expecting per-GW keys get consistent
+          // data rather than empty objects.
+          const zeroByGW: Record<string, number> = {};
+          for (let gw = start; gw <= end; gw++) zeroByGW[gw.toString()] = 0;
+
           return {
             playerId: el.id,
             playerName: `${el.first_name} ${el.second_name}`,
@@ -13683,7 +13690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             price: (el.now_cost || 0) / 10,
             ownership: parseFloat(el.selected_by_percent || '0'),
             form: parseFloat(el.form || '0'),
-            gameweekProjections: {},
+            gameweekProjections: { ...zeroByGW },
             totalExpectedPoints: 0,
             averagePerGameweek: 0,
             averageValue: 0,
@@ -13692,12 +13699,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: el.status || 'a',
             news: el.news || '',
             availabilityAdjustments: {},
-            pointsFromGoals: {}, pointsFromAssists: {}, pointsFromCleanSheets: {},
-            pointsFromMinutes: {}, pointsFromGoalsConceded: {}, pointsFromYellowCards: {},
-            pointsFromRedCards: {}, pointsFromBonus: {}, pointsFromSaves: {},
-            pointsFromDefensiveContributions: {},
-            rawGoalCounts: {}, rawAssistCounts: {}, rawSaveCounts: {},
-            rawGCCounts: {}, rawYCCounts: {}, rawRCCounts: {},
+            pointsFromGoals: { ...zeroByGW }, pointsFromAssists: { ...zeroByGW },
+            pointsFromCleanSheets: { ...zeroByGW }, pointsFromMinutes: { ...zeroByGW },
+            pointsFromGoalsConceded: { ...zeroByGW }, pointsFromYellowCards: { ...zeroByGW },
+            pointsFromRedCards: { ...zeroByGW }, pointsFromBonus: { ...zeroByGW },
+            pointsFromSaves: { ...zeroByGW }, pointsFromDefensiveContributions: { ...zeroByGW },
+            rawGoalCounts: { ...zeroByGW }, rawAssistCounts: { ...zeroByGW },
+            rawSaveCounts: { ...zeroByGW }, rawGCCounts: { ...zeroByGW },
+            rawYCCounts: { ...zeroByGW }, rawRCCounts: { ...zeroByGW },
             fixtureDetails: {},
             totalPointsFromGoals: 0, totalPointsFromAssists: 0, totalPointsFromCleanSheets: 0,
             totalPointsFromMinutes: 0, totalPointsFromGoalsConceded: 0, totalPointsFromYellowCards: 0,
