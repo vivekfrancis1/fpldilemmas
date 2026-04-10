@@ -1759,9 +1759,15 @@ export default function BestFreehitTeam() {
                         </Badge>
                         <div className="text-right">
                           <div className="flex items-center gap-1">
-                            <p className="font-medium">
-                              {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                            </p>
+                            {player.playerId === optimalTeam.captain.playerId ? (
+                              <p className="font-medium text-yellow-600">
+                                {getGameweekPoints(player, selectedGameweek).toFixed(1)}pt × 2 = {(getGameweekPoints(player, selectedGameweek) * 2).toFixed(1)}pts
+                              </p>
+                            ) : (
+                              <p className="font-medium">
+                                {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                              </p>
+                            )}
                             {player.playerId === optimalTeam.captain.playerId && (
                               <span className="text-yellow-600 font-medium">(C)</span>
                             )}
