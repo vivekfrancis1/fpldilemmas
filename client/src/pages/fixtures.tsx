@@ -390,14 +390,17 @@ export default function Fixtures() {
     if (!bootstrapData?.teams || !fixtureMatrix || gameweeks.length === 0) return [];
     
     const teams = bootstrapData.teams.filter(t => !excludedTeams.has(t.id));
+    type FixtureEntry = { opponent: string; isHome: boolean; difficulty: number };
     const pairs: Array<{
       team1: typeof teams[0];
       team2: typeof teams[0];
       rotationScore: number;
       fixturesByGameweek: Array<{ 
         gw: number; 
-        team1Fixture: { opponent: string; isHome: boolean; difficulty: number };
-        team2Fixture: { opponent: string; isHome: boolean; difficulty: number };
+        team1Fixtures: FixtureEntry[];
+        team2Fixtures: FixtureEntry[];
+        diff1Avg: number;
+        diff2Avg: number;
       }>;
       combinedAvgDifficulty: number;
     }> = [];
@@ -412,46 +415,47 @@ export default function Fixtures() {
         let combinedDifficulty = 0;
         const fixturesByGameweek: Array<{ 
           gw: number; 
-          team1Fixture: { opponent: string; isHome: boolean; difficulty: number };
-          team2Fixture: { opponent: string; isHome: boolean; difficulty: number };
+          team1Fixtures: FixtureEntry[];
+          team2Fixtures: FixtureEntry[];
+          diff1Avg: number;
+          diff2Avg: number;
         }> = [];
         
         gameweeks.forEach(gw => {
           const fixtures1 = fixtureMatrix[team1.id]?.[gw] || [];
           const fixtures2 = fixtureMatrix[team2.id]?.[gw] || [];
           
-          // Use the first fixture for rotation calculation (or average if multiple)
-          const fixture1 = fixtures1[0];
-          const fixture2 = fixtures2[0];
+          // For DGWs, use average difficulty across all fixtures for rotation scoring
+          const diff1Avg = fixtures1.length > 0
+            ? fixtures1.reduce((s, f) => s + (f.difficulty || 3), 0) / fixtures1.length
+            : 3;
+          const diff2Avg = fixtures2.length > 0
+            ? fixtures2.reduce((s, f) => s + (f.difficulty || 3), 0) / fixtures2.length
+            : 3;
           
-          const diff1 = fixture1?.difficulty || 3;
-          const diff2 = fixture2?.difficulty || 3;
-          
-          const easierDifficulty = Math.min(diff1, diff2);
+          const easierDifficulty = Math.min(diff1Avg, diff2Avg);
           combinedDifficulty += easierDifficulty;
           
           fixturesByGameweek.push({
             gw,
-            team1Fixture: {
-              opponent: fixture1?.opponent || '-',
-              isHome: fixture1?.isHome ?? true,
-              difficulty: diff1
-            },
-            team2Fixture: {
-              opponent: fixture2?.opponent || '-',
-              isHome: fixture2?.isHome ?? true,
-              difficulty: diff2
-            }
+            team1Fixtures: fixtures1.length > 0
+              ? fixtures1.map(f => ({ opponent: f.opponent, isHome: f.isHome, difficulty: f.difficulty }))
+              : [{ opponent: '-', isHome: true, difficulty: 3 }],
+            team2Fixtures: fixtures2.length > 0
+              ? fixtures2.map(f => ({ opponent: f.opponent, isHome: f.isHome, difficulty: f.difficulty }))
+              : [{ opponent: '-', isHome: true, difficulty: 3 }],
+            diff1Avg,
+            diff2Avg,
           });
           
           // Rotation score: reward when one team has easy (1-2) while other has hard (4-5)
-          if ((diff1 <= 2 && diff2 >= 4) || (diff2 <= 2 && diff1 >= 4)) {
+          if ((diff1Avg <= 2 && diff2Avg >= 4) || (diff2Avg <= 2 && diff1Avg >= 4)) {
             rotationScore += 3; // Perfect rotation week
-          } else if ((diff1 <= 2 && diff2 === 3) || (diff2 <= 2 && diff1 === 3)) {
+          } else if ((diff1Avg <= 2 && diff2Avg === 3) || (diff2Avg <= 2 && diff1Avg === 3)) {
             rotationScore += 2; // Good rotation week
-          } else if ((diff1 <= 3 && diff2 >= 4) || (diff2 <= 3 && diff1 >= 4)) {
+          } else if ((diff1Avg <= 3 && diff2Avg >= 4) || (diff2Avg <= 3 && diff1Avg >= 4)) {
             rotationScore += 1; // Decent rotation week
-          } else if (diff1 >= 4 && diff2 >= 4) {
+          } else if (diff1Avg >= 4 && diff2Avg >= 4) {
             rotationScore -= 2; // Both have hard fixtures - bad
           }
         });
@@ -1139,13 +1143,15 @@ export default function Fixtures() {
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                const diff1 = fw.team1Fixture.difficulty;
-                                const diff2 = fw.team2Fixture.difficulty;
-                                const isRecommended = diff1 < diff2 || (diff1 === diff2 && fw.team1Fixture.isHome && !fw.team2Fixture.isHome) || (diff1 === diff2 && fw.team1Fixture.isHome === fw.team2Fixture.isHome);
+                                const isRecommended = fw.diff1Avg < fw.diff2Avg;
                                 return (
                                   <td key={fw.gw} className="px-0.5 py-0.5 text-center">
-                                    <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
-                                      {fw.team1Fixture.opponent === '-' ? '-' : `${fw.team1Fixture.opponent}(${fw.team1Fixture.isHome ? 'H' : 'A'})`}
+                                    <div className={`flex flex-col gap-0.5 ${isRecommended ? 'font-bold' : 'font-medium'}`}>
+                                      {fw.team1Fixtures.map((f, fi) => (
+                                        <div key={fi} className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${getDifficultyColor(f.difficulty)}`}>
+                                          {f.opponent === '-' ? '-' : `${f.opponent}(${f.isHome ? 'H' : 'A'})`}
+                                        </div>
+                                      ))}
                                     </div>
                                   </td>
                                 );
@@ -1166,13 +1172,15 @@ export default function Fixtures() {
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                const diff1 = fw.team1Fixture.difficulty;
-                                const diff2 = fw.team2Fixture.difficulty;
-                                const isRecommended = diff2 < diff1 || (diff1 === diff2 && fw.team2Fixture.isHome && !fw.team1Fixture.isHome);
+                                const isRecommended = fw.diff2Avg < fw.diff1Avg;
                                 return (
                                   <td key={fw.gw} className="px-0.5 py-0.5 text-center">
-                                    <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
-                                      {fw.team2Fixture.opponent === '-' ? '-' : `${fw.team2Fixture.opponent}(${fw.team2Fixture.isHome ? 'H' : 'A'})`}
+                                    <div className={`flex flex-col gap-0.5 ${isRecommended ? 'font-bold' : 'font-medium'}`}>
+                                      {fw.team2Fixtures.map((f, fi) => (
+                                        <div key={fi} className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${getDifficultyColor(f.difficulty)}`}>
+                                          {f.opponent === '-' ? '-' : `${f.opponent}(${f.isHome ? 'H' : 'A'})`}
+                                        </div>
+                                      ))}
                                     </div>
                                   </td>
                                 );
