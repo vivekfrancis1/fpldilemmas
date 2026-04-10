@@ -191,7 +191,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [loadGroupFilter, setLoadGroupFilter] = useState("Top 50");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [minPrice, setMinPrice] = useState<number>(4.0);
+  const [minPrice, setMinPrice] = useState<number>(3.5);
   const [maxPrice, setMaxPrice] = useState<number>(15.0);
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -513,10 +513,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             <Input
               type="number"
               step="0.1"
-              min="4.0"
+              min="3.5"
               max="15.0"
               value={minPrice}
-              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 4.0)}
+              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
               className="h-8 w-16 text-sm"
               data-testid="input-min-price"
             />
