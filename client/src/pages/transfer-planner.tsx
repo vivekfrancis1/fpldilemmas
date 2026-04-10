@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,8 +186,13 @@ interface AllPlayersProjectionsTabProps {
 
 function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
-  const [teamFilter, setTeamFilter] = useState("all");
+  const [positionFilters, setPositionFilters] = useState<Set<string>>(() =>
+    initialPositionFilter && initialPositionFilter !== "all" ? new Set([initialPositionFilter]) : new Set()
+  );
+  const [teamFilters, setTeamFilters] = useState<Set<string>>(new Set());
+  const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
+  const [teamSearch, setTeamSearch] = useState("");
+  const teamDropdownRef = useRef<HTMLDivElement>(null);
   const [loadGroupFilter, setLoadGroupFilter] = useState("Top 50");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -198,8 +203,23 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // Update position filter when initialPositionFilter changes
   useEffect(() => {
-    setPositionFilter(initialPositionFilter);
+    if (initialPositionFilter && initialPositionFilter !== "all") {
+      setPositionFilters(new Set([initialPositionFilter]));
+    } else {
+      setPositionFilters(new Set());
+    }
   }, [initialPositionFilter]);
+
+  // Close team dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (teamDropdownRef.current && !teamDropdownRef.current.contains(e.target as Node)) {
+        setTeamDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Scroll to view when requested
   useEffect(() => {
@@ -370,9 +390,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesPosition = positionFilter === "all" || player.position === positionFilter;
+      const matchesPosition = positionFilters.size === 0 || positionFilters.has(player.position);
       const normalizedPlayerTeam = normalizeTeamName(player.team);
-      const matchesTeam = teamFilter === "all" || normalizedPlayerTeam === teamFilter;
+      const matchesTeam = teamFilters.size === 0 || teamFilters.has(normalizedPlayerTeam);
       const matchesPrice = player.price >= minPrice && player.price <= maxPrice;
       const isAffordable = !onlyAffordable || player.price <= currentBank;
       
@@ -473,29 +493,97 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             className="h-8 text-sm w-full sm:w-40"
             data-testid="input-player-search"
           />
-          <Select value={positionFilter} onValueChange={setPositionFilter}>
-            <SelectTrigger className="h-8 text-sm w-full sm:w-32" data-testid="select-position-filter">
-              <SelectValue placeholder="All Positions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Positions</SelectItem>
-              <SelectItem value="Goalkeeper">Goalkeepers</SelectItem>
-              <SelectItem value="Defender">Defenders</SelectItem>
-              <SelectItem value="Midfielder">Midfielders</SelectItem>
-              <SelectItem value="Forward">Forwards</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
-            <SelectTrigger className="h-8 text-sm w-full sm:w-28" data-testid="select-team-filter">
-              <SelectValue placeholder="All Teams" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {uniqueTeams.map(team => (
-                <SelectItem key={team} value={team}>{team}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Position multi-select pills */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { label: "GKP", value: "Goalkeeper" },
+              { label: "DEF", value: "Defender" },
+              { label: "MID", value: "Midfielder" },
+              { label: "FWD", value: "Forward" },
+            ].map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setPositionFilters(prev => {
+                  const next = new Set(prev);
+                  if (next.has(value)) next.delete(value); else next.add(value);
+                  return next;
+                })}
+                className={`h-8 px-2 text-xs rounded border font-semibold transition-colors ${
+                  positionFilters.has(value)
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            {positionFilters.size > 0 && (
+              <button
+                onClick={() => setPositionFilters(new Set())}
+                className="h-8 px-1.5 text-xs rounded border border-gray-200 text-gray-400 hover:text-gray-600"
+                title="Clear position filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          {/* Team multi-select dropdown */}
+          <div className="relative" ref={teamDropdownRef}>
+            <button
+              onClick={() => setTeamDropdownOpen(o => !o)}
+              className={`h-8 px-2 text-xs rounded border font-medium flex items-center gap-1 transition-colors ${
+                teamFilters.size > 0
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+              }`}
+            >
+              {teamFilters.size === 0 ? 'All Teams' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
+              <ChevronDown className="h-3 w-3 ml-0.5" />
+            </button>
+            {teamDropdownOpen && (
+              <div className="absolute z-50 top-9 left-0 w-52 bg-white border border-gray-200 rounded-lg shadow-lg">
+                <div className="p-2 border-b">
+                  <input
+                    type="text"
+                    placeholder="Search teams..."
+                    value={teamSearch}
+                    onChange={e => setTeamSearch(e.target.value)}
+                    className="w-full h-7 px-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-blue-400"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-52 overflow-y-auto py-1">
+                  {uniqueTeams
+                    .filter(t => t.toLowerCase().includes(teamSearch.toLowerCase()))
+                    .map(team => (
+                      <label key={team} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={teamFilters.has(team)}
+                          onChange={() => setTeamFilters(prev => {
+                            const next = new Set(prev);
+                            if (next.has(team)) next.delete(team); else next.add(team);
+                            return next;
+                          })}
+                          className="w-3.5 h-3.5 accent-blue-600"
+                        />
+                        <span className="text-xs text-gray-700">{team}</span>
+                      </label>
+                    ))}
+                </div>
+                {teamFilters.size > 0 && (
+                  <div className="p-2 border-t">
+                    <button
+                      onClick={() => { setTeamFilters(new Set()); setTeamDropdownOpen(false); }}
+                      className="w-full text-xs text-red-500 hover:text-red-700 text-center"
+                    >
+                      Clear all teams
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
             <SelectTrigger className="h-8 text-sm w-full sm:w-28" data-testid="select-load-group">
               <SelectValue placeholder="Filter" />
