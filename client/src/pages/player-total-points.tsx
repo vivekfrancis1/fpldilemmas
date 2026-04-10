@@ -1059,6 +1059,12 @@ export default function PlayerTotalPoints() {
     return map;
   }, [bootstrapData?.teams]);
 
+  // Stable full team short-name list for invert (always all 20, not filtered)
+  const allTeamShortNames = useMemo(() => {
+    if (!bootstrapData?.teams) return [];
+    return bootstrapData.teams.map(t => t.short_name).sort();
+  }, [bootstrapData?.teams]);
+
   // Normalize any team name variant (full or short) to its canonical short name
   const normalizeTeam = (name: string): string => {
     if (!name) return name;
@@ -1839,7 +1845,7 @@ export default function PlayerTotalPoints() {
                         {showOpponent ? 'Hide Opp' : 'Show Opp'}
                       </button>
                       <button
-                        onClick={() => setExcludedGameweeks(new Set(fullGameweekRange.filter(gw => !excludedGameweeks.has(gw))))}
+                        onClick={() => setExcludedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))}
                         className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300"
                         data-testid="button-invert-gameweeks"
                       >Invert</button>
@@ -1876,7 +1882,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="pos" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
-                    <button onClick={() => setSelectedPositions(new Set(positions.filter(p => !selectedPositions.has(p))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
+                    <button onClick={() => setSelectedPositions(prev => new Set(positions.filter(p => !prev.has(p))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
                     <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -1901,7 +1907,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="teams" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
-                    <button onClick={() => setSelectedTeams(new Set(teams.filter(t => !selectedTeams.has(t))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
+                    <button onClick={() => setSelectedTeams(prev => new Set(allTeamShortNames.filter(t => !prev.has(t))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
                     <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -1926,7 +1932,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="pts" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={includeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
-                    <button onClick={() => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key).filter(k => !excludedComponents.has(k))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-components">Invert</button>
+                    <button onClick={() => setExcludedComponents(prev => new Set(POINT_COMPONENTS.map(c => c.key).filter(k => !prev.has(k))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-components">Invert</button>
                     <button onClick={excludeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
