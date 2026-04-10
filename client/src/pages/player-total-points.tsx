@@ -1838,6 +1838,11 @@ export default function PlayerTotalPoints() {
                         <Users className="h-2.5 w-2.5" />
                         {showOpponent ? 'Hide Opp' : 'Show Opp'}
                       </button>
+                      <button
+                        onClick={() => setExcludedGameweeks(new Set(fullGameweekRange.filter(gw => !excludedGameweeks.has(gw))))}
+                        className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300"
+                        data-testid="button-invert-gameweeks"
+                      >Invert</button>
                       {excludedGameweeks.size > 0 && (
                         <button
                           onClick={clearExclusions}
@@ -1871,6 +1876,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="pos" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
+                    <button onClick={() => setSelectedPositions(new Set(positions.filter(p => !selectedPositions.has(p))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
                     <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -1895,6 +1901,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="teams" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
+                    <button onClick={() => setSelectedTeams(new Set(teams.filter(t => !selectedTeams.has(t))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
                     <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -1919,6 +1926,7 @@ export default function PlayerTotalPoints() {
                 <TabsContent value="pts" className="mt-0">
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={includeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
+                    <button onClick={() => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key).filter(k => !excludedComponents.has(k))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-components">Invert</button>
                     <button onClick={excludeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
