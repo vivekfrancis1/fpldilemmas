@@ -6319,19 +6319,31 @@ export default function TransferPlanner() {
                   }}
                   renderEmptySlot={(pitchPlayer) => (
                     <div key={`empty-${pitchPlayer.position}`} className="flex flex-col items-center w-[19%]" data-testid={`pitch-empty-${pitchPlayer.position}`}>
-                      <div className="w-18 sm:w-22 md:w-28 rounded-lg p-2 text-center border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20">
+                      <div className="relative flex flex-col items-center">
                         <button
-                          onClick={() => {
-                            setTransferredOutPlayers([]);
-                          }}
-                          className="text-red-600 hover:text-red-700 transition-colors ml-auto block"
-                          aria-label="Close"
+                          onClick={() => setTransferredOutPlayers([])}
+                          className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center border border-white shadow-md text-white"
+                          aria-label="Cancel transfer out"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-2.5 w-2.5" />
                         </button>
-                        <div className="text-[9px] sm:text-xs font-bold text-red-600">EMPTY</div>
-                        <div className="text-[8px] sm:text-[10px] text-red-500">{getPositionShortName(pitchPlayer.element_type)}</div>
-                        <div className="text-lg font-bold text-red-600">-</div>
+                        <div className="w-18 sm:w-22 md:w-28 border-2 border-dashed border-red-400 bg-red-900/10">
+                          <div className="p-1">
+                            <div className="w-full h-16 sm:h-20 md:h-24 flex items-center justify-center">
+                              <span className="text-3xl sm:text-4xl font-bold text-red-400/50">?</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col">
+                            <div className="w-full px-1 py-0.5 bg-white/95 text-center">
+                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-red-600 truncate">
+                                {getPositionShortName(pitchPlayer.element_type)}
+                              </div>
+                            </div>
+                            <div className="w-full px-2 py-0.5 bg-red-500 text-center">
+                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">-</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
