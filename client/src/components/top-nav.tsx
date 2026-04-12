@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import logoImg from "@assets/FPL_Dilemmas_logo_green_new_1776001333352.jpg";
 import {
   TrendingUp,
   RefreshCw,
@@ -241,12 +242,9 @@ export default function TopNav() {
 
   return (
     <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
-      {/* Logo — icon only to save space */}
-      <Link href="/" className="flex items-center gap-2 px-3 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
-        <div className="w-6 h-6 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
-          <i className="fas fa-futbol text-fpl-purple text-xs" />
-        </div>
-        <span className="text-sm font-bold text-white whitespace-nowrap hidden lg:block">FPL Dilemmas</span>
+      {/* Logo */}
+      <Link href="/" className="flex items-center px-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
+        <img src={logoImg} alt="FPL Dilemmas" className="h-9 w-9 rounded-full object-cover" />
       </Link>
 
       {/* Nav dropdowns — flex-1 so they fill available space */}

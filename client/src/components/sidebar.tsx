@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import logoImg from "@assets/FPL_Dilemmas_logo_green_new_1776001333352.jpg";
 import { useState } from "react";
 import { 
   TrendingUp, 
@@ -174,12 +175,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <div className="p-3 sm:p-4 md:p-6 border-b border-purple-400/20">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-futbol text-fpl-purple text-xs sm:text-sm"></i>
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-base md:text-lg font-bold truncate">FPL Dilemmas</h1>
-              </div>
+              <img src={logoImg} alt="FPL Dilemmas" className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" />
             </Link>
             <Button
               variant="ghost"
