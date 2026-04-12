@@ -988,8 +988,8 @@ export default function TransferPlanner() {
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
   const [isDraftSelectionOpen, setIsDraftSelectionOpen] = useState(false);
   const [isTeamSummaryOpen, setIsTeamSummaryOpen] = useState(true);
-  const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
-  const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
+  const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(true);
+  const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(true);
   
   // Track chip changes for autosave (to avoid saving on initial load or draft switch)
   const chipChangeForAutosaveRef = useRef(false);
