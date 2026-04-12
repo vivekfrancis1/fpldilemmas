@@ -3069,9 +3069,9 @@ export default function MyDashboard() {
                           {transfersData
                             .slice()
                             .filter(transfer => {
-                              // Filter out transfers from Free Hit gameweeks (they reverted and are meaningless)
-                              const freeHitGWs = getFreeHitGameweeks();
-                              return !freeHitGWs.has(transfer.event);
+                              // Filter out transfers from Free Hit and Wildcard gameweeks
+                              const chipGWs = getChipGameweeks();
+                              return !chipGWs.has(transfer.event);
                             })
                             .sort((a, b) => {
                               // Sort by timestamp (most recent first), then by gameweek (descending)
