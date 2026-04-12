@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { BootstrapData } from "@shared/schema";
@@ -93,7 +93,6 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
 }
 
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
-import PlayerProjectionsComparisonModal from "@/components/player-projections-comparison-modal";
 
 // Fixture detail type for DGW breakdowns
 interface FixtureDetail {
@@ -650,9 +649,6 @@ function createPlayerTotalPointsColumns(
   maxPointsPerGameweek: { [key: string]: number },
   teamNameToShortName: Map<string, string>,
   playerIdToWebName: Map<number, string>,
-  onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
-  compareList?: PlayerTotalPointsData[],
-  maxCompareReached?: boolean,
   opponentMap?: Map<string, { opponent: string; opponentId: number; isHome: boolean }>,
   showOpponent?: boolean,
   excludedComponents?: Set<string>,
@@ -687,29 +683,6 @@ function createPlayerTotalPointsColumns(
         </div>
       )
     },
-    ...(onPlayerCompareClick ? [{
-      key: 'compare',
-      header: '',
-      sortable: false,
-      align: 'center' as const,
-      className: 'hidden md:table-cell min-w-[40px]',
-      render: (_: any, player: PlayerTotalPointsData) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onPlayerCompareClick(player)}
-          disabled={maxCompareReached && !compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))}
-          className={`h-6 w-6 md:h-8 md:w-8 p-0 hover:bg-blue-50 ${
-            compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-400 hover:text-blue-600'
-          }`}
-          data-testid={`button-compare-${player.playerId || player.id}`}
-        >
-          <UserPlus className="h-3 w-3 md:h-4 md:w-4" />
-        </Button>
-      )
-    }] : []),
     ...gameweekRange.map(gw => {
       const gwKey = `gw${gw}`;
       const numericGwKey = gw.toString();
@@ -932,10 +905,6 @@ export default function PlayerTotalPoints() {
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
-  // Comparison state
-  const [compareList, setCompareList] = useState<PlayerTotalPointsData[]>([]);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
-  
   // Gameweek exclusion state
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   
@@ -1126,44 +1095,6 @@ export default function PlayerTotalPoints() {
     
     return map;
   }, [bootstrapData?.teams, fixturesData]);
-
-  // Handle player comparison
-  const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
-    const playerId = player.playerId;
-    if (!playerId) {
-      console.warn('Player has no valid playerId:', player);
-      return;
-    }
-
-    const isPlayerInList = compareList.some(p => p.playerId === playerId);
-    
-    if (isPlayerInList) {
-      // Remove player from comparison list
-      setCompareList(prev => prev.filter(p => p.playerId !== playerId));
-      console.log('Removed player from comparison:', player.playerName, 'List length:', compareList.length - 1);
-    } else {
-      // Add player to comparison list (max 5 for projected data comparison)
-      if (compareList.length < 5) {
-        setCompareList(prev => [...prev, player]);
-        console.log('Added player to comparison:', player.playerName, 'List length:', compareList.length + 1);
-      }
-    }
-  };
-
-  // Handle compare modal open
-  const handleCompareModalOpen = () => {
-    if (compareList.length >= 2) {
-      setIsCompareModalOpen(true);
-    }
-  };
-
-  // Handle compare modal close
-  const handleCompareModalClose = () => {
-    setIsCompareModalOpen(false);
-  };
-
-  // Check if max compare reached
-  const maxCompareReached = compareList.length >= 5;
 
   // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
   // TanStack Query does NOT refetch when the user changes the GW filter (instant client-side filtering).
@@ -2034,9 +1965,6 @@ export default function PlayerTotalPoints() {
                       maxPointsPerGameweek,
                       teamNameToShortName,
                       playerIdToWebName,
-                      handlePlayerCompareClick, 
-                      compareList, 
-                      maxCompareReached,
                       opponentMap,
                       showOpponent,
                       excludedComponents,
@@ -2062,57 +1990,6 @@ export default function PlayerTotalPoints() {
             </div>
           )}
 
-        {/* Comparison Modal */}
-        <PlayerProjectionsComparisonModal
-          players={compareList}
-          isOpen={isCompareModalOpen}
-          onClose={handleCompareModalClose}
-          bootstrapData={bootstrapData}
-          startGameweek={startGameweek || 6}
-          endGameweek={endGameweek || 11}
-        />
-
-        {/* Bottom Right Comparison Popup */}
-        {compareList.length > 0 && (
-          <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-40 max-w-xs">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900">Compare Players ({compareList.length}/5)</h3>
-              <button
-                onClick={() => setCompareList([])}
-                className="text-gray-400 hover:text-gray-600 text-sm"
-                data-testid="button-clear-comparison"
-              >
-                Clear
-              </button>
-            </div>
-            <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
-              {compareList.map((player) => (
-                <div key={player.playerId || player.id} className="flex items-center justify-between text-sm py-1">
-                  <span className="font-medium text-gray-700 truncate">
-                    {player.playerName || player.name}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const playerId = player.playerId || player.id;
-                      setCompareList(prev => prev.filter(p => (p.playerId || p.id) !== playerId));
-                    }}
-                    className="text-red-400 hover:text-red-600 ml-2"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={handleCompareModalOpen}
-              disabled={compareList.length < 2}
-              className="w-full bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              data-testid="button-compare-players"
-            >
-              Compare {compareList.length < 2 ? `(Need ${2 - compareList.length} more)` : ''}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
