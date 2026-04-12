@@ -132,11 +132,9 @@ export default function Fixtures() {
   // Modal state for assigning a TBC fixture to a gameweek
   const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
 
-  // Toggle between base fixtures (TBC intact) and user-assigned fixtures
-  const [viewMode, setViewMode] = useState<'base' | 'custom'>('custom');
+  // Toggle between base fixtures (TBC intact), user-assigned, and expert (all TBC → GW36)
+  const [viewMode, setViewMode] = useState<'base' | 'custom' | 'expert'>('custom');
   const hasAssignments = Object.keys(tbcAssignments).length > 0;
-  // In base mode assignments are ignored so the TBC column is always shown
-  const activeAssignments = viewMode === 'custom' ? tbcAssignments : {};
   
   const updateCustomFDR = (teamId: number, venue: 'home' | 'away', value: number) => {
     setCustomFDR(prev => ({
@@ -181,6 +179,26 @@ export default function Fixtures() {
     gcTime: 30 * 60 * 1000,
     enabled: fdrMode === 'form',
   });
+
+  // Whether any fixture has event=null (used to show the view mode toggle)
+  const hasTBCFixturesInData = useMemo(() => {
+    return fixturesData?.some(f => f.event === null) ?? false;
+  }, [fixturesData]);
+
+  // Active assignments: base=none, custom=user's, expert=user's + all remaining TBC → GW36
+  const activeAssignments = useMemo<Record<number, number>>(() => {
+    if (viewMode === 'base') return {};
+    if (viewMode === 'expert') {
+      const expertMap: Record<number, number> = { ...tbcAssignments };
+      fixturesData?.forEach(f => {
+        if (f.event === null && !expertMap[f.id]) {
+          expertMap[f.id] = 36;
+        }
+      });
+      return expertMap;
+    }
+    return tbcAssignments;
+  }, [viewMode, tbcAssignments, fixturesData]);
 
   // Initialize gameweek range when bootstrap data loads
   useEffect(() => {
@@ -1024,7 +1042,7 @@ export default function Fixtures() {
             </div>
           </div>
 
-          {hasAssignments && (
+          {hasTBCFixturesInData && (
             <div className="flex justify-center">
               <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs">
                 <button
@@ -1046,6 +1064,17 @@ export default function Fixtures() {
                   }`}
                 >
                   My Fixtures
+                </button>
+                <button
+                  onClick={() => setViewMode('expert')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
+                    viewMode === 'expert'
+                      ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  title="All unassigned TBC fixtures placed in GW36"
+                >
+                  Expert Fixtures
                 </button>
               </div>
             </div>
