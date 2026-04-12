@@ -660,21 +660,18 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             className="h-8 text-sm flex-1 min-w-0 rounded-md"
             data-testid="input-player-search"
           />
-          <label className={`flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap ${transferredOutPlayers.length > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-            <input
-              type="checkbox"
-              checked={onlyAffordable}
-              onChange={(e) => setOnlyAffordable(e.target.checked)}
-              disabled={transferredOutPlayers.length === 0}
-              className="h-4 w-4 rounded border-gray-300"
-              data-testid="checkbox-only-affordable"
-            />
-            <span className="text-sm text-muted-foreground">
-              {transferredOutPlayers.length > 0
-                ? `Only affordable (≤£${currentBank.toFixed(1)}m)`
-                : 'Only affordable (select transfer out first)'}
-            </span>
-          </label>
+          {transferredOutPlayers.length > 0 && (
+            <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={onlyAffordable}
+                onChange={(e) => setOnlyAffordable(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="checkbox-only-affordable"
+              />
+              <span className="text-sm text-muted-foreground">Only affordable (≤£{currentBank.toFixed(1)}m)</span>
+            </label>
+          )}
         </div>
       </div>
       <CardContent className="p-1">
