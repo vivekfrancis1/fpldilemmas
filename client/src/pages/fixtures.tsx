@@ -43,7 +43,11 @@ function TBCCell({ fixtures, onFixtureClick }: {
           {fixtures.map((fixture, idx) => (
             <div
               key={idx}
-              className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800 ${fixture.fixtureId ? 'cursor-pointer hover:bg-amber-200 hover:ring-1 hover:ring-amber-400 transition-colors' : ''}`}
+              className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800 ${
+                fixture.fixtureId
+                  ? 'cursor-pointer select-none border border-dashed border-amber-500 hover:bg-amber-300 hover:border-amber-600 hover:shadow-sm hover:scale-105 active:scale-95 transition-all duration-100'
+                  : ''
+              }`}
               title={fixture.fixtureId ? `Click to assign to a gameweek` : `TBC: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent}`}
               onClick={() => {
                 if (fixture.fixtureId && onFixtureClick) {
@@ -1128,7 +1132,7 @@ export default function Fixtures() {
                                         key={idx}
                                         className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                           fixture.finished ? 'opacity-50' : ''
-                                        } ${fixture.fixtureId ? 'cursor-pointer ring-1 ring-amber-400 hover:ring-2 transition-all' : ''}`}
+                                        } ${fixture.fixtureId ? 'cursor-pointer select-none border-2 border-dashed border-amber-500 hover:border-amber-700 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-100' : ''}`}
                                         title={fixture.fixtureId ? `Assigned from TBC — click to reassign or reset` : `${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
                                         data-testid={`fixture-${team.id}-${gw}-${idx}`}
                                         onClick={() => {
