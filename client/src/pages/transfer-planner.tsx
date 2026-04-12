@@ -6047,7 +6047,7 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
-          <div className="w-full lg:w-1/2 flex-shrink-0">
+          <div className="w-full lg:w-[60%] flex-shrink-0">
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader className="py-3 px-3 sm:px-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -6406,7 +6406,7 @@ export default function TransferPlanner() {
         </Card>
           </div>
           {/* Right column: Projected Points */}
-          <div className="w-full lg:w-1/2 min-w-0">
+          <div className="w-full lg:w-[40%] min-w-0">
             <AllPlayersProjectionsTab
               selectedGameweek={selectedGameweek as number}
               transferredOutPlayers={transferredOutPlayers}
