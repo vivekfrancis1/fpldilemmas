@@ -637,100 +637,100 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-2 md:p-4">
-        <div className="w-full overflow-x-auto md:overflow-visible">
-          <table className="w-full min-w-[480px] md:min-w-0 text-xs md:text-sm">
+      <CardContent className="p-1">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-[10px] leading-tight">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[160px] min-w-[160px] max-w-[200px]">
+                <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[110px] min-w-[110px] max-w-[110px]">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm truncate"
+                    className="h-5 px-1 text-[10px] truncate"
                     onClick={() => handleSort('name')}
                     data-testid="sort-name"
                   >
-                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 font-bold text-xs md:text-sm w-[44px] min-w-[44px] max-w-[44px]">
-                  Action
+                <th className="text-center py-0.5 px-0.5 font-bold w-[28px] min-w-[28px] max-w-[28px]">
+                  +
                 </th>
-                <th className="text-left py-1 px-1 md:p-2 hidden md:table-cell">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('price')}
                     data-testid="sort-price"
                   >
-                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    £ {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort(`gw_${selectedGameweek}`)}
                     data-testid={`sort-gw${selectedGameweek}`}
                   >
-                    GW{selectedGameweek} {sortField === `gw_${selectedGameweek}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    GW{selectedGameweek} {sortField === `gw_${selectedGameweek}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 font-bold">
+                <th className="text-center py-0.5 px-0.5 font-bold">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('total')}
                     data-testid="sort-total"
                   >
-                    Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('avgValue')}
                     data-testid="sort-avgValue"
                   >
-                    Avg Val {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Val {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('form')}
                     data-testid="sort-form"
                   >
-                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('avgMins')}
                     data-testid="sort-avgMins"
                   >
-                    Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-0.5 px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-5 px-1 text-[10px]"
                     onClick={() => handleSort('ownership')}
                     data-testid="sort-ownership"
                   >
-                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
               </tr>
@@ -743,16 +743,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[200px]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="font-medium text-xs md:text-sm truncate max-w-[100px]">
+                    <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[110px] min-w-[110px] max-w-[110px]">
+                      <div className="flex items-center gap-1">
+                        <div className="font-medium truncate max-w-[72px]">
                           {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
                         </div>
                         <TooltipProvider>
                           <PlayerAvailabilityBadge player={player} />
                         </TooltipProvider>
                       </div>
-                      <div className="text-[10px] md:text-xs text-muted-foreground truncate">
+                      <div className="text-[9px] text-muted-foreground truncate">
                         {(() => {
                           const positionShortforms: { [key: string]: string } = {
                             'Goalkeeper': 'GKP',
@@ -764,44 +764,33 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })()} • {getTeamShortName(player.team)}
                       </div>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center w-[44px] min-w-[44px] max-w-[44px]">
+                    <td className="py-0.5 px-0.5 text-center w-[28px] min-w-[28px] max-w-[28px]">
                       {(() => {
-                        // Map position names to element types
                         const positionMap: { [key: string]: number } = {
-                          'Goalkeeper': 1,
-                          'Defender': 2,
-                          'Midfielder': 3,
-                          'Forward': 4
+                          'Goalkeeper': 1, 'Defender': 2, 'Midfielder': 3, 'Forward': 4
                         };
                         const playerElementType = positionMap[player.position];
-                        
-                        // Check if there's a matching transfer out for this position
                         const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
                           t => t.elementType === playerElementType
                         );
-                        
-                        // Calculate available budget: current bank + selling prices of transferred out players
                         const totalSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
                         const availableBudget = currentBank + totalSellingPrice;
-                        
-                        // Check if player is affordable
                         const isAffordable = player.price <= availableBudget;
-                        
                         return hasMatchingTransferOut && isAffordable ? (
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-6 w-6 md:h-8 md:w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
+                            className="h-5 w-5 text-green-600 hover:bg-green-50 hover:text-green-700"
                             onClick={() => onTransferIn(player.playerId, playerElementType)}
                             data-testid={`transfer-in-${player.playerId}`}
                             title="Transfer In"
                           >
-                            <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                            <Plus className="h-3 w-3" />
                           </Button>
                         ) : null;
                       })()}
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">£{player.price.toFixed(1)}m</td>
+                    <td className="py-0.5 px-0.5 text-center">£{player.price.toFixed(1)}m</td>
                     {(() => {
                       const gwPoints = player.gameweekProjections[selectedGameweek.toString()] || 0;
                       const top3 = getTop3ForGameweek(selectedGameweek);
@@ -818,37 +807,25 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         textColor = 'text-orange-800 dark:text-orange-300';
                       }
                       return (
-                        <td className={`py-1 px-1 md:p-2 text-center ${bgColor}`}>
-                          <span className={`${textColor} font-medium`}>
-                            {gwPoints.toFixed(2)}
-                          </span>
+                        <td className={`py-0.5 px-0.5 text-center ${bgColor}`}>
+                          <span className={`${textColor} font-medium`}>{gwPoints.toFixed(2)}</span>
                         </td>
                       );
                     })()}
-                    <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="font-bold text-green-600">
-                        {(player.totalExpectedPoints || 0).toFixed(2)}
-                      </span>
+                    <td className="py-0.5 px-0.5 text-center">
+                      <span className="font-bold text-green-600">{(player.totalExpectedPoints || 0).toFixed(2)}</span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">
-                        {(player.averageValue || 0).toFixed(2)}
-                      </span>
+                    <td className="py-0.5 px-0.5 text-center">
+                      <span className="text-blue-600 dark:text-blue-400">{(player.averageValue || 0).toFixed(2)}</span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                        {(player.form || 0).toFixed(1)}
-                      </span>
+                    <td className="py-0.5 px-0.5 text-center">
+                      <span className="text-emerald-600 dark:text-emerald-400">{(player.form || 0).toFixed(1)}</span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="text-purple-600 dark:text-purple-400 font-medium">
-                        {Math.round(player.avgMinutesPerGameweek || 0)}
-                      </span>
+                    <td className="py-0.5 px-0.5 text-center">
+                      <span className="text-purple-600 dark:text-purple-400">{Math.round(player.avgMinutesPerGameweek || 0)}</span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="text-orange-600 dark:text-orange-400 font-medium">
-                        {player.ownership.toFixed(1)}%
-                      </span>
+                    <td className="py-0.5 px-0.5 text-center">
+                      <span className="text-orange-600 dark:text-orange-400">{player.ownership.toFixed(1)}%</span>
                     </td>
                   </tr>
                 );
