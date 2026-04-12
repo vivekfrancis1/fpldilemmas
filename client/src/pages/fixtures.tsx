@@ -14,7 +14,7 @@ import { useProjectionSettings } from "@/hooks/use-projection-settings";
 
 interface Fixture {
   id: number;
-  event: number;
+  event: number | null;
   team_h: number;
   team_a: number;
   team_h_difficulty: number;
@@ -28,6 +28,32 @@ interface CustomFDR {
     home: number;
     away: number;
   };
+}
+
+type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean };
+
+function TBCCell({ fixtures }: { fixtures?: FixtureEntry[] }) {
+  return (
+    <td className="px-0.5 py-0.5 text-center bg-amber-50 border-l-2 border-amber-300">
+      {fixtures && fixtures.length > 0 ? (
+        <div className="flex flex-col gap-0.5">
+          {fixtures.map((fixture, idx) => (
+            <div
+              key={idx}
+              className="px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800"
+              title={`TBC: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent}`}
+            >
+              <span className="truncate font-medium whitespace-nowrap">
+                {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="px-0.5 py-0.5 text-gray-300">-</div>
+      )}
+    </td>
+  );
 }
 
 export default function Fixtures() {
@@ -308,35 +334,34 @@ export default function Fixtures() {
     };
 
     // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
+    // Use key 0 as a sentinel for unassigned (TBC) fixtures
     fixturesData.forEach(fixture => {
-      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end) {
-        const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
-        const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
-        
-        if (homeTeam && awayTeam) {
-          // Initialize as array if not exists
-          if (!matrix[fixture.team_h][fixture.event]) {
-            matrix[fixture.team_h][fixture.event] = [];
-          }
-          if (!matrix[fixture.team_a][fixture.event]) {
-            matrix[fixture.team_a][fixture.event] = [];
-          }
-          
-          // Push fixtures to array (supports DGW)
-          matrix[fixture.team_h][fixture.event].push({
-            opponent: awayTeam.short_name,
-            difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
-            isHome: true,
-            finished: fixture.finished
-          });
-          
-          matrix[fixture.team_a][fixture.event].push({
-            opponent: homeTeam.short_name,
-            difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
-            isHome: false,
-            finished: fixture.finished
-          });
-        }
+      const gwKey = fixture.event === null ? 0 : fixture.event;
+      const inRange = fixture.event !== null && fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end;
+      const isTBC = fixture.event === null;
+
+      if (!inRange && !isTBC) return;
+
+      const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
+
+      if (homeTeam && awayTeam) {
+        if (!matrix[fixture.team_h][gwKey]) matrix[fixture.team_h][gwKey] = [];
+        if (!matrix[fixture.team_a][gwKey]) matrix[fixture.team_a][gwKey] = [];
+
+        matrix[fixture.team_h][gwKey].push({
+          opponent: awayTeam.short_name,
+          difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
+          isHome: true,
+          finished: fixture.finished
+        });
+
+        matrix[fixture.team_a][gwKey].push({
+          opponent: homeTeam.short_name,
+          difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
+          isHome: false,
+          finished: fixture.finished
+        });
       }
     });
 
@@ -384,6 +409,12 @@ export default function Fixtures() {
   const gameweeks = useMemo(() => {
     return allGameweeksInRange.filter(gw => !excludedGameweeks.has(gw));
   }, [allGameweeksInRange, excludedGameweeks]);
+
+  // Check if any team has TBC (event=null) fixtures
+  const hasTBCFixtures = useMemo(() => {
+    if (!fixturesData) return false;
+    return fixturesData.some(f => f.event === null);
+  }, [fixturesData]);
 
   // Calculate best rotation pairs - teams that complement each other's fixtures
   const rotationPairs = useMemo(() => {
@@ -1015,6 +1046,11 @@ export default function Fixtures() {
                           </button>
                         </th>
                       ))}
+                      {hasTBCFixtures && (
+                        <th className="px-0.5 py-1 text-center font-semibold min-w-[40px] sm:min-w-[50px] md:min-w-[60px] bg-amber-50 border-l-2 border-amber-300">
+                          <span className="text-amber-700 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap">TBC</span>
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1079,6 +1115,9 @@ export default function Fixtures() {
                               </td>
                             );
                           })}
+                          {hasTBCFixtures && (
+                            <TBCCell fixtures={fixtureMatrix[team.id]?.[0]} />
+                          )}
                         </tr>
                       );
                     })}
