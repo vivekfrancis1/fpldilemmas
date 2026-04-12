@@ -24,6 +24,16 @@ interface TeamStanding {
   projectedGames?: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 export default function ProjectedStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"current" | "projected">("projected");
@@ -84,6 +94,28 @@ export default function ProjectedStandings() {
     },
     enabled: viewMode === "current" && !!bootstrapData,
   });
+
+  const { data: tbcData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // TBC impact map: teamShort → { points, goalsFor, goalsAgainst, result, opponent, isHome }
+  const tbcTeamImpactMap = useMemo(() => {
+    const map = new Map<string, { pts: number; gf: number; ga: number; result: 'W' | 'D' | 'L'; opponent: string; isHome: boolean }>();
+    if (!tbcData) return map;
+    tbcData.forEach(f => {
+      const hGoals = f.homeGoals;
+      const aGoals = f.awayGoals;
+      const hPts = hGoals > aGoals ? 3 : hGoals === aGoals ? 1 : 0;
+      const aPts = aGoals > hGoals ? 3 : aGoals === hGoals ? 1 : 0;
+      const hResult: 'W' | 'D' | 'L' = hGoals > aGoals ? 'W' : hGoals === aGoals ? 'D' : 'L';
+      const aResult: 'W' | 'D' | 'L' = aGoals > hGoals ? 'W' : aGoals === hGoals ? 'D' : 'L';
+      map.set(f.homeTeamShort, { pts: hPts, gf: hGoals, ga: aGoals, result: hResult, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { pts: aPts, gf: aGoals, ga: hGoals, result: aResult, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcData]);
 
   const standingsData = viewMode === "projected" ? projectedStandingsData : currentStandingsData;
   const standingsLoading = viewMode === "projected" ? projectedLoading : currentLoading;
@@ -263,6 +295,11 @@ export default function ProjectedStandings() {
                     <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                       Pts
                     </th>
+                    {tbcTeamImpactMap.size > 0 && (
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-amber-700 uppercase bg-amber-50/60 border-l border-amber-200">
+                        +TBC
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -327,6 +364,25 @@ export default function ProjectedStandings() {
                       <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-bold text-gray-900">
                         {team.points}
                       </td>
+                      {tbcTeamImpactMap.size > 0 && (() => {
+                        const tbc = tbcTeamImpactMap.get(team.shortName);
+                        if (!tbc) return <td className="px-1 md:px-2 py-1 md:py-2 text-center bg-amber-50/30 border-l border-amber-100"><span className="text-gray-300 text-xs">-</span></td>;
+                        const ptColor = tbc.pts === 3 ? 'text-green-600' : tbc.pts === 1 ? 'text-yellow-600' : 'text-red-500';
+                        const resultBg = tbc.result === 'W' ? 'bg-green-500' : tbc.result === 'D' ? 'bg-yellow-500' : 'bg-red-500';
+                        return (
+                          <td className="px-1 md:px-2 py-1 md:py-2 text-center bg-amber-50/40 border-l border-amber-200">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className={`text-xs font-bold ${ptColor}`}>
+                                {tbc.pts > 0 ? `+${tbc.pts}` : '0'}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                <span className={`text-[9px] px-1 py-px rounded text-white font-bold ${resultBg}`}>{tbc.result}</span>
+                                <span className="text-[9px] text-gray-500">{tbc.opponent}</span>
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })()}
                     </tr>
                   ))}
                 </tbody>
@@ -334,6 +390,57 @@ export default function ProjectedStandings() {
             </div>
           </CardContent>
         </Card>
+
+        {tbcData && tbcData.length > 0 && (
+          <Card className="mt-6 border-amber-200 shadow-md">
+            <CardHeader className="bg-amber-50/60 border-b border-amber-200 py-3">
+              <CardTitle className="flex items-center gap-2 text-base text-amber-800">
+                <Calendar className="h-4 w-4" />
+                GW TBC Fixtures — Unscheduled
+                <span className="text-xs font-normal text-amber-600 ml-1">FPL Model Projections</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tbcData.map(f => {
+                  const homeScore = Math.round(f.homeGoals);
+                  const awayScore = Math.round(f.awayGoals);
+                  const hResult = homeScore > awayScore ? 'W' : homeScore < awayScore ? 'L' : 'D';
+                  const aResult = awayScore > homeScore ? 'W' : awayScore < homeScore ? 'L' : 'D';
+                  const getBg = (r: string) => r === 'W' ? 'bg-green-500' : r === 'D' ? 'bg-yellow-500' : 'bg-red-500';
+                  const hPts = homeScore > awayScore ? 3 : homeScore === awayScore ? 1 : 0;
+                  const aPts = awayScore > homeScore ? 3 : awayScore === homeScore ? 1 : 0;
+                  return (
+                    <div key={f.fixtureId} className="bg-amber-50/40 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className={`text-[10px] px-1.5 py-px rounded text-white font-bold ${getBg(hResult)}`}>{hResult}</span>
+                          <span className="text-sm font-semibold text-gray-900">{f.homeTeamShort}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500">+{hPts} pts</span>
+                      </div>
+                      <div className="flex flex-col items-center px-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg font-bold text-amber-800">{homeScore}</span>
+                          <span className="text-amber-500 text-sm">-</span>
+                          <span className="text-lg font-bold text-amber-800">{awayScore}</span>
+                        </div>
+                        <span className="text-[9px] text-amber-500">({f.homeGoals.toFixed(1)}-{f.awayGoals.toFixed(1)})</span>
+                      </div>
+                      <div className="flex flex-col items-center flex-1">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-sm font-semibold text-gray-900">{f.awayTeamShort}</span>
+                          <span className={`text-[10px] px-1.5 py-px rounded text-white font-bold ${getBg(aResult)}`}>{aResult}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500">+{aPts} pts</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mt-6">
           <CardHeader>

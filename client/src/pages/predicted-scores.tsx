@@ -37,6 +37,16 @@ interface PredictedScore {
   confidence: 'High' | 'Medium' | 'Low';
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 export default function PredictedScores() {
   const [startGameweek, setStartGameweek] = useState<string>("4");
   const [endGameweek, setEndGameweek] = useState<string>("9");
@@ -52,6 +62,11 @@ export default function PredictedScores() {
 
   const { data: predictedScoresData, isLoading: scoresLoading } = useQuery<PredictedScore[]>({
     queryKey: ["/api/predicted-scores"],
+  });
+
+  const { data: tbcData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
   });
 
   const handleRefresh = async () => {
@@ -82,6 +97,14 @@ export default function PredictedScores() {
       return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
     });
   }, [predictedScoresData, startGameweek, endGameweek, selectedTeam, showFinished]);
+
+  // TBC matches - unscheduled fixtures from /api/tbc-goal-projections
+  const filteredTBCMatches = useMemo(() => {
+    if (!tbcData || showFinished === "finished") return [];
+    return tbcData.filter(f =>
+      selectedTeam === "all" || f.homeTeamShort === selectedTeam || f.awayTeamShort === selectedTeam
+    );
+  }, [tbcData, selectedTeam, showFinished]);
 
   const getResultColor = (teamResult: string) => {
     switch (teamResult) {
@@ -232,8 +255,13 @@ export default function PredictedScores() {
                 <Trophy className="h-5 w-5" />
                 Predicted Match Scores
                 <Badge variant="outline" className="ml-2">
-                  {filteredScores.length} matches
+                  {filteredScores.length + filteredTBCMatches.length} matches
                 </Badge>
+                {filteredTBCMatches.length > 0 && (
+                  <Badge className="bg-amber-100 text-amber-700 border border-amber-300 ml-1 text-xs">
+                    {filteredTBCMatches.length} GW TBC
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -333,6 +361,64 @@ export default function PredictedScores() {
                         </td>
                       </tr>
                     ))}
+                    {filteredTBCMatches.length > 0 && (
+                      <>
+                        <tr className="bg-amber-50/40 border-t-2 border-amber-200">
+                          <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                            GW TBC — Unscheduled Fixtures (FPL Model Projections)
+                          </td>
+                        </tr>
+                        {filteredTBCMatches.map((f) => {
+                          const homeScore = Math.round(f.homeGoals);
+                          const awayScore = Math.round(f.awayGoals);
+                          const homeResult = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
+                          const awayResult = awayScore > homeScore ? 'win' : awayScore < homeScore ? 'loss' : 'draw';
+                          return (
+                            <tr key={`tbc-${f.fixtureId}`} className="bg-amber-50/30 hover:bg-amber-50/60">
+                              <td className="px-4 py-4 text-center">
+                                <Badge className="bg-amber-100 text-amber-700 border border-amber-300 text-xs font-semibold">
+                                  TBC
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm text-amber-600 font-medium">
+                                TBD
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">{f.homeTeamShort}</span>
+                                  <Badge className={`${getResultColor(homeResult)} text-white text-xs`}>
+                                    {homeResult === 'win' ? 'W' : homeResult === 'loss' ? 'L' : 'D'}
+                                  </Badge>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-lg font-bold text-amber-800">{homeScore}</span>
+                                  <span className="text-amber-500">-</span>
+                                  <span className="text-lg font-bold text-amber-800">{awayScore}</span>
+                                </div>
+                                <div className="text-xs text-amber-500 mt-1">
+                                  ({f.homeGoals.toFixed(2)} - {f.awayGoals.toFixed(2)})
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">{f.awayTeamShort}</span>
+                                  <Badge className={`${getResultColor(awayResult)} text-white text-xs`}>
+                                    {awayResult === 'win' ? 'W' : awayResult === 'loss' ? 'L' : 'D'}
+                                  </Badge>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <Badge className="bg-amber-100 text-amber-700 border border-amber-300 text-xs">
+                                  GW TBC
+                                </Badge>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
