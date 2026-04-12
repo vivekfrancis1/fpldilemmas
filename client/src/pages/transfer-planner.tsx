@@ -786,13 +786,17 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         };
                         const playerElementType = positionMap[player.position];
                         const isAlreadyBeingTransferredOut = transferredOutPlayers.some(t => t.playerId === player.playerId);
+                        const transferredOutIds = new Set(transferredOutPlayers.map(t => t.playerId));
+                        const isAlreadyInTeam = teamData?.picks
+                          ? teamData.picks.some(p => p.element === player.playerId && !transferredOutIds.has(p.element))
+                          : false;
                         const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
                           t => t.elementType === playerElementType
                         );
                         const totalSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
                         const availableBudget = currentBank + totalSellingPrice;
                         const isAffordable = player.price <= availableBudget;
-                        return !isAlreadyBeingTransferredOut && hasMatchingTransferOut && isAffordable ? (
+                        return !isAlreadyBeingTransferredOut && !isAlreadyInTeam && hasMatchingTransferOut && isAffordable ? (
                           <Button
                             size="icon"
                             variant="ghost"
