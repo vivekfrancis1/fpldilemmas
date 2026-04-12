@@ -498,29 +498,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     <Card ref={sectionRef} className="border-0 shadow-none">
       <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
-        <div className="flex flex-col sm:flex-row gap-2 mt-2 flex-wrap items-start sm:items-center">
-          <Input
-            placeholder="Search players or teams..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-sm w-full sm:w-40"
-            data-testid="input-player-search"
-          />
+        <div className="flex flex-row gap-2 mt-2 items-center flex-nowrap overflow-x-auto pb-1">
           {/* Position multi-select dropdown */}
-          <div className="relative" ref={positionDropdownRef}>
+          <div className="relative flex-shrink-0" ref={positionDropdownRef}>
             <button
               onClick={() => setPositionDropdownOpen(o => !o)}
-              className={`h-8 px-2 text-xs rounded border font-medium flex items-center gap-1 transition-colors ${
+              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 positionFilters.size > 0
                   ? 'bg-purple-600 text-white border-purple-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400'
+                  : 'bg-background text-foreground border-input hover:border-purple-400'
               }`}
             >
               {positionFilters.size === 0 ? 'All Positions' : `${positionFilters.size} Position${positionFilters.size > 1 ? 's' : ''}`}
               <ChevronDown className="h-3 w-3 ml-0.5" />
             </button>
             {positionDropdownOpen && (
-              <div className="absolute z-50 top-9 left-0 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+              <div className="absolute z-50 top-9 left-0 w-44 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
                 <div className="py-1">
                   {[
                     { label: "Goalkeeper (GKP)", value: "Goalkeeper" },
@@ -539,7 +532,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })}
                         className="w-3.5 h-3.5 accent-purple-600"
                       />
-                      <span className="text-xs text-gray-700 dark:text-gray-300">{label}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
                     </label>
                   ))}
                 </div>
@@ -557,27 +550,27 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             )}
           </div>
           {/* Team multi-select dropdown */}
-          <div className="relative" ref={teamDropdownRef}>
+          <div className="relative flex-shrink-0" ref={teamDropdownRef}>
             <button
               onClick={() => setTeamDropdownOpen(o => !o)}
-              className={`h-8 px-2 text-xs rounded border font-medium flex items-center gap-1 transition-colors ${
+              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 teamFilters.size > 0
                   ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                  : 'bg-background text-foreground border-input hover:border-blue-400'
               }`}
             >
               {teamFilters.size === 0 ? 'All Teams' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
               <ChevronDown className="h-3 w-3 ml-0.5" />
             </button>
             {teamDropdownOpen && (
-              <div className="absolute z-50 top-9 left-0 w-52 bg-white border border-gray-200 rounded-lg shadow-lg">
-                <div className="p-2 border-b">
+              <div className="absolute z-50 top-9 left-0 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+                <div className="p-2 border-b border-gray-100 dark:border-gray-700">
                   <input
                     type="text"
                     placeholder="Search teams..."
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="w-full h-7 px-2 text-xs border border-gray-200 rounded focus:outline-none focus:border-blue-400"
+                    className="w-full h-7 px-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-600"
                     autoFocus
                   />
                 </div>
@@ -585,7 +578,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   {uniqueTeams
                     .filter(t => t.toLowerCase().includes(teamSearch.toLowerCase()))
                     .map(team => (
-                      <label key={team} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                      <label key={team} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={teamFilters.has(team)}
@@ -596,12 +589,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           })}
                           className="w-3.5 h-3.5 accent-blue-600"
                         />
-                        <span className="text-xs text-gray-700">{team}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{team}</span>
                       </label>
                     ))}
                 </div>
                 {teamFilters.size > 0 && (
-                  <div className="p-2 border-t">
+                  <div className="p-2 border-t border-gray-100 dark:border-gray-700">
                     <button
                       onClick={() => { setTeamFilters(new Set()); setTeamDropdownOpen(false); }}
                       className="w-full text-xs text-red-500 hover:text-red-700 text-center"
@@ -613,8 +606,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               </div>
             )}
           </div>
+          {/* Group filter */}
           <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-            <SelectTrigger className="h-8 text-sm w-full sm:w-28" data-testid="select-load-group">
+            <SelectTrigger className="h-8 text-sm w-32 flex-shrink-0 rounded-md" data-testid="select-load-group">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
@@ -625,8 +619,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               <SelectItem value="All Drafts">All Drafts</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Price:</span>
+          {/* Price range */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">£</span>
             <Input
               type="number"
               step="0.1"
@@ -634,10 +629,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={minPrice}
               onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
-              className="h-8 w-16 text-sm"
+              className="h-8 w-14 text-sm rounded-md"
               data-testid="input-min-price"
             />
-            <span className="text-sm text-muted-foreground">-</span>
+            <span className="text-sm text-muted-foreground">–</span>
             <Input
               type="number"
               step="0.1"
@@ -645,10 +640,18 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-              className="h-8 w-16 text-sm"
+              className="h-8 w-14 text-sm rounded-md"
               data-testid="input-max-price"
             />
           </div>
+          {/* Search — last */}
+          <Input
+            placeholder="Search Players"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-8 text-sm w-36 flex-shrink-0 rounded-md"
+            data-testid="input-player-search"
+          />
           {transferredOutPlayers.length > 0 && (
             <div className="flex items-center gap-2">
               <input
