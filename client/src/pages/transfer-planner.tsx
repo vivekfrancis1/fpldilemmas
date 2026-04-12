@@ -500,7 +500,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
       </CardHeader>
       {/* Filter bar — outside CardHeader so overflow-x-auto works correctly */}
-      <div className="px-2 md:px-4 pb-2 overflow-x-auto">
+      <div className="px-2 md:px-4 pb-2 flex flex-col gap-1.5">
+        {/* Row 1: dropdowns + price */}
+        <div className="overflow-x-auto">
         <div className="flex flex-row gap-1.5 items-center flex-nowrap w-max min-w-full">
           {/* Position multi-select dropdown */}
           <div className="relative flex-shrink-0" ref={positionDropdownRef}>
@@ -647,15 +649,17 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               data-testid="input-max-price"
             />
           </div>
-          {/* Search — last */}
+        </div>
+        </div>
+        {/* Row 2: search + only affordable */}
+        <div className="flex flex-row gap-2 items-center">
           <Input
             placeholder="Search Players"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-sm w-36 flex-shrink-0 rounded-md"
+            className="h-8 text-sm flex-1 min-w-0 rounded-md"
             data-testid="input-player-search"
           />
-          {/* Only affordable */}
           {transferredOutPlayers.length > 0 && (
             <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer whitespace-nowrap">
               <input
@@ -665,7 +669,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 className="h-4 w-4 rounded border-gray-300"
                 data-testid="checkbox-only-affordable"
               />
-              <span className="text-sm text-muted-foreground">≤£{currentBank.toFixed(1)}m</span>
+              <span className="text-sm text-muted-foreground">Only affordable (≤£{currentBank.toFixed(1)}m)</span>
             </label>
           )}
         </div>
@@ -6043,7 +6047,7 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
-          <div className="w-full lg:w-[45%] flex-shrink-0">
+          <div className="w-full lg:w-1/2 flex-shrink-0">
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader className="py-3 px-3 sm:px-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -6402,7 +6406,7 @@ export default function TransferPlanner() {
         </Card>
           </div>
           {/* Right column: Projected Points */}
-          <div className="w-full lg:flex-1 min-w-0">
+          <div className="w-full lg:w-1/2 min-w-0">
             <AllPlayersProjectionsTab
               selectedGameweek={selectedGameweek as number}
               transferredOutPlayers={transferredOutPlayers}
