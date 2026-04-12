@@ -6014,19 +6014,6 @@ export default function TransferPlanner() {
                 </div>
               </div>
 
-              {/* Cash in Bank After Transfers */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash After Transfers</div>
-                <div className={`text-xl sm:text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
-                  £{calculateBankAfterTransfers().toFixed(1)}m
-                </div>
-                {calculateBankAfterTransfers() < 0 && (
-                  <div className="text-xs text-red-600 mt-1">
-                    These transfers may not be possible. But it depends on your actual sell value of the transferred out players.
-                  </div>
-                )}
-              </div>
-
               {/* Transfers */}
               <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
@@ -6049,6 +6036,19 @@ export default function TransferPlanner() {
                     </div>
                   );
                 })()}
+              </div>
+
+              {/* Cash in Bank After Transfers */}
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash After Transfers</div>
+                <div className={`text-xl sm:text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                  £{calculateBankAfterTransfers().toFixed(1)}m
+                </div>
+                {calculateBankAfterTransfers() < 0 && (
+                  <div className="text-xs text-red-600 mt-1">
+                    These transfers may not be possible. But it depends on your actual sell value of the transferred out players.
+                  </div>
+                )}
               </div>
             </div>
               </CardContent>
