@@ -606,6 +606,8 @@ interface PlayerTotalPointsData {
   position: string;
   price: number;
   ownership: number;
+  form?: string | number;
+  selectedByPercent?: string | number;
   gameweekProjections: { [key: string]: number };
   totalExpectedPoints: number;
   seasonTotalPoints: number;
@@ -639,7 +641,7 @@ interface PlayerTotalPointsData {
   totalPointsFromRedCards?: number;
 }
 
-type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'averagePerGameweek' | 'averageValue' | 'avgMinutesPerGameweek' | 'chanceOfPlayingNextRound' | string;
+type SortField = 'name' | 'position' | 'team' | 'totalExpectedPoints' | 'averagePerGameweek' | 'averageValue' | 'avgMinutesPerGameweek' | 'form' | 'selected_by_percent' | 'chanceOfPlayingNextRound' | string;
 
 // Create columns configuration for the enhanced table
 function createPlayerTotalPointsColumns(
@@ -773,7 +775,7 @@ function createPlayerTotalPointsColumns(
       header: `Total`,
       sortable: true,
       align: 'center',
-      className: 'w-14 bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[168px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'w-14 bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[224px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -787,26 +789,11 @@ function createPlayerTotalPointsColumns(
       )
     },
     {
-      key: 'averagePerGameweek',
-      header: 'Avg',
-      sortable: true,
-      align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-amber-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
-      render: (value) => (
-        <ValueCell 
-          value={value || 0} 
-          format="points" 
-          decimals={1}
-          className="font-bold text-orange-800 text-sm"
-        />
-      )
-    },
-    {
       key: 'averageValue',
       header: 'Value',
       sortable: true,
       align: 'center',
-      className: 'w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5]',
+      className: 'hidden md:table-cell md:w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-[168px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -817,11 +804,26 @@ function createPlayerTotalPointsColumns(
       )
     },
     {
+      key: 'form',
+      header: 'Form',
+      sortable: true,
+      align: 'center',
+      className: 'hidden md:table-cell md:w-14 bg-teal-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      render: (_, player) => (
+        <ValueCell 
+          value={parseFloat((player as any).form) || 0} 
+          format="number" 
+          decimals={1}
+          className="font-bold text-teal-800 text-sm"
+        />
+      )
+    },
+    {
       key: 'avgMinutesPerGameweek',
       header: 'Mins',
       sortable: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'hidden md:table-cell md:w-14 bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -830,9 +832,24 @@ function createPlayerTotalPointsColumns(
           className="font-bold text-blue-800 text-sm"
         />
       )
+    },
+    {
+      key: 'selected_by_percent',
+      header: 'Own%',
+      sortable: true,
+      align: 'center',
+      className: 'hidden md:table-cell md:w-14 bg-rose-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      render: (_, player) => (
+        <ValueCell 
+          value={parseFloat((player as any).selected_by_percent) || 0} 
+          format="number" 
+          decimals={1}
+          className="font-bold text-rose-800 text-sm"
+        />
+      )
     }
   ];
-  return isMobile ? allColumns.filter(c => c.key !== 'averageValue') : allColumns;
+  return allColumns;
 }
 
 const GW_COMPONENT_KEYS = [
@@ -1586,7 +1603,10 @@ export default function PlayerTotalPoints() {
         bValue = b[sortField];
       }
       
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if ((sortField === 'form' || sortField === 'selected_by_percent') && typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      } else if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
