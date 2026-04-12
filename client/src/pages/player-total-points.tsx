@@ -809,9 +809,9 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-teal-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
-      render: (_, player) => (
+      render: (value) => (
         <ValueCell 
-          value={parseFloat((player as any).form) || 0} 
+          value={parseFloat(value) || 0} 
           format="number" 
           decimals={1}
           className="font-bold text-teal-800 text-sm"
@@ -834,14 +834,14 @@ function createPlayerTotalPointsColumns(
       )
     },
     {
-      key: 'selected_by_percent',
+      key: 'ownership',
       header: 'Own%',
       sortable: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-rose-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
-      render: (_, player) => (
+      render: (value) => (
         <ValueCell 
-          value={parseFloat((player as any).selected_by_percent) || 0} 
+          value={parseFloat(value) || 0} 
           format="number" 
           decimals={1}
           className="font-bold text-rose-800 text-sm"
@@ -1603,10 +1603,7 @@ export default function PlayerTotalPoints() {
         bValue = b[sortField];
       }
       
-      if ((sortField === 'form' || sortField === 'selected_by_percent') && typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = parseFloat(aValue) || 0;
-        bValue = parseFloat(bValue) || 0;
-      } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
