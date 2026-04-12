@@ -6202,8 +6202,8 @@ export default function TransferPlanner() {
 
             <div>
               <div className="relative space-y-4">
-                {/* xPts toggle — top-left of pitch */}
-                <div className="absolute top-2 left-2 z-10">
+                {/* Pitch overlay row — xPts left, Optimise right */}
+                <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -6214,9 +6214,7 @@ export default function TransferPlanner() {
                     {showProjectedPoints ? <Eye className="h-3.5 w-3.5 mr-1" /> : <EyeOff className="h-3.5 w-3.5 mr-1" />}
                     <span className="hidden sm:inline">xPts</span>
                   </Button>
-                </div>
-                {/* Optimise Lineup — top-right of pitch */}
-                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                   {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
                     <>
                       <div className="flex items-center gap-1 px-2 py-1 bg-green-600/90 rounded text-white text-[10px] sm:text-xs font-semibold shadow">
@@ -6274,6 +6272,7 @@ export default function TransferPlanner() {
                       Optimise Lineup
                     </Button>
                   )}
+                  </div>
                 </div>
                 <PitchView
                   players={manualLineup.slice(0, 11).map(pick => {
