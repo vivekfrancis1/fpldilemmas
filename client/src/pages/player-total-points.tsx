@@ -654,7 +654,8 @@ function createPlayerTotalPointsColumns(
   excludedComponents?: Set<string>,
   myTeamPlayerIds?: Set<number>,
   viewMode?: "past" | "future",
-  isMobile?: boolean
+  isMobile?: boolean,
+  tbcTeamShortNames?: Set<string>
 ): TableColumn<PlayerTotalPointsData>[] {
   const isPastMode = viewMode === "past";
   const allColumns: TableColumn<PlayerTotalPointsData>[] = [
@@ -745,6 +746,31 @@ function createPlayerTotalPointsColumns(
         }
       };
     }),
+    ...(tbcTeamShortNames && tbcTeamShortNames.size > 0 && !isPastMode ? [{
+      key: 'tbc',
+      header: 'TBC',
+      sortable: false,
+      hideSortIcon: true,
+      align: 'center' as const,
+      className: 'min-w-[36px] md:min-w-[44px] bg-amber-50/60 border-l border-amber-300 px-0.5',
+      render: (_: any, player: PlayerTotalPointsData) => {
+        const playerTeamShort = (teamNameToShortName?.get((player as any).teamName || player.team)) || (player as any).teamShort || player.team || '';
+        const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
+        if (!isTBCPlayer) return <span className="text-gray-300 text-xs">-</span>;
+
+        const projections = Object.values(player.gameweekProjections || {});
+        const nonZero = projections.filter(v => v > 0);
+        const avgPerFixture = nonZero.length > 0
+          ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length
+          : (player.averagePerGameweek || 0);
+
+        return (
+          <div title="Projected points for unscheduled TBC fixture" className="inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
+            <span className="font-semibold text-amber-800 text-xs md:text-sm">{avgPerFixture.toFixed(1)}</span>
+          </div>
+        );
+      }
+    }] : []),
     {
       key: 'totalExpectedPoints',
       header: `Total`,
@@ -1101,6 +1127,21 @@ export default function PlayerTotalPoints() {
     });
     
     return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
+  // Derive short names of teams involved in TBC fixtures (event: null)
+  const tbcTeamShortNames = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Set<string>();
+    const names = new Set<string>();
+    fixturesData.forEach((fixture: any) => {
+      if (!fixture.event) {
+        const home = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+        const away = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+        if (home) names.add(home.short_name);
+        if (away) names.add(away.short_name);
+      }
+    });
+    return names;
   }, [bootstrapData?.teams, fixturesData]);
 
   // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
@@ -1977,7 +2018,8 @@ export default function PlayerTotalPoints() {
                       excludedComponents,
                       myTeamPlayerIds,
                       viewMode,
-                      isMobile
+                      isMobile,
+                      tbcTeamShortNames
                     )}
                     onSort={handleSort}
                     sortField={sortField}
