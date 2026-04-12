@@ -1423,6 +1423,7 @@ export default function Fixtures() {
                   if (tbcModal) {
                     setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
                     setTbcModal(null);
+                    if (viewMode !== 'custom') setViewMode('custom');
                   }
                 }}
               >
