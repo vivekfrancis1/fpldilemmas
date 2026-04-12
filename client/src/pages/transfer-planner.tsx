@@ -6386,46 +6386,128 @@ export default function TransferPlanner() {
                   )}
                 />
 
-                {/* Chip Bar — apply/remove chips for the current gameweek */}
+                {/* Chip Selection Panel — below pitch view */}
                 {(() => {
-                  const availableChips = getAvailableChipsForGameweek(selectedGameweek);
+                  const allChips: ChipType[] = ['wildcard', '3xc', 'bboost', 'freehit'];
                   const currentChip = plannedChips[selectedGameweek] ?? null;
-                  if (availableChips.length === 0 && !currentChip) return null;
+                  const remainingChips = getRemainingChips();
 
-                  const chipStyle = (chip: ChipType, active: boolean): string => {
-                    const base = 'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer select-none';
-                    const styles: Record<ChipType, { idle: string; on: string }> = {
-                      wildcard: { idle: 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/40', on: 'bg-purple-200 text-purple-900 border-purple-500 ring-2 ring-purple-400/50 dark:bg-purple-800/40 dark:text-purple-200 dark:border-purple-500' },
-                      '3xc': { idle: 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/40', on: 'bg-amber-200 text-amber-900 border-amber-500 ring-2 ring-amber-400/50 dark:bg-amber-800/40 dark:text-amber-200 dark:border-amber-500' },
-                      bboost: { idle: 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/40', on: 'bg-blue-200 text-blue-900 border-blue-500 ring-2 ring-blue-400/50 dark:bg-blue-800/40 dark:text-blue-200 dark:border-blue-500' },
-                      freehit: { idle: 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-900/40', on: 'bg-green-200 text-green-900 border-green-500 ring-2 ring-green-400/50 dark:bg-green-800/40 dark:text-green-200 dark:border-green-500' },
-                    };
-                    return `${base} ${active ? styles[chip].on : styles[chip].idle}`;
+                  // Only show chips that still have remaining uses (or are currently applied)
+                  const visibleChips = allChips.filter(chip =>
+                    remainingChips[chip] > 0 || currentChip === chip
+                  );
+
+                  if (visibleChips.length === 0) return null;
+
+                  const chipTheme: Record<ChipType, {
+                    idle: string; active: string; disabled: string;
+                    icon: string; dot: string;
+                  }> = {
+                    wildcard: {
+                      idle:     'bg-white border-purple-200 text-purple-800 hover:bg-purple-50 hover:border-purple-400 dark:bg-background dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-950/30',
+                      active:   'bg-purple-100 border-purple-500 text-purple-900 ring-2 ring-purple-400/60 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-200',
+                      disabled: 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-muted/20 dark:border-muted dark:text-muted-foreground',
+                      icon:     'text-purple-500 dark:text-purple-400',
+                      dot:      'bg-purple-500',
+                    },
+                    '3xc': {
+                      idle:     'bg-white border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-400 dark:bg-background dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/30',
+                      active:   'bg-amber-100 border-amber-500 text-amber-900 ring-2 ring-amber-400/60 dark:bg-amber-900/30 dark:border-amber-400 dark:text-amber-200',
+                      disabled: 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-muted/20 dark:border-muted dark:text-muted-foreground',
+                      icon:     'text-amber-500 dark:text-amber-400',
+                      dot:      'bg-amber-500',
+                    },
+                    bboost: {
+                      idle:     'bg-white border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-400 dark:bg-background dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30',
+                      active:   'bg-blue-100 border-blue-500 text-blue-900 ring-2 ring-blue-400/60 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-200',
+                      disabled: 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-muted/20 dark:border-muted dark:text-muted-foreground',
+                      icon:     'text-blue-500 dark:text-blue-400',
+                      dot:      'bg-blue-500',
+                    },
+                    freehit: {
+                      idle:     'bg-white border-green-200 text-green-800 hover:bg-green-50 hover:border-green-400 dark:bg-background dark:border-green-700 dark:text-green-300 dark:hover:bg-green-950/30',
+                      active:   'bg-green-100 border-green-500 text-green-900 ring-2 ring-green-400/60 dark:bg-green-900/30 dark:border-green-400 dark:text-green-200',
+                      disabled: 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-muted/20 dark:border-muted dark:text-muted-foreground',
+                      icon:     'text-green-500 dark:text-green-400',
+                      dot:      'bg-green-500',
+                    },
                   };
 
                   return (
-                    <div className="mt-2 mb-1 px-2 flex items-center gap-2 justify-center flex-wrap">
-                      <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">GW{selectedGameweek} chip:</span>
-                      {availableChips.map(chip => {
-                        const isActive = currentChip === chip;
-                        return (
-                          <button
-                            key={chip}
-                            onClick={() => handleChipSelection(selectedGameweek, isActive ? null : chip)}
-                            className={chipStyle(chip, isActive)}
-                          >
-                            <Sparkles className="h-3 w-3" />
-                            {getChipDisplayName(chip)}
-                            {isActive && <span className="ml-0.5 text-[10px]">✓</span>}
-                          </button>
-                        );
-                      })}
-                      {availableChips.length === 0 && currentChip && (
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${getChipIconColor(currentChip)}`}>
-                          <Sparkles className="h-3 w-3" />
-                          {getChipDisplayName(currentChip)} active
+                    <div className="mx-1 mt-3 mb-1 rounded-xl border bg-muted/20 dark:bg-muted/10 p-2.5">
+                      {/* Header */}
+                      <div className="flex items-center gap-1.5 mb-2 px-0.5">
+                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                          Apply chip to GW{selectedGameweek}
                         </span>
-                      )}
+                        {currentChip && (
+                          <span className={`ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${chipTheme[currentChip].dot} text-white`}>
+                            {getChipDisplayName(currentChip)} applied
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Chip buttons row */}
+                      <div className="flex gap-1.5 flex-wrap">
+                        {visibleChips.map(chip => {
+                          const isActive = currentChip === chip;
+                          const canUse = canChipBeUsedInGameweek(chip, selectedGameweek);
+
+                          // Reason chip is unavailable for this GW
+                          const plannedGW = Object.entries(plannedChips).find(
+                            ([gw, c]) => c === chip && parseInt(gw) !== selectedGameweek
+                          );
+                          let statusNote: string | null = null;
+                          if (!isActive && !canUse) {
+                            if (plannedGW) {
+                              statusNote = `GW${plannedGW[0]}`;
+                            } else if (chip === 'wildcard') {
+                              statusNote = selectedGameweek <= 19 ? 'GW20+' : 'GW1–19';
+                            } else {
+                              statusNote = 'N/A';
+                            }
+                          }
+
+                          const theme = chipTheme[chip];
+                          const btnClass = `relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all select-none flex-1 min-w-[64px] ${
+                            isActive ? theme.active : canUse ? theme.idle : theme.disabled
+                          }`;
+
+                          return (
+                            <button
+                              key={chip}
+                              disabled={!isActive && !canUse}
+                              onClick={() => {
+                                if (isActive) {
+                                  handleChipSelection(selectedGameweek, null);
+                                } else if (canUse) {
+                                  handleChipSelection(selectedGameweek, chip);
+                                }
+                              }}
+                              className={btnClass}
+                              title={getChipDescription(chip)}
+                            >
+                              {/* Active checkmark badge */}
+                              {isActive && (
+                                <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center font-bold shadow-sm">✓</span>
+                              )}
+                              {/* Chip name */}
+                              <span className={`font-semibold text-[11px] leading-tight ${isActive ? '' : canUse ? '' : 'text-gray-400'}`}>
+                                {getChipDisplayName(chip)}
+                              </span>
+                              {/* Status note */}
+                              {statusNote ? (
+                                <span className="text-[9px] text-gray-400 leading-tight">Planned {statusNote}</span>
+                              ) : isActive ? (
+                                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 leading-tight font-medium">Tap to remove</span>
+                              ) : (
+                                <span className="text-[9px] opacity-60 leading-tight">Tap to apply</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })()}
