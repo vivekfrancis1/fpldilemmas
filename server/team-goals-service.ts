@@ -451,6 +451,75 @@ export class TeamGoalsService {
   }
 
   /**
+   * Compute model-based projections for TBC fixtures (event: null).
+   * Uses the same calculateFixtureGoals formula as every scheduled GW.
+   */
+  static async getTBCFixtureProjections(): Promise<Array<{
+    fixtureId: number;
+    homeTeamId: number;
+    homeTeamShort: string;
+    awayTeamId: number;
+    awayTeamShort: string;
+    homeGoals: number;
+    awayGoals: number;
+  }>> {
+    const [bootstrapResponse, fixturesResponse] = await Promise.all([
+      fetch(`${INTERNAL_BASE}/api/bootstrap-static`),
+      fetch(`${INTERNAL_BASE}/api/fixtures`)
+    ]);
+
+    if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+      throw new Error('Failed to fetch data for TBC fixture projections');
+    }
+
+    const bootstrapData = await bootstrapResponse.json();
+    const fixturesData: any[] = await fixturesResponse.json();
+
+    const tbcFixtures = fixturesData.filter((f: any) => f.event === null || f.event === undefined);
+    if (tbcFixtures.length === 0) return [];
+
+    const { PREMIER_LEAGUE_TEAMS } = await import('@shared/schema');
+    const { getAdminGoalSettings, getCreateTeamService, MASTER_TEAM_DEFAULTS } = await import('./team-config');
+
+    const adminGoalSettings = getAdminGoalSettings();
+    const createTeamService = getCreateTeamService();
+    const teamService = await createTeamService();
+    const bettingData = teamService.getBettingData();
+    const teams = PREMIER_LEAGUE_TEAMS;
+
+    const results = await Promise.all(
+      tbcFixtures.map(async (fixture: any) => {
+        const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+        if (!homeTeam || !awayTeam) return null;
+
+        const [homeGoals, awayGoals] = await Promise.all([
+          TeamGoalsService.calculateFixtureGoals(
+            homeTeam, awayTeam, fixture, true,
+            bootstrapData, fixturesData, bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+          ),
+          TeamGoalsService.calculateFixtureGoals(
+            awayTeam, homeTeam, fixture, false,
+            bootstrapData, fixturesData, bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+          )
+        ]);
+
+        return {
+          fixtureId: fixture.id,
+          homeTeamId: fixture.team_h,
+          homeTeamShort: homeTeam.short_name,
+          awayTeamId: fixture.team_a,
+          awayTeamShort: awayTeam.short_name,
+          homeGoals: Math.round(homeGoals * 100) / 100,
+          awayGoals: Math.round(awayGoals * 100) / 100,
+        };
+      })
+    );
+
+    return results.filter(Boolean) as any[];
+  }
+
+  /**
    * Clear cache - useful for testing or when admin settings change
    */
   static clearCache(): void {

@@ -18,6 +18,16 @@ interface FixtureDetail {
   goals: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface TeamGoalsHistory {
   lastFinishedGW: number;
   teams: {
@@ -235,22 +245,23 @@ export default function TeamGoalProjections() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
-  // TBC fixtures (event: null) keyed by team short name
-  const tbcFixtureMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; isHome: boolean }>();
-    const map = new Map<string, { opponent: string; isHome: boolean }>();
-    fixturesData.forEach((fixture: any) => {
-      if (!fixture.event) {
-        const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
-        const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
-        if (homeTeam && awayTeam) {
-          map.set(homeTeam.short_name, { opponent: awayTeam.short_name, isHome: true });
-          map.set(awayTeam.short_name, { opponent: homeTeam.short_name, isHome: false });
-        }
-      }
+  // Model-based TBC goal projections from backend (same formula as any scheduled GW)
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future",
+  });
+
+  // Map from teamShort → { goals, opponent, isHome, opponentGoals }
+  const tbcGoalMap = useMemo(() => {
+    const map = new Map<string, { goals: number; opponent: string; isHome: boolean; opponentGoals: number }>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { goals: f.homeGoals, opponent: f.awayTeamShort, isHome: true, opponentGoals: f.awayGoals });
+      map.set(f.awayTeamShort, { goals: f.awayGoals, opponent: f.homeTeamShort, isHome: false, opponentGoals: f.homeGoals });
     });
     return map;
-  }, [bootstrapData?.teams, fixturesData]);
+  }, [tbcGoalData]);
 
   // Use live endpoint to get fixtureDetails for DGW display
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
@@ -625,7 +636,7 @@ export default function TeamGoalProjections() {
                           </div>
                         </th>
                       ))}
-                      {viewMode === "future" && tbcFixtureMap.size > 0 && (
+                      {viewMode === "future" && tbcGoalMap.size > 0 && (
                         <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[44px] md:min-w-[56px]'}`}>
                           GW TBC
                         </th>
@@ -730,29 +741,25 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
-                        {viewMode === "future" && tbcFixtureMap.size > 0 && (() => {
-                          const tbcFixture = tbcFixtureMap.get(team.teamShort);
-                          if (!tbcFixture) {
+                        {viewMode === "future" && tbcGoalMap.size > 0 && (() => {
+                          const tbcEntry = tbcGoalMap.get(team.teamShort);
+                          if (!tbcEntry) {
                             return (
                               <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
                                 <span className="text-gray-300">-</span>
                               </td>
                             );
                           }
-                          const nonZeroGoals = activeGameweeks.map(gw => team.gameweekProjections[gw.toString()] || 0).filter(v => v > 0);
-                          const tbcGoals = nonZeroGoals.length > 0
-                            ? nonZeroGoals.reduce((a, b) => a + b, 0) / nonZeroGoals.length
-                            : team.averageGoalsPerGame;
                           return (
                             <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                     <div className="flex flex-col items-center">
-                                      <span className="font-semibold text-amber-800">{tbcGoals.toFixed(2)}</span>
+                                      <span className="font-semibold text-amber-800">{tbcEntry.goals.toFixed(2)}</span>
                                       {showOpponent && (
                                         <span className="text-[9px] md:text-[10px] text-amber-600 mt-0.5">
-                                          {tbcFixture.opponent}({tbcFixture.isHome ? 'H' : 'A'})
+                                          {tbcEntry.opponent}({tbcEntry.isHome ? 'H' : 'A'})
                                         </span>
                                       )}
                                     </div>
@@ -762,13 +769,13 @@ export default function TeamGoalProjections() {
                                   <div className="space-y-2">
                                     <div className="font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
                                       <span>TBC Fixture</span>
-                                      <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Avg per fixture</span>
+                                      <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">FPL Model</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
-                                      <span className="text-gray-600">vs {tbcFixture.opponent} ({tbcFixture.isHome ? 'H' : 'A'})</span>
-                                      <span className="font-semibold text-amber-800">{tbcGoals.toFixed(2)}</span>
+                                      <span className="text-gray-600">vs {tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})</span>
+                                      <span className="font-semibold text-amber-800">{tbcEntry.goals.toFixed(2)}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 pt-1">Based on average across GW{activeGameweeks[0]}–{activeGameweeks[activeGameweeks.length - 1]}</p>
+                                    <p className="text-xs text-gray-500 pt-1">Projected using the same attack/defence model as scheduled GWs</p>
                                   </div>
                                 </PopoverContent>
                               </Popover>
@@ -808,12 +815,11 @@ export default function TeamGoalProjections() {
                         );
                       })}
 
-                      {viewMode === "future" && tbcFixtureMap.size > 0 && (() => {
+                      {viewMode === "future" && tbcGoalMap.size > 0 && (() => {
                         const tbcTotal = filteredProjections.reduce((sum, team) => {
-                          if (!tbcFixtureMap.has(team.teamShort)) return sum;
-                          const nonZero = activeGameweeks.map(gw => team.gameweekProjections[gw.toString()] || 0).filter(v => v > 0);
-                          const tbcGoals = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : team.averageGoalsPerGame;
-                          return sum + tbcGoals;
+                          const entry = tbcGoalMap.get(team.teamShort);
+                          if (!entry) return sum;
+                          return sum + entry.goals;
                         }, 0);
                         return (
                           <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>

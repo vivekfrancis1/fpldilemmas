@@ -7736,6 +7736,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TBC fixture goal projections — model-based (same formula as scheduled GWs)
+  app.get("/api/tbc-goal-projections",
+    requireReadiness(['bootstrap-data'], 'tbc-goal-projections'),
+    async (req, res) => {
+      try {
+        const { TeamGoalsService } = await import('./team-goals-service');
+        const tbcProjections = await TeamGoalsService.getTBCFixtureProjections();
+        res.json(tbcProjections);
+      } catch (error) {
+        console.error('Error computing TBC goal projections:', error);
+        res.status(500).json({ error: 'Failed to compute TBC goal projections' });
+      }
+    }
+  );
+
   // Past Team Goals endpoint - actual goals from finished fixtures
   app.get("/api/team-goals-history", async (req, res) => {
     try {

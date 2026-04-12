@@ -600,10 +600,14 @@ function TBCBreakdownTooltip({
   player,
   gameweekRange,
   excludedComponents = new Set(),
+  tbcTeamGoals,
+  avgTeamGoalsPerGw,
 }: {
   player: PlayerTotalPointsData;
   gameweekRange: number[];
   excludedComponents?: Set<string>;
+  tbcTeamGoals?: number;
+  avgTeamGoalsPerGw?: number;
 }) {
   const componentDefs = [
     { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
@@ -618,14 +622,22 @@ function TBCBreakdownTooltip({
     { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
   ];
 
+  // GWs in range where this player has a non-zero projection (i.e. has a fixture)
   const playingGws = gameweekRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
   const n = playingGws.length || 1;
+
+  // Whether we have enough data to use model-based scaling for goals/assists
+  const canUseModel = tbcTeamGoals !== undefined && avgTeamGoalsPerGw !== undefined && avgTeamGoalsPerGw > 0;
+  const goalsScaleRatio = canUseModel ? tbcTeamGoals! / avgTeamGoalsPerGw! : 1;
+
+  const modelDrivenKeys = new Set(['pointsFromGoals', 'pointsFromAssists']);
 
   const avgComponents: { [key: string]: number } = {};
   componentDefs.forEach(comp => {
     const compMap = (player as any)[comp.key] as { [key: string]: number } | undefined;
-    const total = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0);
-    avgComponents[comp.key] = total / n;
+    const perFixtureAvg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
+    // Goals and assists: scale per-fixture average by ratio of TBC model goals vs avg team goals
+    avgComponents[comp.key] = modelDrivenKeys.has(comp.key) ? perFixtureAvg * goalsScaleRatio : perFixtureAvg;
   });
 
   const avgTotal = playingGws.reduce((s, gw) => s + (player.gameweekProjections?.[gw.toString()] || 0), 0) / n;
@@ -651,7 +663,7 @@ function TBCBreakdownTooltip({
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3 flex items-center gap-2">
             <span>TBC Points Breakdown</span>
             <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
-              Avg per fixture
+              FPL Model
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -694,7 +706,7 @@ function TBCBreakdownTooltip({
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Average per fixture across GW{gwFirst}–{gwLast}
+            Goals &amp; assists scaled by model-based fixture projection; other components per-fixture average GW{gwFirst}–{gwLast}
           </p>
         </div>
       </PopoverContent>
@@ -864,10 +876,17 @@ function createPlayerTotalPointsColumns(
         const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
         if (!isTBCPlayer) return <span className="text-gray-300 text-xs">-</span>;
 
+        const tbcEntry = tbcPlayerGoalMap.get(playerTeamShort);
         return (
           <div className="flex flex-col items-center">
             <div className="relative inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
-              <TBCBreakdownTooltip player={player} gameweekRange={gameweekRange} excludedComponents={excludedComponents} />
+              <TBCBreakdownTooltip
+                player={player}
+                gameweekRange={gameweekRange}
+                excludedComponents={excludedComponents}
+                tbcTeamGoals={tbcEntry?.tbcGoals}
+                avgTeamGoalsPerGw={tbcEntry?.avgGwGoals}
+              />
             </div>
           </div>
         );
@@ -1245,6 +1264,45 @@ export default function PlayerTotalPoints() {
     });
     return names;
   }, [bootstrapData?.teams, fixturesData]);
+
+  // Model-based TBC goal projections (same formula as scheduled GWs) — only fetched when TBC fixtures exist
+  const { data: tbcGoalData } = useQuery<Array<{
+    homeTeamShort: string; awayTeamShort: string; homeGoals: number; awayGoals: number;
+  }>>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future" && tbcTeamShortNames.size > 0,
+  });
+
+  // Team-level GW goal projections — needed to compute per-player goal-share scaling
+  const { data: teamGoalProjectionsData } = useQuery<Array<{
+    teamShort: string; gameweekProjections: { [gw: string]: number };
+  }>>({
+    queryKey: ["/api/team-goal-projections"],
+    staleTime: 60 * 60 * 1000,
+    enabled: viewMode === "future" && tbcTeamShortNames.size > 0,
+  });
+
+  // teamShort → { tbcGoals, tbcOpponentGoals, avgGwGoals (across the active range) }
+  const tbcPlayerGoalMap = useMemo(() => {
+    const map = new Map<string, { tbcGoals: number; avgGwGoals: number }>();
+    if (!tbcGoalData || !teamGoalProjectionsData) return map;
+    tbcGoalData.forEach(f => {
+      const homeTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort);
+      const awayTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort);
+      if (homeTeamData) {
+        const nonZero = Object.values(homeTeamData.gameweekProjections).filter(v => v > 0);
+        const avg = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : 1;
+        map.set(f.homeTeamShort, { tbcGoals: f.homeGoals, avgGwGoals: avg });
+      }
+      if (awayTeamData) {
+        const nonZero = Object.values(awayTeamData.gameweekProjections).filter(v => v > 0);
+        const avg = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : 1;
+        map.set(f.awayTeamShort, { tbcGoals: f.awayGoals, avgGwGoals: avg });
+      }
+    });
+    return map;
+  }, [tbcGoalData, teamGoalProjectionsData]);
 
   // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
   // TanStack Query does NOT refetch when the user changes the GW filter (instant client-side filtering).
