@@ -240,9 +240,9 @@ export default function TopNav() {
   }));
 
   return (
-    <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
+    <header className="hidden md:flex items-center bg-black text-white sticky top-0 z-40 h-12 w-full border-b border-white/10 shadow-sm">
       {/* Logo */}
-      <Link href="/" className="flex items-center px-3 mr-4 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
+      <Link href="/" className="flex items-center px-3 mr-4 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-white/10 h-full">
         <span className="text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
       </Link>
 
@@ -266,7 +266,7 @@ export default function TopNav() {
       </nav>
 
       {/* Right side: refresh + auth */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-purple-500/30 h-full">
+      <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-white/10 h-full">
         <RefreshButton className="text-purple-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (
           <Button
