@@ -1,13 +1,11 @@
-import { useState } from "react";
-import { X, Users, Trophy, Target, TrendingUp, ArrowRight, Eye } from "lucide-react";
+import { X, Users, Trophy, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ValueCell, PositionBadge, TeamBadge } from "@/components/enhanced-table";
+import { ValueCell, TeamBadge } from "@/components/enhanced-table";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PlayerProjectionsComparisonModalProps {
@@ -67,7 +65,6 @@ export default function PlayerProjectionsComparisonModal({
   startGameweek,
   endGameweek
 }: PlayerProjectionsComparisonModalProps) {
-  const [activeTab, setActiveTab] = useState("summary");
   const isMobile = useIsMobile();
 
   if (!isOpen || players.length === 0) return null;
@@ -94,300 +91,111 @@ export default function PlayerProjectionsComparisonModal({
     }
   };
 
-  // Generate gameweek range for display
-  const gameweekRange = Array.from(
-    { length: endGameweek - startGameweek + 1 },
-    (_, i) => startGameweek + i
-  );
-
-  // Helper function to find players with best value for a given stat
   const getPlayersWithBestValue = (statKey: string) => {
     const values = players.map(player => (player as any)[statKey] || 0);
     const bestValue = Math.max(...values);
-    
     return players
       .map((player, index) => ({ player, value: values[index] }))
       .filter(({ value }) => value === bestValue)
       .map(({ player }) => player.playerId || player.id);
   };
 
-  // Helper function to check if player has best value for stat
   const isPlayerBest = (player: PlayerTotalPointsData, statKey: string) => {
     const bestPlayers = getPlayersWithBestValue(statKey);
     return bestPlayers.includes(player.playerId || player.id);
   };
 
-  // Helper function to find players with best gameweek projection
-  const getPlayersWithBestGameweekValue = (gameweek: number) => {
-    const values = players.map(player => player.gameweekProjections?.[`gw${gameweek}`] || 0);
-    const bestValue = Math.max(...values);
-    
-    return players
-      .map((player, index) => ({ player, value: values[index] }))
-      .filter(({ value }) => value === bestValue)
-      .map(({ player }) => player.playerId || player.id);
-  };
-
-  // Helper function to check if player has best value for gameweek
-  const isPlayerBestForGameweek = (player: PlayerTotalPointsData, gameweek: number) => {
-    const bestPlayers = getPlayersWithBestGameweekValue(gameweek);
-    return bestPlayers.includes(player.playerId || player.id);
-  };
-
-  // Summary stats comparison
   const summaryStats = [
-    {
-      key: 'totalExpectedPoints',
-      label: 'Total Expected Points',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'averagePerGameweek',
-      label: 'Avg Points/GW',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromGoals',
-      label: 'Points from Goals',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromAssists',
-      label: 'Points from Assists',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromCleanSheets',
-      label: 'Points from Clean Sheets',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromMinutes',
-      label: 'Points from Minutes',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromDefensiveContributions',
-      label: 'Points from Defensive Contributions',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromSaves',
-      label: 'Points from Saves',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromGoalsConceded',
-      label: 'Points from Goals Conceded',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromYellowCards',
-      label: 'Points from Yellow Cards',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromRedCards',
-      label: 'Points from Red Cards',
-      format: 'points',
-      decimals: 2
-    },
-    {
-      key: 'totalPointsFromBonus',
-      label: 'Points from Bonus',
-      format: 'points',
-      decimals: 2
-    }
+    { key: 'totalExpectedPoints', label: 'Total Expected Points', format: 'points', decimals: 2 },
+    { key: 'averagePerGameweek', label: 'Avg Points/GW', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromGoals', label: 'Points from Goals', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromAssists', label: 'Points from Assists', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromCleanSheets', label: 'Points from Clean Sheets', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromMinutes', label: 'Points from Minutes', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromDefensiveContributions', label: 'Points from Defensive Contributions', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromSaves', label: 'Points from Saves', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromGoalsConceded', label: 'Points from Goals Conceded', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromYellowCards', label: 'Points from Yellow Cards', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromRedCards', label: 'Points from Red Cards', format: 'points', decimals: 2 },
+    { key: 'totalPointsFromBonus', label: 'Points from Bonus', format: 'points', decimals: 2 },
   ];
 
-  // Mobile-responsive content component
   const ComparisonContent = () => (
-    <div className="w-full max-w-6xl mx-auto">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`${isMobile ? 'grid grid-cols-1 gap-1 h-auto p-1' : 'grid grid-cols-2 w-full'}`}>
-          <TabsTrigger 
-            value="summary" 
-            className={`flex items-center gap-2 ${isMobile ? 'justify-start py-3 px-4' : ''}`}
-          >
-            <Trophy className="h-4 w-4" />
-            Summary Stats
-          </TabsTrigger>
-          <TabsTrigger 
-            value="gameweeks" 
-            className={`flex items-center gap-2 ${isMobile ? 'justify-start py-3 px-4' : ''}`}
-          >
-            <Target className="h-4 w-4" />
-            Gameweek Breakdown
-          </TabsTrigger>
-        </TabsList>
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+      {/* Player Headers */}
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
+        {players.map((player) => (
+          <Card key={player.playerId || player.id} className="bg-gradient-to-br from-blue-50 to-slate-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge className={`${getPositionColor(getPlayerPosition(player))} text-xs px-1.5 py-0.5 h-5`}>
+                    {getPlayerPosition(player)}
+                  </Badge>
+                  <TeamBadge team={getPlayerTeam(player)} compact={true} />
+                </div>
+              </div>
+              <div className="text-lg font-bold text-gray-900">
+                {getPlayerName(player)}
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
 
-        <TabsContent value="summary" className="space-y-6 mt-6">
-          {/* Player Headers */}
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-            {players.map((player) => (
-              <Card key={player.playerId || player.id} className="bg-gradient-to-br from-blue-50 to-slate-50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${getPositionColor(getPlayerPosition(player))} text-xs px-1.5 py-0.5 h-5`}>
-                        {getPlayerPosition(player)}
-                      </Badge>
-                      <TeamBadge team={getPlayerTeam(player)} compact={true} />
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg font-bold text-gray-900">
-                    {getPlayerName(player)}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+      {/* Summary Stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Projected Performance Comparison (GW{startGameweek}-{endGameweek})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {summaryStats.map((stat) => (
+              <div key={stat.key} className="space-y-2">
+                <div className="text-sm font-medium text-gray-700">
+                  {stat.label}
+                </div>
+                <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
+                  {players.map((player) => {
+                    const isBest = isPlayerBest(player, stat.key);
+                    return (
+                      <div
+                        key={player.playerId || player.id}
+                        className={`rounded-lg p-3 text-center transition-all duration-200 ${
+                          isBest
+                            ? 'bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 shadow-md'
+                            : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        <ValueCell
+                          value={(player as any)[stat.key] || 0}
+                          format={stat.format as any}
+                          decimals={stat.decimals}
+                          className={`text-lg font-semibold ${isBest ? 'text-green-800' : 'text-gray-900'}`}
+                        />
+                        {isBest && (
+                          <div className="mt-1">
+                            <Badge className="bg-green-600 text-white text-[10px] px-1 py-0.5 h-4">
+                              Best
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <Separator />
+              </div>
             ))}
           </div>
-
-          {/* Summary Stats Comparison */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Projected Performance Comparison (GW{startGameweek}-{endGameweek})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {summaryStats.map((stat) => (
-                  <div key={stat.key} className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">
-                      {stat.label}
-                    </div>
-                    <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-                      {players.map((player) => {
-                        const isBest = isPlayerBest(player, stat.key);
-                        return (
-                          <div 
-                            key={player.playerId || player.id} 
-                            className={`rounded-lg p-3 text-center transition-all duration-200 ${
-                              isBest 
-                                ? 'bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 shadow-md' 
-                                : 'bg-gray-50 border border-gray-200'
-                            }`}
-                          >
-                            <ValueCell 
-                              value={(player as any)[stat.key] || 0}
-                              format={stat.format as any}
-                              decimals={stat.decimals}
-                              className={`text-lg font-semibold ${
-                                isBest ? 'text-green-800' : 'text-gray-900'
-                              }`}
-                            />
-                            {isBest && (
-                              <div className="mt-1">
-                                <Badge className="bg-green-600 text-white text-[10px] px-1 py-0.5 h-4">
-                                  Best
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Separator />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="gameweeks" className="space-y-6 mt-6">
-          {/* Player Headers */}
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-            {players.map((player) => (
-              <Card key={player.playerId || player.id} className="bg-gradient-to-br from-green-50 to-blue-50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${getPositionColor(getPlayerPosition(player))} text-xs px-1.5 py-0.5 h-5`}>
-                        {getPlayerPosition(player)}
-                      </Badge>
-                      <TeamBadge team={getPlayerTeam(player)} compact={true} />
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg font-bold text-gray-900">
-                    {getPlayerName(player)}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-
-          {/* Gameweek by Gameweek Comparison */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Gameweek Projections Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {gameweekRange.map((gw) => (
-                  <div key={gw} className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">
-                      Gameweek {gw}
-                    </div>
-                    <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : `grid-cols-${Math.min(players.length, 4)}`}`}>
-                      {players.map((player) => {
-                        const isBest = isPlayerBestForGameweek(player, gw);
-                        return (
-                          <div 
-                            key={player.playerId || player.id} 
-                            className={`rounded-lg p-3 text-center transition-all duration-200 ${
-                              isBest 
-                                ? 'bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 shadow-md' 
-                                : 'bg-gray-50 border border-gray-200'
-                            }`}
-                          >
-                            <ValueCell 
-                              value={player.gameweekProjections?.[`gw${gw}`] || 0}
-                              format="points"
-                              decimals={2}
-                              className={`text-lg font-semibold ${
-                                isBest ? 'text-green-800' : 'text-gray-900'
-                              }`}
-                              colorScheme="points"
-                            />
-                            {isBest && (
-                              <div className="mt-1">
-                                <Badge className="bg-green-600 text-white text-[10px] px-1 py-0.5 h-4">
-                                  Best
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Separator />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 
-  // Render content in appropriate container (dialog for desktop, drawer for mobile)
   if (isMobile) {
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
