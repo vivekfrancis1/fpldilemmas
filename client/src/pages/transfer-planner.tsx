@@ -6093,12 +6093,8 @@ export default function TransferPlanner() {
             </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
-            <div className="text-xs sm:text-sm text-muted-foreground mb-2 italic">
-              Click on the player to transfer or swap or set as captain
-            </div>
-
             {/* View Toggle and Optimization Controls */}
-            <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col gap-3 mb-2">
               {/* All buttons in one row */}
               <div className="flex flex-wrap justify-center items-center gap-2">
 
@@ -6254,6 +6250,10 @@ export default function TransferPlanner() {
                   </div>
                 );
               })()}
+            </div>
+
+            <div className="text-xs sm:text-sm text-muted-foreground mb-2 italic">
+              Click on the player to transfer or swap or set as captain
             </div>
 
             <div>
