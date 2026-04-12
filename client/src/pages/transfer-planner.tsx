@@ -5323,15 +5323,6 @@ export default function TransferPlanner() {
           >
             Transfer Out
           </button>
-          {completedTransfers.some(t => t.inPlayerId === pick.element) && (
-            <button
-              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-800/40 font-semibold text-base sm:text-lg text-amber-700 dark:text-amber-400 transition-colors"
-              onClick={() => { handleUndoTransfer(pick.position); setSelectedPlayer(null); }}
-              data-testid={`${isBench ? 'bench' : 'list'}-undo-transfer-${pick.element}`}
-            >
-              Undo Transfer
-            </button>
-          )}
           {!pick.is_captain && (
             <button 
               className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
@@ -6321,9 +6312,9 @@ export default function TransferPlanner() {
                     <div key={`empty-${pitchPlayer.position}`} className="flex flex-col items-center w-[19%]" data-testid={`pitch-empty-${pitchPlayer.position}`}>
                       <div className="relative flex flex-col items-center">
                         <button
-                          onClick={() => setTransferredOutPlayers([])}
+                          onClick={() => handleUndoTransfer(pitchPlayer.position)}
                           className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center border border-white shadow-md text-white"
-                          aria-label="Cancel transfer out"
+                          aria-label="Undo transfer out"
                         >
                           <X className="h-2.5 w-2.5" />
                         </button>
