@@ -8,6 +8,7 @@ export interface TableColumn<T = any> {
   key: string;
   header: string;
   sortable?: boolean;
+  hideSortIcon?: boolean;
   className?: string;
   render?: (value: any, item: T, index: number) => React.ReactNode;
   width?: string;
@@ -202,7 +203,7 @@ export function EnhancedTable<T = any>({
                       )}
                     >
                       <span className="whitespace-nowrap">{column.header}</span>
-                      {getSortIcon(column.key)}
+                      {!column.hideSortIcon && getSortIcon(column.key)}
                     </Button>
                   ) : (
                     <span className="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm">

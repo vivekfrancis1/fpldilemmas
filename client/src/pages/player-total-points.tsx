@@ -690,8 +690,9 @@ function createPlayerTotalPointsColumns(
       
       return {
         key: `gw${gw}`,
-        header: `${gw}`,
+        header: `GW${gw}`,
         sortable: true,
+        hideSortIcon: true,
         align: 'center' as const,
         className: 'min-w-[36px] md:min-w-[44px] bg-blue-50/30 px-0.5',
         render: (_: any, player: PlayerTotalPointsData) => {
