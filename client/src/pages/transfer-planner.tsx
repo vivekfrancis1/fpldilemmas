@@ -6057,8 +6057,11 @@ export default function TransferPlanner() {
         </Collapsible>
       )}
 
-      {/* Team Selection Section */}
+      {/* Team Selection & Projected Points — side-by-side on desktop */}
       {searchedId && teamData && selectedGameweek && (
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          {/* Left column: Team Selection */}
+          <div className="w-full lg:w-[45%] flex-shrink-0">
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader className="py-3 px-3 sm:px-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -6415,6 +6418,22 @@ export default function TransferPlanner() {
             </div>
           </CardContent>
         </Card>
+          </div>
+          {/* Right column: Projected Points */}
+          <div className="w-full lg:flex-1 min-w-0">
+            <AllPlayersProjectionsTab
+              selectedGameweek={selectedGameweek as number}
+              transferredOutPlayers={transferredOutPlayers}
+              onTransferIn={handleTransferIn}
+              currentBank={calculateCurrentBank()}
+              initialPositionFilter={projectionPositionFilter}
+              scrollToView={scrollToProjections}
+              onScrollComplete={() => setScrollToProjections(false)}
+              teamData={teamData}
+              savedDrafts={savedDrafts}
+            />
+          </div>
+        </div>
       )}
 
       {/* Team Evolution Section */}
@@ -6979,23 +6998,6 @@ export default function TransferPlanner() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
-      )}
-
-      {/* Projected Points Section */}
-      {searchedId && teamData && selectedGameweek && (
-        <div className="space-y-4">
-          <AllPlayersProjectionsTab 
-            selectedGameweek={selectedGameweek as number} 
-            transferredOutPlayers={transferredOutPlayers}
-            onTransferIn={handleTransferIn}
-            currentBank={calculateCurrentBank()}
-            initialPositionFilter={projectionPositionFilter}
-            scrollToView={scrollToProjections}
-            onScrollComplete={() => setScrollToProjections(false)}
-            teamData={teamData}
-            savedDrafts={savedDrafts}
-          />
-        </div>
       )}
 
       {/* Empty State */}
