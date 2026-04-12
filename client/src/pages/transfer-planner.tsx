@@ -1024,7 +1024,7 @@ export default function TransferPlanner() {
   // Collapsible sections state - default to collapsed
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
   const [isDraftSelectionOpen, setIsDraftSelectionOpen] = useState(false);
-  const [isTeamSummaryOpen, setIsTeamSummaryOpen] = useState(false);
+  const [isTeamSummaryOpen, setIsTeamSummaryOpen] = useState(true);
   const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
   const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
   
