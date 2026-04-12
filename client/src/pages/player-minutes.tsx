@@ -177,16 +177,16 @@ export default function PlayerMinutes() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <Card className="w-96 shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
+        <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
               Loading Minutes Projections
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm">
               Calculating expected minutes for all players using rotation patterns and current form...
             </p>
           </CardContent>

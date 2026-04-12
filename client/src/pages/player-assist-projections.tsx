@@ -603,9 +603,9 @@ export default function PlayerAssistProjections() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+        <div className="w-full max-w-7xl mx-auto px-2 py-4 sm:px-4 sm:py-8">
           <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">
                 <Zap className="h-6 w-6 text-red-600 mr-3" />
                 <div>
@@ -622,16 +622,16 @@ export default function PlayerAssistProjections() {
 
   if (isLoading || !initialized || displayData.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <Card className="w-96 shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
+        <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
               {viewMode === "future" ? "Loading Assist Projections" : "Loading Assist History"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm">
               {viewMode === "future" 
                 ? "Calculating projected assists for all players across the next 12 gameweeks..."
                 : "Loading historical assist data for all players..."}

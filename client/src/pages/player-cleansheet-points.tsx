@@ -235,7 +235,7 @@ export default function PlayerCleanSheetPoints() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-3 py-4 sm:px-6 sm:py-8">
         <div className="text-center">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             Error loading clean sheet points data. Please try again.
@@ -247,16 +247,16 @@ export default function PlayerCleanSheetPoints() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <Card className="w-96 shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
+        <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
               Loading Clean Sheet Points
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm">
               Calculating clean sheet probabilities and FPL points for all players...
             </p>
           </CardContent>
@@ -297,7 +297,7 @@ export default function PlayerCleanSheetPoints() {
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-8">
           <div className="bg-white rounded-xl shadow-lg border border-gray-200">
             <CollapsibleTrigger asChild>
-              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-4 px-6 flex items-center justify-between">
+              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-3 sm:py-4 sm:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Filter className="h-5 w-5 text-green-600" />
                   <h3 className="text-base sm:text-lg font-semibold">Filters & Controls</h3>
@@ -312,7 +312,7 @@ export default function PlayerCleanSheetPoints() {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="px-6 pb-6">
+              <div className="px-3 pb-3 sm:px-6 sm:pb-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {/* Gameweek Range */}
             <div className="">

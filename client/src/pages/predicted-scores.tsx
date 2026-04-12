@@ -206,10 +206,10 @@ export default function PredictedScores() {
 
           {/* Controls */}
           <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-end">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-wrap gap-2 sm:gap-4 items-end">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Start GW:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
                     <SelectTrigger className="w-20">
                       <SelectValue />
@@ -225,7 +225,7 @@ export default function PredictedScores() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">End GW:</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">End GW:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
                     <SelectTrigger className="w-20">
                       <SelectValue />
@@ -241,9 +241,9 @@ export default function PredictedScores() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Team:</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-28 sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,7 +258,7 @@ export default function PredictedScores() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Status:</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Status:</label>
                   <Select value={showFinished} onValueChange={setShowFinished}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
