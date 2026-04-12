@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3 } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3 } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -6047,24 +6047,49 @@ export default function TransferPlanner() {
                   return null;
                 })()}
               </div>
-              {/* Gameweek Selection - Top Right */}
-              <div className="flex gap-1 sm:gap-1.5 flex-wrap items-center">
+            </div>
+            {/* Gameweek Navigation Bar */}
+            <div className="flex items-center gap-1 mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs font-semibold shrink-0"
+                disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) <= 0}
+                onClick={() => {
+                  const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
+                  if (idx > 0) { setSelectedPlayer(null); setSelectedGameweek(nextGameweeks[idx - 1].id); }
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Prev</span>
+              </Button>
+              <div className="flex gap-1 flex-1 justify-center flex-wrap">
                 {nextGameweeks.map(gw => (
                   <Button
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
                     size="sm"
-                    className="h-7 sm:h-8 text-xs sm:text-sm font-semibold min-w-[2rem] px-2"
-                    onClick={() => {
-                      setSelectedPlayer(null);
-                      setSelectedGameweek(gw.id);
-                    }}
+                    className="h-7 text-xs font-semibold min-w-[2.25rem] px-2"
+                    onClick={() => { setSelectedPlayer(null); setSelectedGameweek(gw.id); }}
                     data-testid={`gw-button-${gw.id}`}
                   >
-                    {gw.id}
+                    GW{gw.id}
                   </Button>
                 ))}
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs font-semibold shrink-0"
+                disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) >= nextGameweeks.length - 1}
+                onClick={() => {
+                  const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
+                  if (idx < nextGameweeks.length - 1) { setSelectedPlayer(null); setSelectedGameweek(nextGameweeks[idx + 1].id); }
+                }}
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
