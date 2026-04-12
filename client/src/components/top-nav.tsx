@@ -173,7 +173,7 @@ function NavDropdown({
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 px-2.5 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+        className={`flex items-center gap-1 px-2.5 h-full text-sm font-medium transition-colors whitespace-nowrap ${
           isActive
             ? "bg-white/15 text-white"
             : "text-purple-100 hover:bg-white/10 hover:text-white"
