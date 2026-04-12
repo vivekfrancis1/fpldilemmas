@@ -235,6 +235,23 @@ export default function TeamGoalProjections() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
+  // TBC fixtures (event: null) keyed by team short name
+  const tbcFixtureMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; isHome: boolean }>();
+    fixturesData.forEach((fixture: any) => {
+      if (!fixture.event) {
+        const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+        const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+        if (homeTeam && awayTeam) {
+          map.set(homeTeam.short_name, { opponent: awayTeam.short_name, isHome: true });
+          map.set(awayTeam.short_name, { opponent: homeTeam.short_name, isHome: false });
+        }
+      }
+    });
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
   // Use live endpoint to get fixtureDetails for DGW display
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/team-goal-projections"],
@@ -608,6 +625,11 @@ export default function TeamGoalProjections() {
                           </div>
                         </th>
                       ))}
+                      {viewMode === "future" && tbcFixtureMap.size > 0 && (
+                        <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                          TBC
+                        </th>
+                      )}
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                         onClick={() => setSortBy('total')}
@@ -708,6 +730,52 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
+                        {viewMode === "future" && tbcFixtureMap.size > 0 && (() => {
+                          const tbcFixture = tbcFixtureMap.get(team.teamShort);
+                          if (!tbcFixture) {
+                            return (
+                              <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                                <span className="text-gray-300">-</span>
+                              </td>
+                            );
+                          }
+                          const nonZeroGoals = activeGameweeks.map(gw => team.gameweekProjections[gw.toString()] || 0).filter(v => v > 0);
+                          const tbcGoals = nonZeroGoals.length > 0
+                            ? nonZeroGoals.reduce((a, b) => a + b, 0) / nonZeroGoals.length
+                            : team.averageGoalsPerGame;
+                          return (
+                            <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                    <div className="flex flex-col items-center">
+                                      <span className="font-semibold text-amber-800">{tbcGoals.toFixed(2)}</span>
+                                      {showOpponent && (
+                                        <span className="text-[9px] md:text-[10px] text-amber-600 mt-0.5">
+                                          {tbcFixture.opponent}({tbcFixture.isHome ? 'H' : 'A'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                  <div className="space-y-2">
+                                    <div className="font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                      <span>TBC Fixture</span>
+                                      <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Avg per fixture</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-600">vs {tbcFixture.opponent} ({tbcFixture.isHome ? 'H' : 'A'})</span>
+                                      <span className="font-semibold text-amber-800">{tbcGoals.toFixed(2)}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 pt-1">Based on average across GW{activeGameweeks[0]}–{activeGameweeks[activeGameweeks.length - 1]}</p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </td>
+                          );
+                        })()}
+                        
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {viewMode === "past" 
@@ -739,6 +807,20 @@ export default function TeamGoalProjections() {
                           </td>
                         );
                       })}
+
+                      {viewMode === "future" && tbcFixtureMap.size > 0 && (() => {
+                        const tbcTotal = filteredProjections.reduce((sum, team) => {
+                          if (!tbcFixtureMap.has(team.teamShort)) return sum;
+                          const nonZero = activeGameweeks.map(gw => team.gameweekProjections[gw.toString()] || 0).filter(v => v > 0);
+                          const tbcGoals = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : team.averageGoalsPerGame;
+                          return sum + tbcGoals;
+                        }, 0);
+                        return (
+                          <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                            {tbcTotal.toFixed(2)}
+                          </td>
+                        );
+                      })()}
                       
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-orange-900">
