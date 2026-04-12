@@ -6051,9 +6051,9 @@ export default function TransferPlanner() {
             {/* Gameweek Navigation Bar */}
             <div className="flex items-center gap-1 mt-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs font-semibold shrink-0"
+                className="h-8 px-3 text-xs sm:text-sm font-bold shrink-0 border-2 border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:opacity-40"
                 disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) <= 0}
                 onClick={() => {
                   const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
@@ -6061,7 +6061,7 @@ export default function TransferPlanner() {
                 }}
               >
                 <ChevronLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Prev</span>
+                <span className="hidden sm:inline ml-0.5">Prev</span>
               </Button>
               <div className="flex gap-1 flex-1 justify-center flex-wrap">
                 {nextGameweeks.map(gw => (
@@ -6069,7 +6069,7 @@ export default function TransferPlanner() {
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
                     size="sm"
-                    className="h-7 text-xs font-semibold min-w-[2.25rem] px-2"
+                    className="h-8 text-xs font-semibold min-w-[2.5rem] px-2"
                     onClick={() => { setSelectedPlayer(null); setSelectedGameweek(gw.id); }}
                     data-testid={`gw-button-${gw.id}`}
                   >
@@ -6078,16 +6078,16 @@ export default function TransferPlanner() {
                 ))}
               </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs font-semibold shrink-0"
+                className="h-8 px-3 text-xs sm:text-sm font-bold shrink-0 border-2 border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:opacity-40"
                 disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) >= nextGameweeks.length - 1}
                 onClick={() => {
                   const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
                   if (idx < nextGameweeks.length - 1) { setSelectedPlayer(null); setSelectedGameweek(nextGameweeks[idx + 1].id); }
                 }}
               >
-                <span className="hidden sm:inline">Next</span>
+                <span className="hidden sm:inline mr-0.5">Next</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
