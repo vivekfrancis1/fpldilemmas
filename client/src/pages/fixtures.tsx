@@ -185,21 +185,6 @@ export default function Fixtures() {
     return fixturesData?.some(f => f.event === null) ?? false;
   }, [fixturesData]);
 
-  // Active assignments: base=none, custom=user's, expert=user's + all remaining TBC → GW36
-  const activeAssignments = useMemo<Record<number, number>>(() => {
-    if (viewMode === 'base') return {};
-    if (viewMode === 'expert') {
-      const expertMap: Record<number, number> = { ...tbcAssignments };
-      fixturesData?.forEach(f => {
-        if (f.event === null && !expertMap[f.id]) {
-          expertMap[f.id] = 36;
-        }
-      });
-      return expertMap;
-    }
-    return tbcAssignments;
-  }, [viewMode, tbcAssignments, fixturesData]);
-
   // Initialize gameweek range when bootstrap data loads
   useEffect(() => {
     if (bootstrapData?.events && !gameweekRange) {
@@ -381,20 +366,33 @@ export default function Fixtures() {
       return originalDifficulty > 0 ? originalDifficulty : 3;
     };
 
+    // Compute effective assignments based on view mode:
+    // base → no assignments (TBC stays in TBC column)
+    // custom → user's manual assignments only
+    // expert → user's assignments + all remaining TBC fixtures → GW36
+    const computedAssignments: Record<number, number> = {};
+    if (viewMode !== 'base') {
+      Object.assign(computedAssignments, tbcAssignments);
+    }
+    if (viewMode === 'expert') {
+      fixturesData.forEach(f => {
+        if (f.event === null && !computedAssignments[f.id]) {
+          computedAssignments[f.id] = 36;
+        }
+      });
+    }
+
     // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
-    // Use key 0 as a sentinel for unassigned (TBC) fixtures (unless assigned by user)
+    // Use key 0 as a sentinel for unassigned (TBC) fixtures
     fixturesData.forEach(fixture => {
       const isTBC = fixture.event === null;
-      const assignedGW = isTBC ? activeAssignments[fixture.id] : undefined;
+      const assignedGW = isTBC ? computedAssignments[fixture.id] : undefined;
       const gwKey = isTBC ? (assignedGW ?? 0) : fixture.event!;
       const inRange = !isTBC && fixture.event! >= gameweekRange.start && fixture.event! <= gameweekRange.end;
 
-      // If TBC+assigned, treat as if it's in the assigned GW (within range)
-      if (!inRange && !(isTBC && assignedGW)) {
-        if (!isTBC) return;
-        if (isTBC && !assignedGW) { /* fall through to add to TBC column */ }
-        else return; // assigned but out of current range — skip
-      }
+      // Skip out-of-range non-TBC fixtures; keep TBC fixtures (assigned or not)
+      if (!inRange && !isTBC) return;
+      // TBC unassigned → gwKey=0 (TBC column); TBC assigned → gwKey=assignedGW
 
       const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
@@ -449,7 +447,7 @@ export default function Fixtures() {
       teamAverageFDR: avgFDR,
       teamGameCount: gameCount
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, activeAssignments]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, viewMode, tbcAssignments]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -466,11 +464,12 @@ export default function Fixtures() {
     return allGameweeksInRange.filter(gw => !excludedGameweeks.has(gw));
   }, [allGameweeksInRange, excludedGameweeks]);
 
-  // Check if any team has TBC (event=null) fixtures
+  // Check if any team has TBC (event=null) fixtures that are unassigned in the current mode
   const hasTBCFixtures = useMemo(() => {
     if (!fixturesData) return false;
-    return fixturesData.some(f => f.event === null && !activeAssignments[f.id]);
-  }, [fixturesData, activeAssignments]);
+    if (viewMode === 'expert') return false; // expert assigns all TBC → GW36
+    return fixturesData.some(f => f.event === null && (viewMode === 'base' || !tbcAssignments[f.id]));
+  }, [fixturesData, viewMode, tbcAssignments]);
 
   // Calculate best rotation pairs - teams that complement each other's fixtures
   const rotationPairs = useMemo(() => {
