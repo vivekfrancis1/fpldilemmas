@@ -926,7 +926,6 @@ export default function TransferPlanner() {
   
   // Current gameweek's transfers (for convenience)
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
-  const [showTransferOutModal, setShowTransferOutModal] = useState(false);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
   
   // Player projections tab state for quick navigation
@@ -3730,7 +3729,9 @@ export default function TransferPlanner() {
 
     const newTransferredOut = [...transferredOutPlayers, transferOut];
     setTransferredOutPlayers(newTransferredOut);
-    setShowTransferOutModal(true);
+    setSelectedPlayer(null);
+    // Directly scroll to replacement — no modal needed
+    setTimeout(() => handleScrollToReplacement(player.element_type), 50);
     
     // Save to gameweek-specific storage immediately and capture updated value
     let updatedGameweekTransfers = gameweekTransfers;
@@ -5366,10 +5367,6 @@ export default function TransferPlanner() {
 
   return (
     <>
-      {/* Modal Overlay - blocks interaction when transfers are pending */}
-      {transferredOutPlayers.length > 0 && showTransferOutModal && (
-        <div className="fixed inset-0 bg-black/50 z-40" />
-      )}
       
       <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header - Compact */}
@@ -6252,7 +6249,7 @@ export default function TransferPlanner() {
                     const playerTeam = getPlayerTeam(player);
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
                     const playerFixtures = getPlayerFixtures(pick.element, selectedGameweek);
-                    const isEmptySlot = pick.is_transferred_out && showTransferOutModal;
+                    const isEmptySlot = !!pick.is_transferred_out;
                     return {
                       element: pick.element,
                       element_type: player.element_type,
@@ -6294,7 +6291,7 @@ export default function TransferPlanner() {
                       const playerTeam = getPlayerTeam(player);
                       const projectedPoints = getPlayerProjectedPoints(pick.element);
                       const benchFixtures = getPlayerFixtures(pick.element, selectedGameweek);
-                      const isEmptySlot = pick.is_transferred_out && showTransferOutModal;
+                      const isEmptySlot = !!pick.is_transferred_out;
                       return {
                         element: pick.element,
                         element_type: player.element_type,
@@ -6326,7 +6323,6 @@ export default function TransferPlanner() {
                         <button
                           onClick={() => {
                             setTransferredOutPlayers([]);
-                            setShowTransferOutModal(false);
                           }}
                           className="text-red-600 hover:text-red-700 transition-colors ml-auto block"
                           aria-label="Close"
@@ -7129,55 +7125,6 @@ export default function TransferPlanner() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Transfer Out Popup Modal - rendered outside main container for proper z-index */}
-      {transferredOutPlayers.length > 0 && showTransferOutModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-xs w-full border border-gray-200 dark:border-gray-800">
-            <div className="p-4 sm:p-6 relative">
-              <button
-                onClick={() => {
-                  if (transferredOutPlayers.length > 0) {
-                    handleUndoTransfer(transferredOutPlayers[0].position);
-                  }
-                }}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
-                data-testid="close-transfer-modal"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto">
-                {transferredOutPlayers.map((player, idx) => (
-                  <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {player.playerName}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Sell Price: £{player.sellingPrice.toFixed(1)}m
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  onClick={() => {
-                    if (transferredOutPlayers.length > 0) {
-                      handleScrollToReplacement(transferredOutPlayers[0].elementType);
-                      setShowTransferOutModal(false);
-                    }
-                  }}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 h-auto"
-                  data-testid="button-replace-player"
-                >
-                  Replace Player
-                </Button>
-                
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
     </>
   );
