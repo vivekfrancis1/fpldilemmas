@@ -30,9 +30,12 @@ interface CustomFDR {
   };
 }
 
-type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean };
+type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number };
 
-function TBCCell({ fixtures }: { fixtures?: FixtureEntry[] }) {
+function TBCCell({ fixtures, onFixtureClick }: {
+  fixtures?: FixtureEntry[];
+  onFixtureClick?: (fixtureId: number, label: string) => void;
+}) {
   return (
     <td className="px-0.5 py-0.5 text-center bg-amber-50 border-l-2 border-amber-300">
       {fixtures && fixtures.length > 0 ? (
@@ -40,8 +43,13 @@ function TBCCell({ fixtures }: { fixtures?: FixtureEntry[] }) {
           {fixtures.map((fixture, idx) => (
             <div
               key={idx}
-              className="px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800"
-              title={`TBC: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent}`}
+              className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800 ${fixture.fixtureId ? 'cursor-pointer hover:bg-amber-200 hover:ring-1 hover:ring-amber-400 transition-colors' : ''}`}
+              title={fixture.fixtureId ? `Click to assign to a gameweek` : `TBC: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent}`}
+              onClick={() => {
+                if (fixture.fixtureId && onFixtureClick) {
+                  onFixtureClick(fixture.fixtureId, `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`);
+                }
+              }}
             >
               <span className="truncate font-medium whitespace-nowrap">
                 {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
@@ -95,6 +103,19 @@ export default function Fixtures() {
   useEffect(() => {
     localStorage.setItem('fpl-custom-fdr', JSON.stringify(customFDR));
   }, [customFDR]);
+
+  // TBC fixture assignments: { [fixtureId]: gwNumber }
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    const stored = localStorage.getItem('fpl-tbc-assignments');
+    if (stored) { try { return JSON.parse(stored); } catch { return {}; } }
+    return {};
+  });
+  useEffect(() => {
+    localStorage.setItem('fpl-tbc-assignments', JSON.stringify(tbcAssignments));
+  }, [tbcAssignments]);
+
+  // Modal state for assigning a TBC fixture to a gameweek
+  const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
   
   const updateCustomFDR = (teamId: number, venue: 'home' | 'away', value: number) => {
     setCustomFDR(prev => ({
@@ -334,13 +355,19 @@ export default function Fixtures() {
     };
 
     // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
-    // Use key 0 as a sentinel for unassigned (TBC) fixtures
+    // Use key 0 as a sentinel for unassigned (TBC) fixtures (unless assigned by user)
     fixturesData.forEach(fixture => {
-      const gwKey = fixture.event === null ? 0 : fixture.event;
-      const inRange = fixture.event !== null && fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end;
       const isTBC = fixture.event === null;
+      const assignedGW = isTBC ? tbcAssignments[fixture.id] : undefined;
+      const gwKey = isTBC ? (assignedGW ?? 0) : fixture.event!;
+      const inRange = !isTBC && fixture.event! >= gameweekRange.start && fixture.event! <= gameweekRange.end;
 
-      if (!inRange && !isTBC) return;
+      // If TBC+assigned, treat as if it's in the assigned GW (within range)
+      if (!inRange && !(isTBC && assignedGW)) {
+        if (!isTBC) return;
+        if (isTBC && !assignedGW) { /* fall through to add to TBC column */ }
+        else return; // assigned but out of current range — skip
+      }
 
       const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
@@ -353,14 +380,16 @@ export default function Fixtures() {
           opponent: awayTeam.short_name,
           difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
           isHome: true,
-          finished: fixture.finished
+          finished: fixture.finished,
+          ...(isTBC && !assignedGW ? { fixtureId: fixture.id } : {})
         });
 
         matrix[fixture.team_a][gwKey].push({
           opponent: homeTeam.short_name,
           difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
           isHome: false,
-          finished: fixture.finished
+          finished: fixture.finished,
+          ...(isTBC && !assignedGW ? { fixtureId: fixture.id } : {})
         });
       }
     });
@@ -393,7 +422,7 @@ export default function Fixtures() {
       teamAverageFDR: avgFDR,
       teamGameCount: gameCount
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, tbcAssignments]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -413,8 +442,8 @@ export default function Fixtures() {
   // Check if any team has TBC (event=null) fixtures
   const hasTBCFixtures = useMemo(() => {
     if (!fixturesData) return false;
-    return fixturesData.some(f => f.event === null);
-  }, [fixturesData]);
+    return fixturesData.some(f => f.event === null && !tbcAssignments[f.id]);
+  }, [fixturesData, tbcAssignments]);
 
   // Calculate best rotation pairs - teams that complement each other's fixtures
   const rotationPairs = useMemo(() => {
@@ -1116,7 +1145,13 @@ export default function Fixtures() {
                             );
                           })}
                           {hasTBCFixtures && (
-                            <TBCCell fixtures={fixtureMatrix[team.id]?.[0]} />
+                            <TBCCell
+                              fixtures={fixtureMatrix[team.id]?.[0]}
+                              onFixtureClick={(fixtureId, label) => {
+                                const defaultGW = gameweekRange ? Math.min(36, gameweekRange.end) : 36;
+                                setTbcModal({ fixtureId, label, selectedGW: defaultGW });
+                              }}
+                            />
                           )}
                         </tr>
                       );
@@ -1236,6 +1271,46 @@ export default function Fixtures() {
           )}
         </div>
       </div>
+
+      {/* TBC fixture assignment modal */}
+      <Dialog open={!!tbcModal} onOpenChange={(open) => { if (!open) setTbcModal(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Assign fixture to gameweek</DialogTitle>
+            <DialogDescription>
+              {tbcModal?.label} — choose which gameweek to place this fixture in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <RadioGroup
+              value={tbcModal?.selectedGW?.toString()}
+              onValueChange={(val) => setTbcModal(prev => prev ? { ...prev, selectedGW: parseInt(val) } : prev)}
+              className="flex flex-wrap gap-2"
+            >
+              {(gameweekRange ? Array.from({ length: gameweekRange.end - gameweekRange.start + 1 }, (_, i) => gameweekRange.start + i) : [33,34,35,36,37,38]).map(gw => (
+                <div key={gw} className="flex items-center gap-1.5">
+                  <RadioGroupItem value={gw.toString()} id={`gw-${gw}`} />
+                  <Label htmlFor={`gw-${gw}`} className="cursor-pointer font-medium">GW{gw}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setTbcModal(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (tbcModal) {
+                  setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
+                  setTbcModal(null);
+                }
+              }}
+            >
+              Assign to GW{tbcModal?.selectedGW}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
