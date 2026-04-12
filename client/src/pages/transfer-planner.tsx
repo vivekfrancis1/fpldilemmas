@@ -1581,6 +1581,11 @@ export default function TransferPlanner() {
 
   // Check if a chip can be used in a specific gameweek
   const canChipBeUsedInGameweek = (chipType: ChipType, gameweek: number): boolean => {
+    // If this chip is already planned for THIS specific gameweek, always allow it.
+    // getRemainingChips() counts planned chips as "used", so without this early
+    // return a chip planned for this GW would show 0 remaining and be hidden.
+    if (plannedChips[gameweek] === chipType) return true;
+
     const remainingChips = getRemainingChips();
     
     // If no chips remaining, it can't be used
