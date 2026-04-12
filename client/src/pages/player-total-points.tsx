@@ -600,14 +600,12 @@ function TBCBreakdownTooltip({
   player,
   gameweekRange,
   excludedComponents = new Set(),
-  tbcTeamGoals,
-  avgTeamGoalsPerGw,
+  tbcEntry,
 }: {
   player: PlayerTotalPointsData;
   gameweekRange: number[];
   excludedComponents?: Set<string>;
-  tbcTeamGoals?: number;
-  avgTeamGoalsPerGw?: number;
+  tbcEntry?: { tbcGoals: number; avgGwGoals: number; tbcOpponentGoals: number; opponent: string; isHome: boolean };
 }) {
   const componentDefs = [
     { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
@@ -622,53 +620,53 @@ function TBCBreakdownTooltip({
     { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
   ];
 
-  // GWs in range where this player has a non-zero projection (i.e. has a fixture)
-  const playingGws = gameweekRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
-  const n = playingGws.length || 1;
-
-  // Whether we have enough data to use model-based scaling for goals/assists
-  const canUseModel = tbcTeamGoals !== undefined && avgTeamGoalsPerGw !== undefined && avgTeamGoalsPerGw > 0;
-  const goalsScaleRatio = canUseModel ? tbcTeamGoals! / avgTeamGoalsPerGw! : 1;
-
-  const modelDrivenKeys = new Set(['pointsFromGoals', 'pointsFromAssists']);
-
-  const avgComponents: { [key: string]: number } = {};
-  componentDefs.forEach(comp => {
-    const compMap = (player as any)[comp.key] as { [key: string]: number } | undefined;
-    const perFixtureAvg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
-    // Goals and assists: scale per-fixture average by ratio of TBC model goals vs avg team goals
-    avgComponents[comp.key] = modelDrivenKeys.has(comp.key) ? perFixtureAvg * goalsScaleRatio : perFixtureAvg;
-  });
-
-  const avgTotal = playingGws.reduce((s, gw) => s + (player.gameweekProjections?.[gw.toString()] || 0), 0) / n;
+  const compValues = tbcEntry
+    ? computeTBCComponents(player, gameweekRange, tbcEntry)
+    : (() => {
+        const playingGws = gameweekRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
+        const n = playingGws.length || 1;
+        const result: { [key: string]: number } = {};
+        componentDefs.forEach(comp => {
+          const compMap = (player as any)[comp.key] as { [key: string]: number } | undefined;
+          result[comp.key] = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
+        });
+        return result;
+      })();
 
   const effectiveTotal = componentDefs.reduce((sum, comp) => {
     if (excludedComponents.has(comp.excludeKey)) return sum;
-    return sum + (avgComponents[comp.key] || 0);
+    return sum + (compValues[comp.key] || 0);
   }, 0);
 
-  const displayValue = effectiveTotal > 0 ? effectiveTotal : avgTotal;
-  const gwFirst = gameweekRange[0];
-  const gwLast = gameweekRange[gameweekRange.length - 1];
+  const opponent = tbcEntry?.opponent;
+  const isHome = tbcEntry?.isHome ?? true;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
-          <span className="font-semibold text-amber-800 text-xs md:text-sm">{displayValue.toFixed(1)}</span>
+          <span className="font-semibold text-amber-800 text-xs md:text-sm">{effectiveTotal.toFixed(1)}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-amber-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3 flex items-center gap-2">
-            <span>TBC Points Breakdown</span>
+            <span>GW TBC Points Breakdown</span>
             <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
-              FPL Model
+              TBC
             </span>
           </div>
+          {opponent && (
+            <div className="flex items-center gap-2 pb-2 border-b border-amber-100">
+              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isHome ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                {isHome ? 'H' : 'A'}
+              </span>
+              <span className="font-semibold text-gray-800">vs {opponent}</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 text-sm">
             {componentDefs.map(comp => {
-              const value = avgComponents[comp.key] || 0;
+              const value = compValues[comp.key] || 0;
               const isExcluded = excludedComponents.has(comp.excludeKey);
               return (
                 <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
@@ -695,9 +693,9 @@ function TBCBreakdownTooltip({
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">TBC Points Total:</span>
+              <span className="text-gray-800">GW TBC Points Total:</span>
               <ValueCell
-                value={displayValue}
+                value={effectiveTotal}
                 format="points"
                 decimals={1}
                 className="text-amber-800"
@@ -705,45 +703,62 @@ function TBCBreakdownTooltip({
               />
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Goals &amp; assists scaled by model-based fixture projection; other components per-fixture average GW{gwFirst}–{gwLast}
-          </p>
         </div>
       </PopoverContent>
     </Popover>
   );
 }
 
-/** Compute a player's TBC fixture total points using the same logic as TBCBreakdownTooltip */
+/** Compute per-component TBC fixture projections using fixture-specific scaling for all components */
+function computeTBCComponents(
+  player: any,
+  activeGwRange: number[],
+  tbcEntry: { tbcGoals: number; avgGwGoals: number; tbcOpponentGoals: number }
+): { [key: string]: number } {
+  const playingGws = activeGwRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
+  const n = playingGws.length || 1;
+  const goalsScale = tbcEntry.avgGwGoals > 0 ? tbcEntry.tbcGoals / tbcEntry.avgGwGoals : 1;
+  const oppGoalScale = tbcEntry.tbcOpponentGoals / 1.35;
+  const csScale = 1.35 / Math.max(tbcEntry.tbcOpponentGoals, 0.1);
+  const compScales: { [key: string]: number } = {
+    pointsFromGoals: goalsScale,
+    pointsFromAssists: goalsScale,
+    pointsFromCleanSheets: csScale,
+    pointsFromDefensiveContributions: 1,
+    pointsFromMinutes: 1,
+    pointsFromBonus: 1,
+    pointsFromSaves: oppGoalScale,
+    pointsFromGoalsConceded: oppGoalScale,
+    pointsFromYellowCards: 1,
+    pointsFromRedCards: 1,
+  };
+  const result: { [key: string]: number } = {};
+  Object.keys(compScales).forEach(key => {
+    const compMap = player[key] as { [k: string]: number } | undefined;
+    const avg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
+    result[key] = avg * compScales[key];
+  });
+  return result;
+}
+
+/** Compute a player's TBC fixture total points using fixture-specific scaling for all components */
 function computePlayerTBCTotal(
   player: any,
   activeGwRange: number[],
-  tbcEntry: { tbcGoals: number; avgGwGoals: number },
+  tbcEntry: { tbcGoals: number; avgGwGoals: number; tbcOpponentGoals: number },
   excluded: Set<string>
 ): number {
-  const playingGws = activeGwRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
-  const n = playingGws.length || 1;
-  const goalsScaleRatio = tbcEntry.avgGwGoals > 0 ? tbcEntry.tbcGoals / tbcEntry.avgGwGoals : 1;
-  const comps = [
-    { key: 'pointsFromGoals', excludeKey: 'goals', scaled: true },
-    { key: 'pointsFromAssists', excludeKey: 'assists', scaled: true },
-    { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', scaled: false },
-    { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', scaled: false },
-    { key: 'pointsFromMinutes', excludeKey: 'minutes', scaled: false },
-    { key: 'pointsFromBonus', excludeKey: 'bonus', scaled: false },
-    { key: 'pointsFromSaves', excludeKey: 'saves', scaled: false },
-    { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', scaled: false },
-    { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', scaled: false },
-    { key: 'pointsFromRedCards', excludeKey: 'redCards', scaled: false },
-  ];
-  let total = 0;
-  comps.forEach(({ key, excludeKey, scaled }) => {
-    if (excluded.has(excludeKey)) return;
-    const compMap = player[key] as { [k: string]: number } | undefined;
-    const avg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
-    total += scaled ? avg * goalsScaleRatio : avg;
-  });
-  return total;
+  const comps = computeTBCComponents(player, activeGwRange, tbcEntry);
+  const excludeKeyMap: { [key: string]: string } = {
+    pointsFromGoals: 'goals', pointsFromAssists: 'assists', pointsFromCleanSheets: 'cleanSheets',
+    pointsFromDefensiveContributions: 'defensiveContributions', pointsFromMinutes: 'minutes',
+    pointsFromBonus: 'bonus', pointsFromSaves: 'saves', pointsFromGoalsConceded: 'goalsConceded',
+    pointsFromYellowCards: 'yellowCards', pointsFromRedCards: 'redCards',
+  };
+  return Object.entries(comps).reduce((total, [key, val]) => {
+    if (excluded.has(excludeKeyMap[key])) return total;
+    return total + val;
+  }, 0);
 }
 
 interface PlayerTotalPointsData {
@@ -917,8 +932,7 @@ function createPlayerTotalPointsColumns(
                 player={player}
                 gameweekRange={gameweekRange}
                 excludedComponents={excludedComponents}
-                tbcTeamGoals={tbcEntry?.tbcGoals}
-                avgTeamGoalsPerGw={tbcEntry?.avgGwGoals}
+                tbcEntry={tbcEntry}
               />
             </div>
           </div>
@@ -1339,22 +1353,22 @@ export default function PlayerTotalPoints() {
     enabled: viewMode === "future" && tbcTeamShortNames.size > 0,
   });
 
-  // teamShort → { tbcGoals, tbcOpponentGoals, avgGwGoals (across the active range) }
+  // teamShort → { tbcGoals, avgGwGoals, tbcOpponentGoals, opponent, isHome }
   const tbcPlayerGoalMap = useMemo(() => {
-    const map = new Map<string, { tbcGoals: number; avgGwGoals: number }>();
+    const map = new Map<string, { tbcGoals: number; avgGwGoals: number; tbcOpponentGoals: number; opponent: string; isHome: boolean }>();
     if (!tbcGoalData || !teamGoalProjectionsData) return map;
     tbcGoalData.forEach(f => {
       const homeTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort);
       const awayTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort);
+      const homeNonZero = homeTeamData ? Object.values(homeTeamData.gameweekProjections).filter(v => v > 0) : [];
+      const awayNonZero = awayTeamData ? Object.values(awayTeamData.gameweekProjections).filter(v => v > 0) : [];
+      const homeAvg = homeNonZero.length > 0 ? homeNonZero.reduce((a, b) => a + b, 0) / homeNonZero.length : 1.35;
+      const awayAvg = awayNonZero.length > 0 ? awayNonZero.reduce((a, b) => a + b, 0) / awayNonZero.length : 1.35;
       if (homeTeamData) {
-        const nonZero = Object.values(homeTeamData.gameweekProjections).filter(v => v > 0);
-        const avg = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : 1;
-        map.set(f.homeTeamShort, { tbcGoals: f.homeGoals, avgGwGoals: avg });
+        map.set(f.homeTeamShort, { tbcGoals: f.homeGoals, avgGwGoals: homeAvg, tbcOpponentGoals: f.awayGoals, opponent: f.awayTeamShort, isHome: true });
       }
       if (awayTeamData) {
-        const nonZero = Object.values(awayTeamData.gameweekProjections).filter(v => v > 0);
-        const avg = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : 1;
-        map.set(f.awayTeamShort, { tbcGoals: f.awayGoals, avgGwGoals: avg });
+        map.set(f.awayTeamShort, { tbcGoals: f.awayGoals, avgGwGoals: awayAvg, tbcOpponentGoals: f.homeGoals, opponent: f.homeTeamShort, isHome: false });
       }
     });
     return map;
@@ -1730,13 +1744,63 @@ export default function PlayerTotalPoints() {
       const tbcPts = computePlayerTBCTotal(player, gameweekRange, tbcEntry, excludedComponents);
       const newTotal = (player.totalExpectedPoints || 0) + tbcPts;
       let newGameweekProjections = player.gameweekProjections;
+      let newFixtureDetails = (player as any).fixtureDetails;
+
       if (assignedGW !== null && !excludedGameweeks.has(assignedGW)) {
         const gwKey = assignedGW.toString();
         const existing = player.gameweekProjections?.[gwKey] || 0;
         newGameweekProjections = { ...player.gameweekProjections, [gwKey]: existing + tbcPts };
+
+        // Build virtual DGW fixture details so the GW popup shows both fixtures
+        const tbcCompValues = computeTBCComponents(player, gameweekRange, tbcEntry);
+        const existingFixtures = ((player as any).fixtureDetails?.[gwKey] || []) as FixtureDetail[];
+        const existingFixtureInfo = existingFixtures[0];
+
+        // First fixture: existing scheduled game for this GW
+        const firstFixture: FixtureDetail = existingFixtureInfo && existingFixtureInfo.pointsFromGoals !== undefined
+          ? existingFixtureInfo
+          : {
+              opponent: existingFixtureInfo?.opponent || '?',
+              isHome: existingFixtureInfo?.isHome ?? true,
+              pointsFromGoals: (player as any).pointsFromGoals?.[gwKey] || 0,
+              pointsFromAssists: (player as any).pointsFromAssists?.[gwKey] || 0,
+              pointsFromCleanSheets: (player as any).pointsFromCleanSheets?.[gwKey] || 0,
+              pointsFromMinutes: (player as any).pointsFromMinutes?.[gwKey] || 0,
+              pointsFromGoalsConceded: (player as any).pointsFromGoalsConceded?.[gwKey] || 0,
+              pointsFromYellowCards: (player as any).pointsFromYellowCards?.[gwKey] || 0,
+              pointsFromRedCards: (player as any).pointsFromRedCards?.[gwKey] || 0,
+              pointsFromBonus: (player as any).pointsFromBonus?.[gwKey] || 0,
+              pointsFromSaves: (player as any).pointsFromSaves?.[gwKey] || 0,
+              pointsFromDefensiveContributions: (player as any).pointsFromDefensiveContributions?.[gwKey] || 0,
+              totalPoints: existing,
+            };
+
+        // Second fixture: TBC with model-based per-component projections
+        const tbcFixtureDetail: FixtureDetail = {
+          opponent: tbcEntry.opponent,
+          isHome: tbcEntry.isHome,
+          pointsFromGoals: tbcCompValues.pointsFromGoals || 0,
+          pointsFromAssists: tbcCompValues.pointsFromAssists || 0,
+          pointsFromCleanSheets: tbcCompValues.pointsFromCleanSheets || 0,
+          pointsFromMinutes: tbcCompValues.pointsFromMinutes || 0,
+          pointsFromGoalsConceded: tbcCompValues.pointsFromGoalsConceded || 0,
+          pointsFromYellowCards: tbcCompValues.pointsFromYellowCards || 0,
+          pointsFromRedCards: tbcCompValues.pointsFromRedCards || 0,
+          pointsFromBonus: tbcCompValues.pointsFromBonus || 0,
+          pointsFromSaves: tbcCompValues.pointsFromSaves || 0,
+          pointsFromDefensiveContributions: tbcCompValues.pointsFromDefensiveContributions || 0,
+          totalPoints: tbcPts,
+        };
+
+        newFixtureDetails = {
+          ...((player as any).fixtureDetails || {}),
+          [gwKey]: [firstFixture, tbcFixtureDetail],
+        };
       }
+
       return {
         ...player,
+        fixtureDetails: newFixtureDetails,
         gameweekProjections: newGameweekProjections,
         totalExpectedPoints: newTotal,
         averagePerGameweek: newTotal / Math.max(gameweekRange.length + 1, 1),
