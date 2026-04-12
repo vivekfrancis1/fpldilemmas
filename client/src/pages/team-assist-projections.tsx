@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -64,8 +64,18 @@ export default function TeamAssistProjections() {
   const [endGameweek, setEndGameweek] = useState<string>("13");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  useEffect(() => {
+    const onFocus = () => { try { const s = localStorage.getItem('fpl-tbc-assignments'); setTbcAssignments(s ? JSON.parse(s) : {}); } catch {} };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   // Update state when defaults change
   useMemo(() => {
@@ -103,10 +113,49 @@ export default function TeamAssistProjections() {
     return map;
   }, [tbcGoalData, bootstrapData]);
 
+  // Absorb TBC into assigned GW when fixtureMode is custom/expert
+  const resolvedProjections = useMemo(() => {
+    if (fixtureMode === 'base' || !tbcGoalData?.length || !projectionsData) return projectionsData || [];
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    return projectionsData.map(team => {
+      const tbcFixture = tbcGoalData.find(f => f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort);
+      if (!tbcFixture) return team;
+      const tbcEntry = tbcAssistMap.get(team.teamShort);
+      if (!tbcEntry) return team;
+      let assignedGW: number | null = null;
+      if (fixtureMode === 'expert') {
+        assignedGW = 36;
+      } else {
+        const raw = tbcAssignments[tbcFixture.fixtureId] ?? null;
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
+      }
+      if (assignedGW === null) return team;
+      const key = String(assignedGW);
+      const newProjections = { ...team.gameweekProjections, [key]: (Number(team.gameweekProjections[key]) || 0) + tbcEntry.assists };
+      const existing: FixtureDetail[] = team.fixtureDetails?.[key] ? [...team.fixtureDetails[key]] : [];
+      const newFixtureDetails = { ...(team.fixtureDetails || {}), [key]: [...existing, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, assists: tbcEntry.assists }] };
+      return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
+    });
+  }, [fixtureMode, projectionsData, tbcGoalData, tbcAssistMap, tbcAssignments, startGameweek, endGameweek]);
+
+  // TBC assists still in TBC column (not absorbed)
+  const getUnabsorbedTBC = (teamShort: string): number => {
+    if (fixtureMode === 'expert') return 0;
+    if (fixtureMode === 'base') return tbcAssistMap.get(teamShort)?.assists || 0;
+    const f = tbcGoalData?.find(x => x.homeTeamShort === teamShort || x.awayTeamShort === teamShort);
+    if (!f) return 0;
+    const assigned = tbcAssignments[f.fixtureId];
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    if (assigned !== undefined && assigned !== null && assigned >= startGW && assigned <= endGW) return 0;
+    return tbcAssistMap.get(teamShort)?.assists || 0;
+  };
+
   const filteredProjections = useMemo(() => {
-    if (!projectionsData) return [];
+    if (!resolvedProjections.length) return [];
     
-    return projectionsData
+    return resolvedProjections
       .filter(team => selectedTeam === "all" || team.teamShort === selectedTeam)
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
@@ -118,17 +167,14 @@ export default function TeamAssistProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate period total for sorting (+ TBC)
             const startGW = parseInt(startGameweek);
             const endGW = parseInt(endGameweek);
-            const aTBC = tbcAssistMap.get(a.teamShort)?.assists || 0;
-            const bTBC = tbcAssistMap.get(b.teamShort)?.assists || 0;
             const aPeriodTotal = Object.keys(a.gameweekProjections)
               .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw) => sum + (a.gameweekProjections[parseInt(gw)] || 0), 0) + aTBC;
+              .reduce((sum, gw) => sum + (a.gameweekProjections[parseInt(gw)] || 0), 0) + getUnabsorbedTBC(a.teamShort);
             const bPeriodTotal = Object.keys(b.gameweekProjections)
               .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0) + bTBC;
+              .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0) + getUnabsorbedTBC(b.teamShort);
             return bPeriodTotal - aPeriodTotal;
           }
           case "average": return b.averageAssistsPerGame - a.averageAssistsPerGame;
@@ -136,7 +182,7 @@ export default function TeamAssistProjections() {
           default: return b.averageAssistsPerGame - a.averageAssistsPerGame;
         }
       });
-  }, [projectionsData, selectedTeam, sortBy, tbcAssistMap]);
+  }, [resolvedProjections, selectedTeam, sortBy, tbcAssistMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   const totalAssists = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
@@ -211,6 +257,16 @@ export default function TeamAssistProjections() {
           </p>
         </div>
       </div>
+
+      {tbcAssistMap.size > 0 && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+        </div>
+      )}
 
       <div className="fpl-section-spacing">
 
@@ -325,7 +381,7 @@ export default function TeamAssistProjections() {
                         </th>
                       );
                     })}
-                    {tbcAssistMap.size > 0 && (
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                       <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
                         GW TBC
                       </th>
@@ -402,7 +458,7 @@ export default function TeamAssistProjections() {
                         );
                       })}
                       
-                      {tbcAssistMap.size > 0 && (() => {
+                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
@@ -447,10 +503,9 @@ export default function TeamAssistProjections() {
                           {(() => {
                             const startGW = parseInt(startGameweek);
                             const endGW = parseInt(endGameweek);
-                            const tbcAssists = tbcAssistMap.get(team.teamShort)?.assists || 0;
                             const periodTotal = Object.keys(team.gameweekProjections)
                               .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-                              .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0) + tbcAssists;
+                              .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0) + getUnabsorbedTBC(team.teamShort);
                             return periodTotal.toFixed(2);
                           })()}
                         </span>
@@ -485,11 +540,8 @@ export default function TeamAssistProjections() {
                       );
                     })}
                     
-                    {tbcAssistMap.size > 0 && (() => {
-                      const tbcTotal = filteredProjections.reduce((sum, team) => {
-                        const entry = tbcAssistMap.get(team.teamShort);
-                        return sum + (entry?.assists || 0);
-                      }, 0);
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                      const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
                         <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
                           {tbcTotal.toFixed(2)}
@@ -499,10 +551,7 @@ export default function TeamAssistProjections() {
 
                     <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 min-w-[50px] md:min-w-[70px]">
                       <span className="text-sm md:text-lg font-bold text-blue-900">
-                        {(totalAssists.overallTotal + filteredProjections.reduce((sum, team) => {
-                          const entry = tbcAssistMap.get(team.teamShort);
-                          return sum + (entry?.assists || 0);
-                        }, 0)).toFixed(2)}
+                        {(totalAssists.overallTotal + filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0)).toFixed(2)}
                       </span>
                     </td>
                     
