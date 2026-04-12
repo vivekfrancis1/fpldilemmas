@@ -5322,6 +5322,15 @@ export default function TransferPlanner() {
           >
             Transfer Out
           </button>
+          {completedTransfers.some(t => t.inPlayerId === pick.element) && (
+            <button
+              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-800/40 font-semibold text-base sm:text-lg text-amber-700 dark:text-amber-400 transition-colors"
+              onClick={() => { handleUndoTransfer(pick.position); setSelectedPlayer(null); }}
+              data-testid={`${isBench ? 'bench' : 'list'}-undo-transfer-${pick.element}`}
+            >
+              Undo Transfer
+            </button>
+          )}
           {!pick.is_captain && (
             <button 
               className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
@@ -7164,33 +7173,6 @@ export default function TransferPlanner() {
                   Replace Player
                 </Button>
                 
-                <Button
-                  onClick={() => {
-                    if (transferredOutPlayers.length > 0) {
-                      handleUndoTransfer(transferredOutPlayers[0].position);
-                      setShowTransferOutModal(false);
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full font-semibold py-2 h-auto"
-                  data-testid="button-undo-transfer"
-                >
-                  Undo Transfer
-                </Button>
-                
-                <Button
-                  onClick={() => {
-                    if (transferredOutPlayers.length > 0) {
-                      handleUndoGameweekTransfersForPosition(transferredOutPlayers[0].position);
-                      setShowTransferOutModal(false);
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full font-semibold py-2 h-auto"
-                  data-testid="button-undo-gw"
-                >
-                  Undo All Transfers This GW
-                </Button>
               </div>
             </div>
           </div>
