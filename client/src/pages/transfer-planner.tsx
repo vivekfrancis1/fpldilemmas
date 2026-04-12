@@ -6143,69 +6143,6 @@ export default function TransferPlanner() {
                   );
                 })()}
 
-                {/* Optimization Controls */}
-                {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
-                      <Sparkles className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                        Your lineup is optimised
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (!selectedGameweek) return;
-                        const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-                        delete isLineupOptimizedRef.current[optimizationKey];
-                        setOptimizedLineups(prev => {
-                          const updated = { ...prev };
-                          delete updated[selectedGameweek];
-                          return updated;
-                        });
-                        if (activeDraft !== "Base" && searchedId) {
-                          const updatedOptimizedLineups = { ...optimizedLineups };
-                          delete updatedOptimizedLineups[selectedGameweek];
-                          fetch("/api/transfer-planner/drafts", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              managerId: parseInt(searchedId),
-                              draftLetter: activeDraft,
-                              gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
-                              plannedChips: JSON.parse(JSON.stringify(plannedChips)),
-                              optimizedLineups: updatedOptimizedLineups,
-                              mode: "manual",
-                              teamBank: calculateBankAfterTransfers(),
-                              teamValue: 0,
-                              totalProjectedPoints: 0,
-                            }),
-                          });
-                        }
-                        toast({
-                          title: "Lineup Reset",
-                          description: `Gameweek ${selectedGameweek} lineup restored to original.`,
-                        });
-                      }}
-                      className="flex items-center gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      <span className="hidden sm:inline">Reset to Original</span>
-                      <span className="sm:hidden">Reset</span>
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="default"
-                    onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
-                    disabled={!selectedGameweek || !playerProjections6GW}
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-optimise-lineup"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Optimise Lineup
-                  </Button>
-                )}
               </div>
 
               {/* Transfer Details - shown below the buttons */}
@@ -6257,7 +6194,68 @@ export default function TransferPlanner() {
             </div>
 
             <div>
-              <div className="space-y-4">
+              <div className="relative space-y-4">
+                {/* Optimise Lineup — overlay top-right of pitch */}
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                  {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
+                    <>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-green-600/90 rounded text-white text-[10px] sm:text-xs font-semibold shadow">
+                        <Sparkles className="h-3 w-3" />
+                        <span className="hidden sm:inline">Optimised</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (!selectedGameweek) return;
+                          const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+                          delete isLineupOptimizedRef.current[optimizationKey];
+                          setOptimizedLineups(prev => {
+                            const updated = { ...prev };
+                            delete updated[selectedGameweek];
+                            return updated;
+                          });
+                          if (activeDraft !== "Base" && searchedId) {
+                            const updatedOptimizedLineups = { ...optimizedLineups };
+                            delete updatedOptimizedLineups[selectedGameweek];
+                            fetch("/api/transfer-planner/drafts", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                managerId: parseInt(searchedId),
+                                draftLetter: activeDraft,
+                                gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
+                                plannedChips: JSON.parse(JSON.stringify(plannedChips)),
+                                optimizedLineups: updatedOptimizedLineups,
+                                mode: "manual",
+                                teamBank: calculateBankAfterTransfers(),
+                                teamValue: 0,
+                                totalProjectedPoints: 0,
+                              }),
+                            });
+                          }
+                          toast({ title: "Lineup Reset", description: `Gameweek ${selectedGameweek} lineup restored to original.` });
+                        }}
+                        className="h-6 w-6 p-0 bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 rounded shadow text-gray-600 dark:text-gray-300"
+                        title="Reset to original"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
+                      disabled={!selectedGameweek || !playerProjections6GW}
+                      className="h-7 px-2 text-[10px] sm:text-xs font-semibold bg-green-600 hover:bg-green-700 text-white shadow"
+                      data-testid="button-optimise-lineup"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Optimise</span>
+                      <span className="sm:hidden">⚡</span>
+                    </Button>
+                  )}
+                </div>
                 <PitchView
                   players={manualLineup.slice(0, 11).map(pick => {
                     const player = getPlayerById(pick.element);
