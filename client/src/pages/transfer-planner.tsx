@@ -6247,12 +6247,11 @@ export default function TransferPlanner() {
                       size="sm"
                       onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
                       disabled={!selectedGameweek || !playerProjections6GW}
-                      className="h-7 px-2 text-[10px] sm:text-xs font-semibold bg-green-600 hover:bg-green-700 text-white shadow"
+                      className="h-8 px-3 text-xs sm:text-sm font-bold bg-green-600 hover:bg-green-500 text-white shadow-lg border-2 border-green-400"
                       data-testid="button-optimise-lineup"
                     >
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      <span className="hidden sm:inline">Optimise</span>
-                      <span className="sm:hidden">⚡</span>
+                      <Sparkles className="h-4 w-4 mr-1.5" />
+                      Optimise Lineup
                     </Button>
                   )}
                 </div>
