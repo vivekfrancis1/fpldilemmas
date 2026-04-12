@@ -381,7 +381,7 @@ export default function Fixtures() {
           difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
           isHome: true,
           finished: fixture.finished,
-          ...(isTBC && !assignedGW ? { fixtureId: fixture.id } : {})
+          ...(isTBC ? { fixtureId: fixture.id } : {})
         });
 
         matrix[fixture.team_a][gwKey].push({
@@ -389,7 +389,7 @@ export default function Fixtures() {
           difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
           isHome: false,
           finished: fixture.finished,
-          ...(isTBC && !assignedGW ? { fixtureId: fixture.id } : {})
+          ...(isTBC ? { fixtureId: fixture.id } : {})
         });
       }
     });
@@ -1128,9 +1128,15 @@ export default function Fixtures() {
                                         key={idx}
                                         className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                           fixture.finished ? 'opacity-50' : ''
-                                        }`}
-                                        title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
+                                        } ${fixture.fixtureId ? 'cursor-pointer ring-1 ring-amber-400 hover:ring-2 transition-all' : ''}`}
+                                        title={fixture.fixtureId ? `Assigned from TBC — click to reassign or reset` : `${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
                                         data-testid={`fixture-${team.id}-${gw}-${idx}`}
+                                        onClick={() => {
+                                          if (fixture.fixtureId) {
+                                            const currentGW = tbcAssignments[fixture.fixtureId] ?? (gameweekRange ? Math.min(36, gameweekRange.end) : 36);
+                                            setTbcModal({ fixtureId: fixture.fixtureId, label: `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`, selectedGW: currentGW });
+                                          }
+                                        }}
                                       >
                                         <span className="truncate font-medium whitespace-nowrap">
                                           {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
@@ -1283,7 +1289,7 @@ export default function Fixtures() {
           </DialogHeader>
           <div className="py-2">
             <RadioGroup
-              value={tbcModal?.selectedGW?.toString()}
+              value={tbcModal?.selectedGW?.toString() ?? ''}
               onValueChange={(val) => setTbcModal(prev => prev ? { ...prev, selectedGW: parseInt(val) } : prev)}
               className="flex flex-wrap gap-2"
             >
@@ -1295,19 +1301,42 @@ export default function Fixtures() {
               ))}
             </RadioGroup>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setTbcModal(null)}>Cancel</Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                if (tbcModal) {
-                  setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
-                  setTbcModal(null);
-                }
-              }}
-            >
-              Assign to GW{tbcModal?.selectedGW}
-            </Button>
+          <div className="flex justify-between gap-2 pt-2">
+            <div>
+              {tbcModal && tbcAssignments[tbcModal.fixtureId] && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+                  onClick={() => {
+                    if (tbcModal) {
+                      setTbcAssignments(prev => {
+                        const next = { ...prev };
+                        delete next[tbcModal.fixtureId];
+                        return next;
+                      });
+                      setTbcModal(null);
+                    }
+                  }}
+                >
+                  ↩ Reset to TBC
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTbcModal(null)}>Cancel</Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (tbcModal) {
+                    setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
+                    setTbcModal(null);
+                  }
+                }}
+              >
+                Assign to GW{tbcModal?.selectedGW}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
