@@ -634,7 +634,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={minPrice}
               onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
-              className="h-8 w-14 text-sm rounded-md"
+              className="h-8 w-16 text-sm rounded-md"
               data-testid="input-min-price"
             />
             <span className="text-sm text-muted-foreground">–</span>
@@ -645,7 +645,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-              className="h-8 w-14 text-sm rounded-md"
+              className="h-8 w-16 text-sm rounded-md"
               data-testid="input-max-price"
             />
           </div>
