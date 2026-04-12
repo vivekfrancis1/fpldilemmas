@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { setupAuth } from "./replitAuth";
 import { registerRoutes } from "./routes";
 import { priceScheduler } from "./price-scheduler";
 import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    await setupAuth(app);
     const server = await registerRoutes(app);
     
     // Seed database with initial data
