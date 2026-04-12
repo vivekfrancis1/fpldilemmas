@@ -496,21 +496,24 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   return (
     <Card ref={sectionRef} className="border-0 shadow-none">
-      <CardHeader className="pb-2 pt-3 px-2 md:px-4">
+      <CardHeader className="pb-1 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
-        <div className="flex flex-row gap-1.5 mt-2 items-center flex-nowrap overflow-x-auto pb-1 min-w-0">
+      </CardHeader>
+      {/* Filter bar — outside CardHeader so overflow-x-auto works correctly */}
+      <div className="px-2 md:px-4 pb-2 overflow-x-auto">
+        <div className="flex flex-row gap-1.5 items-center flex-nowrap w-max min-w-full">
           {/* Position multi-select dropdown */}
           <div className="relative flex-shrink-0" ref={positionDropdownRef}>
             <button
               onClick={() => setPositionDropdownOpen(o => !o)}
-              className={`h-8 px-2 text-xs rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 positionFilters.size > 0
                   ? 'bg-purple-600 text-white border-purple-600'
                   : 'bg-background text-foreground border-input hover:border-purple-400'
               }`}
             >
               {positionFilters.size === 0 ? 'Position' : `${positionFilters.size} Pos`}
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {positionDropdownOpen && (
               <div className="absolute z-50 top-9 left-0 w-44 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
@@ -540,7 +543,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <div className="p-2 border-t border-gray-100 dark:border-gray-700">
                     <button
                       onClick={() => { setPositionFilters(new Set()); setPositionDropdownOpen(false); }}
-                      className="w-full text-xs text-red-500 hover:text-red-700 text-center"
+                      className="w-full text-sm text-red-500 hover:text-red-700 text-center"
                     >
                       Clear all positions
                     </button>
@@ -553,14 +556,14 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <div className="relative flex-shrink-0" ref={teamDropdownRef}>
             <button
               onClick={() => setTeamDropdownOpen(o => !o)}
-              className={`h-8 px-2 text-xs rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 teamFilters.size > 0
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-background text-foreground border-input hover:border-blue-400'
               }`}
             >
               {teamFilters.size === 0 ? 'Team' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {teamDropdownOpen && (
               <div className="absolute z-50 top-9 left-0 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
@@ -597,7 +600,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <div className="p-2 border-t border-gray-100 dark:border-gray-700">
                     <button
                       onClick={() => { setTeamFilters(new Set()); setTeamDropdownOpen(false); }}
-                      className="w-full text-xs text-red-500 hover:text-red-700 text-center"
+                      className="w-full text-sm text-red-500 hover:text-red-700 text-center"
                     >
                       Clear all teams
                     </button>
@@ -608,7 +611,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           </div>
           {/* Group filter */}
           <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-            <SelectTrigger className="h-8 text-xs w-24 flex-shrink-0 rounded-md" data-testid="select-load-group">
+            <SelectTrigger className="h-8 text-sm w-28 flex-shrink-0 rounded-md" data-testid="select-load-group">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
@@ -620,8 +623,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </SelectContent>
           </Select>
           {/* Price range */}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">£</span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">£</span>
             <Input
               type="number"
               step="0.1"
@@ -629,10 +632,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={minPrice}
               onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
-              className="h-8 w-12 text-xs rounded-md px-1"
+              className="h-8 w-14 text-sm rounded-md"
               data-testid="input-min-price"
             />
-            <span className="text-xs text-muted-foreground px-0.5">–</span>
+            <span className="text-sm text-muted-foreground">–</span>
             <Input
               type="number"
               step="0.1"
@@ -640,7 +643,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-              className="h-8 w-12 text-xs rounded-md px-1"
+              className="h-8 w-14 text-sm rounded-md"
               data-testid="input-max-price"
             />
           </div>
@@ -649,27 +652,24 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             placeholder="Search Players"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-xs w-32 flex-shrink-0 rounded-md"
+            className="h-8 text-sm w-36 flex-shrink-0 rounded-md"
             data-testid="input-player-search"
           />
-        </div>
-        {/* Only affordable — separate row */}
-        {transferredOutPlayers.length > 0 && (
-          <div className="flex items-center gap-2 mt-1">
-            <input
-              type="checkbox"
-              id="only-affordable"
-              checked={onlyAffordable}
-              onChange={(e) => setOnlyAffordable(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
-              data-testid="checkbox-only-affordable"
-            />
-            <label htmlFor="only-affordable" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
-              Only affordable (≤£{currentBank.toFixed(1)}m)
+          {/* Only affordable */}
+          {transferredOutPlayers.length > 0 && (
+            <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={onlyAffordable}
+                onChange={(e) => setOnlyAffordable(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="checkbox-only-affordable"
+              />
+              <span className="text-sm text-muted-foreground">≤£{currentBank.toFixed(1)}m</span>
             </label>
-          </div>
-        )}
-      </CardHeader>
+          )}
+        </div>
+      </div>
       <CardContent className="p-1">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm leading-tight">
