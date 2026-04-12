@@ -3067,99 +3067,75 @@ export default function MyDashboard() {
                     <CardContent className="p-4 sm:p-6">
                       {transfersData && transfersData.length > 0 ? (
                         <div className="space-y-3">
-                          {transfersData
-                            .slice()
-                            .filter(transfer => {
-                              // Filter out transfers from Free Hit and Wildcard gameweeks
-                              const chipGWs = getChipGameweeks();
-                              return !chipGWs.has(transfer.event);
-                            })
-                            .sort((a, b) => {
-                              // Sort by timestamp (most recent first), then by gameweek (descending)
-                              const timeA = new Date(a.time).getTime();
-                              const timeB = new Date(b.time).getTime();
-                              if (timeB !== timeA) return timeB - timeA;
-                              return b.event - a.event;
-                            })
-                            .map((transfer, index) => {
-                            const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
-                            const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
-                            
-                            return (
-                              <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
-                                <div className="flex-1">
-                                  <div className="text-base sm:text-lg font-semibold text-gray-800 mb-2">Gameweek {transfer.event}</div>
-                                  
-                                  {/* Transfer Details */}
-                                  <div className="space-y-2">
-                                    {/* Player In */}
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                                        <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-medium text-green-800 text-sm sm:text-base truncate">
-                                            {playerIn ? playerIn.web_name : `Player ${transfer.element_in}`}
-                                          </span>
-                                          <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
-                                            {formatPrice(transfer.element_in_cost)}
-                                          </Badge>
-                                        </div>
-                                        {playerIn && (
-                                          <div className="text-xs sm:text-sm text-gray-600 truncate">
-                                            {getTeamName(playerIn)} • {getPositionName(playerIn.element_type)}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Player Out */}
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                                        <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-medium text-red-800 text-sm sm:text-base truncate">
-                                            {playerOut ? playerOut.web_name : `Player ${transfer.element_out}`}
-                                          </span>
-                                          <Badge variant="outline" className="border-red-200 text-red-800 text-xs shrink-0">
-                                            {formatPrice(transfer.element_out_cost)}
-                                          </Badge>
-                                        </div>
-                                        {playerOut && (
-                                          <div className="text-xs sm:text-sm text-gray-600 truncate">
-                                            {getTeamName(playerOut)} • {getPositionName(playerOut.element_type)}
-                                          </div>
-                                        )}
-                                      </div>
+                          {(() => {
+                            const chipGWs = getChipGameweeks();
+                            const filtered = transfersData
+                              .slice()
+                              .filter(t => !chipGWs.has(t.event))
+                              .sort((a, b) => b.event - a.event || new Date(b.time).getTime() - new Date(a.time).getTime());
+
+                            // Group by gameweek
+                            const groups: { gw: number; transfers: typeof filtered }[] = [];
+                            for (const t of filtered) {
+                              const last = groups[groups.length - 1];
+                              if (last && last.gw === t.event) {
+                                last.transfers.push(t);
+                              } else {
+                                groups.push({ gw: t.event, transfers: [t] });
+                              }
+                            }
+
+                            return groups.map(({ gw, transfers: gwTransfers }) => {
+                              const netTotal = gwTransfers.reduce((sum, t) => sum + (t.element_out_cost - t.element_in_cost), 0);
+                              const latestDate = new Date(Math.max(...gwTransfers.map(t => new Date(t.time).getTime())));
+                              return (
+                                <div key={gw} className="bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                                  {/* GW header */}
+                                  <div className="flex items-center justify-between px-3 py-2 bg-orange-50/80 border-b border-orange-100">
+                                    <span className="text-sm font-semibold text-orange-800">Gameweek {gw}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs text-gray-500">{latestDate.toLocaleDateString()}</span>
+                                      {netTotal !== 0 && (
+                                        <span className={`text-xs font-medium ${netTotal > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {netTotal > 0 ? '+' : ''}{formatPrice(netTotal)}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
+                                  {/* Transfer rows */}
+                                  <div className="divide-y divide-gray-100">
+                                    {gwTransfers.map((transfer, idx) => {
+                                      const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
+                                      const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
+                                      const net = transfer.element_out_cost - transfer.element_in_cost;
+                                      return (
+                                        <div key={idx} className="flex items-center gap-2 px-3 py-2 text-sm">
+                                          {/* IN */}
+                                          <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                          <span className="font-medium text-green-800 truncate min-w-0">
+                                            {playerIn ? playerIn.web_name : `#${transfer.element_in}`}
+                                          </span>
+                                          <span className="text-xs text-green-700 shrink-0">{formatPrice(transfer.element_in_cost)}</span>
+                                          {/* Arrow */}
+                                          <span className="text-gray-400 shrink-0">→</span>
+                                          {/* OUT */}
+                                          <TrendingDown className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                                          <span className="font-medium text-red-800 truncate min-w-0">
+                                            {playerOut ? playerOut.web_name : `#${transfer.element_out}`}
+                                          </span>
+                                          <span className="text-xs text-red-700 shrink-0">{formatPrice(transfer.element_out_cost)}</span>
+                                          {/* Net per transfer */}
+                                          <span className={`text-xs font-medium ml-auto shrink-0 ${net > 0 ? 'text-green-600' : net < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                                            {net > 0 ? '+' : ''}{formatPrice(net)}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                                
-                                <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
-                                  <div className="text-xs sm:text-sm text-gray-600">
-                                    {new Date(transfer.time).toLocaleDateString()}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {new Date(transfer.time).toLocaleTimeString()}
-                                  </div>
-                                  {/* Net amount */}
-                                  <div className={`text-sm font-medium mt-1 ${
-                                    transfer.element_out_cost - transfer.element_in_cost > 0 
-                                      ? 'text-green-600' 
-                                      : transfer.element_out_cost - transfer.element_in_cost < 0 
-                                      ? 'text-red-600' 
-                                      : 'text-gray-600'
-                                  }`}>
-                                    {transfer.element_out_cost - transfer.element_in_cost > 0 ? '+' : ''}
-                                    {formatPrice(transfer.element_out_cost - transfer.element_in_cost)}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            });
+                          })()}
                         </div>
                       ) : (
                         <div className="text-center py-8">
