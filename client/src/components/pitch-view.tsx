@@ -259,11 +259,13 @@ function PlayerCard({
               </div>
             </div>
             
-            <div className={`w-full px-2 py-0.5 ${getBadgeBg(getPointsDisplay(player), isBench)} text-center`}>
-              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                {getPointsDisplay(player)}
+            {getPointsDisplay(player) !== '' && (
+              <div className={`w-full px-2 py-0.5 ${getBadgeBg(getPointsDisplay(player), isBench)} text-center`}>
+                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                  {getPointsDisplay(player)}
+                </div>
               </div>
-            </div>
+            )}
 
             {hasFixture && (
               <div className={`w-full px-1 py-0.5 ${isBench ? 'bg-gray-600' : 'bg-gray-700'} text-center`}>

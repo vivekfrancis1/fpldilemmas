@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3 } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3, Eye, EyeOff } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -931,6 +931,7 @@ export default function TransferPlanner() {
   // Player projections tab state for quick navigation
   const [projectionPositionFilter, setProjectionPositionFilter] = useState<string>("all");
   const [scrollToProjections, setScrollToProjections] = useState<boolean>(false);
+  const [showProjectedPoints, setShowProjectedPoints] = useState(true);
   
   // Track which manager has been initialized to prevent unwanted resets
   const initializedManagerRef = useRef<string | null>(null);
@@ -6201,8 +6202,19 @@ export default function TransferPlanner() {
 
             <div>
               <div className="relative space-y-4">
-                {/* Optimise Lineup — overlay top-right of pitch */}
-                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                {/* Pitch overlay controls — top-right */}
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+                  {/* Toggle projected points visibility */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowProjectedPoints(p => !p)}
+                    className={`h-8 px-2 text-xs font-semibold shadow border-2 ${showProjectedPoints ? 'bg-white/90 dark:bg-gray-800/90 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300' : 'bg-gray-200 dark:bg-gray-700 border-gray-400 dark:border-gray-500 text-gray-500 dark:text-gray-400'}`}
+                    title={showProjectedPoints ? 'Hide projected points' : 'Show projected points'}
+                  >
+                    {showProjectedPoints ? <Eye className="h-3.5 w-3.5 mr-1" /> : <EyeOff className="h-3.5 w-3.5 mr-1" />}
+                    <span className="hidden sm:inline">Pts</span>
+                  </Button>
                   {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
                     <>
                       <div className="flex items-center gap-1 px-2 py-1 bg-green-600/90 rounded text-white text-[10px] sm:text-xs font-semibold shadow">
@@ -6283,7 +6295,7 @@ export default function TransferPlanner() {
                       is_transferred_in: isPlayerTransferredIn(pick),
                       is_selected: selectedPlayer === pick.element,
                       is_empty_slot: isEmptySlot,
-                      points_display: pick.is_captain && projectedPoints !== null
+                      points_display: !showProjectedPoints ? '' : pick.is_captain && projectedPoints !== null
                         ? `${(projectedPoints * (pick.multiplier > 1 ? pick.multiplier : 2)).toFixed(2)} (${projectedPoints.toFixed(2)})`
                         : projectedPoints !== null ? projectedPoints.toFixed(2) : '-',
                       fixtures: playerFixtures as PitchPlayerFixture[],
@@ -6325,7 +6337,7 @@ export default function TransferPlanner() {
                         is_transferred_in: isPlayerTransferredIn(pick),
                         is_selected: selectedPlayer === pick.element,
                         is_empty_slot: isEmptySlot,
-                        points_display: projectedPoints !== null ? projectedPoints.toFixed(2) : '-',
+                        points_display: !showProjectedPoints ? '' : projectedPoints !== null ? projectedPoints.toFixed(2) : '-',
                         fixtures: benchFixtures as PitchPlayerFixture[],
                         status: player.status,
                         chance_of_playing: player.chance_of_playing_next_round,
