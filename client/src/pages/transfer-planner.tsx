@@ -639,7 +639,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       </CardHeader>
       <CardContent className="p-2 md:p-4">
         <div className="w-full overflow-x-auto md:overflow-visible">
-          <table className="w-full min-w-[900px] md:min-w-0 text-xs md:text-sm">
+          <table className="w-full min-w-[480px] md:min-w-0 text-xs md:text-sm">
             <thead>
               <tr className="border-b">
                 <th className="text-left py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[160px] min-w-[160px] max-w-[200px]">
@@ -667,22 +667,17 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                {nextGameweeks.map((gw, idx) => {
-                  const colCls = idx < 4 ? "table-cell" : "hidden lg:table-cell";
-                  return (
-                    <th key={gw} className={`text-center py-1 px-1 md:p-2 ${colCls}`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
-                        onClick={() => handleSort(`gw_${gw}`)}
-                        data-testid={`sort-gw${gw}`}
-                      >
-                        GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
-                      </Button>
-                    </th>
-                  );
-                })}
+                <th className="text-center py-1 px-1 md:p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    onClick={() => handleSort(`gw_${selectedGameweek}`)}
+                    data-testid={`sort-gw${selectedGameweek}`}
+                  >
+                    GW{selectedGameweek} {sortField === `gw_${selectedGameweek}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                  </Button>
+                </th>
                 <th className="text-center py-1 px-1 md:p-2 font-bold">
                   <Button
                     variant="ghost"
@@ -694,7 +689,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -705,7 +700,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Avg Val {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -716,7 +711,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -727,7 +722,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -807,14 +802,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       })()}
                     </td>
                     <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">£{player.price.toFixed(1)}m</td>
-                    {nextGameweeks.map((gw, idx) => {
-                      const gwPoints = player.gameweekProjections[gw.toString()] || 0;
-                      const top3 = getTop3ForGameweek(gw);
-                      
-                      // Determine styling based on rank
+                    {(() => {
+                      const gwPoints = player.gameweekProjections[selectedGameweek.toString()] || 0;
+                      const top3 = getTop3ForGameweek(selectedGameweek);
                       let bgColor = '';
                       let textColor = 'text-purple-600';
-                      
                       if (player.playerId === top3.first) {
                         bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
                         textColor = 'text-yellow-800 dark:text-yellow-300';
@@ -825,55 +817,35 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         bgColor = 'bg-orange-100 dark:bg-orange-900/30';
                         textColor = 'text-orange-800 dark:text-orange-300';
                       }
-                      
-                      const colCls = idx < 4 ? "table-cell" : "hidden lg:table-cell";
-                      
                       return (
-                        <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor} ${colCls}`}>
+                        <td className={`py-1 px-1 md:p-2 text-center ${bgColor}`}>
                           <span className={`${textColor} font-medium`}>
                             {gwPoints.toFixed(2)}
                           </span>
                         </td>
                       );
-                    })}
+                    })()}
                     <td className="py-1 px-1 md:p-2 text-center">
-                      {(() => {
-                        // Calculate 4-GW total for mobile (first 4 gameweeks)
-                        const first4GWTotal = nextGameweeks.slice(0, 4).reduce((sum, gw) => {
-                          return sum + (player.gameweekProjections[gw.toString()] || 0);
-                        }, 0);
-                        
-                        // 6-GW total for desktop (all gameweeks)
-                        const total6GW = player.totalExpectedPoints || 0;
-                        
-                        return (
-                          <>
-                            <span className="font-bold text-green-600 lg:hidden">
-                              {first4GWTotal.toFixed(2)}
-                            </span>
-                            <span className="font-bold text-green-600 hidden lg:inline">
-                              {total6GW.toFixed(2)}
-                            </span>
-                          </>
-                        );
-                      })()}
+                      <span className="font-bold text-green-600">
+                        {(player.totalExpectedPoints || 0).toFixed(2)}
+                      </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-blue-600 dark:text-blue-400 font-medium">
                         {(player.averageValue || 0).toFixed(2)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                         {(player.form || 0).toFixed(1)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-purple-600 dark:text-purple-400 font-medium">
                         {Math.round(player.avgMinutesPerGameweek || 0)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-orange-600 dark:text-orange-400 font-medium">
                         {player.ownership.toFixed(1)}%
                       </span>
