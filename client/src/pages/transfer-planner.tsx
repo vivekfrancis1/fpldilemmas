@@ -679,7 +679,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <table className="w-full text-sm leading-tight">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[160px] min-w-[160px] max-w-[160px]">
+                <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[130px] min-w-[130px] max-w-[130px]">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -758,9 +758,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[160px]">
+                    <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[130px] min-w-[130px] max-w-[130px]">
                       <div className="flex items-center gap-1">
-                        <div className="font-medium truncate max-w-[130px]">
+                        <div className="font-medium truncate max-w-[105px]">
                           {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
                         </div>
                         <TooltipProvider>
