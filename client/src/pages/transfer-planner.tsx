@@ -6333,6 +6333,9 @@ export default function TransferPlanner() {
                             <div className="w-full px-2 py-0.5 bg-red-500 text-center">
                               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">-</div>
                             </div>
+                            <div className="w-full px-1 py-0.5 bg-gray-700 text-center">
+                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">-</div>
+                            </div>
                           </div>
                         </div>
                       </div>
