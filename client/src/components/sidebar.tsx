@@ -260,28 +260,23 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     </div>
   );
 
-  // Render mobile sheet or desktop sidebar based on screen size
-  if (isMobile) {
-    return (
-      <Sheet open={isOpen} onOpenChange={onToggle}>
-        <SheetContent 
-          side="left" 
-          className="p-0 w-80 max-w-[85vw] bg-fpl-purple border-none"
-          data-testid="mobile-sidebar-sheet"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation Menu</SheetTitle>
-          </SheetHeader>
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
-    );
+  // Mobile only: render as a Sheet drawer
+  if (!isMobile) {
+    return null;
   }
 
-  // Desktop sidebar
   return (
-    <aside className="w-64 lg:w-80 flex-shrink-0 hidden lg:block" data-testid="desktop-sidebar">
-      <SidebarContent className="fixed left-0 top-0 h-full w-64 lg:w-80" />
-    </aside>
+    <Sheet open={isOpen} onOpenChange={onToggle}>
+      <SheetContent
+        side="left"
+        className="p-0 w-80 max-w-[85vw] bg-fpl-purple border-none"
+        data-testid="mobile-sidebar-sheet"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </SheetHeader>
+        <SidebarContent />
+      </SheetContent>
+    </Sheet>
   );
 }

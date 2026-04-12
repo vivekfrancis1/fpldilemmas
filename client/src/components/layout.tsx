@@ -51,20 +51,18 @@ export default function Layout({ children }: LayoutProps) {
   }, [isMobile, isSidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-fpl-light flex">
+    <div className="min-h-screen bg-fpl-light flex flex-col">
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
-      
-      <div className="flex-1 flex flex-col min-w-0 w-full lg:ml-0">
-        <Header onSidebarToggle={toggleSidebar} />
-        
-        <main className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-2 sm:pt-4 lg:pt-6 min-w-0 pb-4 sm:pb-6 lg:pb-8 mobile-no-overflow">
-          <div className="w-full max-w-full">
-            {children}
-          </div>
-        </main>
-        
-        <Footer />
-      </div>
+
+      <Header onSidebarToggle={toggleSidebar} />
+
+      <main className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-2 sm:pt-4 lg:pt-6 min-w-0 pb-4 sm:pb-6 lg:pb-8 mobile-no-overflow">
+        <div className="w-full max-w-full">
+          {children}
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }
