@@ -119,7 +119,7 @@ export default function Fixtures() {
     localStorage.setItem('fpl-custom-fdr', JSON.stringify(customFDR));
   }, [customFDR]);
 
-  // TBC fixture assignments: { [fixtureId]: gwNumber }
+  // TBC fixture assignments for My Fixtures: { [fixtureId]: gwNumber }
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     const stored = localStorage.getItem('fpl-tbc-assignments');
     if (stored) { try { return JSON.parse(stored); } catch { return {}; } }
@@ -128,6 +128,16 @@ export default function Fixtures() {
   useEffect(() => {
     localStorage.setItem('fpl-tbc-assignments', JSON.stringify(tbcAssignments));
   }, [tbcAssignments]);
+
+  // TBC fixture overrides for Expert Fixtures: { [fixtureId]: gwNumber } — defaults to GW36, separate from My Fixtures
+  const [expertAssignments, setExpertAssignments] = useState<Record<number, number>>(() => {
+    const stored = localStorage.getItem('fpl-tbc-expert-assignments');
+    if (stored) { try { return JSON.parse(stored); } catch { return {}; } }
+    return {};
+  });
+  useEffect(() => {
+    localStorage.setItem('fpl-tbc-expert-assignments', JSON.stringify(expertAssignments));
+  }, [expertAssignments]);
 
   // Modal state for assigning a TBC fixture to a gameweek
   const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
@@ -376,8 +386,8 @@ export default function Fixtures() {
     } else if (viewMode === 'expert') {
       fixturesData.forEach(f => {
         if (f.event === null) {
-          // Use manual override if explicitly set, otherwise default expert prediction of GW36
-          computedAssignments[f.id] = tbcAssignments[f.id] ?? 36;
+          // Use expert-specific override if set, otherwise default to GW36 (never reads My Fixtures assignments)
+          computedAssignments[f.id] = expertAssignments[f.id] ?? 36;
         }
       });
     }
@@ -1216,7 +1226,9 @@ export default function Fixtures() {
                                         data-testid={`fixture-${team.id}-${gw}-${idx}`}
                                         onClick={() => {
                                           if (fixture.fixtureId) {
-                                            const currentGW = tbcAssignments[fixture.fixtureId] ?? (gameweekRange ? Math.min(36, gameweekRange.end) : 36);
+                                            const currentGW = viewMode === 'expert'
+                                              ? (expertAssignments[fixture.fixtureId] ?? 36)
+                                              : (tbcAssignments[fixture.fixtureId] ?? (gameweekRange ? Math.min(36, gameweekRange.end) : 36));
                                             setTbcModal({ fixtureId: fixture.fixtureId, label: `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`, selectedGW: currentGW });
                                           }
                                         }}
@@ -1395,18 +1407,26 @@ export default function Fixtures() {
           </div>
           <div className="flex justify-between gap-2 pt-2">
             <div>
-              {tbcModal && tbcAssignments[tbcModal.fixtureId] && (
+              {tbcModal && (viewMode === 'expert' ? expertAssignments[tbcModal.fixtureId] : tbcAssignments[tbcModal.fixtureId]) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-amber-700 hover:text-amber-900 hover:bg-amber-50"
                   onClick={() => {
                     if (tbcModal) {
-                      setTbcAssignments(prev => {
-                        const next = { ...prev };
-                        delete next[tbcModal.fixtureId];
-                        return next;
-                      });
+                      if (viewMode === 'expert') {
+                        setExpertAssignments(prev => {
+                          const next = { ...prev };
+                          delete next[tbcModal.fixtureId];
+                          return next;
+                        });
+                      } else {
+                        setTbcAssignments(prev => {
+                          const next = { ...prev };
+                          delete next[tbcModal.fixtureId];
+                          return next;
+                        });
+                      }
                       setTbcModal(null);
                     }
                   }}
@@ -1421,9 +1441,13 @@ export default function Fixtures() {
                 size="sm"
                 onClick={() => {
                   if (tbcModal) {
-                    setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
+                    if (viewMode === 'expert') {
+                      setExpertAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
+                    } else {
+                      setTbcAssignments(prev => ({ ...prev, [tbcModal.fixtureId]: tbcModal.selectedGW }));
+                      if (viewMode !== 'custom') setViewMode('custom');
+                    }
                     setTbcModal(null);
-                    if (viewMode !== 'custom') setViewMode('custom');
                   }
                 }}
               >
