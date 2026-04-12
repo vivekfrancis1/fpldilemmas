@@ -243,7 +243,7 @@ export default function TopNav() {
     <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
       {/* Logo */}
       <Link href="/" className="flex items-center px-3 mr-4 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
-        <span className="text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
+        <span className="text-sm font-bold text-fpl-green whitespace-nowrap">FPL DILEMMAS</span>
       </Link>
 
       {/* Nav dropdowns — flex-1 so they fill available space */}
