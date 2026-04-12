@@ -679,7 +679,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <table className="w-full text-sm leading-tight">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[110px] min-w-[110px] max-w-[110px]">
+                <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[160px] min-w-[160px] max-w-[160px]">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -742,28 +742,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     variant="ghost"
                     size="sm"
                     className="h-6 px-1 text-sm"
-                    onClick={() => handleSort('form')}
-                    data-testid="sort-form"
-                  >
-                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
-                  </Button>
-                </th>
-                <th className="text-center py-0.5 px-0.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1 text-sm"
-                    onClick={() => handleSort('avgMins')}
-                    data-testid="sort-avgMins"
-                  >
-                    Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
-                  </Button>
-                </th>
-                <th className="text-center py-0.5 px-0.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('ownership')}
                     data-testid="sort-ownership"
                   >
@@ -780,9 +758,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[110px] min-w-[110px] max-w-[110px]">
+                    <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[160px]">
                       <div className="flex items-center gap-1">
-                        <div className="font-medium truncate max-w-[72px]">
+                        <div className="font-medium truncate max-w-[130px]">
                           {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
                         </div>
                         <TooltipProvider>
@@ -854,12 +832,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
                       <span className="text-blue-600 dark:text-blue-400">{(player.averageValue || 0).toFixed(2)}</span>
-                    </td>
-                    <td className="py-0.5 px-0.5 text-center">
-                      <span className="text-emerald-600 dark:text-emerald-400">{(player.form || 0).toFixed(1)}</span>
-                    </td>
-                    <td className="py-0.5 px-0.5 text-center">
-                      <span className="text-purple-600 dark:text-purple-400">{Math.round(player.avgMinutesPerGameweek || 0)}</span>
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
                       <span className="text-orange-600 dark:text-orange-400">{player.ownership.toFixed(1)}%</span>
