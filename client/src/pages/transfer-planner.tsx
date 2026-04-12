@@ -193,6 +193,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
   const [teamSearch, setTeamSearch] = useState("");
   const teamDropdownRef = useRef<HTMLDivElement>(null);
+  const [positionDropdownOpen, setPositionDropdownOpen] = useState(false);
+  const positionDropdownRef = useRef<HTMLDivElement>(null);
   const [loadGroupFilter, setLoadGroupFilter] = useState("Top 50");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -215,6 +217,17 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     const handler = (e: MouseEvent) => {
       if (teamDropdownRef.current && !teamDropdownRef.current.contains(e.target as Node)) {
         setTeamDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Close position dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (positionDropdownRef.current && !positionDropdownRef.current.contains(e.target as Node)) {
+        setPositionDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -493,38 +506,54 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             className="h-8 text-sm w-full sm:w-40"
             data-testid="input-player-search"
           />
-          {/* Position multi-select pills */}
-          <div className="flex gap-1 flex-wrap">
-            {[
-              { label: "GKP", value: "Goalkeeper" },
-              { label: "DEF", value: "Defender" },
-              { label: "MID", value: "Midfielder" },
-              { label: "FWD", value: "Forward" },
-            ].map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => setPositionFilters(prev => {
-                  const next = new Set(prev);
-                  if (next.has(value)) next.delete(value); else next.add(value);
-                  return next;
-                })}
-                className={`h-8 px-2 text-xs rounded border font-semibold transition-colors ${
-                  positionFilters.has(value)
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            {positionFilters.size > 0 && (
-              <button
-                onClick={() => setPositionFilters(new Set())}
-                className="h-8 px-1.5 text-xs rounded border border-gray-200 text-gray-400 hover:text-gray-600"
-                title="Clear position filter"
-              >
-                <X className="h-3 w-3" />
-              </button>
+          {/* Position multi-select dropdown */}
+          <div className="relative" ref={positionDropdownRef}>
+            <button
+              onClick={() => setPositionDropdownOpen(o => !o)}
+              className={`h-8 px-2 text-xs rounded border font-medium flex items-center gap-1 transition-colors ${
+                positionFilters.size > 0
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400'
+              }`}
+            >
+              {positionFilters.size === 0 ? 'All Positions' : `${positionFilters.size} Position${positionFilters.size > 1 ? 's' : ''}`}
+              <ChevronDown className="h-3 w-3 ml-0.5" />
+            </button>
+            {positionDropdownOpen && (
+              <div className="absolute z-50 top-9 left-0 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+                <div className="py-1">
+                  {[
+                    { label: "Goalkeeper (GKP)", value: "Goalkeeper" },
+                    { label: "Defender (DEF)", value: "Defender" },
+                    { label: "Midfielder (MID)", value: "Midfielder" },
+                    { label: "Forward (FWD)", value: "Forward" },
+                  ].map(({ label, value }) => (
+                    <label key={value} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={positionFilters.has(value)}
+                        onChange={() => setPositionFilters(prev => {
+                          const next = new Set(prev);
+                          if (next.has(value)) next.delete(value); else next.add(value);
+                          return next;
+                        })}
+                        className="w-3.5 h-3.5 accent-purple-600"
+                      />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{label}</span>
+                    </label>
+                  ))}
+                </div>
+                {positionFilters.size > 0 && (
+                  <div className="p-2 border-t border-gray-100 dark:border-gray-700">
+                    <button
+                      onClick={() => { setPositionFilters(new Set()); setPositionDropdownOpen(false); }}
+                      className="w-full text-xs text-red-500 hover:text-red-700 text-center"
+                    >
+                      Clear all positions
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           {/* Team multi-select dropdown */}
