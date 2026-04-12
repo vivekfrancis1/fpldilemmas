@@ -596,6 +596,112 @@ function RangeTotalBreakdownTooltip({
   );
 }
 
+function TBCBreakdownTooltip({
+  player,
+  gameweekRange,
+  excludedComponents = new Set(),
+}: {
+  player: PlayerTotalPointsData;
+  gameweekRange: number[];
+  excludedComponents?: Set<string>;
+}) {
+  const componentDefs = [
+    { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
+    { key: 'pointsFromAssists', excludeKey: 'assists', label: '🎯 Assists', color: 'text-blue-700' },
+    { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
+    { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Def Contrib', color: 'text-orange-700' },
+    { key: 'pointsFromMinutes', excludeKey: 'minutes', label: '⏱️ Minutes', color: 'text-purple-700' },
+    { key: 'pointsFromBonus', excludeKey: 'bonus', label: '✨ Bonus', color: 'text-pink-700' },
+    { key: 'pointsFromSaves', excludeKey: 'saves', label: '🥅 Saves', color: 'text-cyan-700' },
+    { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
+    { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
+    { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
+  ];
+
+  const playingGws = gameweekRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
+  const n = playingGws.length || 1;
+
+  const avgComponents: { [key: string]: number } = {};
+  componentDefs.forEach(comp => {
+    const compMap = (player as any)[comp.key] as { [key: string]: number } | undefined;
+    const total = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0);
+    avgComponents[comp.key] = total / n;
+  });
+
+  const avgTotal = playingGws.reduce((s, gw) => s + (player.gameweekProjections?.[gw.toString()] || 0), 0) / n;
+
+  const effectiveTotal = componentDefs.reduce((sum, comp) => {
+    if (excludedComponents.has(comp.excludeKey)) return sum;
+    return sum + (avgComponents[comp.key] || 0);
+  }, 0);
+
+  const displayValue = effectiveTotal > 0 ? effectiveTotal : avgTotal;
+  const gwFirst = gameweekRange[0];
+  const gwLast = gameweekRange[gameweekRange.length - 1];
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+          <span className="font-semibold text-amber-800 text-xs md:text-sm">{displayValue.toFixed(1)}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-amber-200 z-50">
+        <div className="space-y-2">
+          <div className="font-semibold text-gray-900 border-b pb-2 mb-3 flex items-center gap-2">
+            <span>TBC Points Breakdown</span>
+            <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+              Avg per fixture
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {componentDefs.map(comp => {
+              const value = avgComponents[comp.key] || 0;
+              const isExcluded = excludedComponents.has(comp.excludeKey);
+              return (
+                <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
+                  <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
+                  <div className="flex items-center gap-1.5">
+                    {isExcluded ? (
+                      <>
+                        <span className="text-gray-400 font-medium">0.00</span>
+                        <span className="text-xs text-red-500">✕</span>
+                      </>
+                    ) : (
+                      <ValueCell
+                        value={value}
+                        format="points"
+                        decimals={1}
+                        className={comp.color}
+                        fontWeight="medium"
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t pt-2 mt-3">
+            <div className="flex justify-between items-center font-semibold">
+              <span className="text-gray-800">TBC Points Total:</span>
+              <ValueCell
+                value={displayValue}
+                format="points"
+                decimals={1}
+                className="text-amber-800"
+                fontWeight="semibold"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Average per fixture across GW{gwFirst}–{gwLast}
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 interface PlayerTotalPointsData {
   [key: string]: any; // Add index signature for dynamic property access
   playerId: number;
@@ -758,15 +864,11 @@ function createPlayerTotalPointsColumns(
         const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
         if (!isTBCPlayer) return <span className="text-gray-300 text-xs">-</span>;
 
-        const projections = Object.values(player.gameweekProjections || {});
-        const nonZero = projections.filter(v => v > 0);
-        const avgPerFixture = nonZero.length > 0
-          ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length
-          : (player.averagePerGameweek || 0);
-
         return (
-          <div title="Projected points for unscheduled TBC fixture" className="inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
-            <span className="font-semibold text-amber-800 text-xs md:text-sm">{avgPerFixture.toFixed(1)}</span>
+          <div className="flex flex-col items-center">
+            <div className="relative inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
+              <TBCBreakdownTooltip player={player} gameweekRange={gameweekRange} excludedComponents={excludedComponents} />
+            </div>
           </div>
         );
       }
