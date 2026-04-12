@@ -18,6 +18,16 @@ interface FixtureDetail {
   cleanSheetOdds: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface TeamCSProjection {
   id: number;
   team: string;
@@ -115,6 +125,23 @@ export default function TeamCSProjections() {
     queryKey: ["/api/team-cs-projections"],
   });
 
+  // Model-based TBC goal projections — CS probability = e^(-opponentGoals) * 100 (Poisson)
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // Map teamShort → { csOdds (%), opponent, isHome }
+  const tbcCSMap = useMemo(() => {
+    const map = new Map<string, { csOdds: number; opponent: string; isHome: boolean }>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { csOdds: Math.round(Math.exp(-f.awayGoals) * 10000) / 100, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { csOdds: Math.round(Math.exp(-f.homeGoals) * 10000) / 100, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData]);
+
   const { data: fixturesData } = useQuery({
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
@@ -173,12 +200,16 @@ export default function TeamCSProjections() {
         
         switch (sortBy) {
           case "average": {
-            // Calculate period average for sorting using active gameweeks only
-            const aPeriodAvg = activeGameweeks.length > 0
-              ? activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) / activeGameweeks.length
+            // Calculate period average for sorting using active gameweeks + TBC
+            const aTBC = tbcCSMap.get(a.teamShort)?.csOdds || 0;
+            const bTBC = tbcCSMap.get(b.teamShort)?.csOdds || 0;
+            const aLen = activeGameweeks.length + (aTBC > 0 ? 1 : 0);
+            const bLen = activeGameweeks.length + (bTBC > 0 ? 1 : 0);
+            const aPeriodAvg = aLen > 0
+              ? (activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) + aTBC) / aLen
               : 0;
-            const bPeriodAvg = activeGameweeks.length > 0
-              ? activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) / activeGameweeks.length
+            const bPeriodAvg = bLen > 0
+              ? (activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + bTBC) / bLen
               : 0;
             return bPeriodAvg - aPeriodAvg;
           }
@@ -187,7 +218,7 @@ export default function TeamCSProjections() {
           default: return b.averageCSProbability - a.averageCSProbability;
         }
       });
-  }, [projectionsData, selectedTeams, sortBy, activeGameweeks]);
+  }, [projectionsData, selectedTeams, sortBy, activeGameweeks, tbcCSMap]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -398,6 +429,11 @@ export default function TeamCSProjections() {
                           </div>
                         </th>
                       ))}
+                      {tbcCSMap.size > 0 && (
+                        <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
+                          GW TBC
+                        </th>
+                      )}
 
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]"
@@ -495,14 +531,55 @@ export default function TeamCSProjections() {
                           );
                         })}
 
-                        
+                        {tbcCSMap.size > 0 && (() => {
+                          const tbcEntry = tbcCSMap.get(team.teamShort);
+                          if (!tbcEntry) {
+                            return (
+                              <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 min-w-[44px] md:min-w-[56px]">
+                                <span className="text-gray-300">-</span>
+                              </td>
+                            );
+                          }
+                          return (
+                            <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                    <div className="flex flex-col items-center">
+                                      <span className="font-semibold text-amber-800">{Math.round(tbcEntry.csOdds)}%</span>
+                                      <span className="text-[9px] md:text-[10px] text-amber-600 mt-0.5">
+                                        {tbcEntry.opponent}({tbcEntry.isHome ? 'H' : 'A'})
+                                      </span>
+                                    </div>
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                  <div className="space-y-2">
+                                    <div className="font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                      <span>TBC Fixture</span>
+                                      <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">FPL Model</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-600">vs {tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})</span>
+                                      <span className="font-semibold text-amber-800">{Math.round(tbcEntry.csOdds)}%</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 pt-1">Poisson CS probability (e^-xGA) using opponent's projected goals from the FPL model</p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </td>
+                          );
+                        })()}
+
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
                           {(() => {
-                            // Calculate average CS% per fixture across all active gameweeks (use string keys)
+                            // Calculate average CS% per fixture across all active gameweeks + TBC (use string keys)
                             const allFixtures = activeGameweeks.flatMap(gw => team.fixtureDetails?.[gw.toString()] || []);
-                            const periodAvg = allFixtures.length > 0 
-                              ? allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) / allFixtures.length 
-                              : 0;
+                            const tbcEntry = tbcCSMap.get(team.teamShort);
+                            const tbcOdds = tbcEntry?.csOdds || 0;
+                            const totalOdds = allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) + tbcOdds;
+                            const totalCount = allFixtures.length + (tbcOdds > 0 ? 1 : 0);
+                            const periodAvg = totalCount > 0 ? totalOdds / totalCount : 0;
                             return (
                               <>
                                 <span className="text-sm md:text-lg font-bold text-blue-900">{Math.round(periodAvg)}%</span>

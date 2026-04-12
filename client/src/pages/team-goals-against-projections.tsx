@@ -32,6 +32,16 @@ interface TeamGoalsAgainstHistory {
   }[];
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface TeamGoalsAgainstProjection {
   id: number;
   team: string;
@@ -208,6 +218,24 @@ export default function TeamGoalsAgainstProjections() {
     enabled: viewMode === "future",
   });
 
+  // Model-based TBC goal projections — goals against = opponent's goals
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future",
+  });
+
+  // Map teamShort → { goalsAgainst, opponent, isHome }
+  const tbcGAMap = useMemo(() => {
+    const map = new Map<string, { goalsAgainst: number; opponent: string; isHome: boolean }>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { goalsAgainst: Math.round(f.awayGoals * 100) / 100, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { goalsAgainst: Math.round(f.homeGoals * 100) / 100, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData]);
+
   // Unified data for display
   const displayData = useMemo(() => {
     if (viewMode === "past" && historyData?.teams) {
@@ -240,11 +268,13 @@ export default function TeamGoalsAgainstProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate period total for sorting using active gameweeks only (lower is better)
+            // Calculate period total for sorting using active gameweeks only + TBC (lower is better)
+            const aTBC = viewMode === "future" ? (tbcGAMap.get(a.teamShort)?.goalsAgainst || 0) : 0;
+            const bTBC = viewMode === "future" ? (tbcGAMap.get(b.teamShort)?.goalsAgainst || 0) : 0;
             const aPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) + aTBC;
             const bPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + bTBC;
             return aPeriodTotal - bPeriodTotal;
           }
           case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
@@ -253,7 +283,7 @@ export default function TeamGoalsAgainstProjections() {
           default: return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst;
         }
       });
-  }, [displayData, selectedTeams, sortBy, activeGameweeks]);
+  }, [displayData, selectedTeams, sortBy, activeGameweeks, tbcGAMap, viewMode]);
 
   const totalGoalsAgainst = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -537,6 +567,11 @@ export default function TeamGoalsAgainstProjections() {
                           </div>
                         </th>
                       ))}
+                      {viewMode === "future" && tbcGAMap.size > 0 && (
+                        <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[44px] md:min-w-[56px]'}`}>
+                          GW TBC
+                        </th>
+                      )}
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                         onClick={() => setSortBy('total')}
@@ -653,6 +688,48 @@ export default function TeamGoalsAgainstProjections() {
                           );
                         })}
                         
+                        {viewMode === "future" && tbcGAMap.size > 0 && (() => {
+                          const tbcEntry = tbcGAMap.get(team.teamShort);
+                          if (!tbcEntry) {
+                            return (
+                              <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                                <span className="text-gray-300">-</span>
+                              </td>
+                            );
+                          }
+                          return (
+                            <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                    <div className="flex flex-col items-center">
+                                      <span className="font-semibold text-amber-800">{tbcEntry.goalsAgainst.toFixed(2)}</span>
+                                      {showOpponent && (
+                                        <span className="text-[9px] md:text-[10px] text-amber-600 mt-0.5">
+                                          {tbcEntry.opponent}({tbcEntry.isHome ? 'H' : 'A'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                  <div className="space-y-2">
+                                    <div className="font-semibold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                      <span>TBC Fixture</span>
+                                      <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">FPL Model</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-600">vs {tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})</span>
+                                      <span className="font-semibold text-amber-800">{tbcEntry.goalsAgainst.toFixed(2)}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 pt-1">Opponent's projected goals using the same attack/defence model as scheduled GWs</p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </td>
+                          );
+                        })()}
+
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-blue-900">
                             {viewMode === "past"
@@ -661,7 +738,9 @@ export default function TeamGoalsAgainstProjections() {
                                   const teamWithDetails = team as TeamGoalsAgainstProjection;
                                   const allFixtures = activeGameweeks.flatMap(gw => teamWithDetails.fixtureDetails?.[gw.toString()] || []);
                                   const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
-                                  const avgGA = allFixtures.length > 0 ? totalGA / allFixtures.length : 0;
+                                  const tbcGA = tbcGAMap.get(team.teamShort)?.goalsAgainst || 0;
+                                  const allCount = allFixtures.length + (tbcGA > 0 ? 1 : 0);
+                                  const avgGA = allCount > 0 ? (totalGA + tbcGA) / allCount : 0;
                                   return avgGA.toFixed(2);
                                 })()}
                           </span>
@@ -690,6 +769,18 @@ export default function TeamGoalsAgainstProjections() {
                           </td>
                         );
                       })}
+
+                      {viewMode === "future" && tbcGAMap.size > 0 && (() => {
+                        const tbcTotal = filteredProjections.reduce((sum, team) => {
+                          const entry = tbcGAMap.get(team.teamShort);
+                          return sum + (entry?.goalsAgainst || 0);
+                        }, 0);
+                        return (
+                          <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                            {tbcTotal.toFixed(2)}
+                          </td>
+                        );
+                      })()}
                       
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
