@@ -167,13 +167,13 @@ function NavDropdown({
   return (
     <div
       ref={ref}
-      className="relative"
+      className="relative flex-shrink-0 h-full flex items-center"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+        className={`flex items-center gap-1 px-2.5 h-full text-xs font-medium transition-colors whitespace-nowrap ${
           isActive
             ? "bg-white/15 text-white"
             : "text-purple-100 hover:bg-white/10 hover:text-white"
@@ -240,17 +240,17 @@ export default function TopNav() {
   }));
 
   return (
-    <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-14 px-4 border-b border-purple-500/30 shadow-sm">
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mr-4 flex-shrink-0 hover:opacity-80 transition-opacity">
-        <div className="w-7 h-7 bg-fpl-green rounded-full flex items-center justify-center">
+    <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
+      {/* Logo — icon only to save space */}
+      <Link href="/" className="flex items-center gap-2 px-3 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
+        <div className="w-6 h-6 bg-fpl-green rounded-full flex items-center justify-center flex-shrink-0">
           <i className="fas fa-futbol text-fpl-purple text-xs" />
         </div>
-        <span className="text-base font-bold text-white whitespace-nowrap">FPL Dilemmas</span>
+        <span className="text-sm font-bold text-white whitespace-nowrap hidden lg:block">FPL Dilemmas</span>
       </Link>
 
-      {/* Nav dropdowns */}
-      <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto">
+      {/* Nav dropdowns — flex-1 so they fill available space */}
+      <nav className="flex items-center h-full flex-1 min-w-0">
         {visibleSections.map((section) => (
           <NavDropdown
             key={section.section}
@@ -269,33 +269,30 @@ export default function TopNav() {
       </nav>
 
       {/* Right side: refresh + auth */}
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        <RefreshButton />
+      <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-purple-500/30 h-full">
+        <RefreshButton className="text-purple-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => (window.location.href = "/api/auth/google")}
-            className="text-fpl-purple border-white bg-white hover:bg-purple-50 text-xs"
+            className="text-fpl-purple border-white bg-white hover:bg-purple-50 text-xs h-7 px-2"
           >
             <LogIn className="h-3.5 w-3.5 mr-1" />
             Login
           </Button>
         )}
         {!isLoading && isAuthenticated && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs text-purple-200">
-              <User className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[120px]">{user?.email}</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-purple-200 truncate max-w-[100px] hidden lg:block">{user?.email}</span>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="text-red-400 border-red-400/50 bg-transparent hover:bg-red-500/10 text-xs"
+              className="text-red-400 border-red-400/50 bg-transparent hover:bg-red-500/10 text-xs h-7 px-2"
             >
-              <LogOut className="h-3.5 w-3.5 mr-1" />
-              Logout
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="ml-1 hidden lg:inline">Logout</span>
             </Button>
           </div>
         )}
