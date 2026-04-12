@@ -5285,6 +5285,7 @@ export default function TransferPlanner() {
                 <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
+                {/* Starting 11 — position-validated */}
                 {manualLineup.slice(0, 11).map((startingPick) => {
                   const startingPlayer = getPlayerById(startingPick.element);
                   const benchPlayer = getPlayerById(pick.element);
@@ -5296,7 +5297,14 @@ export default function TransferPlanner() {
                     if (defendersInStarting <= 3) return null;
                   }
                   const startingIndex = manualLineup.findIndex(p => p.position === startingPick.position);
-                  return (<SelectItem key={startingPick.element} value={startingIndex.toString()}>{startingPlayer?.web_name}</SelectItem>);
+                  return (<SelectItem key={startingPick.element} value={startingIndex.toString()}>{startingPlayer?.web_name} (Starting)</SelectItem>);
+                })}
+                {/* Other bench players — free swap to reorder bench priority */}
+                {manualLineup.slice(11, 15).map((benchPick, bi) => {
+                  if (benchPick.element === pick.element) return null;
+                  const bp = getPlayerById(benchPick.element);
+                  const benchIdx = 11 + bi;
+                  return (<SelectItem key={benchPick.element} value={benchIdx.toString()}>{bp?.web_name} (Bench)</SelectItem>);
                 })}
               </SelectContent>
             </Select>
@@ -5326,26 +5334,6 @@ export default function TransferPlanner() {
             >
               Make Vice Captain
             </button>
-          )}
-          {isBench && actualIndex > 0 && (
-            <>
-              <button 
-                className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                onClick={() => { moveBenchPlayer(actualIndex, 'up'); setSelectedPlayer(null); }} 
-                disabled={actualIndex === 1} 
-                data-testid={`${isBench ? 'bench' : 'list'}-move-up-${pick.element}`}
-              >
-                Increase Bench Priority
-              </button>
-              <button 
-                className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                onClick={() => { moveBenchPlayer(actualIndex, 'down'); setSelectedPlayer(null); }} 
-                disabled={actualIndex === 3} 
-                data-testid={`${isBench ? 'bench' : 'list'}-move-down-${pick.element}`}
-              >
-                Decrease Bench Priority
-              </button>
-            </>
           )}
           <button 
             className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
