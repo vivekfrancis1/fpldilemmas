@@ -498,19 +498,19 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     <Card ref={sectionRef} className="border-0 shadow-none">
       <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
-        <div className="flex flex-row gap-2 mt-2 items-center flex-nowrap overflow-x-auto pb-1">
+        <div className="flex flex-row gap-1.5 mt-2 items-center flex-nowrap overflow-x-auto pb-1 min-w-0">
           {/* Position multi-select dropdown */}
           <div className="relative flex-shrink-0" ref={positionDropdownRef}>
             <button
               onClick={() => setPositionDropdownOpen(o => !o)}
-              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-8 px-2 text-xs rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 positionFilters.size > 0
                   ? 'bg-purple-600 text-white border-purple-600'
                   : 'bg-background text-foreground border-input hover:border-purple-400'
               }`}
             >
-              {positionFilters.size === 0 ? 'All Positions' : `${positionFilters.size} Position${positionFilters.size > 1 ? 's' : ''}`}
-              <ChevronDown className="h-3 w-3 ml-0.5" />
+              {positionFilters.size === 0 ? 'Position' : `${positionFilters.size} Pos`}
+              <ChevronDown className="h-3 w-3" />
             </button>
             {positionDropdownOpen && (
               <div className="absolute z-50 top-9 left-0 w-44 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
@@ -553,14 +553,14 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <div className="relative flex-shrink-0" ref={teamDropdownRef}>
             <button
               onClick={() => setTeamDropdownOpen(o => !o)}
-              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-8 px-2 text-xs rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
                 teamFilters.size > 0
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-background text-foreground border-input hover:border-blue-400'
               }`}
             >
-              {teamFilters.size === 0 ? 'All Teams' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
-              <ChevronDown className="h-3 w-3 ml-0.5" />
+              {teamFilters.size === 0 ? 'Team' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
+              <ChevronDown className="h-3 w-3" />
             </button>
             {teamDropdownOpen && (
               <div className="absolute z-50 top-9 left-0 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
@@ -608,20 +608,20 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           </div>
           {/* Group filter */}
           <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-            <SelectTrigger className="h-8 text-sm w-32 flex-shrink-0 rounded-md" data-testid="select-load-group">
+            <SelectTrigger className="h-8 text-xs w-24 flex-shrink-0 rounded-md" data-testid="select-load-group">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Players</SelectItem>
               <SelectItem value="Top 50">Top 50</SelectItem>
               <SelectItem value="Value 50">Value 50</SelectItem>
-              <SelectItem value="Current Team">Current Team</SelectItem>
+              <SelectItem value="Current Team">My Team</SelectItem>
               <SelectItem value="All Drafts">All Drafts</SelectItem>
             </SelectContent>
           </Select>
           {/* Price range */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">£</span>
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">£</span>
             <Input
               type="number"
               step="0.1"
@@ -629,10 +629,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={minPrice}
               onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
-              className="h-8 w-14 text-sm rounded-md"
+              className="h-8 w-12 text-xs rounded-md px-1"
               data-testid="input-min-price"
             />
-            <span className="text-sm text-muted-foreground">–</span>
+            <span className="text-xs text-muted-foreground px-0.5">–</span>
             <Input
               type="number"
               step="0.1"
@@ -640,7 +640,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-              className="h-8 w-14 text-sm rounded-md"
+              className="h-8 w-12 text-xs rounded-md px-1"
               data-testid="input-max-price"
             />
           </div>
@@ -649,25 +649,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             placeholder="Search Players"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-sm w-36 flex-shrink-0 rounded-md"
+            className="h-8 text-xs w-32 flex-shrink-0 rounded-md"
             data-testid="input-player-search"
           />
-          {transferredOutPlayers.length > 0 && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="only-affordable"
-                checked={onlyAffordable}
-                onChange={(e) => setOnlyAffordable(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-                data-testid="checkbox-only-affordable"
-              />
-              <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
-                Only affordable (≤£{currentBank.toFixed(1)}m)
-              </label>
-            </div>
-          )}
         </div>
+        {/* Only affordable — separate row */}
+        {transferredOutPlayers.length > 0 && (
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="checkbox"
+              id="only-affordable"
+              checked={onlyAffordable}
+              onChange={(e) => setOnlyAffordable(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+              data-testid="checkbox-only-affordable"
+            />
+            <label htmlFor="only-affordable" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Only affordable (≤£{currentBank.toFixed(1)}m)
+            </label>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-1">
         <div className="w-full overflow-x-auto">
