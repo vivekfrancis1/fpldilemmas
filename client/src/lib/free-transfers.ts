@@ -4,7 +4,7 @@
  * - Start with 1 FT each GW
  * - Bank unused FTs up to max 5
  * - GW16 AFCON top-up: everyone gets 5 FTs
- * - Wildcard/Free Hit usage resets to 1 FT next GW
+ * - Wildcard/Free Hit usage: banked FTs are PRESERVED (carry through), not reset
  */
 
 interface GWHistory {
@@ -49,10 +49,10 @@ export function calculateFreeTransfers(
     }
     
     // Check if a wildcard or free hit was used this GW
+    // FPL rule: banked FTs are preserved through a wildcard or free hit —
+    // the chip covers all transfers so the FT bank is untouched
     const chipUsed = chipsByGW.get(gwNum);
     if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
-      // After wildcard/free hit, you get 1 FT for the next GW
-      freeTransfers = 1;
       continue;
     }
     
