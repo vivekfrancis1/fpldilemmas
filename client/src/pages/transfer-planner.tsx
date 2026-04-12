@@ -701,7 +701,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     onClick={() => handleSort('price')}
                     data-testid="sort-price"
                   >
-                    £ {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
+                    £ (mn) {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 inline ml-0.5" /> : <ChevronDown className="h-2 w-2 inline ml-0.5" />)}
                   </Button>
                 </th>
                 <th className="text-center py-0.5 px-0.5">
@@ -810,7 +810,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         ) : null;
                       })()}
                     </td>
-                    <td className="py-0.5 px-0.5 text-center">{player.price.toFixed(1)}m</td>
+                    <td className="py-0.5 px-0.5 text-center">{player.price.toFixed(1)}</td>
                     {(() => {
                       const gwPoints = player.gameweekProjections[selectedGameweek.toString()] || 0;
                       const top3 = getTop3ForGameweek(selectedGameweek);
@@ -6385,6 +6385,50 @@ export default function TransferPlanner() {
                     </div>
                   )}
                 />
+
+                {/* Chip Bar — apply/remove chips for the current gameweek */}
+                {(() => {
+                  const availableChips = getAvailableChipsForGameweek(selectedGameweek);
+                  const currentChip = plannedChips[selectedGameweek] ?? null;
+                  if (availableChips.length === 0 && !currentChip) return null;
+
+                  const chipStyle = (chip: ChipType, active: boolean): string => {
+                    const base = 'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border transition-all cursor-pointer select-none';
+                    const styles: Record<ChipType, { idle: string; on: string }> = {
+                      wildcard: { idle: 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/40', on: 'bg-purple-200 text-purple-900 border-purple-500 ring-2 ring-purple-400/50 dark:bg-purple-800/40 dark:text-purple-200 dark:border-purple-500' },
+                      '3xc': { idle: 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/40', on: 'bg-amber-200 text-amber-900 border-amber-500 ring-2 ring-amber-400/50 dark:bg-amber-800/40 dark:text-amber-200 dark:border-amber-500' },
+                      bboost: { idle: 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/40', on: 'bg-blue-200 text-blue-900 border-blue-500 ring-2 ring-blue-400/50 dark:bg-blue-800/40 dark:text-blue-200 dark:border-blue-500' },
+                      freehit: { idle: 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-900/40', on: 'bg-green-200 text-green-900 border-green-500 ring-2 ring-green-400/50 dark:bg-green-800/40 dark:text-green-200 dark:border-green-500' },
+                    };
+                    return `${base} ${active ? styles[chip].on : styles[chip].idle}`;
+                  };
+
+                  return (
+                    <div className="mt-2 mb-1 px-2 flex items-center gap-2 justify-center flex-wrap">
+                      <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">GW{selectedGameweek} chip:</span>
+                      {availableChips.map(chip => {
+                        const isActive = currentChip === chip;
+                        return (
+                          <button
+                            key={chip}
+                            onClick={() => handleChipSelection(selectedGameweek, isActive ? null : chip)}
+                            className={chipStyle(chip, isActive)}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {getChipDisplayName(chip)}
+                            {isActive && <span className="ml-0.5 text-[10px]">✓</span>}
+                          </button>
+                        );
+                      })}
+                      {availableChips.length === 0 && currentChip && (
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${getChipIconColor(currentChip)}`}>
+                          <Sparkles className="h-3 w-3" />
+                          {getChipDisplayName(currentChip)} active
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {selectedPlayer && (() => {
                   const selectedPick = manualLineup.find(p => p.element === selectedPlayer);
