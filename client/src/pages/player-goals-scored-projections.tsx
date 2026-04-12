@@ -93,6 +93,17 @@ export default function PlayerGoalsScoredProjections() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
+  // Fixture mode for TBC display
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  useEffect(() => {
+    const onFocus = () => { try { const s = localStorage.getItem('fpl-tbc-assignments'); setTbcAssignments(s ? JSON.parse(s) : {}); } catch {} };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const queryClient = useQueryClient();
 
   // FPL points from goals based on position
@@ -369,11 +380,63 @@ export default function PlayerGoalsScoredProjections() {
     return playerGoalData || [];
   }, [viewMode, historyData, xgHistoryData, playerGoalData]);
 
+  // Map teamShort → fixtureId for TBC absorption lookups
+  const tbcFixtureIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    tbcGoalData?.forEach(f => { map.set(f.homeTeamShort, f.fixtureId); map.set(f.awayTeamShort, f.fixtureId); });
+    return map;
+  }, [tbcGoalData]);
+
+  // Helper: returns unabsorbed TBC goals for a player (0 when absorbed into a GW)
+  const getPlayerUnabsorbedTBC = (teamShort: string, goalShare: number): number => {
+    if (viewMode !== "future") return 0;
+    const tbcEntry = tbcTeamGoalMap.get(teamShort);
+    if (!tbcEntry) return 0;
+    if (fixtureMode === 'expert') return 0;
+    if (fixtureMode === 'base') return (goalShare / 100) * tbcEntry.goals;
+    const fixtureId = tbcFixtureIdMap.get(teamShort);
+    if (fixtureId === undefined) return (goalShare / 100) * tbcEntry.goals;
+    const assigned = tbcAssignments[fixtureId];
+    const startGW = startGameweek ?? 0;
+    const endGW = endGameweek ?? 38;
+    if (assigned !== undefined && assigned >= startGW && assigned <= endGW) return 0;
+    return (goalShare / 100) * tbcEntry.goals;
+  };
+
+  // Absorb TBC fixture into the assigned GW's projection data
+  const resolvedDisplayData = useMemo(() => {
+    if (viewMode !== "future" || fixtureMode === 'base' || !tbcGoalData?.length) return displayData;
+    const startGW = startGameweek ?? 0;
+    const endGW = endGameweek ?? 38;
+    return displayData.map(player => {
+      const tbcEntry = tbcTeamGoalMap.get(player.teamShort);
+      if (!tbcEntry) return player;
+      const fixtureId = tbcFixtureIdMap.get(player.teamShort);
+      if (fixtureId === undefined) return player;
+      let assignedGW: number | null = null;
+      if (fixtureMode === 'expert') {
+        assignedGW = 36;
+      } else {
+        const raw = tbcAssignments[fixtureId] ?? null;
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
+      }
+      if (assignedGW === null) return player;
+      const tbcGoals = (player.goalShare / 100) * tbcEntry.goals;
+      const key = String(assignedGW);
+      const existingGoals = Number(player.gameweekProjections[key]) || 0;
+      const newProjections = { ...player.gameweekProjections, [key]: existingGoals + tbcGoals };
+      const existingDetails: FixtureDetail[] = (player as any).fixtureDetails?.[key] || [];
+      const baseDetails = existingDetails.length > 0 ? existingDetails : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.opponent || '?', isHome: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.isHome ?? true, goals: existingGoals }] : []);
+      const newFixtureDetails = { ...((player as any).fixtureDetails || {}), [key]: [...baseDetails, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, goals: tbcGoals }] };
+      return { ...player, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
+    });
+  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcTeamGoalMap, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, opponentMap]);
+
   // Filter and sort data
   const filteredProjections = useMemo(() => {
-    if (!displayData.length) return [];
+    if (!resolvedDisplayData.length) return [];
 
-    return displayData
+    return resolvedDisplayData
       .filter(player => {
         // Position filter - exclude semantics (set contains excluded positions)
         if (selectedPositions.size > 0) {
@@ -401,17 +464,15 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Sort by total goals in selected gameweeks (with availability adjustment) + TBC
-            const aTBC = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(a.teamShort); return e ? (a.goalShare / 100) * e.goals : 0; })() : 0;
-            const bTBC = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(b.teamShort); return e ? (b.goalShare / 100) * e.goals : 0; })() : 0;
+            const aTBC = getPlayerUnabsorbedTBC(a.teamShort, a.goalShare);
+            const bTBC = getPlayerUnabsorbedTBC(b.teamShort, b.goalShare);
             const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC;
             const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC;
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
-            // Sort by total points from goals in selected gameweeks (with availability adjustment) + TBC
-            const aTBC2 = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(a.teamShort); return e ? (a.goalShare / 100) * e.goals : 0; })() : 0;
-            const bTBC2 = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(b.teamShort); return e ? (b.goalShare / 100) * e.goals : 0; })() : 0;
+            const aTBC2 = getPlayerUnabsorbedTBC(a.teamShort, a.goalShare);
+            const bTBC2 = getPlayerUnabsorbedTBC(b.teamShort, b.goalShare);
             const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC2;
             const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC2;
             const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
@@ -431,16 +492,13 @@ export default function PlayerGoalsScoredProjections() {
           }
         }
       });
-  }, [displayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode, tbcTeamGoalMap]);
+  }, [resolvedDisplayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode, tbcTeamGoalMap, fixtureMode, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek]);
 
-  // TBC total goals across all filtered players
+  // TBC total goals across all filtered players (unabsorbed only)
   const tbcTotalGoals = useMemo(() => {
-    if (viewMode !== "future" || tbcTeamGoalMap.size === 0) return 0;
-    return filteredProjections.reduce((sum, p) => {
-      const e = tbcTeamGoalMap.get(p.teamShort);
-      return sum + (e ? (p.goalShare / 100) * e.goals : 0);
-    }, 0);
-  }, [filteredProjections, tbcTeamGoalMap, viewMode]);
+    if (viewMode !== "future" || fixtureMode === 'expert' || tbcTeamGoalMap.size === 0) return 0;
+    return filteredProjections.reduce((sum, p) => sum + getPlayerUnabsorbedTBC(p.teamShort, p.goalShare), 0);
+  }, [filteredProjections, tbcTeamGoalMap, viewMode, fixtureMode, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -682,6 +740,16 @@ export default function PlayerGoalsScoredProjections() {
         </TabsList>
       </Tabs>
 
+      {viewMode === "future" && tbcGoalData && tbcGoalData.length > 0 && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+        </div>
+      )}
+
       <div className="fpl-section-spacing">
 
         {/* Controls */}
@@ -892,7 +960,7 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
-                    {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                    {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (
                       <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                         GW TBC
                       </th>
@@ -925,7 +993,7 @@ export default function PlayerGoalsScoredProjections() {
                       originalTotal += val;
                     });
                     const tbcEntry = viewMode === "future" ? tbcTeamGoalMap.get(player.teamShort) : null;
-                    const tbcGoals = tbcEntry ? (player.goalShare / 100) * tbcEntry.goals : 0;
+                    const tbcGoals = getPlayerUnabsorbedTBC(player.teamShort, player.goalShare);
                     const totalPoints = getPointsFromGoals(adjustedTotal, player.position);
                     const originalTotalPoints = getPointsFromGoals(originalTotal, player.position);
                     
@@ -1010,9 +1078,9 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                        {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (
                           <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
-                            {tbcEntry ? (
+                            {tbcEntry && tbcGoals > 0 ? (
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
@@ -1061,7 +1129,7 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
-                    {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                    {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (
                       <td className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold bg-amber-100 border-l border-amber-300 text-amber-900">
                         {formatGoals(tbcTotalGoals)}
                       </td>

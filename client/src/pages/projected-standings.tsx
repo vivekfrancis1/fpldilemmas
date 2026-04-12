@@ -37,6 +37,7 @@ interface TBCGoalProjection {
 export default function ProjectedStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"current" | "projected">("projected");
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
   const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
@@ -117,8 +118,59 @@ export default function ProjectedStandings() {
     return map;
   }, [tbcData]);
 
+  // TBC assignments from localStorage
+  const tbcAssignments = useMemo<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  }, [fixtureMode]);
+
   const standingsData = viewMode === "projected" ? projectedStandingsData : currentStandingsData;
   const standingsLoading = viewMode === "projected" ? projectedLoading : currentLoading;
+
+  // Whether to absorb TBC into standings (hide +TBC column)
+  const shouldAbsorbTBC = useMemo(() => {
+    if (!tbcData || tbcData.length === 0) return false;
+    if (fixtureMode === 'expert') return true;
+    if (fixtureMode === 'custom') {
+      const end = selectedEndGameweek ?? (viewMode === 'projected' ? maxEndGameweek : lastFinishedGameweek);
+      return tbcData.every(f => {
+        const a = tbcAssignments[f.fixtureId];
+        return a !== undefined && a !== null && a >= 1 && a <= end;
+      });
+    }
+    return false;
+  }, [fixtureMode, tbcData, tbcAssignments, selectedEndGameweek, viewMode, maxEndGameweek, lastFinishedGameweek]);
+
+  // Resolved standings: absorb TBC when needed and re-sort
+  const resolvedStandingsData = useMemo(() => {
+    if (!standingsData) return standingsData;
+    if (!shouldAbsorbTBC || tbcTeamImpactMap.size === 0) return standingsData;
+    const absorbed = standingsData.map(team => {
+      const tbc = tbcTeamImpactMap.get(team.shortName);
+      if (!tbc) return team;
+      const newWins = team.wins + (tbc.result === 'W' ? 1 : 0);
+      const newDraws = team.draws + (tbc.result === 'D' ? 1 : 0);
+      const newLosses = team.losses + (tbc.result === 'L' ? 1 : 0);
+      const newGF = team.goalsFor + tbc.gf;
+      const newGA = team.goalsAgainst + tbc.ga;
+      return {
+        ...team,
+        played: team.played + 1,
+        wins: newWins,
+        draws: newDraws,
+        losses: newLosses,
+        goalsFor: newGF,
+        goalsAgainst: newGA,
+        goalDifference: newGF - newGA,
+        points: team.points + tbc.pts,
+      };
+    });
+    absorbed.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+      return b.goalsFor - a.goalsFor;
+    });
+    return absorbed.map((t, i) => ({ ...t, position: i + 1 }));
+  }, [standingsData, shouldAbsorbTBC, tbcTeamImpactMap]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -166,6 +218,16 @@ export default function ProjectedStandings() {
           </p>
         </div>
       </div>
+
+      {tbcTeamImpactMap.size > 0 && viewMode === "projected" && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+        </div>
+      )}
 
       <div className="fpl-section-spacing">
         <Card className="mb-6 shadow-md border-0">
@@ -295,7 +357,7 @@ export default function ProjectedStandings() {
                     <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                       Pts
                     </th>
-                    {tbcTeamImpactMap.size > 0 && (
+                    {!shouldAbsorbTBC && tbcTeamImpactMap.size > 0 && (
                       <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-amber-700 uppercase bg-amber-50/60 border-l border-amber-200">
                         +TBC
                       </th>
@@ -303,7 +365,7 @@ export default function ProjectedStandings() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {standingsData?.map((team) => (
+                  {resolvedStandingsData?.map((team) => (
                     <tr key={team.id} className="hover:bg-gray-50" data-testid={`standing-row-${team.shortName}`}>
                       <td className="px-1 md:px-2 py-1 md:py-2 text-center">
                         <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
@@ -364,7 +426,7 @@ export default function ProjectedStandings() {
                       <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-bold text-gray-900">
                         {team.points}
                       </td>
-                      {tbcTeamImpactMap.size > 0 && (() => {
+                      {!shouldAbsorbTBC && tbcTeamImpactMap.size > 0 && (() => {
                         const tbc = tbcTeamImpactMap.get(team.shortName);
                         if (!tbc) return <td className="px-1 md:px-2 py-1 md:py-2 text-center bg-amber-50/30 border-l border-amber-100"><span className="text-gray-300 text-xs">-</span></td>;
                         const ptColor = tbc.pts === 3 ? 'text-green-600' : tbc.pts === 1 ? 'text-yellow-600' : 'text-red-500';
@@ -391,7 +453,7 @@ export default function ProjectedStandings() {
           </CardContent>
         </Card>
 
-        {tbcData && tbcData.length > 0 && (
+        {!shouldAbsorbTBC && tbcData && tbcData.length > 0 && (
           <Card className="mt-6 border-amber-200 shadow-md">
             <CardHeader className="bg-amber-50/60 border-b border-amber-200 py-3">
               <CardTitle className="flex items-center gap-2 text-base text-amber-800">

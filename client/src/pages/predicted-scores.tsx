@@ -53,6 +53,7 @@ export default function PredictedScores() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [showFinished, setShowFinished] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
 
   const queryClient = useQueryClient();
 
@@ -97,6 +98,21 @@ export default function PredictedScores() {
       return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
     });
   }, [predictedScoresData, startGameweek, endGameweek, selectedTeam, showFinished]);
+
+  // TBC assignments from localStorage
+  const tbcAssignments = useMemo<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  }, [fixtureMode]);
+
+  // Determine the label for TBC GW badge based on mode
+  const getTBCGWLabel = (fixtureId: number): string => {
+    if (fixtureMode === 'expert') return 'GW 36';
+    if (fixtureMode === 'custom') {
+      const gw = tbcAssignments[fixtureId];
+      return gw ? `GW ${gw}` : 'TBC';
+    }
+    return 'TBC';
+  };
 
   // TBC matches - unscheduled fixtures from /api/tbc-goal-projections
   const filteredTBCMatches = useMemo(() => {
@@ -175,6 +191,16 @@ export default function PredictedScores() {
           </div>
         </div>
       </div>
+
+      {tbcData && tbcData.length > 0 && showFinished !== "finished" && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+        </div>
+      )}
 
       <div className="fpl-section-spacing">
 
@@ -365,7 +391,7 @@ export default function PredictedScores() {
                       <>
                         <tr className="bg-amber-50/40 border-t-2 border-amber-200">
                           <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-amber-700 uppercase tracking-wider">
-                            GW TBC — Unscheduled Fixtures (FPL Model Projections)
+                            {fixtureMode === 'expert' ? 'GW 36 — Expert Assigned Fixtures (FPL Model)' : fixtureMode === 'custom' && tbcData?.[0] && tbcAssignments[tbcData[0].fixtureId] ? `GW ${tbcAssignments[tbcData[0].fixtureId]} — My Assigned Fixtures (FPL Model)` : 'GW TBC — Unscheduled Fixtures (FPL Model Projections)'}
                           </td>
                         </tr>
                         {filteredTBCMatches.map((f) => {
@@ -373,11 +399,12 @@ export default function PredictedScores() {
                           const awayScore = Math.round(f.awayGoals);
                           const homeResult = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
                           const awayResult = awayScore > homeScore ? 'win' : awayScore < homeScore ? 'loss' : 'draw';
+                          const gwLabel = getTBCGWLabel(f.fixtureId);
                           return (
                             <tr key={`tbc-${f.fixtureId}`} className="bg-amber-50/30 hover:bg-amber-50/60">
                               <td className="px-4 py-4 text-center">
                                 <Badge className="bg-amber-100 text-amber-700 border border-amber-300 text-xs font-semibold">
-                                  TBC
+                                  {gwLabel}
                                 </Badge>
                               </td>
                               <td className="px-4 py-4 text-center text-sm text-amber-600 font-medium">
@@ -411,7 +438,7 @@ export default function PredictedScores() {
                               </td>
                               <td className="px-4 py-4 text-center">
                                 <Badge className="bg-amber-100 text-amber-700 border border-amber-300 text-xs">
-                                  GW TBC
+                                  {gwLabel === 'TBC' ? 'GW TBC' : gwLabel}
                                 </Badge>
                               </td>
                             </tr>
