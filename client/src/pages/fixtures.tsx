@@ -1370,6 +1370,15 @@ export default function Fixtures() {
               {tbcModal?.label} — choose which gameweek to place this fixture in.
             </DialogDescription>
           </DialogHeader>
+          {viewMode === 'base' && tbcModal && tbcAssignments[tbcModal.fixtureId] && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 mb-2">
+              <span className="mt-0.5 shrink-0">⚠️</span>
+              <span>
+                <strong>My Fixtures</strong> already has this match assigned to{' '}
+                <strong>GW{tbcAssignments[tbcModal.fixtureId]}</strong>. Saving will update My Fixtures with your new choice.
+              </span>
+            </div>
+          )}
           <div className="py-2">
             <RadioGroup
               value={tbcModal?.selectedGW?.toString() ?? ''}
