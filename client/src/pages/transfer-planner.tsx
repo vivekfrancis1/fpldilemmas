@@ -823,18 +823,18 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       }
                       return (
                         <td className={`py-0.5 px-0.5 text-center ${bgColor}`}>
-                          <span className={`${textColor} font-medium`}>{gwPoints.toFixed(2)}</span>
+                          <span className={`${textColor} font-medium`}>{gwPoints.toFixed(1)}</span>
                         </td>
                       );
                     })()}
                     <td className="py-0.5 px-0.5 text-center">
-                      <span className="font-bold text-green-600">{(player.totalExpectedPoints || 0).toFixed(2)}</span>
+                      <span className="font-bold text-green-600">{(player.totalExpectedPoints || 0).toFixed(1)}</span>
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
-                      <span className="text-blue-600 dark:text-blue-400">{(player.averageValue || 0).toFixed(2)}</span>
+                      <span className="text-blue-600 dark:text-blue-400">{(player.averageValue || 0).toFixed(1)}</span>
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
-                      <span className="text-orange-600 dark:text-orange-400">{player.ownership.toFixed(1)}%</span>
+                      <span className="text-orange-600 dark:text-orange-400">{Math.round(player.ownership)}%</span>
                     </td>
                   </tr>
                 );
