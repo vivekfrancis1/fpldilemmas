@@ -21,6 +21,16 @@ interface FixtureDetail {
   bonusPoints: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface BootstrapData {
   elements: any[];
   teams: any[];
@@ -92,6 +102,24 @@ export default function PlayerBonusPoints() {
     queryKey: ["/api/player-bonus-points-projections"],
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
+
+  // TBC goal projections for amber column
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // TBC team bonus map: teamShort → { opponent, isHome }
+  // For bonus: teamName is short name directly
+  const tbcTeamBonusMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean }>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -240,10 +268,13 @@ export default function PlayerBonusPoints() {
           aValue = a.teamName;
           bValue = b.teamName;
           break;
-        case 'totalBonusPoints':
-          aValue = getAdjustedTotalForSort(a);
-          bValue = getAdjustedTotalForSort(b);
+        case 'totalBonusPoints': {
+          const aTBCBonus = tbcTeamBonusMap.has(a.teamName) ? a.averagePerGameweek : 0;
+          const bTBCBonus = tbcTeamBonusMap.has(b.teamName) ? b.averagePerGameweek : 0;
+          aValue = getAdjustedTotalForSort(a) + aTBCBonus;
+          bValue = getAdjustedTotalForSort(b) + bTBCBonus;
           break;
+        }
         default:
           // Handle dynamic gameweek fields (like 'gw11', 'gw12', etc.)
           if (sortField.startsWith('gw')) {
@@ -268,7 +299,7 @@ export default function PlayerBonusPoints() {
     });
 
     return filtered;
-  }, [bonusPointsProjections, searchTerm, selectedPositions, selectedTeams, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
+  }, [bonusPointsProjections, searchTerm, selectedPositions, selectedTeams, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, tbcTeamBonusMap]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -505,6 +536,11 @@ export default function PlayerBonusPoints() {
                             </button>
                           </th>
                         ))}
+                        {tbcTeamBonusMap.size > 0 && (
+                          <th className="text-center py-2 px-1 text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                            GW TBC
+                          </th>
+                        )}
                         <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
@@ -601,15 +637,50 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })}
+                          {tbcTeamBonusMap.size > 0 && (() => {
+                            const tbcBonusEntry = tbcTeamBonusMap.get(projection.teamName);
+                            const tbcBonusVal = tbcBonusEntry ? projection.averagePerGameweek : 0;
+                            return (
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                                {tbcBonusEntry ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
+                                        {tbcBonusVal.toFixed(1)}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                      <div className="flex items-center gap-1.5 mb-2">
+                                        <span className="text-xs font-semibold">GW TBC</span>
+                                        <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
+                                      </div>
+                                      <div className="flex justify-between items-center py-1">
+                                        <span className={`text-xs ${tbcBonusEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {tbcBonusEntry.opponent} ({tbcBonusEntry.isHome ? 'H' : 'A'})
+                                        </span>
+                                        <span className="font-medium text-xs">{tbcBonusVal.toFixed(1)}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : (
+                                  <span className="text-gray-300">-</span>
+                                )}
+                              </td>
+                            );
+                          })()}
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                            {hasAnyAdjustment ? (
-                              <div className="flex flex-col items-center">
-                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(1)}</span>
-                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(1)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(1)}</span>
-                            )}
+                            {(() => {
+                              const tbcBonusEntry2 = tbcTeamBonusMap.get(projection.teamName);
+                              const tbcBonusVal2 = tbcBonusEntry2 ? projection.averagePerGameweek : 0;
+                              return hasAnyAdjustment ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{(originalTotal + tbcBonusVal2).toFixed(1)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
+                              );
+                            })()}
                           </td>
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (

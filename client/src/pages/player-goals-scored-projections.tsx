@@ -23,6 +23,16 @@ interface FixtureDetail {
   goals: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface PlayerGoalProjection {
   playerId: number;
   playerName: string;
@@ -248,6 +258,13 @@ export default function PlayerGoalsScoredProjections() {
     enabled: viewMode === "future"
   });
 
+  // TBC goal projections for amber column
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future",
+  });
+
   // Get current gameweek from bootstrap data (for display purposes)
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
 
@@ -307,6 +324,17 @@ export default function PlayerGoalsScoredProjections() {
     });
     return total;
   };
+
+  // TBC team goal map: teamShort → { goals, opponent, isHome }
+  const tbcTeamGoalMap = useMemo(() => {
+    const map = new Map<string, { goals: number; opponent: string; isHome: boolean }>();
+    if (!tbcGoalData || viewMode !== "future") return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { goals: f.homeGoals, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { goals: f.awayGoals, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData, viewMode]);
 
   // Transform data based on view mode
   const displayData = useMemo(() => {
@@ -373,15 +401,19 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Sort by total goals in selected gameweeks (with availability adjustment)
-            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks);
-            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks);
+            // Sort by total goals in selected gameweeks (with availability adjustment) + TBC
+            const aTBC = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(a.teamShort); return e ? (a.goalShare / 100) * e.goals : 0; })() : 0;
+            const bTBC = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(b.teamShort); return e ? (b.goalShare / 100) * e.goals : 0; })() : 0;
+            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC;
+            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC;
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
-            // Sort by total points from goals in selected gameweeks (with availability adjustment)
-            const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks);
-            const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks);
+            // Sort by total points from goals in selected gameweeks (with availability adjustment) + TBC
+            const aTBC2 = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(a.teamShort); return e ? (a.goalShare / 100) * e.goals : 0; })() : 0;
+            const bTBC2 = viewMode === "future" ? (() => { const e = tbcTeamGoalMap.get(b.teamShort); return e ? (b.goalShare / 100) * e.goals : 0; })() : 0;
+            const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC2;
+            const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC2;
             const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
             const bPointsTotal = getPointsFromGoals(bGoalsTotal, b.position);
             return (bPointsTotal - aPointsTotal) * multiplier;
@@ -399,7 +431,16 @@ export default function PlayerGoalsScoredProjections() {
           }
         }
       });
-  }, [displayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode]);
+  }, [displayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode, tbcTeamGoalMap]);
+
+  // TBC total goals across all filtered players
+  const tbcTotalGoals = useMemo(() => {
+    if (viewMode !== "future" || tbcTeamGoalMap.size === 0) return 0;
+    return filteredProjections.reduce((sum, p) => {
+      const e = tbcTeamGoalMap.get(p.teamShort);
+      return sum + (e ? (p.goalShare / 100) * e.goals : 0);
+    }, 0);
+  }, [filteredProjections, tbcTeamGoalMap, viewMode]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -851,6 +892,11 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
+                    {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                      <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                        GW TBC
+                      </th>
+                    )}
                     <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
@@ -878,6 +924,8 @@ export default function PlayerGoalsScoredProjections() {
                       adjustedTotal += val * mult;
                       originalTotal += val;
                     });
+                    const tbcEntry = viewMode === "future" ? tbcTeamGoalMap.get(player.teamShort) : null;
+                    const tbcGoals = tbcEntry ? (player.goalShare / 100) * tbcEntry.goals : 0;
                     const totalPoints = getPointsFromGoals(adjustedTotal, player.position);
                     const originalTotalPoints = getPointsFromGoals(originalTotal, player.position);
                     
@@ -962,14 +1010,41 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
+                        {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                          <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                            {tbcEntry ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
+                                    {formatGoals(tbcGoals)}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <span className="text-xs font-semibold">GW TBC</span>
+                                    <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
+                                  </div>
+                                  <div className="flex justify-between items-center py-1">
+                                    <span className={`text-xs ${tbcEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                      {tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})
+                                    </span>
+                                    <span className="font-medium text-xs">{formatGoals(tbcGoals)}</span>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
+                          </td>
+                        )}
                         <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
-                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{formatGoals(originalTotal)}</span>
+                              <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>
+                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{formatGoals(originalTotal + tbcGoals)}</span>
                             </div>
                           ) : (
-                            <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal)}</span>
+                            <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal + tbcGoals)}</span>
                           )}
                         </td>
                       </tr>
@@ -986,9 +1061,14 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
+                    {viewMode === "future" && tbcTeamGoalMap.size > 0 && (
+                      <td className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold bg-amber-100 border-l border-amber-300 text-amber-900">
+                        {formatGoals(tbcTotalGoals)}
+                      </td>
+                    )}
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-orange-900">
-                        {formatGoals(totalGoals.overallTotal)}
+                        {formatGoals(totalGoals.overallTotal + (viewMode === "future" ? tbcTotalGoals : 0))}
                       </span>
                     </td>
                   </tr>

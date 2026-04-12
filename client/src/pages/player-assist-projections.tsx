@@ -24,6 +24,16 @@ interface FixtureDetail {
   assists: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface PlayerAssistProjection {
   playerId: number;
   playerName: string;
@@ -224,6 +234,13 @@ export default function PlayerAssistProjections() {
     }
   );
 
+  // TBC goal projections for amber column
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future",
+  });
+
   // Transform history data to match projection format for unified display
   const displayData = useMemo(() => {
     if (viewMode === "past" && historyData?.players) {
@@ -327,6 +344,18 @@ export default function PlayerAssistProjections() {
     });
     return map;
   }, [bootstrapData?.teams]);
+
+  // TBC team assist map: teamShort → { assists, opponent, isHome }
+  // assists = tbcTeamGoals × 0.85 (standard assist ratio)
+  const tbcTeamAssistMap = useMemo(() => {
+    const map = new Map<string, { assists: number; opponent: string; isHome: boolean }>();
+    if (!tbcGoalData || viewMode !== "future") return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { assists: f.homeGoals * 0.85, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { assists: f.awayGoals * 0.85, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData, viewMode]);
 
   // Generate dynamic gameweek columns based on selected range (filtered by exclusions)
   const dynamicGameweekColumns = useMemo(() => {
@@ -443,14 +472,20 @@ export default function PlayerAssistProjections() {
           aValue = a.totalProjectedAssists;
           bValue = b.totalProjectedAssists;
           break;
-        case 'rangeTotal':
-          aValue = getFilteredTotalForSort(a);
-          bValue = getFilteredTotalForSort(b);
+        case 'rangeTotal': {
+          const aTBC = viewMode === "future" ? (() => { const e = tbcTeamAssistMap.get(a.teamShort || ''); return e ? (a.assistShare / 100) * e.assists : 0; })() : 0;
+          const bTBC = viewMode === "future" ? (() => { const e = tbcTeamAssistMap.get(b.teamShort || ''); return e ? (b.assistShare / 100) * e.assists : 0; })() : 0;
+          aValue = getFilteredTotalForSort(a) + aTBC;
+          bValue = getFilteredTotalForSort(b) + bTBC;
           break;
-        case 'rangePoints':
-          aValue = getFilteredTotalForSort(a) * 3;
-          bValue = getFilteredTotalForSort(b) * 3;
+        }
+        case 'rangePoints': {
+          const aTBC2 = viewMode === "future" ? (() => { const e = tbcTeamAssistMap.get(a.teamShort || ''); return e ? (a.assistShare / 100) * e.assists : 0; })() : 0;
+          const bTBC2 = viewMode === "future" ? (() => { const e = tbcTeamAssistMap.get(b.teamShort || ''); return e ? (b.assistShare / 100) * e.assists : 0; })() : 0;
+          aValue = (getFilteredTotalForSort(a) + aTBC2) * 3;
+          bValue = (getFilteredTotalForSort(b) + bTBC2) * 3;
           break;
+        }
         case 'assistShare':
           aValue = a.assistShare;
           bValue = b.assistShare;
@@ -484,7 +519,7 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [displayData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode]);
+  }, [displayData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, tbcTeamAssistMap]);
 
   // Calculate dynamic totals based on selected gameweek range (excluding excluded gameweeks)
   const getFilteredTotal = (player: PlayerAssistProjection, useAvailability: boolean = false) => {
@@ -834,6 +869,11 @@ export default function PlayerAssistProjections() {
                               </Button>
                             </th>
                           ))}
+                          {viewMode === "future" && tbcTeamAssistMap.size > 0 && (
+                            <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                              GW TBC
+                            </th>
+                          )}
                           <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
                               {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
@@ -857,6 +897,8 @@ export default function PlayerAssistProjections() {
                             adjustedTotal += val * mult;
                             originalTotal += val;
                           });
+                          const tbcAssistEntry = viewMode === "future" ? tbcTeamAssistMap.get(player.teamShort || '') : null;
+                          const tbcAssists = tbcAssistEntry ? (player.assistShare / 100) * tbcAssistEntry.assists : 0;
                           const pointsTotal = adjustedTotal * 3;
                           const originalPointsTotal = originalTotal * 3;
                           
@@ -937,14 +979,41 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
+                            {viewMode === "future" && tbcTeamAssistMap.size > 0 && (
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                                {tbcAssistEntry ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
+                                        {tbcAssists.toFixed(1)}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                      <div className="flex items-center gap-1.5 mb-2">
+                                        <span className="text-xs font-semibold">GW TBC</span>
+                                        <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
+                                      </div>
+                                      <div className="flex justify-between items-center py-1">
+                                        <span className={`text-xs ${tbcAssistEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {tbcAssistEntry.opponent} ({tbcAssistEntry.isHome ? 'H' : 'A'})
+                                        </span>
+                                        <span className="font-medium text-xs">{tbcAssists.toFixed(1)}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : (
+                                  <span className="text-gray-300">-</span>
+                                )}
+                              </td>
+                            )}
                             <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal) : originalTotal.toFixed(1)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcAssists) : (adjustedTotal + tbcAssists).toFixed(1)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcAssists) : (originalTotal + tbcAssists).toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(1)}</span>
+                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcAssists) : (adjustedTotal + tbcAssists).toFixed(1)}</span>
                               )}
                             </td>
                           </tr>

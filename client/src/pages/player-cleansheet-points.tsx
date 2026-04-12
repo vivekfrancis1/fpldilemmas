@@ -19,6 +19,16 @@ interface FixtureDetail {
   cleanSheetPoints: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface PlayerCleanSheetData {
   playerId: number;
   playerName: string;
@@ -86,6 +96,23 @@ export default function PlayerCleanSheetPoints() {
     retryDelay: 1000,
   });
 
+  // TBC goal projections for amber column
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // TBC team CS map: teamShort → { opponentGoals, opponent, isHome }
+  const tbcTeamCSMap = useMemo(() => {
+    const map = new Map<string, { opponentGoals: number; opponent: string; isHome: boolean }>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { opponentGoals: f.awayGoals, opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { opponentGoals: f.homeGoals, opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData]);
+
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
     const range = [];
@@ -106,6 +133,19 @@ export default function PlayerCleanSheetPoints() {
     return Array.from(new Set(cleanSheetData.map(p => p.position))).sort();
   }, [cleanSheetData]);
 
+  // TBC CS points for a player: exp(-opponentGoals) × positionCSPoints
+  const getPositionCSPoints = (position: string) => {
+    if (position === "Goalkeeper" || position === "Defender") return 4;
+    if (position === "Midfielder") return 1;
+    return 0;
+  };
+  const getTBCCS = (player: any) => {
+    const entry = tbcTeamCSMap.get(player.team);
+    if (!entry) return 0;
+    const csProb = Math.exp(-entry.opponentGoals);
+    return csProb * getPositionCSPoints(player.position);
+  };
+
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
     if (!cleanSheetData) return [];
@@ -120,8 +160,12 @@ export default function PlayerCleanSheetPoints() {
 
     // Sort data
     filtered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      let aValue: any = sortField === 'totalExpectedPoints'
+        ? (a.totalExpectedPoints + getTBCCS(a))
+        : a[sortField];
+      let bValue: any = sortField === 'totalExpectedPoints'
+        ? (b.totalExpectedPoints + getTBCCS(b))
+        : b[sortField];
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
@@ -136,7 +180,7 @@ export default function PlayerCleanSheetPoints() {
     });
 
     return filtered;
-  }, [cleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection]);
+  }, [cleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection, tbcTeamCSMap]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -359,6 +403,11 @@ export default function PlayerCleanSheetPoints() {
                       {gameweekRange.map(gw => (
                         <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">{gw}</th>
                       ))}
+                      {tbcTeamCSMap.size > 0 && (
+                        <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                          GW TBC
+                        </th>
+                      )}
                       <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 w-16 md:w-auto md:min-w-[70px] text-xs md:text-sm sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                           onClick={() => handleSort('totalExpectedPoints')}>
                         <div className="flex items-center justify-center gap-1">
@@ -437,9 +486,40 @@ export default function PlayerCleanSheetPoints() {
                             </td>
                           );
                         })}
+                        {tbcTeamCSMap.size > 0 && (() => {
+                          const tbcCSEntry = tbcTeamCSMap.get(player.team);
+                          const tbcCSPoints = tbcCSEntry ? Math.exp(-tbcCSEntry.opponentGoals) * getPositionCSPoints(player.position) : 0;
+                          return (
+                            <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                              {tbcCSEntry ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
+                                      {tbcCSPoints.toFixed(2)}
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <span className="text-xs font-semibold">GW TBC</span>
+                                      <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-1">
+                                      <span className={`text-xs ${tbcCSEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                        {tbcCSEntry.opponent} ({tbcCSEntry.isHome ? 'H' : 'A'})
+                                      </span>
+                                      <span className="font-medium text-xs">{tbcCSPoints.toFixed(2)}</span>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </td>
+                          );
+                        })()}
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {player.totalExpectedPoints.toFixed(1)}
+                            {(player.totalExpectedPoints + getTBCCS(player)).toFixed(1)}
                           </span>
                         </td>
                       </tr>

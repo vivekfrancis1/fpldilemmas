@@ -22,6 +22,16 @@ interface FixtureDetail {
   saves: number;
 }
 
+interface TBCGoalProjection {
+  fixtureId: number;
+  homeTeamId: number;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamShort: string;
+  homeGoals: number;
+  awayGoals: number;
+}
+
 interface BootstrapData {
   elements: any[];
   teams: any[];
@@ -102,6 +112,13 @@ export default function PlayerSaves() {
     return getNextGameweeksForDropdown(bootstrapData.events, 12);
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
+  // TBC goal projections for amber column
+  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+    enabled: viewMode === "future",
+  });
+
   // Create teamName to short_name mapping
   const teamNameToShort = useMemo(() => {
     if (!bootstrapData?.teams) return new Map<string, string>();
@@ -111,6 +128,17 @@ export default function PlayerSaves() {
     });
     return map;
   }, [bootstrapData?.teams]);
+
+  // TBC team saves map: teamShort → { opponent, isHome }
+  const tbcTeamSavesMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean }>();
+    if (!tbcGoalData || viewMode !== "future") return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, { opponent: f.awayTeamShort, isHome: true });
+      map.set(f.awayTeamShort, { opponent: f.homeTeamShort, isHome: false });
+    });
+    return map;
+  }, [tbcGoalData, viewMode]);
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
@@ -369,10 +397,13 @@ export default function PlayerSaves() {
           aValue = a.teamName;
           bValue = b.teamName;
           break;
-        case 'totalSaves':
-          aValue = getAdjustedTotalForSort(a);
-          bValue = getAdjustedTotalForSort(b);
+        case 'totalSaves': {
+          const aTBCSaves = viewMode === "future" ? (() => { const s = teamNameToShort.get(a.teamName); return s && tbcTeamSavesMap.has(s) ? a.averagePerGameweek : 0; })() : 0;
+          const bTBCSaves = viewMode === "future" ? (() => { const s = teamNameToShort.get(b.teamName); return s && tbcTeamSavesMap.has(s) ? b.averagePerGameweek : 0; })() : 0;
+          aValue = getAdjustedTotalForSort(a) + aTBCSaves;
+          bValue = getAdjustedTotalForSort(b) + bTBCSaves;
           break;
+        }
         default:
           // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
           if (sortField.startsWith('gw')) {
@@ -397,7 +428,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [displayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode]);
+  }, [displayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, tbcTeamSavesMap, teamNameToShort]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -674,6 +705,11 @@ export default function PlayerSaves() {
                             </Button>
                           </th>
                         ))}
+                        {viewMode === "future" && tbcTeamSavesMap.size > 0 && (
+                          <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                            GW TBC
+                          </th>
+                        )}
                         <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
                             Total {getSortIcon('totalSaves')}
@@ -778,15 +814,52 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })}
+                          {viewMode === "future" && tbcTeamSavesMap.size > 0 && (() => {
+                            const teamShortKey = teamNameToShort.get(projection.teamName) || '';
+                            const tbcSavesEntry = tbcTeamSavesMap.get(teamShortKey);
+                            const tbcSavesVal = tbcSavesEntry ? projection.averagePerGameweek : 0;
+                            return (
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                                {tbcSavesEntry ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
+                                        {tbcSavesVal.toFixed(1)}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
+                                      <div className="flex items-center gap-1.5 mb-2">
+                                        <span className="text-xs font-semibold">GW TBC</span>
+                                        <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
+                                      </div>
+                                      <div className="flex justify-between items-center py-1">
+                                        <span className={`text-xs ${tbcSavesEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {tbcSavesEntry.opponent} ({tbcSavesEntry.isHome ? 'H' : 'A'})
+                                        </span>
+                                        <span className="font-medium text-xs">{tbcSavesVal.toFixed(1)}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : (
+                                  <span className="text-gray-300">-</span>
+                                )}
+                              </td>
+                            );
+                          })()}
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                            {hasAnyAdjustment ? (
-                              <div className="flex flex-col items-center">
-                                <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(1)}</span>
-                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? originalTotal.toFixed(0) : originalTotal.toFixed(1)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(1)}</span>
-                            )}
+                            {(() => {
+                              const teamShortKey2 = teamNameToShort.get(projection.teamName) || '';
+                              const tbcEntry2 = tbcTeamSavesMap.get(teamShortKey2);
+                              const tbcVal2 = tbcEntry2 ? projection.averagePerGameweek : 0;
+                              return hasAnyAdjustment ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? (adjustedTotal + tbcVal2).toFixed(0) : (adjustedTotal + tbcVal2).toFixed(1)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? (originalTotal + tbcVal2).toFixed(0) : (originalTotal + tbcVal2).toFixed(1)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? (adjustedTotal + tbcVal2).toFixed(0) : (adjustedTotal + tbcVal2).toFixed(1)}</span>
+                              );
+                            })()}
                           </td>
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
