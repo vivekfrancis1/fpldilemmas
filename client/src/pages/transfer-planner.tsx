@@ -810,7 +810,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         ) : null;
                       })()}
                     </td>
-                    <td className="py-0.5 px-0.5 text-center">£{player.price.toFixed(1)}m</td>
+                    <td className="py-0.5 px-0.5 text-center">{player.price.toFixed(1)}m</td>
                     {(() => {
                       const gwPoints = player.gameweekProjections[selectedGameweek.toString()] || 0;
                       const top3 = getTop3ForGameweek(selectedGameweek);
