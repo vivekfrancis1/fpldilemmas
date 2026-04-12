@@ -84,7 +84,7 @@ export default function TeamGoalProjections() {
   const [viewMode, setViewMode] = useState<"future" | "past" | "pastXg">("future");
 
   // Fixture mode for TBC display (base=TBC column, custom=user's assignments, expert=all TBC→GW36)
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
 
   // Load user's TBC fixture assignments from localStorage (synced with /fixtures page)
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
@@ -336,7 +336,7 @@ export default function TeamGoalProjections() {
       const tbcGoals = isHome ? tbcFixture.homeGoals : tbcFixture.awayGoals;
       let assignedGW: number | null = null;
       if (fixtureMode === 'expert') {
-        assignedGW = tbcAssignments[tbcFixture.fixtureId] ?? 36;
+        assignedGW = 36; // Expert mode always places TBC in GW36 regardless of manual assignments
       } else {
         assignedGW = tbcAssignments[tbcFixture.fixtureId] ?? null;
       }
