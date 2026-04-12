@@ -369,14 +369,13 @@ export default function Fixtures() {
     // Compute effective assignments based on view mode:
     // base → no assignments (TBC stays in TBC column)
     // custom → user's manual assignments only
-    // expert → user's assignments + all remaining TBC fixtures → GW36
+    // expert → ALL TBC fixtures forced to GW36 (ignores any manual assignments)
     const computedAssignments: Record<number, number> = {};
-    if (viewMode !== 'base') {
+    if (viewMode === 'custom') {
       Object.assign(computedAssignments, tbcAssignments);
-    }
-    if (viewMode === 'expert') {
+    } else if (viewMode === 'expert') {
       fixturesData.forEach(f => {
-        if (f.event === null && !computedAssignments[f.id]) {
+        if (f.event === null) {
           computedAssignments[f.id] = 36;
         }
       });
