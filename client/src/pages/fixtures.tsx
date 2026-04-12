@@ -369,14 +369,15 @@ export default function Fixtures() {
     // Compute effective assignments based on view mode:
     // base → no assignments (TBC stays in TBC column)
     // custom → user's manual assignments only
-    // expert → ALL TBC fixtures forced to GW36 (ignores any manual assignments)
+    // expert → GW36 by default, but respects manual overrides from the assignment modal
     const computedAssignments: Record<number, number> = {};
     if (viewMode === 'custom') {
       Object.assign(computedAssignments, tbcAssignments);
     } else if (viewMode === 'expert') {
       fixturesData.forEach(f => {
         if (f.event === null) {
-          computedAssignments[f.id] = 36;
+          // Use manual override if explicitly set, otherwise default expert prediction of GW36
+          computedAssignments[f.id] = tbcAssignments[f.id] ?? 36;
         }
       });
     }
@@ -1401,7 +1402,7 @@ export default function Fixtures() {
                     }
                   }}
                 >
-                  ↩ Reset to TBC
+                  ↩ {viewMode === 'expert' ? 'Reset to GW36 (Expert)' : 'Reset to TBC'}
                 </Button>
               )}
             </div>
