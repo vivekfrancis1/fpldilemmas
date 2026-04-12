@@ -52,6 +52,7 @@ import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
 import { useAuth } from "@/hooks/useAuth";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
@@ -2804,15 +2805,15 @@ export default function MyDashboard() {
                           <p className="text-sm text-emerald-600">
                             {nextTeamData?.transfers 
                               ? 'Pending transfers for next gameweek' 
-                              : '1 free transfer available at the beginning of the gameweek. Login and connect your FPL account to see transfers made and remaining free transfers.'}
+                              : `${calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())} free transfer${calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard()) === 1 ? '' : 's'} available at the beginning of the gameweek.`}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-                        {/* Free Transfers at Start - Always show, use nextTeamData if available, otherwise default to 1 */}
+                        {/* Free Transfers at Start - use FPL API limit if available, else calculate from history */}
                         <div className="text-center">
                           <div className="text-2xl sm:text-3xl font-bold text-blue-700">
-                            {nextTeamData?.transfers?.limit || 1}
+                            {nextTeamData?.transfers?.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())}
                           </div>
                           <div className="text-xs sm:text-sm text-blue-600 font-medium">
                             Free at Start
@@ -2833,7 +2834,7 @@ export default function MyDashboard() {
                             {/* Point Hit - only show if transfers exceed free transfer limit */}
                             {(() => {
                               const made = nextTeamData.transfers.made || 0;
-                              const limit = nextTeamData.transfers.limit || 1;
+                              const limit = nextTeamData.transfers.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard());
                               const hitCost = Math.max(0, (made - limit) * 4);
                               if (hitCost > 0) {
                                 return (
@@ -2852,7 +2853,7 @@ export default function MyDashboard() {
                             {/* Remaining Free Transfers */}
                             <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
                               <div className="text-2xl sm:text-3xl font-bold text-emerald-700">
-                                {Math.max(0, (nextTeamData.transfers.limit || 1) - (nextTeamData.transfers.made || 0))}
+                                {Math.max(0, (nextTeamData.transfers.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())) - (nextTeamData.transfers.made || 0))}
                               </div>
                               <div className="text-xs sm:text-sm text-emerald-600 font-medium">
                                 Remaining
