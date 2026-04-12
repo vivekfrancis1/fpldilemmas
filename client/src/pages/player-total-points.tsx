@@ -662,6 +662,7 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
+      hideSortIcon: true,
       className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[56px] md:min-w-[80px]',
       render: (_, player) => (
         <div className="min-w-[56px] md:min-w-[80px]">
@@ -748,6 +749,7 @@ function createPlayerTotalPointsColumns(
       key: 'totalExpectedPoints',
       header: `Total`,
       sortable: true,
+      hideSortIcon: true,
       align: 'center',
       className: 'w-14 bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[224px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
@@ -766,6 +768,7 @@ function createPlayerTotalPointsColumns(
       key: 'averageValue',
       header: 'Value',
       sortable: true,
+      hideSortIcon: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-[168px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
@@ -781,6 +784,7 @@ function createPlayerTotalPointsColumns(
       key: 'form',
       header: 'Form',
       sortable: true,
+      hideSortIcon: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-teal-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
@@ -796,6 +800,7 @@ function createPlayerTotalPointsColumns(
       key: 'avgMinutesPerGameweek',
       header: 'Mins',
       sortable: true,
+      hideSortIcon: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
@@ -811,6 +816,7 @@ function createPlayerTotalPointsColumns(
       key: 'ownership',
       header: 'Own%',
       sortable: true,
+      hideSortIcon: true,
       align: 'center',
       className: 'hidden md:table-cell md:w-14 bg-rose-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
