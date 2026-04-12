@@ -5258,11 +5258,11 @@ export default function TransferPlanner() {
             </button>
           </div>
           
-          {/* Swap Player Option */}
+          {/* Switch Player Option */}
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap Player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -5282,7 +5282,7 @@ export default function TransferPlanner() {
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap Player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(0, 11).map((startingPick) => {
