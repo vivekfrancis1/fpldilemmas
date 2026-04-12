@@ -854,7 +854,7 @@ function createPlayerTotalPointsColumns(
     }),
     ...(tbcTeamShortNames && tbcTeamShortNames.size > 0 && !isPastMode ? [{
       key: 'tbc',
-      header: 'TBC',
+      header: 'GW TBC',
       sortable: false,
       hideSortIcon: true,
       align: 'center' as const,
