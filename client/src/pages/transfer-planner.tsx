@@ -6012,10 +6012,14 @@ export default function TransferPlanner() {
           <div className="w-full lg:w-[60%] flex-shrink-0">
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader className="py-3 px-3 sm:px-6">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
+              {/* Left: title */}
+              <div className="flex items-center gap-2 shrink-0">
                 <Users className="h-5 w-5 text-blue-600" />
                 <span className="text-base sm:text-lg font-semibold">Team Selection</span>
+              </div>
+              {/* Centre: draft badge + chip */}
+              <div className="flex items-center gap-2 justify-center">
                 <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
                   {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
                 </Badge>
@@ -6047,6 +6051,8 @@ export default function TransferPlanner() {
                   return null;
                 })()}
               </div>
+              {/* Right: spacer to balance layout */}
+              <div className="shrink-0 w-[100px] sm:w-[130px]" />
             </div>
             {/* Gameweek Navigation Bar */}
             <div className="flex items-center gap-1 mt-2">
