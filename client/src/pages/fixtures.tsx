@@ -383,37 +383,56 @@ export default function Fixtures() {
 
     // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
     // Use key 0 as a sentinel for unassigned (TBC) fixtures
+    // Pass 1: regular (non-TBC) fixtures in range — these always appear first
     fixturesData.forEach(fixture => {
-      const isTBC = fixture.event === null;
-      const assignedGW = isTBC ? computedAssignments[fixture.id] : undefined;
-      const gwKey = isTBC ? (assignedGW ?? 0) : fixture.event!;
-      const inRange = !isTBC && fixture.event! >= gameweekRange.start && fixture.event! <= gameweekRange.end;
-
-      // Skip out-of-range non-TBC fixtures; keep TBC fixtures (assigned or not)
-      if (!inRange && !isTBC) return;
-      // TBC unassigned → gwKey=0 (TBC column); TBC assigned → gwKey=assignedGW
+      if (fixture.event === null) return;
+      const inRange = fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end;
+      if (!inRange) return;
 
       const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
+      if (homeTeam && awayTeam) {
+        if (!matrix[fixture.team_h][fixture.event]) matrix[fixture.team_h][fixture.event] = [];
+        if (!matrix[fixture.team_a][fixture.event]) matrix[fixture.team_a][fixture.event] = [];
+        matrix[fixture.team_h][fixture.event].push({
+          opponent: awayTeam.short_name,
+          difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
+          isHome: true,
+          finished: fixture.finished,
+        });
+        matrix[fixture.team_a][fixture.event].push({
+          opponent: homeTeam.short_name,
+          difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
+          isHome: false,
+          finished: fixture.finished,
+        });
+      }
+    });
 
+    // Pass 2: TBC fixtures — appended after regular fixtures so they always show as the 2nd match
+    fixturesData.forEach(fixture => {
+      if (fixture.event !== null) return;
+      const assignedGW = computedAssignments[fixture.id];
+      const gwKey = assignedGW ?? 0; // 0 = unassigned → TBC column
+
+      const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
       if (homeTeam && awayTeam) {
         if (!matrix[fixture.team_h][gwKey]) matrix[fixture.team_h][gwKey] = [];
         if (!matrix[fixture.team_a][gwKey]) matrix[fixture.team_a][gwKey] = [];
-
         matrix[fixture.team_h][gwKey].push({
           opponent: awayTeam.short_name,
           difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
           isHome: true,
           finished: fixture.finished,
-          ...(isTBC ? { fixtureId: fixture.id } : {})
+          fixtureId: fixture.id,
         });
-
         matrix[fixture.team_a][gwKey].push({
           opponent: homeTeam.short_name,
           difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
           isHome: false,
           finished: fixture.finished,
-          ...(isTBC ? { fixtureId: fixture.id } : {})
+          fixtureId: fixture.id,
         });
       }
     });
