@@ -32,6 +32,17 @@ interface CustomFDR {
 
 type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number };
 
+function getDifficultyColor(difficulty: number) {
+  switch (difficulty) {
+    case 1: return 'bg-green-300 text-green-800';
+    case 2: return 'bg-green-100 text-green-800';
+    case 3: return 'bg-gray-100 text-gray-800';
+    case 4: return 'bg-red-100 text-red-800';
+    case 5: return 'bg-red-300 text-red-800';
+    default: return 'bg-gray-300 text-gray-900';
+  }
+}
+
 function TBCCell({ fixtures, onFixtureClick }: {
   fixtures?: FixtureEntry[];
   onFixtureClick?: (fixtureId: number, label: string) => void;
@@ -43,9 +54,9 @@ function TBCCell({ fixtures, onFixtureClick }: {
           {fixtures.map((fixture, idx) => (
             <div
               key={idx}
-              className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium bg-amber-100 text-amber-800 ${
+              className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                 fixture.fixtureId
-                  ? 'cursor-pointer select-none border border-dashed border-amber-500 hover:bg-amber-300 hover:border-amber-600 hover:shadow-sm hover:scale-105 active:scale-95 transition-all duration-100'
+                  ? 'cursor-pointer select-none border border-dashed border-amber-500 hover:border-amber-600 hover:shadow-sm hover:scale-105 active:scale-95 transition-all duration-100'
                   : ''
               }`}
               title={fixture.fixtureId ? `Click to assign to a gameweek` : `TBC: ${fixture.isHome ? 'vs' : '@'} ${fixture.opponent}`}
@@ -295,18 +306,6 @@ export default function Fixtures() {
   const excludeAllTeams = () => {
     if (bootstrapData?.teams) {
       setExcludedTeams(new Set(bootstrapData.teams.map(t => t.id)));
-    }
-  };
-
-  // Get difficulty rating color class
-  const getDifficultyColor = (difficulty: number) => {
-    switch (difficulty) {
-      case 1: return 'bg-green-300 text-green-800';
-      case 2: return 'bg-green-100 text-green-800';
-      case 3: return 'bg-gray-100 text-gray-800';
-      case 4: return 'bg-red-100 text-red-800';
-      case 5: return 'bg-red-300 text-red-800';
-      default: return 'bg-gray-300 text-gray-900';
     }
   };
 
