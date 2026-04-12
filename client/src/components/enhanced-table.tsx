@@ -198,15 +198,19 @@ export function EnhancedTable<T = any>({
                       size="sm"
                       onClick={() => handleSort(column.key)}
                       className={cn(
-                        "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent",
-                        "flex items-center gap-1 transition-colors text-xs md:text-sm"
+                        "h-auto p-0 w-full font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent",
+                        "flex items-center gap-1 transition-colors text-xs md:text-sm",
+                        column.align === 'center' ? 'justify-center' : column.align === 'right' ? 'justify-end' : 'justify-start'
                       )}
                     >
                       <span className="whitespace-nowrap">{column.header}</span>
                       {!column.hideSortIcon && getSortIcon(column.key)}
                     </Button>
                   ) : (
-                    <span className="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm">
+                    <span className={cn(
+                      "flex items-center gap-1 whitespace-nowrap text-xs md:text-sm",
+                      column.align === 'center' ? 'justify-center' : column.align === 'right' ? 'justify-end' : 'justify-start'
+                    )}>
                       {column.header}
                     </span>
                   )}
