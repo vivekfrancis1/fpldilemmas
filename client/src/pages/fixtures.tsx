@@ -131,6 +131,12 @@ export default function Fixtures() {
 
   // Modal state for assigning a TBC fixture to a gameweek
   const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
+
+  // Toggle between base fixtures (TBC intact) and user-assigned fixtures
+  const [viewMode, setViewMode] = useState<'base' | 'custom'>('custom');
+  const hasAssignments = Object.keys(tbcAssignments).length > 0;
+  // In base mode assignments are ignored so the TBC column is always shown
+  const activeAssignments = viewMode === 'custom' ? tbcAssignments : {};
   
   const updateCustomFDR = (teamId: number, venue: 'home' | 'away', value: number) => {
     setCustomFDR(prev => ({
@@ -361,7 +367,7 @@ export default function Fixtures() {
     // Use key 0 as a sentinel for unassigned (TBC) fixtures (unless assigned by user)
     fixturesData.forEach(fixture => {
       const isTBC = fixture.event === null;
-      const assignedGW = isTBC ? tbcAssignments[fixture.id] : undefined;
+      const assignedGW = isTBC ? activeAssignments[fixture.id] : undefined;
       const gwKey = isTBC ? (assignedGW ?? 0) : fixture.event!;
       const inRange = !isTBC && fixture.event! >= gameweekRange.start && fixture.event! <= gameweekRange.end;
 
@@ -425,7 +431,7 @@ export default function Fixtures() {
       teamAverageFDR: avgFDR,
       teamGameCount: gameCount
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, tbcAssignments]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, activeAssignments]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -445,8 +451,8 @@ export default function Fixtures() {
   // Check if any team has TBC (event=null) fixtures
   const hasTBCFixtures = useMemo(() => {
     if (!fixturesData) return false;
-    return fixturesData.some(f => f.event === null && !tbcAssignments[f.id]);
-  }, [fixturesData, tbcAssignments]);
+    return fixturesData.some(f => f.event === null && !activeAssignments[f.id]);
+  }, [fixturesData, activeAssignments]);
 
   // Calculate best rotation pairs - teams that complement each other's fixtures
   const rotationPairs = useMemo(() => {
@@ -1017,6 +1023,33 @@ export default function Fixtures() {
               <span>5</span>
             </div>
           </div>
+
+          {hasAssignments && (
+            <div className="flex justify-center">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs">
+                <button
+                  onClick={() => setViewMode('base')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
+                    viewMode === 'base'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Base Fixtures
+                </button>
+                <button
+                  onClick={() => setViewMode('custom')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
+                    viewMode === 'custom'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  My Fixtures
+                </button>
+              </div>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="flex justify-center py-12">
