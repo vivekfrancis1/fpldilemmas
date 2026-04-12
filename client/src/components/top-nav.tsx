@@ -72,14 +72,14 @@ const navSections: NavSection[] = [
       { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3 },
       { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield },
       { path: "/team-cs-projections", label: "Clean Sheet Odds", icon: Shield },
+      { path: "/projected-goals-cs", label: "Match Predictions", icon: Target },
+      { path: "/projected-standings", label: "Predicted Standings", icon: Trophy },
     ],
   },
   {
     section: "Popular Tools",
     items: [
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
-      { path: "/projected-goals-cs", label: "Match Predictions", icon: Target },
-      { path: "/projected-standings", label: "Predicted Standings", icon: Trophy },
       { path: "/best-freehit-team", label: "Freehit Team", icon: Users },
       { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star },
       { path: "/player-statistics", label: "Player Statistics", icon: BarChart3 },
