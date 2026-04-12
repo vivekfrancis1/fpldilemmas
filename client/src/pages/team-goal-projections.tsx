@@ -316,11 +316,13 @@ export default function TeamGoalProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate period total for sorting (using active gameweeks only)
+            // Calculate period total for sorting (active GWs + TBC if future mode)
+            const aTBC = viewMode === "future" ? (tbcGoalMap.get(a.teamShort)?.goals || 0) : 0;
+            const bTBC = viewMode === "future" ? (tbcGoalMap.get(b.teamShort)?.goals || 0) : 0;
             const aPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) + aTBC;
             const bPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
+              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + bTBC;
             return bPeriodTotal - aPeriodTotal;
           }
           case "season": return b.totalProjectedGoals - a.totalProjectedGoals;
@@ -785,9 +787,12 @@ export default function TeamGoalProjections() {
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {viewMode === "past" 
-                              ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
-                              : activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
+                            {(() => {
+                              const gwSum = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+                              const tbcGoals = viewMode === "future" ? (tbcGoalMap.get(team.teamShort)?.goals || 0) : 0;
+                              const total = gwSum + tbcGoals;
+                              return viewMode === "past" ? total : total.toFixed(2);
+                            })()}
                           </span>
                         </td>
                         
@@ -830,7 +835,13 @@ export default function TeamGoalProjections() {
                       
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-orange-900">
-                          {viewMode === "past" ? totalGoals.overallTotal : totalGoals.overallTotal.toFixed(2)}
+                          {(() => {
+                            const tbcSum = viewMode === "future"
+                              ? filteredProjections.reduce((s, t) => s + (tbcGoalMap.get(t.teamShort)?.goals || 0), 0)
+                              : 0;
+                            const grand = totalGoals.overallTotal + tbcSum;
+                            return viewMode === "past" ? grand : grand.toFixed(2);
+                          })()}
                         </span>
                       </td>
                       

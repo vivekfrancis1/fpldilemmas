@@ -714,6 +714,38 @@ function TBCBreakdownTooltip({
   );
 }
 
+/** Compute a player's TBC fixture total points using the same logic as TBCBreakdownTooltip */
+function computePlayerTBCTotal(
+  player: any,
+  activeGwRange: number[],
+  tbcEntry: { tbcGoals: number; avgGwGoals: number },
+  excluded: Set<string>
+): number {
+  const playingGws = activeGwRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
+  const n = playingGws.length || 1;
+  const goalsScaleRatio = tbcEntry.avgGwGoals > 0 ? tbcEntry.tbcGoals / tbcEntry.avgGwGoals : 1;
+  const comps = [
+    { key: 'pointsFromGoals', excludeKey: 'goals', scaled: true },
+    { key: 'pointsFromAssists', excludeKey: 'assists', scaled: true },
+    { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', scaled: false },
+    { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', scaled: false },
+    { key: 'pointsFromMinutes', excludeKey: 'minutes', scaled: false },
+    { key: 'pointsFromBonus', excludeKey: 'bonus', scaled: false },
+    { key: 'pointsFromSaves', excludeKey: 'saves', scaled: false },
+    { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', scaled: false },
+    { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', scaled: false },
+    { key: 'pointsFromRedCards', excludeKey: 'redCards', scaled: false },
+  ];
+  let total = 0;
+  comps.forEach(({ key, excludeKey, scaled }) => {
+    if (excluded.has(excludeKey)) return;
+    const compMap = player[key] as { [k: string]: number } | undefined;
+    const avg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
+    total += scaled ? avg * goalsScaleRatio : avg;
+  });
+  return total;
+}
+
 interface PlayerTotalPointsData {
   [key: string]: any; // Add index signature for dynamic property access
   playerId: number;
@@ -773,7 +805,8 @@ function createPlayerTotalPointsColumns(
   myTeamPlayerIds?: Set<number>,
   viewMode?: "past" | "future",
   isMobile?: boolean,
-  tbcTeamShortNames?: Set<string>
+  tbcTeamShortNames?: Set<string>,
+  tbcPlayerGoalMap?: Map<string, { tbcGoals: number; avgGwGoals: number }>
 ): TableColumn<PlayerTotalPointsData>[] {
   const isPastMode = viewMode === "past";
   const allColumns: TableColumn<PlayerTotalPointsData>[] = [
@@ -876,7 +909,7 @@ function createPlayerTotalPointsColumns(
         const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
         if (!isTBCPlayer) return <span className="text-gray-300 text-xs">-</span>;
 
-        const tbcEntry = tbcPlayerGoalMap.get(playerTeamShort);
+        const tbcEntry = tbcPlayerGoalMap?.get(playerTeamShort);
         return (
           <div className="flex flex-col items-center">
             <div className="relative inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
@@ -1616,6 +1649,24 @@ export default function PlayerTotalPoints() {
     return fullGameweekRange.filter(gw => !excludedGameweeks.has(gw));
   }, [fullGameweekRange, excludedGameweeks]);
 
+  // displayData + TBC pts added to totalExpectedPoints (for correct sort & displayed total)
+  const tbcAdjustedData = useMemo((): PlayerTotalPointsData[] | null => {
+    if (!displayData || viewMode !== "future" || tbcPlayerGoalMap.size === 0) return displayData;
+    return displayData.map(player => {
+      const playerTeamShort = (teamNameToShortName?.get((player as any).teamName || player.team)) || (player as any).teamShort || '';
+      const tbcEntry = tbcPlayerGoalMap.get(playerTeamShort);
+      if (!tbcEntry) return player;
+      const tbcPts = computePlayerTBCTotal(player, gameweekRange, tbcEntry, excludedComponents);
+      const newTotal = (player.totalExpectedPoints || 0) + tbcPts;
+      return {
+        ...player,
+        totalExpectedPoints: newTotal,
+        averagePerGameweek: newTotal / Math.max(gameweekRange.length + 1, 1),
+        averageValue: (player.price || 0) > 0 ? newTotal / player.price : 0,
+      };
+    });
+  }, [displayData, tbcPlayerGoalMap, gameweekRange, excludedComponents, viewMode, teamNameToShortName]);
+
   // Get unique teams and positions for filters — normalize to short names to avoid duplicates
   const teams = useMemo(() => {
     if (!displayData) return [];
@@ -1642,9 +1693,9 @@ export default function PlayerTotalPoints() {
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    if (!displayData) return [];
+    if (!tbcAdjustedData) return [];
     
-    let filtered = displayData.filter(player => {
+    let filtered = tbcAdjustedData.filter(player => {
       // Position filter - normalize both sides for comparison (exclude semantics: set contains excluded positions)
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(player.position);
@@ -1755,7 +1806,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [displayData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
+  }, [tbcAdjustedData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
 
   // Compute empty message based on filter state
   const emptyMessage = useMemo(() => {
@@ -2179,7 +2230,8 @@ export default function PlayerTotalPoints() {
                       myTeamPlayerIds,
                       viewMode,
                       isMobile,
-                      tbcTeamShortNames
+                      tbcTeamShortNames,
+                      tbcPlayerGoalMap
                     )}
                     onSort={handleSort}
                     sortField={sortField}
