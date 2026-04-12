@@ -327,6 +327,8 @@ export default function TeamGoalProjections() {
   // Merge TBC goals into assigned GW columns based on fixtureMode
   const resolvedProjections = useMemo(() => {
     if (viewMode !== "future" || fixtureMode === 'base' || !tbcGoalData?.length) return displayData;
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
     return displayData.map(team => {
       const tbcFixture = tbcGoalData.find(f =>
         f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort
@@ -334,28 +336,43 @@ export default function TeamGoalProjections() {
       if (!tbcFixture) return team;
       const isHome = tbcFixture.homeTeamShort === team.teamShort;
       const tbcGoals = isHome ? tbcFixture.homeGoals : tbcFixture.awayGoals;
+      const tbcOpponent = isHome ? tbcFixture.awayTeamShort : tbcFixture.homeTeamShort;
       let assignedGW: number | null = null;
       if (fixtureMode === 'expert') {
-        assignedGW = 36; // Expert mode always places TBC in GW36 regardless of manual assignments
+        assignedGW = 36;
       } else {
-        assignedGW = tbcAssignments[tbcFixture.fixtureId] ?? null;
+        const raw = tbcAssignments[tbcFixture.fixtureId] ?? null;
+        // Only absorb if assigned GW is within the currently visible range
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
       }
-      if (assignedGW === null) return team; // custom+unassigned → stays in TBC column
+      if (assignedGW === null) return team; // unassigned or out-of-range → stays in TBC column
       const newProjections = { ...team.gameweekProjections };
       const key = String(assignedGW);
-      const existing = Number(newProjections[key]) || 0;
-      newProjections[key] = existing + tbcGoals;
-      return { ...team, gameweekProjections: newProjections };
+      const existingGoals = Number(newProjections[key]) || 0;
+      newProjections[key] = existingGoals + tbcGoals;
+      // Update fixtureDetails so the DGW matchwise split shows in the popover
+      const teamData = team as TeamGoalProjection;
+      const newFixtureDetails: { [gameweek: string]: FixtureDetail[] } = { ...(teamData.fixtureDetails || {}) };
+      const existingFixtures: FixtureDetail[] = newFixtureDetails[key]
+        ? [...newFixtureDetails[key]]
+        : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.opponent || '?', isHome: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.isHome ?? true, goals: existingGoals }] : []);
+      newFixtureDetails[key] = [...existingFixtures, { opponent: tbcOpponent, isHome, goals: tbcGoals }];
+      return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
     });
-  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcAssignments]);
+  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcAssignments, startGameweek, endGameweek, opponentMap]);
 
-  // Helper: TBC goals still in TBC column (not absorbed into a GW) for a given team
+  // Helper: TBC goals still in TBC column (not absorbed into a visible GW) for a given team
   const getUnabsorbedTBC = (teamShort: string): number => {
     if (viewMode !== "future") return 0;
     if (fixtureMode === 'expert') return 0;
     if (fixtureMode === 'base') return tbcGoalMap.get(teamShort)?.goals || 0;
     const f = tbcGoalData?.find(x => x.homeTeamShort === teamShort || x.awayTeamShort === teamShort);
-    if (!f || tbcAssignments[f.fixtureId]) return 0;
+    if (!f) return 0;
+    const assigned = tbcAssignments[f.fixtureId];
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    // Absorbed only if assigned to a GW that is within the currently visible range
+    if (assigned !== undefined && assigned !== null && assigned >= startGW && assigned <= endGW) return 0;
     return tbcGoalMap.get(teamShort)?.goals || 0;
   };
 
@@ -719,7 +736,7 @@ export default function TeamGoalProjections() {
                           </div>
                         </th>
                       ))}
-                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => tbcAssignments[f.fixtureId])) && (
+                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[44px] md:min-w-[56px]'}`}>
                           GW TBC
                         </th>
@@ -824,11 +841,12 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
-                        {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => tbcAssignments[f.fixtureId])) && (() => {
+                        {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                           const tbcEntry = tbcGoalMap.get(team.teamShort);
-                          // In custom mode: if this team's TBC is assigned, show dash (absorbed into GW)
+                          // In custom mode: show dash only if assigned to a GW within the visible range
                           const tbcFixture = tbcGoalData?.find(f => f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort);
-                          const isAbsorbed = fixtureMode === 'custom' && tbcFixture && tbcAssignments[tbcFixture.fixtureId];
+                          const assigned = tbcFixture ? tbcAssignments[tbcFixture.fixtureId] : undefined;
+                          const isAbsorbed = fixtureMode === 'custom' && tbcFixture && assigned !== undefined && assigned !== null && assigned >= parseInt(startGameweek) && assigned <= parseInt(endGameweek);
                           if (!tbcEntry || isAbsorbed) {
                             return (
                               <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
@@ -904,7 +922,7 @@ export default function TeamGoalProjections() {
                         );
                       })}
 
-                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => tbcAssignments[f.fixtureId])) && (() => {
+                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcTotal = filteredProjections.reduce((sum, t) => sum + getUnabsorbedTBC(t.teamShort), 0);
                         return (
                           <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
