@@ -639,14 +639,14 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       </CardHeader>
       <CardContent className="p-1">
         <div className="w-full overflow-x-auto">
-          <table className="w-full text-xs leading-tight">
+          <table className="w-full text-sm leading-tight">
             <thead>
               <tr className="border-b">
                 <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[110px] min-w-[110px] max-w-[110px]">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs truncate"
+                    className="h-6 px-1 text-sm truncate"
                     onClick={() => handleSort('name')}
                     data-testid="sort-name"
                   >
@@ -660,7 +660,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('price')}
                     data-testid="sort-price"
                   >
@@ -671,7 +671,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort(`gw_${selectedGameweek}`)}
                     data-testid={`sort-gw${selectedGameweek}`}
                   >
@@ -682,7 +682,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('total')}
                     data-testid="sort-total"
                   >
@@ -693,7 +693,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('avgValue')}
                     data-testid="sort-avgValue"
                   >
@@ -704,7 +704,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('form')}
                     data-testid="sort-form"
                   >
@@ -715,7 +715,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('avgMins')}
                     data-testid="sort-avgMins"
                   >
@@ -726,7 +726,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-1 text-sm"
                     onClick={() => handleSort('ownership')}
                     data-testid="sort-ownership"
                   >
