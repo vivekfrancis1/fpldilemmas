@@ -83,6 +83,10 @@ export default function PlayerSaves() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // View mode: "future" for projections, "past" for historical data
   const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  });
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -139,6 +143,16 @@ export default function PlayerSaves() {
     });
     return map;
   }, [tbcGoalData, viewMode]);
+
+  const tbcFixtureIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!tbcGoalData) return map;
+    tbcGoalData.forEach(f => {
+      map.set(f.homeTeamShort, f.fixtureId);
+      map.set(f.awayTeamShort, f.fixtureId);
+    });
+    return map;
+  }, [tbcGoalData]);
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
@@ -198,6 +212,27 @@ export default function PlayerSaves() {
       setExcludedGameweeks(new Set());
     }
   }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
+
+  // Sync tbcAssignments from localStorage when window regains focus
+  useEffect(() => {
+    const onFocus = () => {
+      try {
+        const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+        const stored = JSON.parse(localStorage.getItem(key) || '{}');
+        setTbcAssignments(stored);
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fixtureMode]);
+
+  useEffect(() => {
+    try {
+      const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+      const stored = JSON.parse(localStorage.getItem(key) || '{}');
+      setTbcAssignments(stored);
+    } catch {}
+  }, [fixtureMode]);
 
   // API call for saves projections - use cached endpoint for 10-20x faster loading
   const { data: allSavesProjections, isLoading: isLoadingProjections } = useQuery({
@@ -278,6 +313,35 @@ export default function PlayerSaves() {
     }
     return savesProjections || [];
   }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, excludedGameweeks]);
+
+  // Absorb TBC saves into the assigned GW's saves data when fixtureMode is custom/expert
+  const resolvedDisplayData = useMemo(() => {
+    if (viewMode !== "future" || fixtureMode === 'base' || !tbcGoalData?.length) return displayData;
+    const startGW = startGameweek ?? 0;
+    const endGW = endGameweek ?? 38;
+    return (displayData as SavesProjection[]).map(player => {
+      const teamShort = teamNameToShort.get(player.teamName) || '';
+      const tbcEntry = tbcTeamSavesMap.get(teamShort);
+      if (!tbcEntry) return player;
+      const fixtureId = tbcFixtureIdMap.get(teamShort);
+      if (fixtureId === undefined) return player;
+      let assignedGW: number | null = null;
+      if (fixtureMode === 'expert') {
+        assignedGW = 36;
+      } else {
+        const raw = tbcAssignments[fixtureId] ?? null;
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
+      }
+      if (assignedGW === null) return player;
+      const key = `gw${assignedGW}`;
+      const existingSaves = player.saves?.[key] || 0;
+      const newSaves = { ...player.saves, [key]: existingSaves + player.averagePerGameweek };
+      const existingDetails: FixtureDetail[] = (player as any).fixtureDetails?.[assignedGW.toString()] || [];
+      const newDetails = [...existingDetails, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, saves: player.averagePerGameweek }];
+      const newFixtureDetails = { ...((player as any).fixtureDetails || {}), [assignedGW.toString()]: newDetails };
+      return { ...player, saves: newSaves, fixtureDetails: newFixtureDetails };
+    });
+  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcTeamSavesMap, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, teamNameToShort]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -372,9 +436,9 @@ export default function PlayerSaves() {
   };
 
   const filteredAndSortedData = useMemo(() => {
-    if (!displayData || !Array.isArray(displayData)) return [];
+    if (!resolvedDisplayData || !Array.isArray(resolvedDisplayData)) return [];
     
-    let filtered = displayData.filter((projection: SavesProjection) => {
+    let filtered = resolvedDisplayData.filter((projection: SavesProjection) => {
       const matchesSearch = !searchTerm || 
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -383,6 +447,21 @@ export default function PlayerSaves() {
       
       return matchesSearch;
     });
+
+    const getUnabsorbedTBCSavesForPlayer = (player: SavesProjection) => {
+      if (viewMode !== "future") return 0;
+      const teamShort = teamNameToShort.get(player.teamName) || '';
+      if (!tbcTeamSavesMap.has(teamShort)) return 0;
+      if (fixtureMode === 'expert') return 0;
+      if (fixtureMode === 'base') return player.averagePerGameweek;
+      const fixtureId = tbcFixtureIdMap.get(teamShort);
+      if (fixtureId === undefined) return player.averagePerGameweek;
+      const assigned = tbcAssignments[fixtureId];
+      const startGW = startGameweek ?? 0;
+      const endGW = endGameweek ?? 38;
+      if (assigned !== undefined && assigned >= startGW && assigned <= endGW) return 0;
+      return player.averagePerGameweek;
+    };
 
     // Sort data
     filtered.sort((a: SavesProjection, b: SavesProjection) => {
@@ -398,10 +477,8 @@ export default function PlayerSaves() {
           bValue = b.teamName;
           break;
         case 'totalSaves': {
-          const aTBCSaves = viewMode === "future" ? (() => { const s = teamNameToShort.get(a.teamName); return s && tbcTeamSavesMap.has(s) ? a.averagePerGameweek : 0; })() : 0;
-          const bTBCSaves = viewMode === "future" ? (() => { const s = teamNameToShort.get(b.teamName); return s && tbcTeamSavesMap.has(s) ? b.averagePerGameweek : 0; })() : 0;
-          aValue = getAdjustedTotalForSort(a) + aTBCSaves;
-          bValue = getAdjustedTotalForSort(b) + bTBCSaves;
+          aValue = getAdjustedTotalForSort(a) + getUnabsorbedTBCSavesForPlayer(a);
+          bValue = getAdjustedTotalForSort(b) + getUnabsorbedTBCSavesForPlayer(b);
           break;
         }
         default:
@@ -428,7 +505,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [displayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, tbcTeamSavesMap, teamNameToShort]);
+  }, [resolvedDisplayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, tbcTeamSavesMap, teamNameToShort, fixtureMode, tbcFixtureIdMap, tbcAssignments]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -668,6 +745,26 @@ export default function PlayerSaves() {
           </Card>
         </Collapsible>
 
+        {/* Fixture Mode Toggle — only when TBC fixtures exist and in future mode */}
+        {viewMode === "future" && tbcTeamSavesMap.size > 0 && (
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex rounded-lg border bg-gray-100 p-0.5 gap-0">
+              <button
+                onClick={() => setFixtureMode('base')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+              >Base Fixtures</button>
+              <button
+                onClick={() => setFixtureMode('custom')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+              >My Fixtures</button>
+              <button
+                onClick={() => setFixtureMode('expert')}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}
+              >Expert Fixtures</button>
+            </div>
+          </div>
+        )}
+
         {/* Results */}
         {filteredAndSortedData.length > 0 && (
           <Card>
@@ -705,7 +802,7 @@ export default function PlayerSaves() {
                             </Button>
                           </th>
                         ))}
-                        {viewMode === "future" && tbcTeamSavesMap.size > 0 && (
+                        {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamSavesMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (
                           <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                             GW TBC
                           </th>
@@ -814,7 +911,7 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })}
-                          {viewMode === "future" && tbcTeamSavesMap.size > 0 && (() => {
+                          {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamSavesMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (() => {
                             const teamShortKey = teamNameToShort.get(projection.teamName) || '';
                             const tbcSavesEntry = tbcTeamSavesMap.get(teamShortKey);
                             const tbcSavesVal = tbcSavesEntry ? projection.averagePerGameweek : 0;
@@ -850,7 +947,24 @@ export default function PlayerSaves() {
                             {(() => {
                               const teamShortKey2 = teamNameToShort.get(projection.teamName) || '';
                               const tbcEntry2 = tbcTeamSavesMap.get(teamShortKey2);
-                              const tbcVal2 = tbcEntry2 ? projection.averagePerGameweek : 0;
+                              let tbcVal2 = 0;
+                              if (tbcEntry2 && viewMode === "future") {
+                                if (fixtureMode === 'expert') {
+                                  tbcVal2 = 0;
+                                } else if (fixtureMode === 'base') {
+                                  tbcVal2 = projection.averagePerGameweek;
+                                } else {
+                                  const fid2 = tbcFixtureIdMap.get(teamShortKey2);
+                                  if (fid2 !== undefined) {
+                                    const assigned2 = tbcAssignments[fid2];
+                                    const startGW2 = startGameweek ?? 0;
+                                    const endGW2 = endGameweek ?? 38;
+                                    tbcVal2 = (assigned2 !== undefined && assigned2 >= startGW2 && assigned2 <= endGW2) ? 0 : projection.averagePerGameweek;
+                                  } else {
+                                    tbcVal2 = projection.averagePerGameweek;
+                                  }
+                                }
+                              }
                               return hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? (adjustedTotal + tbcVal2).toFixed(0) : (adjustedTotal + tbcVal2).toFixed(1)}</span>
