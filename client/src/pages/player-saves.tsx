@@ -753,10 +753,10 @@ export default function PlayerSaves() {
                 onClick={() => setFixtureMode('base')}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
               >Base Fixtures</button>
-              <button
+              {Object.keys(tbcAssignments).length > 0 && <button
                 onClick={() => setFixtureMode('custom')}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-              >My Fixtures</button>
+              >My Fixtures</button>}
               <button
                 onClick={() => setFixtureMode('expert')}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}

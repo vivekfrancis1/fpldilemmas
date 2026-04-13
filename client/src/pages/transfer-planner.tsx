@@ -742,19 +742,24 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         {/* Row 3: Fixture mode toggle */}
         <div className="flex flex-row gap-1.5 items-center">
           <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
-          {(['base', 'custom', 'expert'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setFixtureMode(mode)}
-              className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
-                fixtureMode === mode
-                  ? 'bg-purple-600 text-white border-purple-600'
-                  : 'bg-background text-foreground border-input hover:border-purple-400'
-              }`}
-            >
-              {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
-            </button>
-          ))}
+          {(['base', 'custom', 'expert'] as const)
+            .filter(mode => {
+              if (mode !== 'custom') return true;
+              try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; }
+            })
+            .map(mode => (
+              <button
+                key={mode}
+                onClick={() => setFixtureMode(mode)}
+                className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
+                  fixtureMode === mode
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-background text-foreground border-input hover:border-purple-400'
+                }`}
+              >
+                {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
+              </button>
+            ))}
         </div>
       </div>
       <CardContent className="p-1">

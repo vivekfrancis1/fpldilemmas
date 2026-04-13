@@ -1083,16 +1083,18 @@ export default function Fixtures() {
                 >
                   Base Fixtures
                 </button>
-                <button
-                  onClick={() => setViewMode('custom')}
-                  className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
-                    viewMode === 'custom'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  My Fixtures
-                </button>
+                {Object.keys(tbcAssignments).length > 0 && (
+                  <button
+                    onClick={() => setViewMode('custom')}
+                    className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
+                      viewMode === 'custom'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    My Fixtures
+                  </button>
+                )}
                 <button
                   onClick={() => setViewMode('expert')}
                   className={`px-3 py-1.5 rounded-md font-medium transition-all duration-150 ${
