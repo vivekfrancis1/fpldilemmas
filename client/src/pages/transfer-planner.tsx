@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2452,109 +2453,17 @@ export default function TransferPlanner() {
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     const currentGW = currentEvent?.id || 1;
     const firstPlanningGW = currentGW + 1;
-    
-    // When using authenticated my-team endpoint for the first planning GW, 
-    // trust the FPL API's transfer limit directly (it knows the correct value)
-    console.log(`🔍 FT CONDITION DEBUG - isOwnTeam=${isOwnTeam}, selectedGW=${selectedGameweek}, firstPlanningGW=${firstPlanningGW}, limit=${teamData.transfers.limit}`);
-    
-    // For the first planning gameweek when using own team data, use API limit
-    if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers.limit !== undefined) {
-      console.log(`✅ FT DEBUG - Using FPL API limit for GW ${firstPlanningGW}:`, teamData.transfers.limit);
-      return teamData.transfers.limit;
-    }
-    
-    // Calculate initial FTs - if we have API data for first planning GW, use that as starting point
-    // Otherwise fall back to historical calculation
-    let currentInitial = 1; // Start with base 1 FT
-    
-    // If we have API data for the first planning GW, use that as the starting point for banking forward
-    if (isOwnTeam && teamData.transfers.limit !== undefined) {
-      currentInitial = teamData.transfers.limit;
-      console.log(`✅ Using API limit (${currentInitial}) as starting point for banking calculation`);
-    } else if (bootstrapData && historyData?.current && historyData.current.length > 0) {
-      // Calculate from history using forward simulation (mirroring backend logic)
-      // Start with 1 FT and simulate forward through each finished gameweek
-      let runningFTs = 1;
-      
-      // Get all finished gameweeks in chronological order
-      const finishedHistory = historyData.current
-        .filter((h: any) => {
-          const gwData = bootstrapData.events.find((e: any) => e.id === h.event);
-          return gwData?.finished === true;
-        })
-        .sort((a: any, b: any) => a.event - b.event);
-      
-      console.log(`📊 FORWARD SIMULATION: Starting with 1 FT, simulating through ${finishedHistory.length} finished GWs`);
-      
-      for (const gw of finishedHistory) {
-        const gwEvent = gw.event;
-        const transfersMade = gw.event_transfers || 0;
-        
-        // Check if a chip was used in this gameweek
-        const chipUsed = historyData.chips?.find((c: any) => c.event === gwEvent);
-        const isWildcard = chipUsed?.name === 'wildcard';
-        const isFreeHit = chipUsed?.name === 'freehit';
-        
-        // Subtract transfers used first (clamped to >= 0)
-        const remaining = Math.max(0, runningFTs - transfersMade);
-        
-        if (isWildcard || isFreeHit) {
-          // Wildcard or Free Hit: Keep banked FTs but don't add +1 for this gameweek
-          const cap = gwEvent === 15 ? 5 : 2; // AFCON cap
-          runningFTs = Math.min(cap, remaining);
-          console.log(`  GW${gwEvent}: ${isWildcard ? 'Wildcard' : 'Free Hit'} used → Bank carries through at ${remaining} FTs (capped to ${runningFTs})`);
-        } else {
-          // Normal banking: add +1 and clamp to cap (2 for normal, 5 for AFCON)
-          const cap = gwEvent === 15 ? 5 : 2; // AFCON gives 5 FT cap at GW16, calculated at end of GW15
-          runningFTs = Math.max(1, Math.min(cap, remaining + 1));
-          console.log(`  GW${gwEvent}: Had ${runningFTs - 1 + transfersMade} FTs, used ${transfersMade}, remaining ${remaining}, next GW gets ${remaining}+1=${remaining + 1}, capped to ${runningFTs} (cap: ${cap})`);
-        }
-      }
-      
-      currentInitial = runningFTs;
-      console.log(`✅ FORWARD SIMULATION RESULT: ${currentInitial} FTs for GW ${firstPlanningGW}`);
-    }
-    
-    // If firstPlanningGW > 16, simulate banking from GW16 through intervening gameweeks
-    // using ACTUAL historical transfer data to get the correct starting FTs
-    if (firstPlanningGW > 16 && historyData?.current) {
-      // Start with 5 FTs at GW16 (AFCON top-up)
-      let runningFTs = 5;
-      
-      // Simulate banking from GW16 to firstPlanningGW using historical data
-      for (let gw = 16; gw < firstPlanningGW; gw++) {
-        // Check if any chip was used in this gameweek
-        const chipUsedThisGW = historyData.chips?.find((c: any) => c.event === gw);
-        const isFreeHitGW = chipUsedThisGW?.name === 'freehit';
-        const isWildcardGW = chipUsedThisGW?.name === 'wildcard';
-        
-        if (isFreeHitGW) {
-          // Free Hit: FTs remain unchanged (no +1 banking for chip weeks)
-          continue;
-        } else if (isWildcardGW) {
-          // Wildcard: FTs reset to 1 for next gameweek
-          runningFTs = 1;
-        } else {
-          // Normal banking: get actual transfers from history
-          const gwHistory = historyData.current.find((h: any) => h.event === gw);
-          const transfersUsed = gwHistory?.event_transfers || 0;
-          
-          // Apply banking logic
-          const remaining = runningFTs - transfersUsed;
-          runningFTs = Math.max(1, Math.min(5, 1 + remaining));
-        }
-      }
-      
-      currentInitial = runningFTs;
-    }
-    
+
+    // Use the shared calculateFreeTransfers utility (same logic the dashboard uses)
+    // It correctly handles wildcard/freehit banking, AFCON top-ups, and point hits
+    const currentInitial = historyData?.current
+      ? calculateFreeTransfers(historyData.current, historyData.chips, firstPlanningGW)
+      : (teamData.transfers.limit ?? 1);
+
+    console.log(`🔍 FT DEBUG - GW ${firstPlanningGW} initial FTs: ${currentInitial}`);
+
     // Early return if we're viewing the first planning gameweek
     if (selectedGameweek === firstPlanningGW) {
-      // Special case: if first planning GW is 16, apply AFCON top-up
-      if (firstPlanningGW === 16) {
-        return 5;
-      }
-      console.log(`🔍 FT DEBUG - GW ${firstPlanningGW} initial FTs from calculation:`, currentInitial);
       return currentInitial;
     }
     
