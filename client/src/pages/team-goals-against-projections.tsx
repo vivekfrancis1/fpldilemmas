@@ -100,6 +100,16 @@ export default function TeamGoalsAgainstProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (col: string) => {
+    if (col === sortBy) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+  };
   const [showOpponent, setShowOpponent] = useState<boolean>(false);
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - collapsed by default on all devices
@@ -325,6 +335,7 @@ export default function TeamGoalsAgainstProjections() {
   const filteredProjections = useMemo(() => {
     if (!resolvedProjections.length) return [];
     
+    const dir = sortDir === 'asc' ? 1 : -1;
     return resolvedProjections
       .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
       .sort((a, b) => {
@@ -336,12 +347,12 @@ export default function TeamGoalsAgainstProjections() {
           const bValue = (gwNumber === 39 && viewMode === 'future' && fixtureMode === 'base')
             ? (tbcGAMap.get(b.teamShort)?.goalsAgainst || 0)
             : (b.gameweekProjections[gwNumber] || 0);
-          return aValue - bValue; // Lower goals against is better
+          return (aValue - bValue) * dir;
         }
         
         switch (sortBy) {
           case "total": {
-            const computeAvgGA = (team: typeof a) => {
+            const computeTotal = (team: typeof a) => {
               if (viewMode === "past") {
                 return activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
               }
@@ -357,15 +368,15 @@ export default function TeamGoalsAgainstProjections() {
               const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
               return totalGA + tbcGA;
             };
-            return computeAvgGA(a) - computeAvgGA(b);
+            return (computeTotal(a) - computeTotal(b)) * dir;
           }
-          case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
-          case "average": return a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame; // Lower is better
-          case "position": return a.position - b.position;
-          default: return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst;
+          case "season": return (a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst) * dir;
+          case "average": return (a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame) * dir;
+          case "position": return (a.position - b.position) * dir;
+          default: return (a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   const totalGoalsAgainst = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -652,12 +663,12 @@ export default function TeamGoalsAgainstProjections() {
                         <th 
                           key={gwNumber} 
                           className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
-                          onClick={() => setSortBy(`gw${gwNumber}`)}
+                          onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
                             <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
                             <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
-                            {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                            {sortBy === `gw${gwNumber}` && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
                           </div>
                         </th>
                       ))}
@@ -668,12 +679,12 @@ export default function TeamGoalsAgainstProjections() {
                       )}
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
-                        onClick={() => setSortBy('total')}
+                        onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="md:hidden">Tot</span>
                           <span className="hidden md:inline">Total</span>
-                          {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
+                          {sortBy === 'total' && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
                         </div>
                       </th>
                     </tr>
