@@ -56,7 +56,7 @@ export async function getBulkPlayerHistories(playerIds: number[]): Promise<Map<n
   return result;
 }
 
-export async function prefetchAllPlayerHistories(playerIds: number[]): Promise<void> {
+export async function prefetchAllPlayerHistories(playerIds: number[], finishedGW?: number, onRefreshComplete?: () => void): Promise<void> {
   if (prefetchRunning) {
     console.log("⏭️ Player history prefetch already in progress, skipping");
     return;
@@ -72,10 +72,29 @@ export async function prefetchAllPlayerHistories(playerIds: number[]): Promise<v
     
     const fresh = freshCount[0]?.total ?? 0;
     if (fresh >= playerIds.length * 0.95) {
-      console.log(`✅ Player history cache fresh: ${fresh}/${playerIds.length} players up to date (skipping prefetch)`);
-      return;
+      // Timestamps look fresh — but also verify GW coverage if finishedGW is provided.
+      // The cache can be "fresh" in time but missing the latest GW (e.g. updated before GW finished).
+      if (finishedGW && finishedGW > 0) {
+        const sampleHistories = await getBulkPlayerHistories(playerIds.slice(0, 5));
+        let maxRoundInDb = 0;
+        for (const hist of sampleHistories.values()) {
+          const m = Math.max(...hist.map((h: any) => h.round || 0), 0);
+          if (m > maxRoundInDb) maxRoundInDb = m;
+        }
+        if (maxRoundInDb < finishedGW) {
+          console.log(`🔄 Player history GW stale: DB max round=${maxRoundInDb}, finished GW=${finishedGW} — forcing refresh`);
+          // Fall through to full re-fetch below
+        } else {
+          console.log(`✅ Player history cache fresh: ${fresh}/${playerIds.length} players up to date through GW${maxRoundInDb} (skipping prefetch)`);
+          return;
+        }
+      } else {
+        console.log(`✅ Player history cache fresh: ${fresh}/${playerIds.length} players up to date (skipping prefetch)`);
+        return;
+      }
+    } else {
+      console.log(`🔄 Player history cache stale: ${fresh}/${playerIds.length} fresh — running prefetch`);
     }
-    console.log(`🔄 Player history cache stale: ${fresh}/${playerIds.length} fresh — running prefetch`);
   } catch (e) {
     console.log("⚠️ Could not check cache freshness, proceeding with prefetch");
   }
@@ -120,6 +139,11 @@ export async function prefetchAllPlayerHistories(playerIds: number[]): Promise<v
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ Player history prefetch complete: ${saved} saved, ${failed} failed in ${elapsed}s`);
+    // Notify caller that a full refresh ran — caller should re-run scoring cache to pick up fresh histories
+    if (saved > 0 && onRefreshComplete) {
+      console.log("🔄 Player history refreshed — triggering scoring cache re-run with fresh data...");
+      try { onRefreshComplete(); } catch (e) { console.warn("⚠️ onRefreshComplete error:", e); }
+    }
   } finally {
     prefetchRunning = false;
   }

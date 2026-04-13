@@ -38,6 +38,7 @@ import { InitializationOrchestrator } from './initialization-orchestrator';
 import { calculateAvailabilityProbability, parseReturnDate, getGameweekFromDate, BootstrapEvent } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
 import { totalPointsCache } from './total-points-cache';
+import { getGoalShareCache, setGoalShareCache, getAssistShareCache, setAssistShareCache } from './goal-share-cache';
 
 // Module-level caches for team-level projection endpoints (60-minute TTL)
 let teamGoalsAgainstCache: { data: any[]; timestamp: number } | null = null;
@@ -9142,9 +9143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // REMOVED: Sample size regression function (Option B simplification)
 
-  // Add simple caching for goal share data
-  let goalShareCache: { data: any, timestamp: number, cacheKey?: string } | null = null;
-  let assistShareCache: { data: any, timestamp: number } | null = null;
+  // Goal/assist share caches are managed in server/goal-share-cache.ts (module-level, clearable after history refresh)
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Simplified Goal Share endpoint - player's goals+xG divided by team total
@@ -9164,6 +9163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check memory cache
       const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      const goalShareCache = getGoalShareCache();
       if (goalShareCache && goalShareCache.cacheKey === cacheKey && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
         console.log(`✅ Serving goal share data from cache (full season)`);
         return res.json(goalShareCache.data);
@@ -9252,11 +9252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap, goalBlendMap);
       
-      goalShareCache = {
+      setGoalShareCache({
         data: finalResponse,
         timestamp: Date.now(),
         cacheKey: cacheKey
-      };
+      });
       
       savedGoalShareData = {
         timestamp: Date.now(),
@@ -10147,6 +10147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check memory cache
       const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      const assistShareCache = getAssistShareCache();
       if (assistShareCache && (assistShareCache as any).cacheKey === cacheKey && Date.now() - assistShareCache.timestamp < CACHE_DURATION) {
         console.log(`✅ Serving assist share data from cache (full season)`);
         return res.json(assistShareCache.data);
@@ -10318,11 +10319,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       finalResponse.sort((a, b) => b.expectedAssists - a.expectedAssists);
       
-      assistShareCache = {
+      setAssistShareCache({
         data: finalResponse,
         timestamp: Date.now(),
         cacheKey: cacheKey
-      } as any;
+      } as any);
       
       console.log(`DEBUG: Built full season assist share response with ${finalResponse.length} teams`);
       return res.json(finalResponse);

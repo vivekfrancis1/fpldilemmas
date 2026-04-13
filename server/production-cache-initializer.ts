@@ -201,14 +201,43 @@ export class ProductionCacheInitializer {
         const playerIds: number[] = bootstrapData.elements
           .filter((p: any) => (p.minutes || 0) >= 1)
           .map((p: any) => p.id);
+        const finishedGW: number = bootstrapData.events.filter((e: any) => e.finished).length;
+        // When histories are GW-stale and fully re-fetched, clear the goal/assist share caches
+        // and re-run the scoring cache so the next DB snapshot uses fresh player history data.
+        const onHistoryRefreshComplete = () => {
+          // Clear share caches so next scoring re-run computes fresh goal/assist share from DB
+          import('./goal-share-cache').then(({ clearGoalShareCaches }) => {
+            clearGoalShareCaches();
+          }).catch(console.error);
+
+          // Retry until the existing scoring update lock is released, then re-run
+          const attemptScoringRefresh = (attemptsLeft: number) => {
+            import('./fpl-scoring-cache-service').then(({ FPLScoringCacheService }) => {
+              if ((FPLScoringCacheService as any).updateLock) {
+                if (attemptsLeft > 0) {
+                  setTimeout(() => attemptScoringRefresh(attemptsLeft - 1), 30000);
+                } else {
+                  console.warn("⚠️ Could not run post-history scoring refresh — lock never released");
+                }
+                return;
+              }
+              console.log("🔄 Re-running scoring cache after player history refresh (fresh GW data)...");
+              new FPLScoringCacheService().updateAllScoringData().catch(e =>
+                console.warn("⚠️ Post-history scoring cache re-run failed:", e)
+              );
+            }).catch(console.error);
+          };
+          // Give the current scoring run 30s to finish, then attempt up to 10 times (5 min window)
+          setTimeout(() => attemptScoringRefresh(10), 30000);
+        };
         if (hasSnapshots) {
           console.log("📚 Player history prefetch starting in background (non-blocking)...");
-          prefetchAllPlayerHistories(playerIds).catch(e =>
+          prefetchAllPlayerHistories(playerIds, finishedGW, onHistoryRefreshComplete).catch(e =>
             console.warn("⚠️ Background player history prefetch error:", e)
           );
         } else {
           console.log("📚 Prefetching player histories to DB cache (first-time setup)...");
-          await prefetchAllPlayerHistories(playerIds);
+          await prefetchAllPlayerHistories(playerIds, finishedGW, onHistoryRefreshComplete);
         }
       },
       timeout: hasSnapshots ? 10000 : 300000
