@@ -64,6 +64,16 @@ export default function TeamCSProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("average");
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (col: string) => {
+    if (col === sortBy) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(col);
+      setSortDir('desc');
+    }
+  };
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -255,6 +265,7 @@ export default function TeamCSProjections() {
   const filteredProjections = useMemo(() => {
     if (!resolvedProjections.length) return [];
     
+    const dir = sortDir === 'asc' ? -1 : 1;
     return resolvedProjections
       .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
       .sort((a, b) => {
@@ -262,7 +273,7 @@ export default function TeamCSProjections() {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
           const aValue = a.gameweekProjections[gwNumber] || 0;
           const bValue = b.gameweekProjections[gwNumber] || 0;
-          return bValue - aValue;
+          return (bValue - aValue) * dir;
         }
         
         switch (sortBy) {
@@ -277,14 +288,14 @@ export default function TeamCSProjections() {
             const bPeriodAvg = bLen > 0
               ? (activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + bTBC) / bLen
               : 0;
-            return bPeriodAvg - aPeriodAvg;
+            return (bPeriodAvg - aPeriodAvg) * dir;
           }
-          case "season": return b.averageCSProbability - a.averageCSProbability;
-          case "position": return a.position - b.position;
-          default: return b.averageCSProbability - a.averageCSProbability;
+          case "season": return (b.averageCSProbability - a.averageCSProbability) * dir;
+          case "position": return (a.position - b.position) * dir;
+          default: return (b.averageCSProbability - a.averageCSProbability) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, activeGameweeks, tbcCSMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcCSMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -496,12 +507,12 @@ export default function TeamCSProjections() {
                         <th 
                           key={gwNumber} 
                           className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
-                          onClick={() => setSortBy(`gw${gwNumber}`)}
+                          onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
                             <span className="md:hidden">{gwNumber}</span>
                             <span className="hidden md:inline">GW{gwNumber}</span>
-                            {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                            {sortBy === `gw${gwNumber}` && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                           </div>
                         </th>
                       ))}
@@ -513,11 +524,11 @@ export default function TeamCSProjections() {
 
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]"
-                        onClick={() => setSortBy('average')}
+                        onClick={() => handleSort('average')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
-                          Avg
-                          {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
+                          Avg CS%
+                          {sortBy === 'average' && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                         </div>
                       </th>
                     </tr>
