@@ -804,7 +804,9 @@ export default function TeamGoalProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          const goals = team.gameweekProjections[gwNumber.toString()];
+                          const rawGoals = team.gameweekProjections[gwNumber.toString()];
+                          // GW39 is a provisional TBC fixture — only MCI/CRY have data; treat 0 as no fixture
+                          const goals = (gwNumber === 39 && (rawGoals === undefined || rawGoals === 0)) ? undefined : rawGoals;
                           const teamWithDetails = team as TeamGoalProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const isDGW = fixtures.length > 1;
