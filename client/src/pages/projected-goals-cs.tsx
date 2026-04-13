@@ -73,6 +73,14 @@ export default function ProjectedGoalsCS() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
+  // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
+  const { data: tbcFixtures } = useQuery<any[]>({
+    queryKey: [`/api/fixtures`],
+    select: (data) => data.filter((f: any) => f.event === null || f.event === undefined),
+    enabled: !!bootstrapData?.events,
+  });
+  const hasTBCFixture = (tbcFixtures?.length ?? 0) > 0;
+
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past") {
@@ -81,8 +89,13 @@ export default function ProjectedGoalsCS() {
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback starting from GW7
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+    // Append GW39 for the TBC fixture if not already present
+    if (hasTBCFixture && !gws.includes(39)) {
+      return [...gws, 39];
+    }
+    return gws;
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture]);
 
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
@@ -91,11 +104,12 @@ export default function ProjectedGoalsCS() {
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinishedGW));
     } else if (viewMode === "future" && bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
+      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
-      setEndGameweek(newRange.endGameweek);
+      // Extend default end to GW39 when a TBC fixture exists
+      setEndGameweek(hasTBCFixture ? "39" : newRange.endGameweek);
     }
-  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture]);
 
   // Fetch team goal projections with gameweek range
   const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
@@ -114,12 +128,14 @@ export default function ProjectedGoalsCS() {
     queryKey: [`/api/fixtures`],
     enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
     select: (data) => {
-      // Filter fixtures client-side to only include the selected range
+      // Normalize TBC fixtures (event: null) to GW39 so they flow through the model
       const startGW = parseInt(startGameweek);
       const endGW = parseInt(endGameweek);
-      return data.filter((fixture: any) => 
-        fixture.event >= startGW && fixture.event <= endGW
-      );
+      return data
+        .map((fixture: any) =>
+          (fixture.event === null || fixture.event === undefined) ? { ...fixture, event: 39 } : fixture
+        )
+        .filter((fixture: any) => fixture.event >= startGW && fixture.event <= endGW);
     },
   });
 
@@ -421,7 +437,7 @@ export default function ProjectedGoalsCS() {
                         <SelectContent>
                           {availableGameweeks.map(gameweek => (
                             <SelectItem key={gameweek} value={gameweek.toString()}>
-                              GW{gameweek}
+                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -438,7 +454,7 @@ export default function ProjectedGoalsCS() {
                         <SelectContent>
                           {availableGameweeks.map(gameweek => (
                             <SelectItem key={gameweek} value={gameweek.toString()}>
-                              GW{gameweek}
+                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -489,7 +505,7 @@ export default function ProjectedGoalsCS() {
                       <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1.5 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-sm text-gray-800">
-                            GW{projections[0]?.gameweek}
+                            GW{projections[0]?.gameweek}{projections[0]?.gameweek === 39 ? ' (TBC)' : ''}
                           </span>
                           <span className="text-xs text-gray-600 font-medium">{projections.length} {projections.length === 1 ? 'match' : 'matches'}</span>
                         </div>
@@ -588,16 +604,14 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                 >
                                   {/* Kickoff Time Header */}
-                                  {match1.kickoffTime && (
-                                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
-                                      <div className="flex items-center justify-center gap-1.5">
-                                        <Clock className="h-3 w-3 text-gray-500" />
-                                        <span className="text-xs font-medium text-gray-700">
-                                          {formatKickoffTime(match1.kickoffTime)}
-                                        </span>
-                                      </div>
+                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Clock className="h-3 w-3 text-gray-500" />
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {match1.kickoffTime ? formatKickoffTime(match1.kickoffTime) : 'Date TBC'}
+                                      </span>
                                     </div>
-                                  )}
+                                  </div>
                                   
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
@@ -700,16 +714,14 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                 >
                                   {/* Kickoff Time Header */}
-                                  {match2.kickoffTime && (
-                                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
-                                      <div className="flex items-center justify-center gap-1.5">
-                                        <Clock className="h-3 w-3 text-gray-500" />
-                                        <span className="text-xs font-medium text-gray-700">
-                                          {formatKickoffTime(match2.kickoffTime)}
-                                        </span>
-                                      </div>
+                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Clock className="h-3 w-3 text-gray-500" />
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {match2.kickoffTime ? formatKickoffTime(match2.kickoffTime) : 'Date TBC'}
+                                      </span>
                                     </div>
-                                  )}
+                                  </div>
                                   
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">

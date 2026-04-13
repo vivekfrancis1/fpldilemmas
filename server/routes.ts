@@ -7720,9 +7720,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Process next 12 gameweeks
+      // Process next 12 gameweeks — extend to GW39 to include the TBC fixture
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
