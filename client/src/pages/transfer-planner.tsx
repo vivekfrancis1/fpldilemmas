@@ -5773,29 +5773,6 @@ export default function TransferPlanner() {
         </Collapsible>
       )}
 
-      {/* Active Chip Banner - Shows when FPL account has an active chip */}
-      {searchedId && teamData?.active_chip && isOwnTeam && selectedGameweek && (
-        <Alert className="border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20">
-          <Sparkles className="h-4 w-4 text-purple-600" />
-          <AlertDescription className="text-sm text-purple-800 dark:text-purple-200">
-            <span className="font-semibold">
-              {teamData.active_chip.toUpperCase()} Active
-            </span>
-            {' '}- Synced from your FPL account. 
-            {(teamData.active_chip === 'wildcard' || teamData.active_chip === 'freehit') && (
-              <span className="text-purple-600 dark:text-purple-300">{(() => {
-                const currentEvent = bootstrapData?.events.find(e => e.is_current);
-                const chipGW = currentEvent?.id || selectedGameweek;
-                const isFinished = currentEvent?.finished ?? false;
-                return isFinished
-                  ? ` Unlimited transfers were available for GW ${chipGW}.`
-                  : ` Unlimited transfers available for GW ${chipGW}!`;
-              })()}</span>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Team Summary Stats */}
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isTeamSummaryOpen} onOpenChange={setIsTeamSummaryOpen}>
