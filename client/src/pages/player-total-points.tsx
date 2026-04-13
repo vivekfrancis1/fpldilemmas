@@ -1346,7 +1346,7 @@ export default function PlayerTotalPoints() {
 
   // Team-level GW goal projections — needed to compute per-player goal-share scaling
   const { data: teamGoalProjectionsData } = useQuery<Array<{
-    teamShort: string; gameweekProjections: { [gw: string]: number };
+    teamShort: string; averageGoalsPerGame: number;
   }>>({
     queryKey: ["/api/team-goal-projections"],
     staleTime: 60 * 60 * 1000,
@@ -1360,10 +1360,8 @@ export default function PlayerTotalPoints() {
     tbcGoalData.forEach(f => {
       const homeTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort);
       const awayTeamData = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort);
-      const homeNonZero = homeTeamData ? Object.values(homeTeamData.gameweekProjections).filter(v => v > 0) : [];
-      const awayNonZero = awayTeamData ? Object.values(awayTeamData.gameweekProjections).filter(v => v > 0) : [];
-      const homeAvg = homeNonZero.length > 0 ? homeNonZero.reduce((a, b) => a + b, 0) / homeNonZero.length : 1.35;
-      const awayAvg = awayNonZero.length > 0 ? awayNonZero.reduce((a, b) => a + b, 0) / awayNonZero.length : 1.35;
+      const homeAvg = homeTeamData?.averageGoalsPerGame || 1.35;
+      const awayAvg = awayTeamData?.averageGoalsPerGame || 1.35;
       if (homeTeamData) {
         map.set(f.homeTeamShort, { tbcGoals: f.homeGoals, avgGwGoals: homeAvg, tbcOpponentGoals: f.awayGoals, opponent: f.awayTeamShort, isHome: true });
       }
