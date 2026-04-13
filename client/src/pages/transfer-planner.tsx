@@ -6020,6 +6020,7 @@ export default function TransferPlanner() {
                 {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
               </button>
             ))}
+          <a href="/fixtures" className="text-xs text-blue-600 hover:underline flex-shrink-0 ml-1">⚙ Edit fixtures</a>
         </div>
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}

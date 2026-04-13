@@ -599,6 +599,7 @@ export default function TeamGoalProjections() {
               Expert Fixtures
             </button>
           </div>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
