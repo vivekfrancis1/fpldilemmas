@@ -2182,7 +2182,7 @@ export default function PlayerTotalPoints() {
                   <EnhancedTable
                     data={filteredAndSortedData}
                     columns={createPlayerTotalPointsColumns(
-                      gameweekRange, 
+                      gameweekRange.filter(gw => gw < 39), 
                       handleSort, 
                       maxPointsPerGameweek,
                       teamNameToShortName,
