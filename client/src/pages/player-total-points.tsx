@@ -1297,11 +1297,16 @@ export default function PlayerTotalPoints() {
       samplePlayer.totalExpectedPoints !== undefined;
     if (!hasValidData) return null;
 
+    // Always include GW39 when TBC fixture exists so tbcAdjustedData can move it into the assigned GW
+    const effectiveEndGW = (tbcTeamShortNames.size > 0 && viewMode === 'future')
+      ? Math.max(endGameweek, 39)
+      : endGameweek;
+
     return fullRangeData.map(player => {
       const filtered: { [key: string]: number } = {};
       const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
 
-      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
         if (excludedGameweeks.has(gw)) continue;
         const key = gw.toString();
         if (key in gwProjections) {
@@ -1318,7 +1323,7 @@ export default function PlayerTotalPoints() {
         const gwMap = (player as any)[compKey] as { [key: string]: number } | undefined;
         if (!gwMap) continue;
         const filteredComp: { [key: string]: number } = {};
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
           if (excludedGameweeks.has(gw)) continue;
           const key = gw.toString();
           if (key in gwMap) filteredComp[key] = gwMap[key];
@@ -1339,7 +1344,7 @@ export default function PlayerTotalPoints() {
         averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
       };
     });
-  }, [fullRangeData, startGameweek, endGameweek, excludedGameweeks]);
+  }, [fullRangeData, startGameweek, endGameweek, excludedGameweeks, tbcTeamShortNames, viewMode]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
