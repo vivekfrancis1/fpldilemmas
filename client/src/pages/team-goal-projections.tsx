@@ -606,7 +606,7 @@ export default function TeamGoalProjections() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-gray-600">Start GW:</label>
                       <Select value={startGameweek} onValueChange={setStartGameweek}>
-                        <SelectTrigger className="h-8 text-xs w-20">
+                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture ? 'w-32' : 'w-20'}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -622,7 +622,7 @@ export default function TeamGoalProjections() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-gray-600">End GW:</label>
                       <Select value={endGameweek} onValueChange={setEndGameweek}>
-                        <SelectTrigger className="h-8 text-xs w-20">
+                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture ? 'w-32' : 'w-20'}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
