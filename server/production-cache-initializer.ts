@@ -181,7 +181,7 @@ export class ProductionCacheInitializer {
         const bootstrapData = await bootstrapResp.json();
         const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
         const { TeamGoalsService } = await import('./team-goals-service');
-        await TeamGoalsService.getTeamGoalProjections(currentGW + 1, Math.min(currentGW + 12, 38));
+        await TeamGoalsService.getTeamGoalProjections(currentGW + 1, Math.min(currentGW + 12, 39));
         console.log("✅ TeamGoalsService pre-warmed successfully");
       },
       timeout: 60000

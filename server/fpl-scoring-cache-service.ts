@@ -26,7 +26,7 @@ export class FPLScoringCacheService {
             const bootstrapData = await bootstrapResp.json();
             const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
             resolvedStart = currentGW + 1;
-            resolvedEnd = Math.min(currentGW + 12, 38);
+            resolvedEnd = Math.min(currentGW + 12, 39);
           }
         } catch {
           resolvedStart = resolvedStart ?? 25;
