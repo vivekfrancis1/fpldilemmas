@@ -418,8 +418,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       const tbcEntry = tbcTeamScaleMap.get(teamShort);
       if (!tbcEntry) return player;
 
-      // Determine which GW the TBC fixture is assigned to (tbcAssignments reflects the active mode)
-      const assignedGW = tbcAssignments[tbcEntry.fixtureId];
+      // Determine which GW the TBC fixture is assigned to (tbcAssignments reflects the active mode).
+      // Expert mode defaults to GW36 when no explicit assignment is set (consistent with other pages).
+      const assignedGW = fixtureMode === 'expert'
+        ? (tbcAssignments[tbcEntry.fixtureId] || 36)
+        : tbcAssignments[tbcEntry.fixtureId];
       if (!assignedGW || !nextGameweeks.includes(assignedGW)) return player;
 
       // Compute TBC points using the player's average per-playing-GW contribution.
