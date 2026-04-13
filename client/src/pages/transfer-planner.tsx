@@ -205,20 +205,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // Fixture mode toggle (Base / My Fixtures / Expert Fixtures)
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
-  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
-    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
-  });
+  // Track a version counter so the adjustedPlayersData memo re-runs when localStorage changes
+  // (e.g. user assigned fixtures in another tab and refocused the window).
+  const [assignmentVersion, setAssignmentVersion] = useState(0);
 
-  // Sync assignments from localStorage whenever fixtureMode changes or window refocuses
+  // Increment version on window focus so the memo always picks up fresh localStorage data.
   useEffect(() => {
-    const sync = () => {
-      const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
-      try { setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}')); } catch { setTbcAssignments({}); }
-    };
-    sync();
+    const sync = () => setAssignmentVersion(v => v + 1);
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
-  }, [fixtureMode]);
+  }, []);
 
   // Update position filter when initialPositionFilter changes
   useEffect(() => {
@@ -411,6 +407,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     if (!allPlayersData) return allPlayersData;
     if (fixtureMode === 'base' || tbcTeamScaleMap.size === 0) return allPlayersData;
 
+    // Read assignments synchronously from localStorage so there's no stale-state window
+    // when the user switches between fixture modes.
+    const lsKey = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+    let assignments: Record<number, number> = {};
+    try { assignments = JSON.parse(localStorage.getItem(lsKey) || '{}'); } catch { /* use empty */ }
+
     return allPlayersData.map(player => {
       // Look up team short name via bootstrap
       const teamShort = bootstrapData?.teams.find(t => t.name === player.team || t.short_name === player.team)?.short_name;
@@ -418,11 +420,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       const tbcEntry = tbcTeamScaleMap.get(teamShort);
       if (!tbcEntry) return player;
 
-      // Determine which GW the TBC fixture is assigned to (tbcAssignments reflects the active mode).
+      // Determine which GW the TBC fixture is assigned to.
       // Expert mode defaults to GW36 when no explicit assignment is set (consistent with other pages).
       const assignedGW = fixtureMode === 'expert'
-        ? (tbcAssignments[tbcEntry.fixtureId] || 36)
-        : tbcAssignments[tbcEntry.fixtureId];
+        ? (assignments[tbcEntry.fixtureId] || 36)
+        : assignments[tbcEntry.fixtureId];
       if (!assignedGW || !nextGameweeks.includes(assignedGW)) return player;
 
       // Compute TBC points using the player's average per-playing-GW contribution.
@@ -440,7 +442,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       const newTotal = nextGameweeks.reduce((sum, gw) => sum + (newGameweekProjections[gw.toString()] || 0), 0);
       return { ...player, gameweekProjections: newGameweekProjections, totalExpectedPoints: newTotal };
     });
-  }, [allPlayersData, fixtureMode, tbcTeamScaleMap, tbcAssignments, nextGameweeks, bootstrapData]);
+  }, [allPlayersData, fixtureMode, tbcTeamScaleMap, assignmentVersion, nextGameweeks, bootstrapData]);
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
