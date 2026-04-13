@@ -330,17 +330,23 @@ export default function TeamGoalsAgainstProjections() {
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
-          const aValue = a.gameweekProjections[gwNumber] || 0;
-          const bValue = b.gameweekProjections[gwNumber] || 0;
+          const aValue = (gwNumber === 39 && viewMode === 'future' && fixtureMode === 'base')
+            ? (tbcGAMap.get(a.teamShort)?.goalsAgainst || 0)
+            : (a.gameweekProjections[gwNumber] || 0);
+          const bValue = (gwNumber === 39 && viewMode === 'future' && fixtureMode === 'base')
+            ? (tbcGAMap.get(b.teamShort)?.goalsAgainst || 0)
+            : (b.gameweekProjections[gwNumber] || 0);
           return aValue - bValue; // Lower goals against is better
         }
         
         switch (sortBy) {
           case "total": {
             const aPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) + getUnabsorbedTBC(a.teamShort);
+              .reduce((sum, gw) => sum + ((gw === 39 && viewMode === 'future' && fixtureMode === 'base') ? (tbcGAMap.get(a.teamShort)?.goalsAgainst || 0) : (a.gameweekProjections[gw] || 0)), 0)
+              + (activeGameweeks.includes(39) ? 0 : getUnabsorbedTBC(a.teamShort));
             const bPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + getUnabsorbedTBC(b.teamShort);
+              .reduce((sum, gw) => sum + ((gw === 39 && viewMode === 'future' && fixtureMode === 'base') ? (tbcGAMap.get(b.teamShort)?.goalsAgainst || 0) : (b.gameweekProjections[gw] || 0)), 0)
+              + (activeGameweeks.includes(39) ? 0 : getUnabsorbedTBC(b.teamShort));
             return aPeriodTotal - bPeriodTotal;
           }
           case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
@@ -362,7 +368,9 @@ export default function TeamGoalsAgainstProjections() {
     
     // Calculate totals for active gameweeks only (excluding excluded ones)
     for (const gwNumber of activeGameweeks) {
-      const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+      const gwTotal = (gwNumber === 39 && viewMode === 'future' && fixtureMode === 'base')
+        ? filteredProjections.reduce((sum, team) => sum + (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0), 0)
+        : filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
@@ -633,12 +641,12 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}
+                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
-                            <span className="md:hidden">{gwNumber}</span>
-                            <span className="hidden md:inline">GW{gwNumber}</span>
+                            <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
+                            <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
                             {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
                           </div>
                         </th>
@@ -698,6 +706,26 @@ export default function TeamGoalsAgainstProjections() {
                                       {pastOpponentInfo ? `${pastOpponentInfo.opponent}(${pastOpponentInfo.isHome ? 'H' : 'A'})` : '\u00A0'}
                                     </span>
                                   )}
+                                </div>
+                              </td>
+                            );
+                          }
+
+                          // GW39 in base mode: use tbcGAMap instead of empty fixtureDetails
+                          if (gwNumber === 39 && fixtureMode === 'base') {
+                            const tbcEntry = tbcGAMap.get(team.teamShort);
+                            if (!tbcEntry) {
+                              return (
+                                <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
+                                  <div className="flex flex-col items-center"><span className="text-gray-300">-</span>{showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">&nbsp;</span>}</div>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium bg-amber-50/60 border-l border-amber-200 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${getGoalsAgainstColor(tbcEntry.goalsAgainst)}`}>
+                                <div className="flex flex-col items-center">
+                                  <span>{tbcEntry.goalsAgainst.toFixed(2)}</span>
+                                  {showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">{tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})</span>}
                                 </div>
                               </td>
                             );
@@ -812,9 +840,15 @@ export default function TeamGoalsAgainstProjections() {
                               ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
                               : (() => {
                                   const teamWithDetails = team as TeamGoalsAgainstProjection;
-                                  const allFixtures = activeGameweeks.flatMap(gw => teamWithDetails.fixtureDetails?.[gw.toString()] || []);
+                                  const allFixtures = activeGameweeks.flatMap(gw => {
+                                    if (gw === 39 && fixtureMode === 'base') {
+                                      const tbcEntry = tbcGAMap.get(team.teamShort);
+                                      return tbcEntry ? [{ goalsAgainst: tbcEntry.goalsAgainst, opponent: tbcEntry.opponent, isHome: tbcEntry.isHome } as FixtureDetail] : [];
+                                    }
+                                    return teamWithDetails.fixtureDetails?.[gw.toString()] || [];
+                                  });
                                   const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
-                                  const tbcGA = getUnabsorbedTBC(team.teamShort);
+                                  const tbcGA = activeGameweeks.includes(39) ? 0 : getUnabsorbedTBC(team.teamShort);
                                   const allCount = allFixtures.length + (tbcGA > 0 ? 1 : 0);
                                   const avgGA = allCount > 0 ? (totalGA + tbcGA) / allCount : 0;
                                   return avgGA.toFixed(2);
