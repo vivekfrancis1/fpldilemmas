@@ -267,7 +267,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   });
 
   const tabNextGW = ((rawBootstrapData?.events.find((e: any) => e.is_current)?.id) || 27) + 1;
-  const tabMaxGW = Math.min(38, tabNextGW + 11);
+  const tabMaxGW = Math.min(39, tabNextGW + 11);
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
     queryKey: ["/api/cached/player-total-points"],
@@ -280,14 +280,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     enabled: !!rawBootstrapData,
   });
 
-  const { data: tbcGoalData } = useQuery<Array<{ fixtureId: number; homeTeamShort: string; awayTeamShort: string; homeGoals: number; awayGoals: number }>>({
-    queryKey: ["/api/tbc-goal-projections"],
-    staleTime: 30 * 60 * 1000,
-  });
-
-  const { data: teamGoalProjectionsData } = useQuery<Array<{ teamShort: string; averageGoalsPerGame: number }>>({
-    queryKey: ["/api/team-goal-projections"],
-    staleTime: 30 * 60 * 1000,
+  // Fetch fixtures for TBC fixture identification (event=null → TBC)
+  const { data: fixturesDataEarly } = useQuery<any[]>({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
   });
 
   // Apply manual availability overrides to bootstrap data
@@ -373,9 +369,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     }
     
     const gameweeks = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       const gwNumber = startGW + i;
-      if (gwNumber <= 38) {
+      if (gwNumber <= 39) {
         gameweeks.push(gwNumber);
       }
     }
@@ -385,102 +381,60 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const nextGameweeks = getNextGameweeksForTable();
 
-  // Build TBC fixture scaling map when in custom/expert mode.
-  // Stores per-team: goal scale (for goals/assists), opponent goal scale (for CS/GC/saves).
-  const tbcTeamScaleMap = useMemo(() => {
-    const map = new Map<string, { fixtureId: number; goalsScale: number; oppGoalsScale: number }>();
-    if (fixtureMode === 'base' || !tbcGoalData || !teamGoalProjectionsData) return map;
-    tbcGoalData.forEach(f => {
-      const homeAvg = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort)?.averageGoalsPerGame || 1;
-      const awayAvg = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort)?.averageGoalsPerGame || 1;
-      map.set(f.homeTeamShort, {
-        fixtureId: f.fixtureId,
-        goalsScale: homeAvg > 0 ? f.homeGoals / homeAvg : 1,
-        oppGoalsScale: f.awayGoals,  // raw opponent goals for cs/saves/gc scale
-      });
-      map.set(f.awayTeamShort, {
-        fixtureId: f.fixtureId,
-        goalsScale: awayAvg > 0 ? f.awayGoals / awayAvg : 1,
-        oppGoalsScale: f.homeGoals,  // raw opponent goals for cs/saves/gc scale
-      });
-    });
-    return map;
-  }, [fixtureMode, tbcGoalData, teamGoalProjectionsData]);
-
-  // Build adjusted player data with TBC fixture applied to the assigned GW.
-  // TBC is treated as GW39 in base mode (excluded from GW33-38).
-  // In My/Expert mode, when assigned to a GW, TBC points are added to that GW.
-  // Uses player's average per-playing-GW contribution (not the specific GW's points)
-  // so blank GW assignments are handled correctly.
+  // In base mode: GW39 data from the backend is already in gameweekProjections['39'] — use it directly.
+  // In custom/expert mode: move real GW39 points to the user-assigned GW for planning purposes.
   const adjustedPlayersData = useMemo(() => {
     if (!allPlayersData) return allPlayersData;
-    if (fixtureMode === 'base' || tbcTeamScaleMap.size === 0) return allPlayersData;
+    if (fixtureMode === 'base') return allPlayersData;
 
-    // Read assignments synchronously from localStorage so there's no stale-state window
-    // when the user switches between fixture modes.
+    // Build fixtureId → teamShort map from raw fixturesDataEarly (TBC fixtures have event=null)
+    const fixtureIdByTeam = new Map<string, number>();
+    if (fixturesDataEarly && bootstrapData?.teams) {
+      (fixturesDataEarly as any[]).forEach(f => {
+        if (f.event !== null && f.event !== undefined) return;
+        const home = (bootstrapData.teams as any[]).find(t => t.id === f.team_h);
+        const away = (bootstrapData.teams as any[]).find(t => t.id === f.team_a);
+        if (home) fixtureIdByTeam.set(home.short_name, f.id);
+        if (away) fixtureIdByTeam.set(away.short_name, f.id);
+      });
+    }
+    if (fixtureIdByTeam.size === 0) return allPlayersData;
+
     const lsKey = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
     let assignments: Record<number, number> = {};
     try { assignments = JSON.parse(localStorage.getItem(lsKey) || '{}'); } catch { /* use empty */ }
 
     return allPlayersData.map(player => {
-      // Look up team short name via bootstrap
-      const teamShort = bootstrapData?.teams.find(t => t.name === player.team || t.short_name === player.team)?.short_name;
+      const teamShort = (bootstrapData?.teams as any[])?.find(t => t.name === player.team || t.short_name === player.team)?.short_name;
       if (!teamShort) return player;
-      const tbcEntry = tbcTeamScaleMap.get(teamShort);
-      if (!tbcEntry) return player;
 
-      // Determine which GW the TBC fixture is assigned to.
-      // Expert mode defaults to GW36 when no explicit assignment is set (consistent with other pages).
-      const assignedGW = fixtureMode === 'expert'
-        ? (assignments[tbcEntry.fixtureId] || 36)
-        : assignments[tbcEntry.fixtureId];
-      if (!assignedGW || !nextGameweeks.includes(assignedGW)) return player;
+      const gw39Points = player.gameweekProjections?.['39'] || 0;
+      if (gw39Points === 0) return player;
 
-      // Compute TBC points using component-specific scaling (matching Player Total Points page).
-      // Only goals/assists scale with the goal ratio; bonus, minutes, defensive contributions
-      // stay at their per-GW average. CS/saves/goals-conceded scale with opponent goal expectations.
-      const playingGws = nextGameweeks.filter(gw => (player.gameweekProjections[gw.toString()] || 0) > 0);
-      // Exclude DGW entries so the per-fixture average isn't inflated by double-game weeks
-      const singleFixGws = playingGws.filter(gw => ((player as any).fixtureDetails?.[gw.toString()] || []).length <= 1);
-      const gwsForAvg = singleFixGws.length > 0 ? singleFixGws : playingGws;
-      const n = gwsForAvg.length || 1;
-      const goalsScale = tbcEntry.goalsScale;
-      const csScale = 1.35 / Math.max(tbcEntry.oppGoalsScale, 0.1);
-      const gcSavesScale = tbcEntry.oppGoalsScale / 1.35;
-      const compKeys: Array<[string, number]> = [
-        ['pointsFromGoals', goalsScale],
-        ['pointsFromAssists', goalsScale],
-        ['pointsFromCleanSheets', csScale],
-        ['pointsFromDefensiveContributions', 1],
-        ['pointsFromMinutes', 1],
-        ['pointsFromBonus', 1],
-        ['pointsFromSaves', gcSavesScale],
-        ['pointsFromGoalsConceded', gcSavesScale],
-        ['pointsFromYellowCards', 1],
-        ['pointsFromRedCards', 1],
-      ];
-      let tbcPoints = 0;
-      if ((player as any).pointsFromGoals) {
-        // Use component breakdown when available (accurate scaling)
-        for (const [key, compScale] of compKeys) {
-          const compMap = (player as any)[key] as { [k: string]: number } | undefined;
-          if (!compMap) continue;
-          const avg = gwsForAvg.reduce((s, gw) => s + (compMap[gw.toString()] || 0), 0) / n;
-          tbcPoints += avg * compScale;
-        }
+      const fixtureId = fixtureIdByTeam.get(teamShort);
+      let assignedGW: number;
+      if (fixtureMode === 'expert') {
+        assignedGW = (fixtureId ? assignments[fixtureId] : undefined) || 36;
       } else {
-        // Fallback: uniform scale on total points (less accurate but safe)
-        const sumPoints = gwsForAvg.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
-        tbcPoints = (sumPoints / n) * goalsScale;
+        if (!fixtureId) return player;
+        const raw = assignments[fixtureId];
+        if (!raw || !nextGameweeks.includes(raw)) return player;
+        assignedGW = raw;
       }
+
+      if (!nextGameweeks.includes(assignedGW)) return player;
 
       const gwKey = assignedGW.toString();
       const originalGWPoints = player.gameweekProjections[gwKey] || 0;
-      const newGameweekProjections = { ...player.gameweekProjections, [gwKey]: originalGWPoints + tbcPoints };
+      const newGameweekProjections = {
+        ...player.gameweekProjections,
+        '39': 0,
+        [gwKey]: originalGWPoints + gw39Points,
+      };
       const newTotal = nextGameweeks.reduce((sum, gw) => sum + (newGameweekProjections[gw.toString()] || 0), 0);
       return { ...player, gameweekProjections: newGameweekProjections, totalExpectedPoints: newTotal };
     });
-  }, [allPlayersData, fixtureMode, tbcTeamScaleMap, assignmentVersion, nextGameweeks, bootstrapData]);
+  }, [allPlayersData, fixtureMode, assignmentVersion, nextGameweeks, bootstrapData, fixturesDataEarly]);
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {

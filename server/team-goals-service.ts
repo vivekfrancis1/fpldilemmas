@@ -119,15 +119,22 @@ export class TeamGoalsService {
     }
     
     const bootstrapData = await bootstrapResponse.json();
-    const fixturesData = await fixturesResponse.json();
+    const rawFixturesData = await fixturesResponse.json();
+
+    // Treat TBC fixtures (event: null) as GW39 so they flow through the standard pipeline.
+    // This means the projection model (historical season data) is applied identically to the
+    // TBC fixture as it is to GW33-38 — no frontend approximations needed.
+    const fixturesData = rawFixturesData.map((f: any) =>
+      f.event === null || f.event === undefined ? { ...f, event: 39 } : f
+    );
     
     // Use hardcoded teams for better performance
     const teams = PREMIER_LEAGUE_TEAMS;
     const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
     
-    // Determine gameweek range
+    // Determine gameweek range — extend upper bound to 39 to include the TBC fixture (GW39)
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);
-    const calculatedEndGameweek = endGameweek || Math.min(currentGameweek + 6, 38);
+    const calculatedEndGameweek = endGameweek || Math.min(currentGameweek + 6, 39);
     
     // Use centralized team service for betting data
     const teamService = await createTeamService();
@@ -138,7 +145,7 @@ export class TeamGoalsService {
     console.log(`🎯 Calculating team goals for GW${calculatedStartGameweek}-${calculatedEndGameweek}, current GW: ${currentGameweek}`);
     
     const teamProjections: TeamGoalProjection[] = await Promise.all(teams.map(async (team: any) => {
-      // Get fixtures for this team across the specified gameweek range
+      // Get fixtures for this team across the specified gameweek range (includes GW39 = TBC)
       const allFixtures = fixturesData
         .filter((f: any) => 
           (f.team_h === team.id || f.team_a === team.id) && 

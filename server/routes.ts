@@ -17576,7 +17576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate next 12 gameweeks range
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks
+      const endGameweek = Math.min(startGameweek + 11, 39); // Next 12 gameweeks (39 = TBC fixture)
       
       console.log(`📊 Current GW: ${currentGameweek}, serving next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
