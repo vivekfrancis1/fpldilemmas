@@ -1589,7 +1589,41 @@ export default function PlayerTotalPoints() {
         const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
         if (fixtureId === undefined) return player;
         const raw = tbcAssignments[fixtureId];
-        if (raw === undefined || raw === null || raw < startGW || raw > endGW) return player;
+        if (raw === undefined || raw === null || raw < startGW || raw > endGW) {
+          // TBC not assigned to a GW within the display range — zero out GW39 so it
+          // doesn't silently inflate the total without a visible GW39 column.
+          const componentKeys = [
+            'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+            'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
+            'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+          ];
+          const compTotalKeys: Record<string, string> = {
+            pointsFromGoals: 'totalPointsFromGoals', pointsFromAssists: 'totalPointsFromAssists',
+            pointsFromCleanSheets: 'totalPointsFromCleanSheets', pointsFromDefensiveContributions: 'totalPointsFromDefensiveContributions',
+            pointsFromMinutes: 'totalPointsFromMinutes', pointsFromBonus: 'totalPointsFromBonus',
+            pointsFromSaves: 'totalPointsFromSaves', pointsFromGoalsConceded: 'totalPointsFromGoalsConceded',
+            pointsFromYellowCards: 'totalPointsFromYellowCards', pointsFromRedCards: 'totalPointsFromRedCards',
+          };
+          const updatedComponents: Record<string, any> = {};
+          componentKeys.forEach(key => {
+            const compMap = (player as any)[key] as Record<string, number> | undefined;
+            if (!compMap) return;
+            const gw39Val = compMap['39'] || 0;
+            if (gw39Val === 0) return;
+            updatedComponents[key] = { ...compMap, '39': 0 };
+            const totalKey = compTotalKeys[key];
+            if (totalKey) updatedComponents[totalKey] = Math.max(0, ((player as any)[totalKey] || 0) - gw39Val);
+          });
+          const numGWsVisible = Object.keys(player.gameweekProjections || {}).filter(k => k !== '39').length || 1;
+          const newTotal = Math.max(0, (player.totalExpectedPoints || 0) - gw39Points);
+          return {
+            ...player,
+            gameweekProjections: { ...player.gameweekProjections, '39': 0 },
+            totalExpectedPoints: newTotal,
+            averagePerGameweek: newTotal / numGWsVisible,
+            ...updatedComponents,
+          };
+        }
         assignedGW = raw;
       }
 
