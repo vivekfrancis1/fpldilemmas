@@ -709,7 +709,7 @@ export default function PlayerGoalsScoredProjections() {
         </TabsList>
       </Tabs>
 
-      {viewMode === "future" && tbcGoalData && tbcGoalData.length > 0 && (
+      {viewMode === "future" && tbcTeamInfoMap.size > 0 && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
