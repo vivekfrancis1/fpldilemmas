@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,8 @@ import {
   Sparkles,
   Clock,
   Wallet,
-  Zap
+  Zap,
+  X
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
@@ -338,6 +340,9 @@ export default function MyDashboard() {
   const [selectedPlayerForProjection, setSelectedPlayerForProjection] = useState<any | null>(null);
   const [showProjectionBreakdown, setShowProjectionBreakdown] = useState(false);
   const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
+
+  // Chip simulation state for GW Projections tab
+  const [dashboardChip, setDashboardChip] = useState<string | null>(null);
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -830,7 +835,19 @@ export default function MyDashboard() {
     if (nextTeamData?.active_chip) {
       return nextTeamData.active_chip.toLowerCase();
     }
-    return null;
+    // Fall back to manually selected chip simulation
+    return dashboardChip;
+  };
+
+  // Returns chips still available (not yet used in history)
+  const getRemainingChipsForDashboard = (): string[] => {
+    const limits: Record<string, number> = { wildcard: 2, '3xc': 2, bboost: 2, freehit: 2 };
+    const used: Record<string, number> = {};
+    (historyData?.chips || []).forEach((c: any) => {
+      const key = c.name.toLowerCase();
+      used[key] = (used[key] || 0) + 1;
+    });
+    return Object.keys(limits).filter(chip => (used[chip] || 0) < limits[chip]);
   };
 
   // Helper to check if unlimited transfers are active
@@ -2198,12 +2215,40 @@ export default function MyDashboard() {
                     </AlertDescription>
                   </Alert>
                   
+                  {/* Chip simulator for non-connected users */}
+                  {isOwnTeam && (
+                    <div className="mb-4 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Simulate chip:</span>
+                      <Select
+                        value={dashboardChip || "none"}
+                        onValueChange={(val) => setDashboardChip(val === "none" ? null : val)}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-44">
+                          <SelectValue placeholder="No chip" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No chip</SelectItem>
+                          {getRemainingChipsForDashboard().map(chip => (
+                            <SelectItem key={chip} value={chip}>
+                              {getChipDisplayName(chip)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {dashboardChip && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDashboardChip(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
                   {(() => {
                     const nextGW = getNextGameweekDashboard();
-                    const activeChipVal = null;
+                    const activeChipVal = dashboardChip;
                     const normalizedPicks = teamData.picks.map(pick => ({
                       ...pick,
-                      multiplier: pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0)
+                      multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
                     }));
                     const activePicks = optimisedPicks || normalizedPicks;
                     const starting11 = activePicks.filter(pick => pick.position <= 11);
@@ -2424,6 +2469,34 @@ export default function MyDashboard() {
                           </div>
                         </AlertDescription>
                       </Alert>
+                    )}
+
+                    {/* Chip simulator — only show when no chip is already active from FPL */}
+                    {isOwnTeam && !nextTeamData?.active_chip && (
+                      <div className="mb-4 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Simulate chip:</span>
+                        <Select
+                          value={dashboardChip || "none"}
+                          onValueChange={(val) => setDashboardChip(val === "none" ? null : val)}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-44">
+                            <SelectValue placeholder="No chip" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No chip</SelectItem>
+                            {getRemainingChipsForDashboard().map(chip => (
+                              <SelectItem key={chip} value={chip}>
+                                {getChipDisplayName(chip)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {dashboardChip && (
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDashboardChip(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     )}
 
                     {(() => {
