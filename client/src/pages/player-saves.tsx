@@ -804,7 +804,7 @@ export default function PlayerSaves() {
                         ))}
                         {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamSavesMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= (startGameweek ?? 0) && a <= (endGameweek ?? 38); })) && (
                           <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
-                            GW TBC
+                            GW39 (TBC)
                           </th>
                         )}
                         <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
@@ -926,7 +926,7 @@ export default function PlayerSaves() {
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
                                       <div className="flex items-center gap-1.5 mb-2">
-                                        <span className="text-xs font-semibold">GW TBC</span>
+                                        <span className="text-xs font-semibold">GW39 (TBC)</span>
                                         <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
                                       </div>
                                       <div className="flex justify-between items-center py-1">

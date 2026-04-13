@@ -458,7 +458,7 @@ export default function ProjectedStandings() {
             <CardHeader className="bg-amber-50/60 border-b border-amber-200 py-3">
               <CardTitle className="flex items-center gap-2 text-base text-amber-800">
                 <Calendar className="h-4 w-4" />
-                GW TBC Fixtures — Unscheduled
+                GW39 (TBC) Fixtures — Unscheduled
                 <span className="text-xs font-normal text-amber-600 ml-1">FPL Model Projections</span>
               </CardTitle>
             </CardHeader>

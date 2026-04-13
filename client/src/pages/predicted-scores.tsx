@@ -285,7 +285,7 @@ export default function PredictedScores() {
                 </Badge>
                 {filteredTBCMatches.length > 0 && (
                   <Badge className="bg-amber-100 text-amber-700 border border-amber-300 ml-1 text-xs">
-                    {filteredTBCMatches.length} GW TBC
+                    {filteredTBCMatches.length} GW39 (TBC)
                   </Badge>
                 )}
               </CardTitle>
@@ -391,7 +391,7 @@ export default function PredictedScores() {
                       <>
                         <tr className="bg-amber-50/40 border-t-2 border-amber-200">
                           <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-amber-700 uppercase tracking-wider">
-                            {fixtureMode === 'expert' ? 'GW 36 — Expert Assigned Fixtures (FPL Model)' : fixtureMode === 'custom' && tbcData?.[0] && tbcAssignments[tbcData[0].fixtureId] ? `GW ${tbcAssignments[tbcData[0].fixtureId]} — My Assigned Fixtures (FPL Model)` : 'GW TBC — Unscheduled Fixtures (FPL Model Projections)'}
+                            {fixtureMode === 'expert' ? 'GW 36 — Expert Assigned Fixtures (FPL Model)' : fixtureMode === 'custom' && tbcData?.[0] && tbcAssignments[tbcData[0].fixtureId] ? `GW ${tbcAssignments[tbcData[0].fixtureId]} — My Assigned Fixtures (FPL Model)` : 'GW39 (TBC) — Unscheduled Fixtures (FPL Model Projections)'}
                           </td>
                         </tr>
                         {filteredTBCMatches.map((f) => {
@@ -438,7 +438,7 @@ export default function PredictedScores() {
                               </td>
                               <td className="px-4 py-4 text-center">
                                 <Badge className="bg-amber-100 text-amber-700 border border-amber-300 text-xs">
-                                  {gwLabel === 'TBC' ? 'GW TBC' : gwLabel}
+                                  {gwLabel === 'TBC' ? 'GW39 (TBC)' : gwLabel}
                                 </Badge>
                               </td>
                             </tr>

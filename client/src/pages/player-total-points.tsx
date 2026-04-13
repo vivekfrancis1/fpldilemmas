@@ -651,7 +651,7 @@ function TBCBreakdownTooltip({
       <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-amber-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3 flex items-center gap-2">
-            <span>GW TBC Points Breakdown</span>
+            <span>GW39 (TBC) Points Breakdown</span>
             <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
               TBC
             </span>
@@ -693,7 +693,7 @@ function TBCBreakdownTooltip({
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">GW TBC Points Total:</span>
+              <span className="text-gray-800">GW39 (TBC) Points Total:</span>
               <ValueCell
                 value={effectiveTotal}
                 format="points"
@@ -914,7 +914,7 @@ function createPlayerTotalPointsColumns(
     }),
     ...(tbcTeamShortNames && tbcTeamShortNames.size > 0 && !isPastMode ? [{
       key: 'tbc',
-      header: 'GW TBC',
+      header: 'GW39 (TBC)',
       sortable: false,
       hideSortIcon: true,
       align: 'center' as const,

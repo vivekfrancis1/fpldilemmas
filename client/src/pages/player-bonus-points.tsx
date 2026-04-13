@@ -586,7 +586,7 @@ export default function PlayerBonusPoints() {
                         ))}
                         {fixtureMode !== 'expert' && tbcTeamBonusMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek; })) && (
                           <th className="text-center py-2 px-1 text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
-                            GW TBC
+                            GW39 (TBC)
                           </th>
                         )}
                         <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
@@ -699,7 +699,7 @@ export default function PlayerBonusPoints() {
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
                                       <div className="flex items-center gap-1.5 mb-2">
-                                        <span className="text-xs font-semibold">GW TBC</span>
+                                        <span className="text-xs font-semibold">GW39 (TBC)</span>
                                         <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-300 rounded px-1">FPL Model</span>
                                       </div>
                                       <div className="flex justify-between items-center py-1">
