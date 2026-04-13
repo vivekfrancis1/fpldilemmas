@@ -1166,13 +1166,13 @@ export default function Fixtures() {
                             className="flex items-center justify-center hover:text-blue-600 transition-colors mx-auto"
                             data-testid={`sort-gw-${gw}`}
                           >
-                            {gw}
+                            GW{gw}
                           </button>
                         </th>
                       ))}
                       {hasTBCFixtures && (
                         <th className="px-0.5 py-1 text-center font-semibold min-w-[40px] sm:min-w-[50px] md:min-w-[60px] bg-amber-50 border-l-2 border-amber-300">
-                          <span className="text-amber-700 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap">TBC</span>
+                          <span className="text-amber-700 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap">GW39 (TBC)</span>
                         </th>
                       )}
                     </tr>
