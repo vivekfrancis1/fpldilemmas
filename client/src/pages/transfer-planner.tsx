@@ -5874,10 +5874,14 @@ export default function TransferPlanner() {
             </span>
             {' '}- Synced from your FPL account. 
             {(teamData.active_chip === 'wildcard' || teamData.active_chip === 'freehit') && (
-              <span className="text-purple-600 dark:text-purple-300"> Unlimited transfers available for GW {(() => {
-                const nextEvent = bootstrapData?.events.find(e => e.is_next);
-                return nextEvent?.id || selectedGameweek;
-              })()}!</span>
+              <span className="text-purple-600 dark:text-purple-300">{(() => {
+                const currentEvent = bootstrapData?.events.find(e => e.is_current);
+                const chipGW = currentEvent?.id || selectedGameweek;
+                const isFinished = currentEvent?.finished ?? false;
+                return isFinished
+                  ? ` Unlimited transfers were available for GW ${chipGW}.`
+                  : ` Unlimited transfers available for GW ${chipGW}!`;
+              })()}</span>
             )}
           </AlertDescription>
         </Alert>
