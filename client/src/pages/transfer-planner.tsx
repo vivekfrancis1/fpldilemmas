@@ -286,12 +286,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const { data: tbcGoalData } = useQuery<Array<{ fixtureId: number; homeTeamShort: string; awayTeamShort: string; homeGoals: number; awayGoals: number }>>({
     queryKey: ["/api/tbc-goal-projections"],
-    enabled: fixtureMode !== 'base',
+    staleTime: 30 * 60 * 1000,
   });
 
   const { data: teamGoalProjectionsData } = useQuery<Array<{ teamShort: string; averageGoalsPerGame: number }>>({
     queryKey: ["/api/team-goal-projections"],
-    enabled: fixtureMode !== 'base',
+    staleTime: 30 * 60 * 1000,
   });
 
   // Apply manual availability overrides to bootstrap data
