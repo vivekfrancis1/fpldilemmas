@@ -214,12 +214,12 @@ export default function TeamGoalProjections() {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
-    // Append GW39 for the TBC fixture if not already present
-    if (hasTBCFixture && !gws.includes(39)) {
+    // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
+    if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
 
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
@@ -232,11 +232,20 @@ export default function TeamGoalProjections() {
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
-      // Extend default end to GW39 when a TBC fixture exists
-      setEndGameweek(hasTBCFixture ? "39" : newRange.endGameweek);
+      // Extend default end to GW39 only in base mode (expert/custom absorb TBC into a regular GW)
+      setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
       setExcludedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
+
+  // When switching away from base mode, snap endGameweek back from GW39 to the regular range
+  useEffect(() => {
+    if (fixtureMode !== 'base' && endGameweek === "39" && bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      setEndGameweek(newRange.endGameweek);
+      setExcludedGameweeks(prev => { const s = new Set(prev); s.delete(39); return s; });
+    }
+  }, [fixtureMode]);
 
   // State for showing opponent info
   const [showOpponent, setShowOpponent] = useState(false);
