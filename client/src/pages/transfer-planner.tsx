@@ -402,7 +402,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     return map;
   }, [fixtureMode, tbcGoalData, teamGoalProjectionsData]);
 
-  // Build adjusted player data with TBC fixture applied to the assigned GW
+  // Build adjusted player data with TBC fixture applied to the assigned GW.
+  // TBC is treated as GW39 in base mode (excluded from GW33-38).
+  // In My/Expert mode, when assigned to a GW, TBC points are added to that GW.
+  // Uses player's average per-playing-GW contribution (not the specific GW's points)
+  // so blank GW assignments are handled correctly.
   const adjustedPlayersData = useMemo(() => {
     if (!allPlayersData) return allPlayersData;
     if (fixtureMode === 'base' || tbcTeamScaleMap.size === 0) return allPlayersData;
@@ -414,15 +418,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       const tbcEntry = tbcTeamScaleMap.get(teamShort);
       if (!tbcEntry) return player;
 
-      // Determine which GW the TBC fixture is assigned to (tbcAssignments already reflects the active mode)
+      // Determine which GW the TBC fixture is assigned to (tbcAssignments reflects the active mode)
       const assignedGW = tbcAssignments[tbcEntry.fixtureId];
-      if (!assignedGW) return player;
+      if (!assignedGW || !nextGameweeks.includes(assignedGW)) return player;
+
+      // Compute TBC points using the player's average per-playing-GW contribution.
+      // This correctly handles blank GWs (originalPoints=0) — instead of scaling from 0,
+      // we use the average across all non-blank GWs, scaled by the TBC fixture's goal ratio.
+      const playingGws = nextGameweeks.filter(gw => (player.gameweekProjections[gw.toString()] || 0) > 0);
+      const n = playingGws.length || 1;
+      const sumPoints = nextGameweeks.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
+      const avgGwPoints = sumPoints / n;
+      const tbcPoints = avgGwPoints * tbcEntry.scale;
 
       const gwKey = assignedGW.toString();
-      const originalPoints = player.gameweekProjections[gwKey] || 0;
-      // Add TBC fixture points on top of the existing GW points
-      const tbcPoints = originalPoints * tbcEntry.scale;
-      const newGameweekProjections = { ...player.gameweekProjections, [gwKey]: originalPoints + tbcPoints };
+      const originalGWPoints = player.gameweekProjections[gwKey] || 0;
+      const newGameweekProjections = { ...player.gameweekProjections, [gwKey]: originalGWPoints + tbcPoints };
       const newTotal = nextGameweeks.reduce((sum, gw) => sum + (newGameweekProjections[gw.toString()] || 0), 0);
       return { ...player, gameweekProjections: newGameweekProjections, totalExpectedPoints: newTotal };
     });
