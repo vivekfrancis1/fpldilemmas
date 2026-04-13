@@ -47,24 +47,40 @@ export default function TeamAssistProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const hasTBCFixture = useMemo(() => {
+    if (!Array.isArray(fixturesData)) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
+  }, [fixturesData]);
+
   // Calculate dynamic gameweek ranges based on current gameweek
   const { defaultStart, defaultEnd } = useMemo(() => {
     const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
     return {
       defaultStart: range.startGameweek || "6",
-      defaultEnd: range.endGameweek || "13"
+      defaultEnd: hasTBCFixture && fixtureMode === 'base' ? "39" : (range.endGameweek || "13")
     };
-  }, [bootstrapData]);
+  }, [bootstrapData, hasTBCFixture, fixtureMode]);
   
-  const availableGameweeks = useMemo(() => 
-    getNextGameweeksForDropdown(bootstrapData?.events || [], 12), [bootstrapData]
-  );
+  const availableGameweeks = useMemo(() => {
+    const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], 12);
+    // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
+    if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
+      return [...gws, 39];
+    }
+    return gws;
+  }, [bootstrapData, hasTBCFixture, fixtureMode]);
 
   const [startGameweek, setStartGameweek] = useState<string>("6");
   const [endGameweek, setEndGameweek] = useState<string>("13");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
@@ -82,6 +98,14 @@ export default function TeamAssistProjections() {
     if (defaultStart && defaultStart !== startGameweek) setStartGameweek(defaultStart);
     if (defaultEnd && defaultEnd !== endGameweek) setEndGameweek(defaultEnd);
   }, [defaultStart, defaultEnd]);
+
+  // When switching away from base mode, snap endGameweek back from GW39
+  useEffect(() => {
+    if (fixtureMode !== 'base' && endGameweek === "39" && bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      setEndGameweek(newRange.endGameweek);
+    }
+  }, [fixtureMode]);
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
     queryKey: ["/api/team-assist-projections"],
@@ -293,13 +317,13 @@ export default function TeamAssistProjections() {
                       From GW
                     </label>
                     <Select value={startGameweek} onValueChange={setStartGameweek}>
-                      <SelectTrigger className="h-8 text-xs" data-testid="select-start-gameweek">
+                      <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : ''}`} data-testid="select-start-gameweek">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {availableGameweeks.map((gw) => (
                           <SelectItem key={gw} value={gw.toString()}>
-                            {gw}
+                            {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -311,13 +335,13 @@ export default function TeamAssistProjections() {
                       To GW
                     </label>
                     <Select value={endGameweek} onValueChange={setEndGameweek}>
-                      <SelectTrigger className="h-8 text-xs" data-testid="select-end-gameweek">
+                      <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : ''}`} data-testid="select-end-gameweek">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {availableGameweeks.map((gw) => (
                           <SelectItem key={gw} value={gw.toString()}>
-                            {gw}
+                            {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -381,7 +405,7 @@ export default function TeamAssistProjections() {
                         </th>
                       );
                     })}
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                       <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
                         GW39 (TBC)
                       </th>
@@ -458,7 +482,7 @@ export default function TeamAssistProjections() {
                         );
                       })}
                       
-                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
@@ -540,7 +564,7 @@ export default function TeamAssistProjections() {
                       );
                     })}
                     
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                       const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
                         <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
