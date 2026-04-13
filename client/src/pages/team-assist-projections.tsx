@@ -405,7 +405,7 @@ export default function TeamAssistProjections() {
                         </th>
                       );
                     })}
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                       <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
                         GW39 (TBC)
                       </th>
@@ -482,7 +482,7 @@ export default function TeamAssistProjections() {
                         );
                       })}
                       
-                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
@@ -564,7 +564,7 @@ export default function TeamAssistProjections() {
                       );
                     })}
                     
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                       const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
                         <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">

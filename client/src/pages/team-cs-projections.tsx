@@ -516,7 +516,7 @@ export default function TeamCSProjections() {
                           </div>
                         </th>
                       ))}
-                      {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39)) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                      {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
                           GW39 (TBC)
                         </th>
@@ -618,7 +618,7 @@ export default function TeamCSProjections() {
                           );
                         })}
 
-                        {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39)) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                        {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                           const tbcEntry = tbcCSMap.get(team.teamShort);
                           if (!tbcEntry) {
                             return (
