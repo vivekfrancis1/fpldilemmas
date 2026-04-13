@@ -4503,12 +4503,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const singleGWProjectionsByPlayerId = new Map(singleGWProjectionsData.map((p: any) => [p.playerId, p]));
         
-        // Filter cached projections for the next 4 gameweeks (or remaining gameweeks if less than 4)
-        const fourGWEnd = Math.min(targetGW + 3, planningEnd);
+        // Filter cached projections for the next 6 gameweeks (or remaining gameweeks if less than 6)
+        const fourGWEnd = Math.min(targetGW + 5, planningEnd);
         const fourGWProjectionsData = allCachedProjections.map((player: any) => {
           const originalProjections = player.gameweekProjections || {};
           
-          // Calculate total points for next 4 gameweeks
+          // Calculate total points for next 6 gameweeks
           let totalPoints = 0;
           for (let gw = targetGW; gw <= fourGWEnd; gw++) {
             const gwKey = normalizeGameweekKey(gw);
@@ -4630,11 +4630,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               5: 0.1
             };
             const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.0;
-            const fourGameweeks = Math.min(4, fourGWEnd - targetGW + 1);
+            const fourGameweeks = Math.min(6, fourGWEnd - targetGW + 1);
             const minPointsGainFourGW = fourGameweeks * thresholdMultiplier;
             
             // Determine if this transfer meets the normal threshold
-            // Only check next 4 gameweeks points gain
+            // Only check next 6 gameweeks points gain
             const meetsNormalThreshold = 
               fourGWPointsGain >= minPointsGainFourGW;
             
@@ -5012,7 +5012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
-          targetRange: `next 4 GWs`,
+          targetRange: `next 6 GWs`,
           freeTransfersAvailable: freeTransfersForGW,
           bankBefore: runningBank,
           recommendations: filteredRecommendations,

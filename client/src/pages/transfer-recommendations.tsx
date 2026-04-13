@@ -1202,7 +1202,7 @@ export default function TransferRecommendations() {
                                                   </div>
                                                   <h3 className="text-base font-bold text-purple-800">Best {comboToShow.length}-Transfer Combo</h3>
                                                   <Badge className="bg-purple-100 text-purple-800 border-purple-300 ml-auto">
-                                                    +{totalGain.toFixed(1)} pts (4 GWs)
+                                                    +{totalGain.toFixed(1)} pts (6 GWs)
                                                   </Badge>
                                                 </div>
                                                 <div className="space-y-2">
@@ -1312,7 +1312,7 @@ export default function TransferRecommendations() {
                                         </div>
                                         <div className={`grid grid-cols-3 sm:grid-cols-3 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-green-300' : 'border-orange-200'}`}>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">Next 4 GWs</div>
+                                            <div className="text-xs text-gray-500">Next 6 GWs</div>
                                             <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${index}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
