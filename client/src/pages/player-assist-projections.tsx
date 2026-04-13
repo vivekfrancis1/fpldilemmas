@@ -164,6 +164,19 @@ export default function PlayerAssistProjections() {
     });
   };
 
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || viewMode !== "future") return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData, viewMode]);
+
   // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXa") {
@@ -175,8 +188,10 @@ export default function PlayerAssistProjections() {
     if (!bootstrapData?.events) {
       return [];
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
+    return gws;
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap]);
 
   // Initialize gameweeks when bootstrap data loads
   useEffect(() => {
@@ -331,19 +346,6 @@ export default function PlayerAssistProjections() {
     return map;
   }, [bootstrapData?.teams]);
 
-  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
-  const tbcTeamInfoMap = useMemo(() => {
-    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
-    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || viewMode !== "future") return map;
-    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
-      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
-      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
-      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
-      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
-    });
-    return map;
-  }, [fixturesData, bootstrapData, viewMode]);
-
   // TBC assignments from localStorage (My Fixtures tab)
   const tbcAssignments = useMemo<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
@@ -376,11 +378,17 @@ export default function PlayerAssistProjections() {
     });
   }, [displayData, viewMode, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
-  // Generate dynamic gameweek columns based on selected range (filtered by exclusions)
+  // Whether the floating GW39 (TBC) column should be visible
+  const showTBCColumn = useMemo(() => (
+    endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
+  ), [endGameweek, excludedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
+
+  // Generate dynamic gameweek columns based on selected range (filtered by exclusions, capped at GW38)
   const dynamicGameweekColumns = useMemo(() => {
-    // Safe to use startGameweek and endGameweek (never null)
+    const cappedEnd = Math.min(endGameweek, 38);
     const columns = [];
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    for (let gw = startGameweek; gw <= cappedEnd; gw++) {
       if (!excludedGameweeks.has(gw)) {
         columns.push(gw);
       }
@@ -492,13 +500,17 @@ export default function PlayerAssistProjections() {
           bValue = b.totalProjectedAssists;
           break;
         case 'rangeTotal': {
-          aValue = getFilteredTotalForSort(a) + (Number(a.gameweekProjections?.['39']) || 0);
-          bValue = getFilteredTotalForSort(b) + (Number(b.gameweekProjections?.['39']) || 0);
+          const aTBC = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
+          const bTBC = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
+          aValue = getFilteredTotalForSort(a) + aTBC;
+          bValue = getFilteredTotalForSort(b) + bTBC;
           break;
         }
         case 'rangePoints': {
-          aValue = (getFilteredTotalForSort(a) + (Number(a.gameweekProjections?.['39']) || 0)) * 3;
-          bValue = (getFilteredTotalForSort(b) + (Number(b.gameweekProjections?.['39']) || 0)) * 3;
+          const aTBC2 = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
+          const bTBC2 = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
+          aValue = (getFilteredTotalForSort(a) + aTBC2) * 3;
+          bValue = (getFilteredTotalForSort(b) + bTBC2) * 3;
           break;
         }
         case 'assistShare':
@@ -534,7 +546,7 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [resolvedDisplayData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode]);
+  }, [resolvedDisplayData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, showTBCColumn]);
 
   // Calculate dynamic totals based on selected gameweek range (excluding excluded gameweeks)
   const getFilteredTotal = (player: PlayerAssistProjection, useAvailability: boolean = false) => {
@@ -686,7 +698,7 @@ export default function PlayerAssistProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -700,7 +712,7 @@ export default function PlayerAssistProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -749,11 +761,6 @@ export default function PlayerAssistProjections() {
                     data-testid="button-toggle-availability">
                     {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
                   </button>
-                  <button onClick={() => setShowOpponent(!showOpponent)}
-                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                    data-testid="button-toggle-opponent">
-                    {showOpponent ? 'Hide Opp' : 'Show Opp'}
-                  </button>
                   {excludedGameweeks.size > 0 && (
                     <button onClick={clearExclusions}
                       className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700"
@@ -763,7 +770,7 @@ export default function PlayerAssistProjections() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                  {Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => {
                     const gwNumber = startGameweek + i;
                     const isExcluded = excludedGameweeks.has(gwNumber);
                     return (
@@ -774,6 +781,12 @@ export default function PlayerAssistProjections() {
                       </button>
                     );
                   })}
+                  {viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
+                    <button onClick={() => toggleGameweekExclusion(39)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}>
+                      GW39 (TBC)
+                    </button>
+                  )}
                 </div>
               </TabsContent>
 
@@ -854,7 +867,7 @@ export default function PlayerAssistProjections() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 flex-wrap">
                       <Zap className="h-5 w-5 text-green-600" />
                       {viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW{startGameweek}-GW{endGameweek}
                       {excludedGameweeks.size > 0 && (
@@ -862,6 +875,11 @@ export default function PlayerAssistProjections() {
                           {excludedGameweeks.size} excluded
                         </Badge>
                       )}
+                      <button onClick={() => setShowOpponent(!showOpponent)}
+                        className={`ml-auto inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                        data-testid="button-toggle-opponent">
+                        <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                      </button>
                     </CardTitle>
                     <Button
                       onClick={handleRefreshData}
@@ -890,11 +908,13 @@ export default function PlayerAssistProjections() {
                           {dynamicGameweekColumns.map((gw) => (
                             <th key={`assists-header-gw${gw}`} className="px-1 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider min-w-[40px] md:min-w-[50px]">
                               <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
-                                {gw} {getSortIcon(`gw${gw}`)}
+                                <span className="md:hidden">{gw}</span>
+                                <span className="hidden md:inline">GW{gw}</span>
+                                {getSortIcon(`gw${gw}`)}
                               </Button>
                             </th>
                           ))}
-                          {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (Number(p.gameweekProjections?.['39']) || 0) > 0) && (
+                          {showTBCColumn && (
                             <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                               GW39 (TBC)
                             </th>
@@ -1004,7 +1024,7 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
-                            {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (Number(p.gameweekProjections?.['39']) || 0) > 0) && (
+                            {showTBCColumn && (
                               <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
                                 {tbcAssistEntry && tbcAssists > 0 ? (
                                   <Popover>
@@ -1032,14 +1052,17 @@ export default function PlayerAssistProjections() {
                               </td>
                             )}
                             <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                              {hasAnyAdjustment ? (
-                                <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcAssists) : (adjustedTotal + tbcAssists).toFixed(1)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcAssists) : (originalTotal + tbcAssists).toFixed(1)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcAssists) : (adjustedTotal + tbcAssists).toFixed(1)}</span>
-                              )}
+                              {(() => {
+                                const tbcContrib = showTBCColumn ? tbcAssists : 0;
+                                return hasAnyAdjustment ? (
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(1)}</span>
+                                    <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcContrib) : (originalTotal + tbcContrib).toFixed(1)}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(1)}</span>
+                                );
+                              })()}
                             </td>
                           </tr>
                           );

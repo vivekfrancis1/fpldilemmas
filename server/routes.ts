@@ -16299,9 +16299,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Find fixture for this team in this gameweek to get opponent
+            // Find fixture for this team in this gameweek (handles GW39 TBC fixture where event=null)
             const fixture = fixturesData.find((f: any) => 
-              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+              (f.event === gw || (gw === 39 && (f.event === null || f.event === undefined))) &&
+              (f.team_h === player.team || f.team_a === player.team)
             );
             
             let opponentId = 1; // Default fallback

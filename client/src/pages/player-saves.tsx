@@ -95,28 +95,6 @@ export default function PlayerSaves() {
     enabled: viewMode === "past",
   });
 
-  // Get available gameweeks for dropdown based on view mode
-  const availableGameweeks = useMemo(() => {
-    if (viewMode === "past") {
-      const lastFinished = historyData?.lastFinishedGW || 24;
-      return Array.from({ length: lastFinished }, (_, i) => i + 1);
-    }
-    if (!bootstrapData?.events) {
-      return [];
-    }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12);
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
-
-  // Create teamName to short_name mapping
-  const teamNameToShort = useMemo(() => {
-    if (!bootstrapData?.teams) return new Map<string, string>();
-    const map = new Map<string, string>();
-    bootstrapData.teams.forEach((team: any) => {
-      map.set(team.name, team.short_name);
-    });
-    return map;
-  }, [bootstrapData?.teams]);
-
   // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
   const tbcTeamInfoMap = useMemo(() => {
     const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
@@ -129,6 +107,30 @@ export default function PlayerSaves() {
     });
     return map;
   }, [fixturesData, bootstrapData, viewMode]);
+
+  // Get available gameweeks for dropdown based on view mode
+  const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
+    if (!bootstrapData?.events) {
+      return [];
+    }
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
+    return gws;
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap]);
+
+  // Create teamName to short_name mapping
+  const teamNameToShort = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, string>();
+    const map = new Map<string, string>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, team.short_name);
+    });
+    return map;
+  }, [bootstrapData?.teams]);
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
@@ -372,10 +374,17 @@ export default function PlayerSaves() {
     setExcludedGameweeks(new Set());
   };
 
-  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks)
+  // Whether the floating GW39 (TBC) column should be visible
+  const showTBCColumn = useMemo(() => (
+    endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
+  ), [endGameweek, excludedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
+
+  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks, capped at GW38)
   const dynamicGameweekColumns = useMemo(() => {
+    const cappedEnd = Math.min(endGameweek, 38);
     const columns = [];
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    for (let gw = startGameweek; gw <= cappedEnd; gw++) {
       if (!excludedGameweeks.has(gw)) {
         columns.push(gw);
       }
@@ -443,8 +452,8 @@ export default function PlayerSaves() {
           bValue = b.teamName;
           break;
         case 'totalSaves': {
-          aValue = getAdjustedTotalForSort(a) + getUnabsorbedTBCSavesForPlayer(a);
-          bValue = getAdjustedTotalForSort(b) + getUnabsorbedTBCSavesForPlayer(b);
+          aValue = getAdjustedTotalForSort(a) + (showTBCColumn ? getUnabsorbedTBCSavesForPlayer(a) : 0);
+          bValue = getAdjustedTotalForSort(b) + (showTBCColumn ? getUnabsorbedTBCSavesForPlayer(b) : 0);
           break;
         }
         default:
@@ -471,7 +480,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [resolvedDisplayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, teamNameToShort]);
+  }, [resolvedDisplayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, teamNameToShort, showTBCColumn]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -600,7 +609,7 @@ export default function PlayerSaves() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -614,7 +623,7 @@ export default function PlayerSaves() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -658,12 +667,6 @@ export default function PlayerSaves() {
                   >
                     Avail: {applyAvailability ? 'ON' : 'OFF'}
                   </button>
-                  <button
-                    onClick={() => setShowOpponent(!showOpponent)}
-                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                  >
-                    <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-                  </button>
                   {excludedGameweeks.size > 0 && (
                     <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
                       <X className="h-2.5 w-2.5" />Clear
@@ -671,7 +674,7 @@ export default function PlayerSaves() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                  {Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => {
                     const gw = startGameweek + i;
                     const isExcluded = excludedGameweeks.has(gw);
                     return (
@@ -680,6 +683,11 @@ export default function PlayerSaves() {
                       >GW{gw}</button>
                     );
                   })}
+                  {viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
+                    <button onClick={() => toggleGameweekExclusion(39)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+                    >GW39 (TBC)</button>
+                  )}
                 </div>
               </TabsContent>
 
@@ -735,20 +743,30 @@ export default function PlayerSaves() {
         {filteredAndSortedData.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-blue-600" />
-                {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
-                {excludedGameweeks.size > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {excludedGameweeks.size} excluded
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {viewMode === "future" 
-                  ? "Projected number of saves for each goalkeeper based on opponent strength and team defensive quality"
-                  : "Actual saves recorded for each goalkeeper in past gameweeks"}
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                    {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
+                    {excludedGameweeks.size > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {excludedGameweeks.size} excluded
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {viewMode === "future"
+                      ? "Projected number of saves for each goalkeeper based on opponent strength and team defensive quality"
+                      : "Actual saves recorded for each goalkeeper in past gameweeks"}
+                  </CardDescription>
+                </div>
+                <button
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                >
+                  <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -770,7 +788,7 @@ export default function PlayerSaves() {
                             </Button>
                           </th>
                         ))}
-                        {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.saves?.['gw39'] || 0) > 0) && (
+                        {showTBCColumn && (
                           <th className="px-1 py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                             GW39 (TBC)
                           </th>
@@ -879,7 +897,7 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })}
-                          {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.saves?.['gw39'] || 0) > 0) && (() => {
+                          {showTBCColumn && (() => {
                             const teamShortKey = teamNameToShort.get(projection.teamName) || '';
                             const tbcSavesEntry = tbcTeamInfoMap.get(teamShortKey);
                             const tbcSavesVal = projection.saves?.['gw39'] || 0;
@@ -913,7 +931,7 @@ export default function PlayerSaves() {
                           })()}
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {(() => {
-                              const tbcVal2 = getUnabsorbedTBCSavesForPlayer(projection);
+                              const tbcVal2 = showTBCColumn ? getUnabsorbedTBCSavesForPlayer(projection) : 0;
                               return hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? (adjustedTotal + tbcVal2).toFixed(0) : (adjustedTotal + tbcVal2).toFixed(1)}</span>

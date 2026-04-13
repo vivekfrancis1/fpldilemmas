@@ -125,6 +125,25 @@ export default function PlayerDefensiveContributions() {
   // Dynamic gameweek range state - only set once bootstrap data is loaded
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   
+  // Fetch fixtures for opponent data and TBC detection
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || viewMode !== "future") return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData, viewMode]);
+
   // Update range when bootstrap data loads, currentGameweek becomes available, or viewMode changes
   useEffect(() => {
     if (viewMode === "past" && historyData?.lastFinishedGW) {
@@ -136,13 +155,14 @@ export default function PlayerDefensiveContributions() {
       setExcludedGameweeks(new Set());
     } else if (viewMode === "future" && nextGameweek && nextGameweek > 0) {
       const start = nextGameweek;
-      const end = Math.min(nextGameweek + 11, 38);
+      const maxEnd = tbcTeamInfoMap.size > 0 ? 39 : 38;
+      const end = Math.min(nextGameweek + 11, maxEnd);
       setGameweekRange({ start, end });
       setStartGameweek(start);
-      setEndGameweek(Math.min(start + 7, 38));
+      setEndGameweek(Math.min(start + 7, maxEnd));
       setExcludedGameweeks(new Set());
     }
-  }, [nextGameweek, viewMode, historyData?.lastFinishedGW]);
+  }, [nextGameweek, viewMode, historyData?.lastFinishedGW, tbcTeamInfoMap.size]);
 
   // Fetch defensive contribution projections using new formula-based endpoint with current season data
   // Only fetch when gameweekRange is valid (after bootstrap data loads) and in future mode
@@ -159,16 +179,12 @@ export default function PlayerDefensiveContributions() {
       const lastFinished = historyData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
-    // Future mode: next 12 gameweeks
+    // Future mode: next 12 gameweeks, extending to 39 if TBC fixture exists
     if (!nextGameweek) return Array.from({ length: 12 }, (_, i) => i + 1);
-    return Array.from({ length: 12 }, (_, i) => nextGameweek + i).filter(gw => gw <= 38);
-  }, [viewMode, historyData?.lastFinishedGW, nextGameweek]);
-
-  // Fetch fixtures for opponent data
-  const { data: fixturesData } = useQuery({
-    queryKey: ["/api/fixtures"],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+    const gws = Array.from({ length: 12 }, (_, i) => nextGameweek + i).filter(gw => gw <= 38);
+    if (tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
+    return gws;
+  }, [viewMode, historyData?.lastFinishedGW, nextGameweek, tbcTeamInfoMap]);
 
   // Team attacking tier multipliers (from TEAM_MULTIPLIERS.attack)
   const ATTACK_MULTIPLIERS: { [key: number]: number } = {
@@ -717,7 +733,7 @@ export default function PlayerDefensiveContributions() {
                 </SelectTrigger>
                 <SelectContent>
                   {availableGameweeks.map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -731,7 +747,7 @@ export default function PlayerDefensiveContributions() {
                 </SelectTrigger>
                 <SelectContent>
                   {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -775,11 +791,6 @@ export default function PlayerDefensiveContributions() {
                   data-testid="button-toggle-availability">
                   {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
                 </button>
-                <button onClick={() => setShowOpponent(!showOpponent)}
-                  className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                  data-testid="button-toggle-opponent">
-                  {showOpponent ? 'Hide Opp' : 'Show Opp'}
-                </button>
                 {excludedGameweeks.size > 0 && (
                   <button onClick={clearExclusions}
                     className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700"
@@ -789,7 +800,7 @@ export default function PlayerDefensiveContributions() {
                 )}
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                {gameweeks.map(gwNumber => {
+                {gameweeks.filter(gw => gw <= 38).map(gwNumber => {
                   const isExcluded = excludedGameweeks.has(gwNumber);
                   return (
                     <button key={gwNumber} onClick={() => toggleGameweekExclusion(gwNumber)}
@@ -799,6 +810,13 @@ export default function PlayerDefensiveContributions() {
                     </button>
                   );
                 })}
+                {tbcTeamInfoMap.size > 0 && endGameweek >= 39 && viewMode === 'future' && (
+                  <button onClick={() => toggleGameweekExclusion(39)}
+                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+                    data-testid="button-toggle-gw-39">
+                    GW39 (TBC)
+                  </button>
+                )}
               </div>
             </TabsContent>
 
@@ -870,17 +888,28 @@ export default function PlayerDefensiveContributions() {
       {/* Main Content */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
-            {excludedGameweeks.size > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {excludedGameweeks.size} excluded
-              </Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Fixture-aware projections with opponent difficulty indicators
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Fixture-aware projections with opponent difficulty indicators
+              </CardDescription>
+            </div>
+            <button
+              onClick={() => setShowOpponent(!showOpponent)}
+              className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+              data-testid="button-toggle-opponent"
+            >
+              {showOpponent ? 'Hide Opp' : 'Show Opp'}
+            </button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="w-full mt-4">
@@ -905,23 +934,32 @@ export default function PlayerDefensiveContributions() {
                       )}
                     </div>
                   </TableHead>
-                  {activeGameweeks.map(gw => (
-                    <TableHead 
-                      key={gw} 
-                      className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
-                      onClick={() => handleGameweekSort(gw)}
-                    >
-                      <div className="flex items-center justify-center gap-0.5">
-                        <span className="md:hidden">{gw}</span>
-                        <span className="hidden md:inline">GW{gw}</span>
-                        {gameweekSortColumn === gw && (
-                          <span className="text-xs">
-                            {gameweekSortOrder === "desc" ? "↓" : "↑"}
-                          </span>
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
+                  {activeGameweeks.map(gw => {
+                    const isTBC = gw === 39 && tbcTeamInfoMap.size > 0 && viewMode === 'future';
+                    return (
+                      <TableHead 
+                        key={gw} 
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors min-w-[40px] md:min-w-[50px] ${isTBC ? 'text-amber-700 bg-amber-50/60 border-l border-amber-300 hover:bg-amber-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                        onClick={() => handleGameweekSort(gw)}
+                      >
+                        <div className="flex items-center justify-center gap-0.5">
+                          {isTBC ? (
+                            <span>GW39 (TBC)</span>
+                          ) : (
+                            <>
+                              <span className="md:hidden">{gw}</span>
+                              <span className="hidden md:inline">GW{gw}</span>
+                            </>
+                          )}
+                          {gameweekSortColumn === gw && (
+                            <span className="text-xs">
+                              {gameweekSortOrder === "desc" ? "↓" : "↑"}
+                            </span>
+                          )}
+                        </div>
+                      </TableHead>
+                    );
+                  })}
                   <TableHead 
                     className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                     onClick={handleTotalSort}
@@ -981,10 +1019,11 @@ export default function PlayerDefensiveContributions() {
                       </div>
                     </TableCell>
                     {activeGameweeks.map((gwNum) => {
+                        const isTBCGW = gwNum === 39 && tbcTeamInfoMap.size > 0 && viewMode === 'future';
                         const gw = player.gameweekProjections.find(g => g.gameweek === gwNum);
                         if (!gw) {
                           return (
-                            <TableCell key={gwNum} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-gray-50">
+                            <TableCell key={gwNum} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : 'bg-gray-50'}`}>
                               <div className="flex flex-col items-center">
                                 <span className="text-gray-400">-</span>
                                 {showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">&nbsp;</span>}
@@ -996,7 +1035,7 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getOpponentColor(gw.opponentTier)}`}>
+                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : getOpponentColor(gw.opponentTier)}`}>
                         <div className="flex flex-col items-center">
                           <span className="font-bold">
                             {hasGwAdjustment && !gw.isActual ? (
