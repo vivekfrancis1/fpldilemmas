@@ -191,6 +191,21 @@ export default function PlayerSaves() {
     }
   }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
 
+  // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
+  useEffect(() => {
+    if (tbcTeamInfoMap.size > 0 && fixtureMode === 'base') {
+      setEndGameweek(39);
+    }
+  }, [tbcTeamInfoMap.size, fixtureMode]);
+
+  // Snap endGameweek back from 39 when leaving base mode
+  useEffect(() => {
+    if (fixtureMode !== 'base' && endGameweek === 39 && bootstrapData?.events) {
+      const defaultRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      setEndGameweek(parseInt(defaultRange.endGameweek));
+    }
+  }, [fixtureMode, endGameweek, bootstrapData?.events]);
+
   // Sync tbcAssignments from localStorage when window regains focus
   useEffect(() => {
     const onFocus = () => {

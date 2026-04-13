@@ -1960,14 +1960,6 @@ export default function PlayerTotalPoints() {
                   <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setShowOpponent(!showOpponent)}
-                        className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                        data-testid="button-toggle-opponent"
-                      >
-                        <Users className="h-2.5 w-2.5" />
-                        {showOpponent ? 'Hide Opp' : 'Show Opp'}
-                      </button>
-                      <button
                         onClick={() => setExcludedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))}
                         className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300"
                         data-testid="button-invert-gameweeks"
@@ -2125,6 +2117,14 @@ export default function PlayerTotalPoints() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowOpponent(!showOpponent)}
+                      className={`inline-flex items-center gap-1 rounded border text-xs font-medium px-2.5 py-1.5 cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                      data-testid="button-toggle-opponent"
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      {showOpponent ? 'Hide Opp' : 'Show Opp'}
+                    </button>
                     <Button
                       onClick={handleRefreshData}
                       disabled={isRefreshing}
