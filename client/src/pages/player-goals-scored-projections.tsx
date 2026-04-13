@@ -949,7 +949,8 @@ export default function PlayerGoalsScoredProjections() {
                     {selectedGameweeks.map(gw => (
                       <th key={gw} className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]">
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
-                          {gw}
+                          <span className="md:hidden">{gw}</span>
+                          <span className="hidden md:inline">GW{gw}</span>
                           {sortBy === `gw${gw}` && (
                             sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                           )}

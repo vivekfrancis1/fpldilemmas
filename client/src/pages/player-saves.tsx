@@ -764,7 +764,9 @@ export default function PlayerSaves() {
                         {dynamicGameweekColumns.map((gw) => (
                           <th key={`saves-header-gw${gw}`} className="px-1 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider min-w-[40px] md:min-w-[50px]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
-                              {gw} {getSortIcon(`gw${gw}`)}
+                              <span className="md:hidden">{gw}</span>
+                              <span className="hidden md:inline">GW{gw}</span>
+                              {getSortIcon(`gw${gw}`)}
                             </Button>
                           </th>
                         ))}
