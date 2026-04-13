@@ -385,15 +385,24 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const nextGameweeks = getNextGameweeksForTable();
 
-  // Build TBC fixture scaling map when in custom/expert mode
+  // Build TBC fixture scaling map when in custom/expert mode.
+  // Stores per-team: goal scale (for goals/assists), opponent goal scale (for CS/GC/saves).
   const tbcTeamScaleMap = useMemo(() => {
-    const map = new Map<string, { fixtureId: number; scale: number }>();
+    const map = new Map<string, { fixtureId: number; goalsScale: number; oppGoalsScale: number }>();
     if (fixtureMode === 'base' || !tbcGoalData || !teamGoalProjectionsData) return map;
     tbcGoalData.forEach(f => {
       const homeAvg = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort)?.averageGoalsPerGame || 1;
       const awayAvg = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort)?.averageGoalsPerGame || 1;
-      map.set(f.homeTeamShort, { fixtureId: f.fixtureId, scale: homeAvg > 0 ? f.homeGoals / homeAvg : 1 });
-      map.set(f.awayTeamShort, { fixtureId: f.fixtureId, scale: awayAvg > 0 ? f.awayGoals / awayAvg : 1 });
+      map.set(f.homeTeamShort, {
+        fixtureId: f.fixtureId,
+        goalsScale: homeAvg > 0 ? f.homeGoals / homeAvg : 1,
+        oppGoalsScale: f.awayGoals,  // raw opponent goals for cs/saves/gc scale
+      });
+      map.set(f.awayTeamShort, {
+        fixtureId: f.fixtureId,
+        goalsScale: awayAvg > 0 ? f.awayGoals / awayAvg : 1,
+        oppGoalsScale: f.homeGoals,  // raw opponent goals for cs/saves/gc scale
+      });
     });
     return map;
   }, [fixtureMode, tbcGoalData, teamGoalProjectionsData]);
@@ -427,14 +436,40 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         : assignments[tbcEntry.fixtureId];
       if (!assignedGW || !nextGameweeks.includes(assignedGW)) return player;
 
-      // Compute TBC points using the player's average per-playing-GW contribution.
-      // This correctly handles blank GWs (originalPoints=0) — instead of scaling from 0,
-      // we use the average across all non-blank GWs, scaled by the TBC fixture's goal ratio.
+      // Compute TBC points using component-specific scaling (matching Player Total Points page).
+      // Only goals/assists scale with the goal ratio; bonus, minutes, defensive contributions
+      // stay at their per-GW average. CS/saves/goals-conceded scale with opponent goal expectations.
       const playingGws = nextGameweeks.filter(gw => (player.gameweekProjections[gw.toString()] || 0) > 0);
       const n = playingGws.length || 1;
-      const sumPoints = nextGameweeks.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
-      const avgGwPoints = sumPoints / n;
-      const tbcPoints = avgGwPoints * tbcEntry.scale;
+      const goalsScale = tbcEntry.goalsScale;
+      const csScale = 1.35 / Math.max(tbcEntry.oppGoalsScale, 0.1);
+      const gcSavesScale = tbcEntry.oppGoalsScale / 1.35;
+      const compKeys: Array<[string, number]> = [
+        ['pointsFromGoals', goalsScale],
+        ['pointsFromAssists', goalsScale],
+        ['pointsFromCleanSheets', csScale],
+        ['pointsFromDefensiveContributions', 1],
+        ['pointsFromMinutes', 1],
+        ['pointsFromBonus', 1],
+        ['pointsFromSaves', gcSavesScale],
+        ['pointsFromGoalsConceded', gcSavesScale],
+        ['pointsFromYellowCards', 1],
+        ['pointsFromRedCards', 1],
+      ];
+      let tbcPoints = 0;
+      if ((player as any).pointsFromGoals) {
+        // Use component breakdown when available (accurate scaling)
+        for (const [key, compScale] of compKeys) {
+          const compMap = (player as any)[key] as { [k: string]: number } | undefined;
+          if (!compMap) continue;
+          const avg = playingGws.reduce((s, gw) => s + (compMap[gw.toString()] || 0), 0) / n;
+          tbcPoints += avg * compScale;
+        }
+      } else {
+        // Fallback: uniform scale on total points (less accurate but safe)
+        const sumPoints = nextGameweeks.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
+        tbcPoints = (sumPoints / n) * goalsScale;
+      }
 
       const gwKey = assignedGW.toString();
       const originalGWPoints = player.gameweekProjections[gwKey] || 0;
