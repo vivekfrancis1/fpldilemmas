@@ -752,9 +752,9 @@ function createPlayerTotalPointsColumns(
       };
     }),
     ...(tbcTeamShortNames && tbcTeamShortNames.size > 0 && !isPastMode ? [{
-      key: 'tbc',
+      key: 'gw39',
       header: 'GW39 (TBC)',
-      sortable: false,
+      sortable: true,
       hideSortIcon: true,
       align: 'center' as const,
       className: 'min-w-[36px] md:min-w-[44px] bg-amber-50/60 border-l border-amber-300 px-0.5',
