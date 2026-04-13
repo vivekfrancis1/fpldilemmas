@@ -353,20 +353,13 @@ export default function TeamGoalsAgainstProjections() {
         switch (sortBy) {
           case "total": {
             const computeTotal = (team: typeof a) => {
-              if (viewMode === "past") {
-                return activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
-              }
-              const td = team as TeamGoalsAgainstProjection;
-              const fixtures = activeGameweeks.flatMap(gw => {
-                if (gw === 39 && fixtureMode === 'base') {
-                  const entry = tbcGAMap.get(team.teamShort);
-                  return entry ? [{ goalsAgainst: entry.goalsAgainst }] : [];
-                }
-                return td.fixtureDetails?.[gw.toString()] || [];
-              });
-              const totalGA = fixtures.reduce((sum, f) => sum + (f as FixtureDetail).goalsAgainst, 0);
-              const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
-              return totalGA + tbcGA;
+              const regularGA = activeGameweeks
+                .filter(gw => gw !== 39)
+                .reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+              const tbcGA = (activeGameweeks.includes(39) && viewMode === 'future' && fixtureMode === 'base')
+                ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
+                : ((activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort));
+              return regularGA + tbcGA;
             };
             return (computeTotal(a) - computeTotal(b)) * dir;
           }
@@ -860,17 +853,13 @@ export default function TeamGoalsAgainstProjections() {
                             {viewMode === "past"
                               ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
                               : (() => {
-                                  const teamWithDetails = team as TeamGoalsAgainstProjection;
-                                  const allFixtures = activeGameweeks.flatMap(gw => {
-                                    if (gw === 39 && fixtureMode === 'base') {
-                                      const tbcEntry = tbcGAMap.get(team.teamShort);
-                                      return tbcEntry ? [{ goalsAgainst: tbcEntry.goalsAgainst, opponent: tbcEntry.opponent, isHome: tbcEntry.isHome } as FixtureDetail] : [];
-                                    }
-                                    return teamWithDetails.fixtureDetails?.[gw.toString()] || [];
-                                  });
-                                  const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
-                                  const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
-                                  return (totalGA + tbcGA).toFixed(2);
+                                  const regularGA = activeGameweeks
+                                    .filter(gw => gw !== 39)
+                                    .reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+                                  const tbcGA = (activeGameweeks.includes(39) && fixtureMode === 'base')
+                                    ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
+                                    : ((activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort));
+                                  return (regularGA + tbcGA).toFixed(2);
                                 })()}
                           </span>
                         </td>
