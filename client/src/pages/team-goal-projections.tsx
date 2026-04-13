@@ -413,7 +413,7 @@ export default function TeamGoalProjections() {
   const filteredProjections = useMemo(() => {
     if (!resolvedProjections.length) return [];
     
-    const dir = sortDir === 'desc' ? -1 : 1;
+    const dir = sortDir === 'asc' ? -1 : 1;
     return resolvedProjections
       .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
       .sort((a, b) => {
