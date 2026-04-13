@@ -396,6 +396,11 @@ export default function PlayerSaves() {
     return total;
   };
 
+  const getUnabsorbedTBCSavesForPlayer = (player: SavesProjection) => {
+    if (viewMode !== "future") return 0;
+    return player.saves?.['gw39'] || 0;
+  };
+
   // Helper to get adjusted total for sorting
   const getAdjustedTotalForSort = (player: SavesProjection) => {
     const playerInfo = playerAvailabilityMap?.get(player.playerId);
@@ -423,11 +428,6 @@ export default function PlayerSaves() {
       
       return matchesSearch;
     });
-
-    const getUnabsorbedTBCSavesForPlayer = (player: SavesProjection) => {
-      if (viewMode !== "future") return 0;
-      return player.saves?.['gw39'] || 0;
-    };
 
     // Sort data
     filtered.sort((a: SavesProjection, b: SavesProjection) => {

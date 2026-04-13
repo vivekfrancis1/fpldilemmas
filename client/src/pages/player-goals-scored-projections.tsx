@@ -188,6 +188,19 @@ export default function PlayerGoalsScoredProjections() {
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || viewMode !== "future") return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData, viewMode]);
+
   // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
@@ -197,8 +210,12 @@ export default function PlayerGoalsScoredProjections() {
     if (!bootstrapData?.events) {
       return [];
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    if (tbcTeamInfoMap.size > 0 && fixtureMode === 'base' && !gws.includes(39)) {
+      return [...gws, 39];
+    }
+    return gws;
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, tbcTeamInfoMap, fixtureMode]);
 
   // Reset gameweek range when view mode changes
   useEffect(() => {
@@ -237,6 +254,22 @@ export default function PlayerGoalsScoredProjections() {
       setInitialized(true);
     }
   }, [bootstrapData, initialized]);
+
+  // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
+  useEffect(() => {
+    if (viewMode !== 'future') return;
+    if (tbcTeamInfoMap.size > 0 && fixtureMode === 'base') {
+      setEndGameweek(39);
+    }
+  }, [tbcTeamInfoMap, fixtureMode, viewMode]);
+
+  // Snap endGameweek back from 39 when leaving base mode
+  useEffect(() => {
+    if (viewMode === 'future' && fixtureMode !== 'base' && endGameweek === 39 && bootstrapData?.events) {
+      const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      setEndGameweek(parseInt(range.endGameweek));
+    }
+  }, [fixtureMode, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Use fast cached endpoint with robust error handling
   const { data: playerGoalData, isLoading: playerGoalLoading, error } = useQuery<PlayerGoalProjection[]>({
@@ -282,11 +315,12 @@ export default function PlayerGoalsScoredProjections() {
   };
 
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
-  // Filters out excluded gameweeks
+  // Filters out excluded gameweeks; GW39 is handled separately as floating TBC column
   const selectedGameweeks = useMemo(() => {
     if (!startGameweek || !endGameweek) return [];
     const gameweeks = [];
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    const cappedEnd = Math.min(endGameweek, 38);
+    for (let gw = startGameweek; gw <= cappedEnd; gw++) {
       if (!excludedGameweeks.has(gw)) {
         gameweeks.push(gw);
       }
@@ -319,19 +353,6 @@ export default function PlayerGoalsScoredProjections() {
     });
     return total;
   };
-
-  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
-  const tbcTeamInfoMap = useMemo(() => {
-    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
-    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || viewMode !== "future") return map;
-    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
-      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
-      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
-      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
-      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
-    });
-    return map;
-  }, [fixturesData, bootstrapData, viewMode]);
 
   // Transform data based on view mode
   const displayData = useMemo(() => {
@@ -401,6 +422,12 @@ export default function PlayerGoalsScoredProjections() {
     });
   }, [viewMode, fixtureMode, displayData, tbcTeamInfoMap, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, opponentMap]);
 
+  // Whether the floating GW39 (TBC) column should be visible
+  const showTBCColumn = useMemo(() => (
+    endGameweek !== null && endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
+  ), [endGameweek, excludedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
+
   // Filter and sort data
   const filteredProjections = useMemo(() => {
     if (!resolvedDisplayData.length) return [];
@@ -433,15 +460,15 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            const aTBC = Number(a.gameweekProjections?.['39']) || 0;
-            const bTBC = Number(b.gameweekProjections?.['39']) || 0;
+            const aTBC = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
+            const bTBC = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
             const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC;
             const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC;
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
-            const aTBC2 = Number(a.gameweekProjections?.['39']) || 0;
-            const bTBC2 = Number(b.gameweekProjections?.['39']) || 0;
+            const aTBC2 = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
+            const bTBC2 = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
             const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC2;
             const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC2;
             const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
@@ -465,9 +492,9 @@ export default function PlayerGoalsScoredProjections() {
 
   // TBC total goals across all filtered players (unabsorbed only)
   const tbcTotalGoals = useMemo(() => {
-    if (viewMode !== "future" || fixtureMode === 'expert' || tbcTeamInfoMap.size === 0) return 0;
+    if (!showTBCColumn) return 0;
     return filteredProjections.reduce((sum, p) => sum + (Number(p.gameweekProjections?.['39']) || 0), 0);
-  }, [filteredProjections, tbcTeamInfoMap, viewMode, fixtureMode]);
+  }, [showTBCColumn, filteredProjections]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -752,7 +779,7 @@ export default function PlayerGoalsScoredProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -766,7 +793,7 @@ export default function PlayerGoalsScoredProjections() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
-                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      <SelectItem key={gw} value={gw.toString()}>{gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -821,10 +848,11 @@ export default function PlayerGoalsScoredProjections() {
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {availableGameweeks.filter(gw => startGameweek && endGameweek && gw >= startGameweek && gw <= endGameweek).map(gw => {
                     const isExcluded = excludedGameweeks.has(gw);
+                    const isTBC = gw === 39;
                     return (
                       <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
-                      >GW{gw}</button>
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : isTBC ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                      >{isTBC ? 'GW39 (TBC)' : `GW${gw}`}</button>
                     );
                   })}
                 </div>
@@ -929,7 +957,7 @@ export default function PlayerGoalsScoredProjections() {
                         </div>
                       </th>
                     ))}
-                    {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredProjections.some(p => (Number(p.gameweekProjections?.['39']) || 0) > 0) && (
+                    {showTBCColumn && (
                       <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                         GW39 (TBC)
                       </th>
@@ -962,7 +990,7 @@ export default function PlayerGoalsScoredProjections() {
                       originalTotal += val;
                     });
                     const tbcEntry = viewMode === "future" ? tbcTeamInfoMap.get(player.teamShort) : null;
-                    const tbcGoals = Number(player.gameweekProjections?.['39']) || 0;
+                    const tbcGoals = showTBCColumn ? (Number(player.gameweekProjections?.['39']) || 0) : 0;
                     const totalPoints = getPointsFromGoals(adjustedTotal, player.position);
                     const originalTotalPoints = getPointsFromGoals(originalTotal, player.position);
                     
@@ -1047,7 +1075,7 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredProjections.some(p => (Number(p.gameweekProjections?.['39']) || 0) > 0) && (
+                        {showTBCColumn && (
                           <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
                             {tbcEntry && tbcGoals > 0 ? (
                               <Popover>
@@ -1098,14 +1126,14 @@ export default function PlayerGoalsScoredProjections() {
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
-                    {viewMode === "future" && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredProjections.some(p => (Number(p.gameweekProjections?.['39']) || 0) > 0) && (
+                    {showTBCColumn && (
                       <td className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold bg-amber-100 border-l border-amber-300 text-amber-900">
                         {formatGoals(tbcTotalGoals)}
                       </td>
                     )}
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-orange-900">
-                        {formatGoals(totalGoals.overallTotal + (viewMode === "future" ? tbcTotalGoals : 0))}
+                        {formatGoals(totalGoals.overallTotal + (showTBCColumn ? tbcTotalGoals : 0))}
                       </span>
                     </td>
                   </tr>
