@@ -252,7 +252,7 @@ export default function TeamCSProjections() {
   // TBC CS odds still in TBC column (not absorbed)
   const getUnabsorbedTBC = (teamShort: string): number => {
     if (fixtureMode === 'expert') return 0;
-    if (fixtureMode === 'base') return tbcCSMap.get(teamShort)?.csOdds || 0;
+    if (fixtureMode === 'base') return parseInt(endGameweek) >= 39 ? (tbcCSMap.get(teamShort)?.csOdds || 0) : 0;
     const f = tbcGoalData?.find(x => x.homeTeamShort === teamShort || x.awayTeamShort === teamShort);
     if (!f) return 0;
     const assigned = tbcAssignments[f.fixtureId];
