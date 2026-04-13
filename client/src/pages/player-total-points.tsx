@@ -1017,6 +1017,21 @@ export default function PlayerTotalPoints() {
     return finishedEvents.length > 0 ? Math.max(...finishedEvents.map((e: any) => e.id)) : 0;
   }, [bootstrapData?.events]);
 
+  // Derive short names of teams involved in TBC fixtures (event: null) — must be defined early
+  const tbcTeamShortNames = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Set<string>();
+    const names = new Set<string>();
+    fixturesData.forEach((fixture: any) => {
+      if (!fixture.event) {
+        const home = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+        const away = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+        if (home) names.add(home.short_name);
+        if (away) names.add(away.short_name);
+      }
+    });
+    return names;
+  }, [bootstrapData?.teams, fixturesData]);
+
   // Get available gameweeks for dropdown - different for past vs future
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
@@ -1026,8 +1041,10 @@ export default function PlayerTotalPoints() {
       // Past mode: GW1 to last finished gameweek
       return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    if (fixtureMode === 'base' && tbcTeamShortNames.size > 0 && !gws.includes(39)) gws.push(39);
+    return gws;
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, fixtureMode, tbcTeamShortNames]);
 
   // One-time initialization when bootstrap data loads
   useEffect(() => {
@@ -1038,7 +1055,7 @@ export default function PlayerTotalPoints() {
     const end = parseInt(range.endGameweek);
     
     // Validate range
-    if (start > 0 && end > 0 && start <= end && end <= 38) {
+    if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
       setInitialized(true);
@@ -1061,6 +1078,21 @@ export default function PlayerTotalPoints() {
       setEndGameweek(parseInt(range.endGameweek));
     }
   }, [viewMode, bootstrapData?.events, lastFinishedGW]);
+
+  // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
+  useEffect(() => {
+    if (tbcTeamShortNames.size > 0 && fixtureMode === 'base' && viewMode === 'future') {
+      setEndGameweek(39);
+    }
+  }, [tbcTeamShortNames.size, fixtureMode, viewMode]);
+
+  // Snap endGameweek back from 39 when leaving base mode
+  useEffect(() => {
+    if (fixtureMode !== 'base' && endGameweek === 39 && bootstrapData?.events) {
+      const defaultRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      setEndGameweek(parseInt(defaultRange.endGameweek));
+    }
+  }, [fixtureMode, endGameweek, bootstrapData?.events]);
 
   // Sync tbcAssignments from localStorage when window regains focus or fixtureMode changes
   useEffect(() => {
@@ -1152,21 +1184,6 @@ export default function PlayerTotalPoints() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
-  // Derive short names of teams involved in TBC fixtures (event: null)
-  const tbcTeamShortNames = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Set<string>();
-    const names = new Set<string>();
-    fixturesData.forEach((fixture: any) => {
-      if (!fixture.event) {
-        const home = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
-        const away = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
-        if (home) names.add(home.short_name);
-        if (away) names.add(away.short_name);
-      }
-    });
-    return names;
-  }, [bootstrapData?.teams, fixturesData]);
-
   // fixtureId lookup for TBC fixtures — built from fixturesData (event=null means TBC)
   const tbcFixtureIdMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -1202,6 +1219,14 @@ export default function PlayerTotalPoints() {
     }
     return tbcTeamShortNames;
   }, [fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek]);
+
+  // Show the GW39 TBC column only when GW39 is in range and not excluded by the user
+  const showTBCColumn = useMemo(() => (
+    endGameweek !== null && endGameweek >= 39 &&
+    !excludedGameweeks.has(39) &&
+    viewMode === 'future' &&
+    effectiveTbcTeamShortNames.size > 0
+  ), [endGameweek, excludedGameweeks, viewMode, effectiveTbcTeamShortNames]);
 
   // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
   // TanStack Query does NOT refetch when the user changes the GW filter (instant client-side filtering).
@@ -2168,7 +2193,7 @@ export default function PlayerTotalPoints() {
                       myTeamPlayerIds,
                       viewMode,
                       isMobile,
-                      effectiveTbcTeamShortNames
+                      showTBCColumn ? effectiveTbcTeamShortNames : new Set<string>()
                     )}
                     onSort={handleSort}
                     sortField={sortField}
