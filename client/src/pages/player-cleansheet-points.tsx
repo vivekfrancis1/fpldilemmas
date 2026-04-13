@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Calendar, Filter, Search, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, Filter, Search, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ export default function PlayerCleanSheetPoints() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // Fixture mode toggle
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+  const [showOpponent, setShowOpponent] = useState(false);
 
   // Fetch bootstrap data to get events for dynamic gameweek calculation
   const { data: bootstrapData } = useQuery({
@@ -68,6 +69,27 @@ export default function PlayerCleanSheetPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  // Must be defined before the effects that reference it
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData]);
+
+  // Available gameweeks for selects (dynamic from bootstrap, up to GW38 normally)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) return Array.from({ length: 12 }, (_, i) => i + 4);
+    const nextRange = computeNextRange(bootstrapData.events, 12);
+    return nextRange.list.length > 0 ? nextRange.list : Array.from({ length: 12 }, (_, i) => i + 4);
+  }, [bootstrapData?.events]);
+
   // Update gameweek range when bootstrap data is available
   useEffect(() => {
     if (bootstrapData?.events) {
@@ -78,6 +100,21 @@ export default function PlayerCleanSheetPoints() {
       }
     }
   }, [bootstrapData]);
+
+  // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
+  useEffect(() => {
+    if (tbcTeamInfoMap.size > 0 && fixtureMode === 'base') {
+      setEndGameweek(39);
+    }
+  }, [tbcTeamInfoMap, fixtureMode]);
+
+  // Snap endGameweek back from 39 when leaving base mode
+  useEffect(() => {
+    if (fixtureMode !== 'base' && endGameweek === 39 && bootstrapData?.events) {
+      const nextRange = computeNextRange(bootstrapData.events, defaultWeeks);
+      if (nextRange.list.length > 0) setEndGameweek(nextRange.end);
+    }
+  }, [fixtureMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch player clean sheet points data
   const { data: cleanSheetData, isLoading, error } = useQuery<PlayerCleanSheetData[]>({
@@ -95,23 +132,11 @@ export default function PlayerCleanSheetPoints() {
     retryDelay: 1000,
   });
 
-  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
-  const tbcTeamInfoMap = useMemo(() => {
-    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
-    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
-    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
-      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
-      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
-      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
-      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
-    });
-    return map;
-  }, [fixturesData, bootstrapData]);
-
-  // Generate gameweek range for table headers
+  // Generate gameweek range for table headers — capped at GW38; GW39 handled as floating TBC column
   const gameweekRange = useMemo(() => {
     const range = [];
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    const cappedEnd = Math.min(endGameweek, 38);
+    for (let gw = startGameweek; gw <= cappedEnd; gw++) {
       range.push(gw);
     }
     return range;
@@ -301,7 +326,7 @@ export default function PlayerCleanSheetPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
+                  {availableGameweeks.filter(gw => gw <= 38).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -315,9 +340,12 @@ export default function PlayerCleanSheetPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 4).map(gw => (
+                  {availableGameweeks.filter(gw => gw <= 38).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
+                  {tbcTeamInfoMap.size > 0 && fixtureMode === 'base' && (
+                    <SelectItem value="39" className="text-amber-700 font-medium">GW39 (TBC)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -397,6 +425,24 @@ export default function PlayerCleanSheetPoints() {
 
         {/* Main Table */}
         <Card className="overflow-hidden shadow-xl">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base sm:text-lg">
+                  Clean Sheet Points: GW{startGameweek}–GW{endGameweek}
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Expected clean sheet points for goalkeepers, defenders and midfielders
+                </CardDescription>
+              </div>
+              <button
+                onClick={() => setShowOpponent(!showOpponent)}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+              >
+                {showOpponent ? 'Hide Opp' : 'Show Opp'}
+              </button>
+            </div>
+          </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-12 text-center">
@@ -427,7 +473,10 @@ export default function PlayerCleanSheetPoints() {
                         </div>
                       </th>
                       {gameweekRange.map(gw => (
-                        <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">{gw}</th>
+                        <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">
+                          <span className="md:hidden">{gw}</span>
+                          <span className="hidden md:inline">GW{gw}</span>
+                        </th>
                       ))}
                       {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.gameweekProjections?.['39'] || 0) > 0) && (
                         <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
@@ -470,9 +519,11 @@ export default function PlayerCleanSheetPoints() {
                           const fixtures = player.fixtureDetails?.[gw.toString()] || [];
                           const isDGW = fixtures.length > 1;
                           const value = player.gameweekProjections[gw.toString()] || 0;
+                          const singleFixture = !isDGW && fixtures.length === 1 ? fixtures[0] : null;
                           
                           return (
                             <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                              <div className="flex flex-col items-center">
                               {isDGW ? (
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -509,6 +560,15 @@ export default function PlayerCleanSheetPoints() {
                                   {value.toFixed(1)}
                                 </span>
                               )}
+                              {showOpponent && singleFixture && (
+                                <span className={`text-[9px] md:text-[10px] mt-0.5 ${singleFixture.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                  {singleFixture.opponent}({singleFixture.isHome ? 'H' : 'A'})
+                                </span>
+                              )}
+                              {showOpponent && !singleFixture && !isDGW && (
+                                <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">&nbsp;</span>
+                              )}
+                              </div>
                             </td>
                           );
                         })}

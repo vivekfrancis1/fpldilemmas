@@ -11781,7 +11781,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Clean Sheet Points endpoint - API-first with cache fallback
   app.get("/api/player-cleansheet-points", async (req, res) => {
     try {
-      const csCacheKey = 'default';
+      // Extract GW range before cache check so it's part of the cache key
+      const reqStart = req.query.startGameweek ? parseInt(req.query.startGameweek as string) : null;
+      const reqEnd = req.query.endGameweek ? parseInt(req.query.endGameweek as string) : null;
+      const csCacheKey = reqStart !== null && reqEnd !== null ? `${reqStart}-${reqEnd}` : 'default';
       const csHit = cleansheetCache.get(csCacheKey);
       if (csHit && Date.now() - csHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(csHit.data);
@@ -11819,8 +11822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
       
       // Dynamic gameweek range - start from current+1 (next gameweek) for 12 weeks
-      const startGameweek = parseInt(req.query.startGameweek as string) || (currentGameweek + 1);
-      const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 11, 39);
+      const startGameweek = reqStart ?? (currentGameweek + 1);
+      const endGameweek = reqEnd ?? Math.min(startGameweek + 11, 39);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
       // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets
@@ -11879,45 +11882,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const events: BootstrapEvent[] = bootstrapData.events || [];
 
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        // Main loop: cap at GW38 so totalExpectedPoints never includes GW39
+        // GW39 TBC is computed separately below and NOT added to totalExpectedPoints
+        const effectiveEndGW = Math.min(endGameweek, 38);
+
+        const computeCSForGW = (gw: number, addToTotal: boolean) => {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           const teamFixtureDetails = teamCSProjection.fixtureDetails?.[gw.toString()] || teamCSProjection.fixtureDetails?.[gw] || [];
-          
           const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
-          
           let cleanSheetPointsForGW = 0;
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
-          
           if (teamCleanSheetPercent !== undefined) {
             const absenceFactor = defensiveAbsenceMap.get(player.team) ?? 1.0;
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
                 const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
-                gwFixtureDetails.push({
-                  opponent: fd.opponent,
-                  isHome: fd.isHome,
-                  cleanSheetPoints: Math.round(fixtureCSPoints * 100) / 100
-                });
+                gwFixtureDetails.push({ opponent: fd.opponent, isHome: fd.isHome, cleanSheetPoints: Math.round(fixtureCSPoints * 100) / 100 });
               });
             } else {
               cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
-              gwFixtureDetails.push({
-                opponent: 'OPP',
-                isHome: true,
-                cleanSheetPoints: Math.round(cleanSheetPointsForGW * 100) / 100
-              });
+              gwFixtureDetails.push({ opponent: 'OPP', isHome: true, cleanSheetPoints: Math.round(cleanSheetPointsForGW * 100) / 100 });
             }
           }
-          
           gameweekProjections[gw.toString()] = Math.round(cleanSheetPointsForGW * 100) / 100;
           fixtureDetails[gw.toString()] = gwFixtureDetails;
-          totalExpectedPoints += cleanSheetPointsForGW;
+          if (addToTotal) totalExpectedPoints += cleanSheetPointsForGW;
+        };
+
+        for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
+          computeCSForGW(gw, true);
+        }
+
+        // GW39 TBC: always compute if team-cs-projections has GW39 data (NOT added to totalExpectedPoints)
+        if (teamCSProjection.gameweekProjections?.['39'] !== undefined) {
+          computeCSForGW(39, false);
         }
 
         // Create pointsFromCleanSheets field for aggregator compatibility
         const pointsFromCleanSheets: { [key: string]: number } = {};
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
           pointsFromCleanSheets[`gw${gw}`] = gameweekProjections[gw.toString()] || 0;
         }
 

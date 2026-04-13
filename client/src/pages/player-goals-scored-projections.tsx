@@ -829,10 +829,6 @@ export default function PlayerGoalsScoredProjections() {
 
               <TabsContent value="gws" className="mt-0">
                 <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                  <button onClick={() => setShowOpponent(!showOpponent)}
-                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
-                    <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-                  </button>
                   <button
                     onClick={() => setApplyAvailability(!applyAvailability)}
                     className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
@@ -913,16 +909,22 @@ export default function PlayerGoalsScoredProjections() {
                       </Badge>
                     )}
                   </CardTitle>
-                  <Button
-                    onClick={handleRefreshData}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    data-testid="button-refresh-data"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Refresh Data
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setShowOpponent(!showOpponent)}
+                      className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      {showOpponent ? 'Hide Opp' : 'Show Opp'}
+                    </button>
+                    <Button
+                      onClick={handleRefreshData}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      data-testid="button-refresh-data"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Refresh Data
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
