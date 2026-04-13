@@ -440,7 +440,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       // Only goals/assists scale with the goal ratio; bonus, minutes, defensive contributions
       // stay at their per-GW average. CS/saves/goals-conceded scale with opponent goal expectations.
       const playingGws = nextGameweeks.filter(gw => (player.gameweekProjections[gw.toString()] || 0) > 0);
-      const n = playingGws.length || 1;
+      // Exclude DGW entries so the per-fixture average isn't inflated by double-game weeks
+      const singleFixGws = playingGws.filter(gw => ((player as any).fixtureDetails?.[gw.toString()] || []).length <= 1);
+      const gwsForAvg = singleFixGws.length > 0 ? singleFixGws : playingGws;
+      const n = gwsForAvg.length || 1;
       const goalsScale = tbcEntry.goalsScale;
       const csScale = 1.35 / Math.max(tbcEntry.oppGoalsScale, 0.1);
       const gcSavesScale = tbcEntry.oppGoalsScale / 1.35;
@@ -462,12 +465,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         for (const [key, compScale] of compKeys) {
           const compMap = (player as any)[key] as { [k: string]: number } | undefined;
           if (!compMap) continue;
-          const avg = playingGws.reduce((s, gw) => s + (compMap[gw.toString()] || 0), 0) / n;
+          const avg = gwsForAvg.reduce((s, gw) => s + (compMap[gw.toString()] || 0), 0) / n;
           tbcPoints += avg * compScale;
         }
       } else {
         // Fallback: uniform scale on total points (less accurate but safe)
-        const sumPoints = nextGameweeks.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
+        const sumPoints = gwsForAvg.reduce((s, gw) => s + (player.gameweekProjections[gw.toString()] || 0), 0);
         tbcPoints = (sumPoints / n) * goalsScale;
       }
 

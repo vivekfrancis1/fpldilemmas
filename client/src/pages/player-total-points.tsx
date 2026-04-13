@@ -716,7 +716,10 @@ function computeTBCComponents(
   tbcEntry: { tbcGoals: number; avgGwGoals: number; tbcOpponentGoals: number }
 ): { [key: string]: number } {
   const playingGws = activeGwRange.filter(gw => (player.gameweekProjections?.[gw.toString()] || 0) > 0);
-  const n = playingGws.length || 1;
+  // Exclude DGW entries so the per-fixture average isn't inflated by double-game weeks
+  const singleFixGws = playingGws.filter(gw => ((player as any).fixtureDetails?.[gw.toString()] || []).length <= 1);
+  const gwsForAvg = singleFixGws.length > 0 ? singleFixGws : playingGws;
+  const n = gwsForAvg.length || 1;
   const goalsScale = tbcEntry.avgGwGoals > 0 ? tbcEntry.tbcGoals / tbcEntry.avgGwGoals : 1;
   const oppGoalScale = tbcEntry.tbcOpponentGoals / 1.35;
   const csScale = 1.35 / Math.max(tbcEntry.tbcOpponentGoals, 0.1);
@@ -735,7 +738,7 @@ function computeTBCComponents(
   const result: { [key: string]: number } = {};
   Object.keys(compScales).forEach(key => {
     const compMap = player[key] as { [k: string]: number } | undefined;
-    const avg = playingGws.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
+    const avg = gwsForAvg.reduce((s, gw) => s + (compMap?.[gw.toString()] || 0), 0) / n;
     result[key] = avg * compScales[key];
   });
   return result;
