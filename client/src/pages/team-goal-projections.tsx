@@ -190,6 +190,18 @@ export default function TeamGoalProjections() {
     });
   };
 
+  // Fetch fixtures for opponent information (must be before hasTBCFixture)
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Detect TBC fixtures (event=null) from the fixtures cache — no extra HTTP call
+  const hasTBCFixture = useMemo(() => {
+    if (!Array.isArray(fixturesData)) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
+  }, [fixturesData]);
+
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
@@ -201,8 +213,13 @@ export default function TeamGoalProjections() {
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12);
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    // Append GW39 for the TBC fixture if not already present
+    if (hasTBCFixture && !gws.includes(39)) {
+      return [...gws, 39];
+    }
+    return gws;
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture]);
 
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
@@ -215,16 +232,11 @@ export default function TeamGoalProjections() {
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
-      setEndGameweek(newRange.endGameweek);
+      // Extend default end to GW39 when a TBC fixture exists
+      setEndGameweek(hasTBCFixture ? "39" : newRange.endGameweek);
       setExcludedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW]);
-
-  // Fetch fixtures for opponent information
-  const { data: fixturesData } = useQuery({
-    queryKey: ["/api/fixtures"],
-    staleTime: 5 * 60 * 1000,
-  });
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture]);
 
   // State for showing opponent info
   const [showOpponent, setShowOpponent] = useState(false);
@@ -248,16 +260,17 @@ export default function TeamGoalProjections() {
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
-      
-      if (homeTeam && awayTeam && fixture.event) {
+      // Normalize TBC fixtures (event: null) to GW39 so they appear in opponent info
+      const gwNumber = fixture.event ?? 39;
+      if (homeTeam && awayTeam) {
         // Home team's opponent is away team
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+        map.set(`${homeTeam.short_name}-${gwNumber}`, {
           opponent: awayTeam.short_name,
           opponentId: fixture.team_a,
           isHome: true
         });
         // Away team's opponent is home team
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+        map.set(`${awayTeam.short_name}-${gwNumber}`, {
           opponent: homeTeam.short_name,
           opponentId: fixture.team_h,
           isHome: false
@@ -326,9 +339,32 @@ export default function TeamGoalProjections() {
 
   // Merge TBC goals into assigned GW columns based on fixtureMode
   const resolvedProjections = useMemo(() => {
-    if (viewMode !== "future" || fixtureMode === 'base' || !tbcGoalData?.length) return displayData;
+    if (viewMode !== "future" || !tbcGoalData?.length) return displayData;
     const startGW = parseInt(startGameweek);
     const endGW = parseInt(endGameweek);
+    // In base mode: only merge TBC into GW39 column if GW39 is within the visible range
+    if (fixtureMode === 'base') {
+      if (!activeGameweeks.includes(39)) return displayData;
+      return displayData.map(team => {
+        const tbcFixture = tbcGoalData.find(f =>
+          f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort
+        );
+        if (!tbcFixture) return team;
+        const isHome = tbcFixture.homeTeamShort === team.teamShort;
+        const tbcGoals = isHome ? tbcFixture.homeGoals : tbcFixture.awayGoals;
+        const tbcOpponent = isHome ? tbcFixture.awayTeamShort : tbcFixture.homeTeamShort;
+        const newProjections = { ...team.gameweekProjections };
+        const existingGoals = Number(newProjections['39']) || 0;
+        newProjections['39'] = existingGoals + tbcGoals;
+        const teamData = team as TeamGoalProjection;
+        const newFixtureDetails: { [gameweek: string]: FixtureDetail[] } = { ...(teamData.fixtureDetails || {}) };
+        const existingFixtures: FixtureDetail[] = newFixtureDetails['39']
+          ? [...newFixtureDetails['39']]
+          : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${team.teamShort}-39`)?.opponent || '?', isHome: opponentMap.get(`${team.teamShort}-39`)?.isHome ?? true, goals: existingGoals }] : []);
+        newFixtureDetails['39'] = [...existingFixtures, { opponent: tbcOpponent, isHome, goals: tbcGoals }];
+        return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
+      });
+    }
     return displayData.map(team => {
       const tbcFixture = tbcGoalData.find(f =>
         f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort
@@ -359,13 +395,14 @@ export default function TeamGoalProjections() {
       newFixtureDetails[key] = [...existingFixtures, { opponent: tbcOpponent, isHome, goals: tbcGoals }];
       return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
     });
-  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcAssignments, startGameweek, endGameweek, opponentMap]);
+  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcAssignments, startGameweek, endGameweek, opponentMap, activeGameweeks]);
 
   // Helper: TBC goals still in TBC column (not absorbed into a visible GW) for a given team
   const getUnabsorbedTBC = (teamShort: string): number => {
     if (viewMode !== "future") return 0;
     if (fixtureMode === 'expert') return 0;
-    if (fixtureMode === 'base') return tbcGoalMap.get(teamShort)?.goals || 0;
+    // In base mode: TBC is absorbed into GW39 column if GW39 is in the active range
+    if (fixtureMode === 'base') return activeGameweeks.includes(39) ? 0 : (tbcGoalMap.get(teamShort)?.goals || 0);
     const f = tbcGoalData?.find(x => x.homeTeamShort === teamShort || x.awayTeamShort === teamShort);
     if (!f) return 0;
     const assigned = tbcAssignments[f.fixtureId];
@@ -597,7 +634,7 @@ export default function TeamGoalProjections() {
                         <SelectContent>
                           {availableGameweeks.map(gameweek => (
                             <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek}
+                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -613,7 +650,7 @@ export default function TeamGoalProjections() {
                         <SelectContent>
                           {availableGameweeks.map(gameweek => (
                             <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek}
+                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -650,8 +687,8 @@ export default function TeamGoalProjections() {
                           const isExcluded = excludedGameweeks.has(gw);
                           return (
                             <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                              className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}>
-                              GW{gw}
+                              className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : gw === 39 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}>
+                              {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                             </button>
                           );
                         })}
@@ -728,17 +765,17 @@ export default function TeamGoalProjections() {
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}
+                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
-                            <span className="md:hidden">{gwNumber}</span>
-                            <span className="hidden md:inline">GW{gwNumber}</span>
+                            <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
+                            <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
                             {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
                           </div>
                         </th>
                       ))}
-                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !activeGameweeks.includes(39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[44px] md:min-w-[56px]'}`}>
                           GW39 (TBC)
                         </th>
@@ -843,7 +880,7 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
-                        {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                        {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !activeGameweeks.includes(39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                           const tbcEntry = tbcGoalMap.get(team.teamShort);
                           // In custom mode: show dash only if assigned to a GW within the visible range
                           const tbcFixture = tbcGoalData?.find(f => f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort);
@@ -924,7 +961,7 @@ export default function TeamGoalProjections() {
                         );
                       })}
 
-                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                      {viewMode === "future" && fixtureMode !== 'expert' && tbcGoalMap.size > 0 && !activeGameweeks.includes(39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcTotal = filteredProjections.reduce((sum, t) => sum + getUnabsorbedTBC(t.teamShort), 0);
                         return (
                           <td className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'}`}>
