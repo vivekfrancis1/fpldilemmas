@@ -355,8 +355,7 @@ export default function TeamGoalsAgainstProjections() {
               });
               const totalGA = fixtures.reduce((sum, f) => sum + (f as FixtureDetail).goalsAgainst, 0);
               const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
-              const count = fixtures.length + (tbcGA > 0 ? 1 : 0);
-              return count > 0 ? (totalGA + tbcGA) / count : 0;
+              return totalGA + tbcGA;
             };
             return computeAvgGA(a) - computeAvgGA(b);
           }
@@ -860,9 +859,7 @@ export default function TeamGoalsAgainstProjections() {
                                   });
                                   const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
                                   const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
-                                  const allCount = allFixtures.length + (tbcGA > 0 ? 1 : 0);
-                                  const avgGA = allCount > 0 ? (totalGA + tbcGA) / allCount : 0;
-                                  return avgGA.toFixed(2);
+                                  return (totalGA + tbcGA).toFixed(2);
                                 })()}
                           </span>
                         </td>
