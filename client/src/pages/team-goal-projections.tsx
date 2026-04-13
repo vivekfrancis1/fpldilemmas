@@ -658,17 +658,13 @@ export default function TeamGoalProjections() {
 
                     {/* GWs tab */}
                     <TabsContent value="gws" className="mt-0">
-                      <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                        <button onClick={() => setShowOpponent(!showOpponent)}
-                          className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
-                          <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-                        </button>
-                        {excludedGameweeks.size > 0 && (
+                      {excludedGameweeks.size > 0 && (
+                        <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
                           <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
                             <X className="h-2.5 w-2.5" />Clear
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
                         {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).map(gw => {
                           const isExcluded = excludedGameweeks.has(gw);
@@ -739,6 +735,10 @@ export default function TeamGoalProjections() {
                     xG Data
                   </Badge>
                 )}
+                <button onClick={() => setShowOpponent(!showOpponent)}
+                  className={`ml-auto inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                  <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
