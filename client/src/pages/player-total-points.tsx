@@ -659,7 +659,8 @@ function createPlayerTotalPointsColumns(
   myTeamPlayerIds?: Set<number>,
   viewMode?: "past" | "future",
   isMobile?: boolean,
-  tbcTeamShortNames?: Set<string>
+  tbcTeamShortNames?: Set<string>,
+  tbcOpponentMap?: Map<string, { opponent: string; isHome: boolean }>
 ): TableColumn<PlayerTotalPointsData>[] {
   const isPastMode = viewMode === "past";
   const allColumns: TableColumn<PlayerTotalPointsData>[] = [
@@ -762,11 +763,17 @@ function createPlayerTotalPointsColumns(
         const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
         if (!isTBCPlayer) return <span className="text-gray-300 text-xs">-</span>;
 
+        const tbcOpponentInfo = tbcOpponentMap?.get(playerTeamShort);
         return (
           <div className="flex flex-col items-center">
             <div className="relative inline-flex items-center justify-center ring-1 ring-amber-400 bg-amber-50 rounded px-0.5">
               <GameweekPointBreakdownTooltip player={player} gameweek={39} excludedComponents={excludedComponents} />
             </div>
+            {showOpponent && tbcOpponentInfo && (
+              <div className="text-[9px] text-gray-500 mt-0.5">
+                {tbcOpponentInfo.opponent} ({tbcOpponentInfo.isHome ? 'H' : 'A'})
+              </div>
+            )}
           </div>
         );
       }
@@ -1194,6 +1201,22 @@ export default function PlayerTotalPoints() {
       const away = (bootstrapData.teams as any[]).find(t => t.id === f.team_a);
       if (home) map.set(home.short_name, f.id);
       if (away) map.set(away.short_name, f.id);
+    });
+    return map;
+  }, [fixturesData, bootstrapData?.teams]);
+
+  // Opponent + home/away info for TBC fixtures — used by showOpponent in the GW39 TBC column
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean }>();
+    if (!fixturesData || !bootstrapData?.teams || !Array.isArray(fixturesData)) return map;
+    (fixturesData as any[]).forEach(f => {
+      if (f.event !== null && f.event !== undefined) return;
+      const home = (bootstrapData.teams as any[]).find(t => t.id === f.team_h);
+      const away = (bootstrapData.teams as any[]).find(t => t.id === f.team_a);
+      if (home && away) {
+        map.set(home.short_name, { opponent: away.short_name, isHome: true });
+        map.set(away.short_name, { opponent: home.short_name, isHome: false });
+      }
     });
     return map;
   }, [fixturesData, bootstrapData?.teams]);
@@ -2198,7 +2221,8 @@ export default function PlayerTotalPoints() {
                       myTeamPlayerIds,
                       viewMode,
                       isMobile,
-                      showTBCColumn ? effectiveTbcTeamShortNames : new Set<string>()
+                      showTBCColumn ? effectiveTbcTeamShortNames : new Set<string>(),
+                      tbcTeamInfoMap
                     )}
                     onSort={handleSort}
                     sortField={sortField}
