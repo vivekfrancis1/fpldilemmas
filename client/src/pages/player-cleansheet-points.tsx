@@ -19,15 +19,6 @@ interface FixtureDetail {
   cleanSheetPoints: number;
 }
 
-interface TBCGoalProjection {
-  fixtureId: number;
-  homeTeamId: number;
-  homeTeamShort: string;
-  awayTeamId: number;
-  awayTeamShort: string;
-  homeGoals: number;
-  awayGoals: number;
-}
 
 interface PlayerCleanSheetData {
   playerId: number;
@@ -71,6 +62,12 @@ export default function PlayerCleanSheetPoints() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch fixtures to detect TBC (event=null) fixtures for GW39 amber column
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Update gameweek range when bootstrap data is available
   useEffect(() => {
     if (bootstrapData?.events) {
@@ -98,22 +95,18 @@ export default function PlayerCleanSheetPoints() {
     retryDelay: 1000,
   });
 
-  // TBC goal projections for amber column
-  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
-    queryKey: ["/api/tbc-goal-projections"],
-    staleTime: 30 * 60 * 1000,
-  });
-
-  // TBC team CS map: teamShort → { opponentGoals, opponent, isHome }
-  const tbcTeamCSMap = useMemo(() => {
-    const map = new Map<string, { opponentGoals: number; opponent: string; isHome: boolean }>();
-    if (!tbcGoalData) return map;
-    tbcGoalData.forEach(f => {
-      map.set(f.homeTeamShort, { opponentGoals: f.awayGoals, opponent: f.awayTeamShort, isHome: true });
-      map.set(f.awayTeamShort, { opponentGoals: f.homeGoals, opponent: f.homeTeamShort, isHome: false });
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
     });
     return map;
-  }, [tbcGoalData]);
+  }, [fixturesData, bootstrapData]);
 
   // Generate gameweek range for table headers
   const gameweekRange = useMemo(() => {
@@ -135,53 +128,37 @@ export default function PlayerCleanSheetPoints() {
     return Array.from(new Set(cleanSheetData.map(p => p.position))).sort();
   }, [cleanSheetData]);
 
-  // TBC CS points for a player: exp(-opponentGoals) × positionCSPoints
-  const getPositionCSPoints = (position: string) => {
-    if (position === "Goalkeeper" || position === "Defender") return 4;
-    if (position === "Midfielder") return 1;
-    return 0;
-  };
-  const getTBCCS = (player: any) => {
-    const entry = tbcTeamCSMap.get(player.team);
-    if (!entry) return 0;
-    const csProb = Math.exp(-entry.opponentGoals);
-    return csProb * getPositionCSPoints(player.position);
-  };
-
   // TBC assignments from localStorage
   const tbcAssignments = useMemo<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  // Returns unabsorbed TBC CS points (0 if absorbed into a GW column)
-  const getPlayerUnabsorbedCSTBC = (player: any): number => {
-    if (tbcTeamCSMap.size === 0) return 0;
-    if (fixtureMode === 'expert') return 0;
-    if (fixtureMode === 'base') return getTBCCS(player);
-    const allAbsorbed = tbcGoalData?.every(f => {
-      const a = tbcAssignments[f.fixtureId];
-      return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek;
-    }) ?? false;
-    return allAbsorbed ? 0 : getTBCCS(player);
-  };
-
-  // resolvedCleanSheetData: absorbs TBC into assigned GW for expert/custom modes
+  // resolvedCleanSheetData: absorbs GW39 real data into assigned GW for expert/custom modes
   const resolvedCleanSheetData = useMemo<PlayerCleanSheetData[]>(() => {
-    if (!cleanSheetData || tbcTeamCSMap.size === 0 || fixtureMode === 'base') return cleanSheetData || [];
-    const tbcFixtureId = tbcGoalData?.[0]?.fixtureId;
-    const assignedGW = fixtureMode === 'expert' ? 36 : (tbcFixtureId !== undefined ? tbcAssignments[tbcFixtureId] : undefined);
-    if (assignedGW === undefined || assignedGW === null || assignedGW < startGameweek || assignedGW > endGameweek) return cleanSheetData;
+    if (!cleanSheetData || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return cleanSheetData || [];
+    const startGW = startGameweek ?? 0;
+    const endGW = endGameweek ?? 39;
     return cleanSheetData.map(player => {
-      const tbcEntry = tbcTeamCSMap.get(player.team);
-      if (!tbcEntry) return player;
-      const tbcCSVal = Math.exp(-tbcEntry.opponentGoals) * getPositionCSPoints(player.position);
-      const prevVal = player.gameweekProjections[assignedGW.toString()] || 0;
-      const newProjections = { ...player.gameweekProjections, [assignedGW.toString()]: prevVal + tbcCSVal };
-      const prevDetails = player.fixtureDetails?.[assignedGW.toString()] || [];
-      const newFixtureDetails = { ...(player.fixtureDetails || {}), [assignedGW.toString()]: [...prevDetails, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, cleanSheetPoints: tbcCSVal }] };
-      return { ...player, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails, totalExpectedPoints: player.totalExpectedPoints + tbcCSVal };
+      const tbcInfo = tbcTeamInfoMap.get(player.team);
+      if (!tbcInfo) return player;
+      const gw39CS = Number(player.gameweekProjections?.['39']) || 0;
+      if (!gw39CS) return player;
+      let assignedGW: number | null = null;
+      if (fixtureMode === 'expert') {
+        assignedGW = 36;
+      } else {
+        const raw = tbcAssignments[tbcInfo.fixtureId] ?? null;
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
+      }
+      if (assignedGW === null) return player;
+      const key = assignedGW.toString();
+      const prevVal = player.gameweekProjections[key] || 0;
+      const newProjections = { ...player.gameweekProjections, [key]: prevVal + gw39CS, '39': 0 };
+      const prevDetails = player.fixtureDetails?.[key] || [];
+      const newFixtureDetails = { ...(player.fixtureDetails || {}), [key]: [...prevDetails, { opponent: tbcInfo.opponent, isHome: tbcInfo.isHome, cleanSheetPoints: gw39CS }] };
+      return { ...player, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails, totalExpectedPoints: player.totalExpectedPoints + gw39CS };
     });
-  }, [cleanSheetData, tbcTeamCSMap, fixtureMode, tbcAssignments, tbcGoalData, startGameweek, endGameweek]);
+  }, [cleanSheetData, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -197,11 +174,13 @@ export default function PlayerCleanSheetPoints() {
 
     // Sort data
     filtered.sort((a, b) => {
+      const aTBC = fixtureMode !== 'expert' ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
+      const bTBC = fixtureMode !== 'expert' ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
       let aValue: any = sortField === 'totalExpectedPoints'
-        ? (a.totalExpectedPoints + getPlayerUnabsorbedCSTBC(a))
+        ? (a.totalExpectedPoints + aTBC)
         : a[sortField];
       let bValue: any = sortField === 'totalExpectedPoints'
-        ? (b.totalExpectedPoints + getPlayerUnabsorbedCSTBC(b))
+        ? (b.totalExpectedPoints + bTBC)
         : b[sortField];
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -217,7 +196,7 @@ export default function PlayerCleanSheetPoints() {
     });
 
     return filtered;
-  }, [resolvedCleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection, tbcTeamCSMap, fixtureMode, tbcAssignments, tbcGoalData, startGameweek, endGameweek]);
+  }, [resolvedCleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection, fixtureMode]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -281,7 +260,7 @@ export default function PlayerCleanSheetPoints() {
         </div>
       </div>
 
-      {tbcGoalData && tbcGoalData.length > 0 && (
+      {tbcTeamInfoMap.size > 0 && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
@@ -450,7 +429,7 @@ export default function PlayerCleanSheetPoints() {
                       {gameweekRange.map(gw => (
                         <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">{gw}</th>
                       ))}
-                      {fixtureMode !== 'expert' && tbcTeamCSMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek; })) && (
+                      {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.gameweekProjections?.['39'] || 0) > 0) && (
                         <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                           GW39 (TBC)
                         </th>
@@ -533,9 +512,9 @@ export default function PlayerCleanSheetPoints() {
                             </td>
                           );
                         })}
-                        {fixtureMode !== 'expert' && tbcTeamCSMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek; })) && (() => {
-                          const tbcCSEntry = tbcTeamCSMap.get(player.team);
-                          const tbcCSPoints = getPlayerUnabsorbedCSTBC(player);
+                        {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.gameweekProjections?.['39'] || 0) > 0) && (() => {
+                          const tbcCSEntry = tbcTeamInfoMap.get(player.team);
+                          const tbcCSPoints = player.gameweekProjections?.['39'] || 0;
                           return (
                             <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
                               {tbcCSEntry && tbcCSPoints > 0 ? (
@@ -566,7 +545,7 @@ export default function PlayerCleanSheetPoints() {
                         })()}
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {(player.totalExpectedPoints + getPlayerUnabsorbedCSTBC(player)).toFixed(1)}
+                            {(player.totalExpectedPoints + (player.gameweekProjections?.['39'] || 0)).toFixed(1)}
                           </span>
                         </td>
                       </tr>

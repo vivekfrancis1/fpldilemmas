@@ -8624,9 +8624,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Process next 12 gameweeks
+      // Process next 12 gameweeks (extend to 39 to include TBC fixtures)
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
       console.log(`DEBUG: Team Assist Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Use TeamGoalsService directly (not HTTP call) as architect specified
@@ -8704,11 +8704,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
+      const rawFixturesDataCS = await fixturesResponse.json();
+      // Normalize TBC fixtures (event=null) to GW39 so they flow through the CS model
+      const fixturesData = rawFixturesDataCS.map((f: any) =>
+        f.event === null || f.event === undefined ? { ...f, event: 39 } : f
+      );
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
       const startGWforCS = currentGameweek + 1;
       
       console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${startGWforCS} to GW${endGameweek}), current GW: ${currentGameweek}`);
@@ -11773,7 +11777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Dynamic gameweek range - start from current+1 (next gameweek) for 12 weeks
       const startGameweek = parseInt(req.query.startGameweek as string) || (currentGameweek + 1);
-      const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 11, 38);
+      const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 11, 39);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
       // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets
@@ -15817,8 +15821,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
+        const hasTBCSaves = fixturesData.some((f: any) => f.event === null || f.event === undefined);
         const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
-        const endGameweek = parseInt(req.query.endGameweek as string) || gameweekRange.end;
+        const endGameweek = parseInt(req.query.endGameweek as string) || (hasTBCSaves ? 39 : gameweekRange.end);
         
         console.log(`DEBUG: Current gameweek: ${currentGameweek}, saves projections from GW${startGameweek} to GW${endGameweek}`);
       
@@ -15974,9 +15979,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Per-GW availability probability for this goalkeeper
             const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, savesEvents);
             
-            // Find ALL fixtures for this team in this gameweek (handles DGW)
+            // Find ALL fixtures for this team in this gameweek (handles DGW + TBC at GW39)
             const fixtures = fixturesData.filter((f: any) => 
-              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+              (f.event === gw || (gw === 39 && (f.event === null || f.event === undefined))) &&
+              (f.team_h === player.team || f.team_a === player.team)
             );
             
             let gwExpectedSaves = 0;
@@ -17057,11 +17063,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
-        const endGameweek = gameweekRange.end;
         
-        // Get fixtures for the gameweek range
+        // Fetch fixtures first so we can detect TBC (event=null) fixtures and extend to GW39
         const fixturesResponse = await internalFetch("api/fixtures");
         const allFixtures = await fixturesResponse.json();
+        const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
+        const endGameweek = hasTBCBonus ? 39 : gameweekRange.end;
         
         // Filter only players with 1+ minutes for meaningful projections
         const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
@@ -17098,8 +17105,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Per-GW availability probability
             const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
             
-            const fixtures = allFixtures.filter((f: any) => 
-              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+            const fixtures = allFixtures.filter((f: any) =>
+              (f.event === gw || (gw === 39 && (f.event === null || f.event === undefined))) &&
+              (f.team_h === player.team || f.team_a === player.team)
             );
             
             let gwBonusPoints = 0;

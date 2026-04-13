@@ -134,7 +134,8 @@ export class TeamGoalsService {
     
     // Determine gameweek range — extend upper bound to 39 to include the TBC fixture (GW39)
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);
-    const calculatedEndGameweek = endGameweek || Math.min(currentGameweek + 6, 39);
+    const hasTBCFixtures = rawFixturesData.some((f: any) => f.event === null || f.event === undefined);
+    const calculatedEndGameweek = endGameweek || (hasTBCFixtures ? 39 : Math.min(currentGameweek + 6, 38));
     
     // Use centralized team service for betting data
     const teamService = await createTeamService();

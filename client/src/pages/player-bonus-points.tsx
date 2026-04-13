@@ -21,15 +21,6 @@ interface FixtureDetail {
   bonusPoints: number;
 }
 
-interface TBCGoalProjection {
-  fixtureId: number;
-  homeTeamId: number;
-  homeTeamShort: string;
-  awayTeamId: number;
-  awayTeamShort: string;
-  homeGoals: number;
-  awayGoals: number;
-}
 
 interface BootstrapData {
   elements: any[];
@@ -75,6 +66,12 @@ export default function PlayerBonusPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch fixtures to detect TBC (event=null) fixtures for GW39 amber column
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
@@ -92,7 +89,7 @@ export default function PlayerBonusPoints() {
     const end = parseInt(range.endGameweek);
     
     // Validate range
-    if (start > 0 && end > 0 && start <= end && end <= 38) {
+    if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
       setInitialized(true);
@@ -105,61 +102,51 @@ export default function PlayerBonusPoints() {
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
-  // TBC goal projections for amber column
-  const { data: tbcGoalData } = useQuery<TBCGoalProjection[]>({
-    queryKey: ["/api/tbc-goal-projections"],
-    staleTime: 30 * 60 * 1000,
-  });
-
-  // TBC team bonus map: teamShort → { opponent, isHome }
-  // For bonus: teamName is short name directly
-  const tbcTeamBonusMap = useMemo(() => {
-    const map = new Map<string, { opponent: string; isHome: boolean }>();
-    if (!tbcGoalData) return map;
-    tbcGoalData.forEach(f => {
-      map.set(f.homeTeamShort, { opponent: f.awayTeamShort, isHome: true });
-      map.set(f.awayTeamShort, { opponent: f.homeTeamShort, isHome: false });
+  // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
+    (fixturesData as any[]).filter(f => f.event === null || f.event === undefined).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
     });
     return map;
-  }, [tbcGoalData]);
+  }, [fixturesData, bootstrapData]);
 
   // TBC assignments from localStorage
   const tbcAssignments = useMemo<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  // Returns unabsorbed TBC bonus for a player (0 if absorbed into a GW column)
-  const getPlayerUnabsorbedBonusTBC = (projection: BonusPointsProjection): number => {
-    if (tbcTeamBonusMap.size === 0) return 0;
-    if (!tbcTeamBonusMap.has(projection.teamName)) return 0;
-    if (fixtureMode === 'expert') return 0;
-    if (fixtureMode === 'base') return projection.averagePerGameweek;
-    const allAbsorbed = tbcGoalData?.every(f => {
-      const a = tbcAssignments[f.fixtureId];
-      return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek;
-    }) ?? false;
-    return allAbsorbed ? 0 : projection.averagePerGameweek;
-  };
-
-  // resolvedBonusData: absorbs TBC into assigned GW for expert/custom modes
+  // resolvedBonusData: absorbs GW39 real data into assigned GW for expert/custom modes
   const resolvedBonusData = useMemo<BonusPointsProjection[]>(() => {
     if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
-    if (tbcTeamBonusMap.size === 0 || fixtureMode === 'base') return bonusPointsProjections;
-    const tbcFixtureId = tbcGoalData?.[0]?.fixtureId;
-    const assignedGW = fixtureMode === 'expert' ? 36 : (tbcFixtureId !== undefined ? tbcAssignments[tbcFixtureId] : undefined);
-    if (assignedGW === undefined || assignedGW === null || assignedGW < startGameweek || assignedGW > endGameweek) return bonusPointsProjections;
+    if (tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return bonusPointsProjections;
+    const startGW = startGameweek ?? 0;
+    const endGW = endGameweek ?? 39;
     return bonusPointsProjections.map((p: BonusPointsProjection) => {
-      const tbcEntry = tbcTeamBonusMap.get(p.teamName);
-      if (!tbcEntry) return p;
-      const tbcVal = p.averagePerGameweek;
+      const tbcInfo = tbcTeamInfoMap.get(p.teamName);
+      if (!tbcInfo) return p;
+      const gw39Bonus = p.bonusPoints?.['gw39'] || 0;
+      if (!gw39Bonus) return p;
+      let assignedGW: number | null = null;
+      if (fixtureMode === 'expert') {
+        assignedGW = 36;
+      } else {
+        const raw = tbcAssignments[tbcInfo.fixtureId] ?? null;
+        if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;
+      }
+      if (assignedGW === null) return p;
       const gwKey = `gw${assignedGW}`;
       const prevVal = p.bonusPoints?.[gwKey] || 0;
-      const newBonusPoints = { ...p.bonusPoints, [gwKey]: prevVal + tbcVal };
+      const newBonusPoints = { ...p.bonusPoints, [gwKey]: prevVal + gw39Bonus, 'gw39': 0 };
       const prevDetails = p.fixtureDetails?.[assignedGW.toString()] || [];
-      const newFixtureDetails = { ...(p.fixtureDetails || {}), [assignedGW.toString()]: [...prevDetails, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, bonusPoints: tbcVal }] };
+      const newFixtureDetails = { ...(p.fixtureDetails || {}), [assignedGW.toString()]: [...prevDetails, { opponent: tbcInfo.opponent, isHome: tbcInfo.isHome, bonusPoints: gw39Bonus }] };
       return { ...p, bonusPoints: newBonusPoints, fixtureDetails: newFixtureDetails };
     });
-  }, [bonusPointsProjections, tbcTeamBonusMap, fixtureMode, tbcAssignments, tbcGoalData, startGameweek, endGameweek]);
+  }, [bonusPointsProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -309,8 +296,8 @@ export default function PlayerBonusPoints() {
           bValue = b.teamName;
           break;
         case 'totalBonusPoints': {
-          aValue = getAdjustedTotalForSort(a) + getPlayerUnabsorbedBonusTBC(a);
-          bValue = getAdjustedTotalForSort(b) + getPlayerUnabsorbedBonusTBC(b);
+          aValue = getAdjustedTotalForSort(a) + (a.bonusPoints?.['gw39'] || 0);
+          bValue = getAdjustedTotalForSort(b) + (b.bonusPoints?.['gw39'] || 0);
           break;
         }
         default:
@@ -337,7 +324,7 @@ export default function PlayerBonusPoints() {
     });
 
     return filtered;
-  }, [resolvedBonusData, searchTerm, selectedPositions, selectedTeams, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, tbcTeamBonusMap, fixtureMode, tbcAssignments, tbcGoalData, startGameweek, endGameweek]);
+  }, [resolvedBonusData, searchTerm, selectedPositions, selectedTeams, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -384,7 +371,7 @@ export default function PlayerBonusPoints() {
         </div>
       </div>
 
-      {tbcGoalData && tbcGoalData.length > 0 && (
+      {tbcTeamInfoMap.size > 0 && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
@@ -584,7 +571,7 @@ export default function PlayerBonusPoints() {
                             </button>
                           </th>
                         ))}
-                        {fixtureMode !== 'expert' && tbcTeamBonusMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek; })) && (
+                        {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.bonusPoints?.['gw39'] || 0) > 0) && (
                           <th className="text-center py-2 px-1 text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                             GW39 (TBC)
                           </th>
@@ -685,9 +672,9 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })}
-                          {fixtureMode !== 'expert' && tbcTeamBonusMap.size > 0 && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= startGameweek && a <= endGameweek; })) && (() => {
-                            const tbcBonusEntry = tbcTeamBonusMap.get(projection.teamName);
-                            const tbcBonusVal = getPlayerUnabsorbedBonusTBC(projection);
+                          {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.bonusPoints?.['gw39'] || 0) > 0) && (() => {
+                            const tbcBonusEntry = tbcTeamInfoMap.get(projection.teamName);
+                            const tbcBonusVal = projection.bonusPoints?.['gw39'] || 0;
                             return (
                               <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
                                 {tbcBonusEntry && tbcBonusVal > 0 ? (
@@ -718,7 +705,7 @@ export default function PlayerBonusPoints() {
                           })()}
                           <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {(() => {
-                              const tbcBonusVal2 = getPlayerUnabsorbedBonusTBC(projection);
+                              const tbcBonusVal2 = projection.bonusPoints?.['gw39'] || 0;
                               return hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
