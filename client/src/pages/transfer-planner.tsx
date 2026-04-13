@@ -182,9 +182,11 @@ interface AllPlayersProjectionsTabProps {
   onScrollComplete?: () => void;
   teamData?: TeamData;
   savedDrafts?: any[];
+  fixtureMode: 'base' | 'custom' | 'expert';
+  setFixtureMode: (mode: 'base' | 'custom' | 'expert') => void;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts, fixtureMode, setFixtureMode }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilters, setPositionFilters] = useState<Set<string>>(() =>
     initialPositionFilter && initialPositionFilter !== "all" ? new Set([initialPositionFilter]) : new Set()
@@ -203,8 +205,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Fixture mode toggle (Base / My Fixtures / Expert Fixtures)
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Track a version counter so the adjustedPlayersData memo re-runs when localStorage changes
   // (e.g. user assigned fixtures in another tab and refocused the window).
   const [assignmentVersion, setAssignmentVersion] = useState(0);
@@ -747,28 +747,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </label>
           )}
         </div>
-        {/* Row 3: Fixture mode toggle */}
-        <div className="flex flex-row gap-1.5 items-center">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
-          {(['base', 'custom', 'expert'] as const)
-            .filter(mode => {
-              if (mode !== 'custom') return true;
-              try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; }
-            })
-            .map(mode => (
-              <button
-                key={mode}
-                onClick={() => setFixtureMode(mode)}
-                className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
-                  fixtureMode === mode
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-background text-foreground border-input hover:border-purple-400'
-                }`}
-              >
-                {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
-              </button>
-            ))}
-        </div>
       </div>
       <CardContent className="p-1">
         <div className="w-full overflow-x-auto">
@@ -1047,6 +1025,9 @@ export default function TransferPlanner() {
     return `${draft}_${gameweek}`;
   };
   
+  // Fixture mode — shared across both Team Selection and Projected Points sections
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+
   // Draft management state
   const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -1422,9 +1403,9 @@ export default function TransferPlanner() {
 
   // Whether a TBC fixture exists (event=null) — used to conditionally show GW39 in Team Selection
   const hasTBCFixtures = useMemo(() => {
-    if (!fixturesDataEarly) return false;
-    return (fixturesDataEarly as any[]).some(f => f.event === null || f.event === undefined);
-  }, [fixturesDataEarly]);
+    if (!fixturesData) return false;
+    return (fixturesData as any[]).some(f => f.event === null || f.event === undefined);
+  }, [fixturesData]);
 
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
@@ -6120,6 +6101,29 @@ export default function TransferPlanner() {
 
       {/* Team Selection & Projected Points — side-by-side on desktop */}
       {searchedId && teamData && selectedGameweek && (
+        <div className="flex flex-col gap-3">
+        {/* Fixture Mode Toggle — page-level, shared by Team Selection + Projected Points */}
+        <div className="flex flex-row gap-1.5 items-center">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
+          {(['base', 'custom', 'expert'] as const)
+            .filter(mode => {
+              if (mode !== 'custom') return true;
+              try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; }
+            })
+            .map(mode => (
+              <button
+                key={mode}
+                onClick={() => setFixtureMode(mode)}
+                className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
+                  fixtureMode === mode
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-background text-foreground border-input hover:border-purple-400'
+                }`}
+              >
+                {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
+              </button>
+            ))}
+        </div>
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
           <div className="w-full lg:w-[60%] flex-shrink-0">
@@ -6674,8 +6678,11 @@ export default function TransferPlanner() {
               onScrollComplete={() => setScrollToProjections(false)}
               teamData={teamData}
               savedDrafts={savedDrafts}
+              fixtureMode={fixtureMode}
+              setFixtureMode={setFixtureMode}
             />
           </div>
+        </div>
         </div>
       )}
 
