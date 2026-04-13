@@ -119,7 +119,7 @@ export default function PlayerAssistProjections() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // Fixture mode toggle for TBC column behaviour
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   // Fetch past player xA (expected assists) history (after startGameweek/endGameweek are defined)
   const { data: xaHistoryData, isLoading: xaHistoryLoading } = useQuery<PlayerXaHistory>({

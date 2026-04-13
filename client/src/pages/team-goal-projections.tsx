@@ -84,7 +84,7 @@ export default function TeamGoalProjections() {
   const [viewMode, setViewMode] = useState<"future" | "past" | "pastXg">("future");
 
   // Fixture mode for TBC display (base=TBC column, custom=user's assignments, expert=all TBC→GW36)
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   // Load user's TBC fixture assignments from localStorage (synced with /fixtures page)
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {

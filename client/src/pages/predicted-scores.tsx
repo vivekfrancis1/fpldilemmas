@@ -53,7 +53,7 @@ export default function PredictedScores() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [showFinished, setShowFinished] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   const queryClient = useQueryClient();
 

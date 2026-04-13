@@ -1093,7 +1093,7 @@ export default function PlayerTotalPoints() {
     return ids;
   }, [managerTeamData]);
 
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   });

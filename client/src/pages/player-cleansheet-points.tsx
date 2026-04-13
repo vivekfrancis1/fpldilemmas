@@ -56,7 +56,7 @@ export default function PlayerCleanSheetPoints() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // Fixture mode toggle
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   // Fetch bootstrap data to get events for dynamic gameweek calculation
   const { data: bootstrapData } = useQuery({

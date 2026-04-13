@@ -143,7 +143,7 @@ export default function Fixtures() {
   const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
 
   // Toggle between base fixtures (TBC intact), user-assigned, and expert (all TBC → GW36)
-  const [viewMode, setViewMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [viewMode, setViewMode] = useState<'base' | 'custom' | 'expert'>('base');
   const hasAssignments = Object.keys(tbcAssignments).length > 0;
   
   const updateCustomFDR = (teamId: number, venue: 'home' | 'away', value: number) => {

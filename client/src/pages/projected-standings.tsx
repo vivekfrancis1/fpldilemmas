@@ -37,7 +37,7 @@ interface TBCGoalProjection {
 export default function ProjectedStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"current" | "projected">("projected");
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({

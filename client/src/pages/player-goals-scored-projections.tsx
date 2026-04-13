@@ -94,7 +94,7 @@ export default function PlayerGoalsScoredProjections() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Fixture mode for TBC display
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });

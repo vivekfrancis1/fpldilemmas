@@ -83,7 +83,7 @@ export default function PlayerSaves() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // View mode: "future" for projections, "past" for historical data
   const [viewMode, setViewMode] = useState<"future" | "past">("future");
-  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('custom');
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   });
