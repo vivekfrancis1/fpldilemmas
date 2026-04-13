@@ -1420,6 +1420,12 @@ export default function TransferPlanner() {
     refetchOnWindowFocus: false,
   });
 
+  // Whether a TBC fixture exists (event=null) — used to conditionally show GW39 in Team Selection
+  const hasTBCFixtures = useMemo(() => {
+    if (!fixturesDataEarly) return false;
+    return (fixturesDataEarly as any[]).some(f => f.event === null || f.event === undefined);
+  }, [fixturesDataEarly]);
+
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
@@ -1445,13 +1451,18 @@ export default function TransferPlanner() {
     
     const nextGameweeks = [];
     
-    // Get exactly 6 upcoming gameweeks
+    // Get exactly 6 upcoming gameweeks (GW33-38)
     for (let i = 0; i < 6; i++) {
       const gwNumber = startGW + i;
       const gw = bootstrapData.events.find(e => e.id === gwNumber);
       if (gw && gwNumber <= 38) {
         nextGameweeks.push(gw);
       }
+    }
+
+    // Append a synthetic GW39 entry when TBC fixtures exist (event=null in fixtures data)
+    if (hasTBCFixtures) {
+      nextGameweeks.push({ id: 39, name: 'Gameweek 39', finished: false, is_current: false, is_next: false, is_previous: false });
     }
     
     return nextGameweeks;
