@@ -203,6 +203,23 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
+  // Fixture mode toggle (Base / My Fixtures / Expert Fixtures)
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  });
+
+  // Sync assignments from localStorage whenever fixtureMode changes or window refocuses
+  useEffect(() => {
+    const sync = () => {
+      const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+      try { setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}')); } catch { setTbcAssignments({}); }
+    };
+    sync();
+    window.addEventListener('focus', sync);
+    return () => window.removeEventListener('focus', sync);
+  }, [fixtureMode]);
+
   // Update position filter when initialPositionFilter changes
   useEffect(() => {
     if (initialPositionFilter && initialPositionFilter !== "all") {
@@ -265,6 +282,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     },
     staleTime: 30 * 60 * 1000,
     enabled: !!rawBootstrapData,
+  });
+
+  const { data: tbcGoalData } = useQuery<Array<{ fixtureId: number; homeTeamShort: string; awayTeamShort: string; homeGoals: number; awayGoals: number }>>({
+    queryKey: ["/api/tbc-goal-projections"],
+    enabled: fixtureMode !== 'base',
+  });
+
+  const { data: teamGoalProjectionsData } = useQuery<Array<{ teamShort: string; averageGoalsPerGame: number }>>({
+    queryKey: ["/api/team-goal-projections"],
+    enabled: fixtureMode !== 'base',
   });
 
   // Apply manual availability overrides to bootstrap data
@@ -362,9 +389,48 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const nextGameweeks = getNextGameweeksForTable();
 
+  // Build TBC fixture scaling map when in custom/expert mode
+  const tbcTeamScaleMap = useMemo(() => {
+    const map = new Map<string, { fixtureId: number; scale: number }>();
+    if (fixtureMode === 'base' || !tbcGoalData || !teamGoalProjectionsData) return map;
+    tbcGoalData.forEach(f => {
+      const homeAvg = teamGoalProjectionsData.find(t => t.teamShort === f.homeTeamShort)?.averageGoalsPerGame || 1;
+      const awayAvg = teamGoalProjectionsData.find(t => t.teamShort === f.awayTeamShort)?.averageGoalsPerGame || 1;
+      map.set(f.homeTeamShort, { fixtureId: f.fixtureId, scale: homeAvg > 0 ? f.homeGoals / homeAvg : 1 });
+      map.set(f.awayTeamShort, { fixtureId: f.fixtureId, scale: awayAvg > 0 ? f.awayGoals / awayAvg : 1 });
+    });
+    return map;
+  }, [fixtureMode, tbcGoalData, teamGoalProjectionsData]);
+
+  // Build adjusted player data with TBC fixture applied to the assigned GW
+  const adjustedPlayersData = useMemo(() => {
+    if (!allPlayersData) return allPlayersData;
+    if (fixtureMode === 'base' || tbcTeamScaleMap.size === 0) return allPlayersData;
+
+    return allPlayersData.map(player => {
+      // Look up team short name via bootstrap
+      const teamShort = bootstrapData?.teams.find(t => t.name === player.team || t.short_name === player.team)?.short_name;
+      if (!teamShort) return player;
+      const tbcEntry = tbcTeamScaleMap.get(teamShort);
+      if (!tbcEntry) return player;
+
+      // Determine which GW the TBC fixture is assigned to (tbcAssignments already reflects the active mode)
+      const assignedGW = tbcAssignments[tbcEntry.fixtureId];
+      if (!assignedGW) return player;
+
+      const gwKey = assignedGW.toString();
+      const originalPoints = player.gameweekProjections[gwKey] || 0;
+      // Add TBC fixture points on top of the existing GW points
+      const tbcPoints = originalPoints * tbcEntry.scale;
+      const newGameweekProjections = { ...player.gameweekProjections, [gwKey]: originalPoints + tbcPoints };
+      const newTotal = nextGameweeks.reduce((sum, gw) => sum + (newGameweekProjections[gw.toString()] || 0), 0);
+      return { ...player, gameweekProjections: newGameweekProjections, totalExpectedPoints: newTotal };
+    });
+  }, [allPlayersData, fixtureMode, tbcTeamScaleMap, tbcAssignments, nextGameweeks, bootstrapData]);
+
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
-    const sorted = [...(allPlayersData || [])]
+    const sorted = [...(adjustedPlayersData || [])]
       .map(p => ({ playerId: p.playerId, points: p.gameweekProjections[gw.toString()] || 0 }))
       .sort((a, b) => b.points - a.points);
     
@@ -399,7 +465,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   // Filter and sort players
-  let filteredPlayers = (allPlayersData || [])
+  let filteredPlayers = (adjustedPlayersData || [])
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
@@ -672,6 +738,23 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               <span className="text-sm text-muted-foreground">Only affordable (≤£{currentBank.toFixed(1)}m)</span>
             </label>
           )}
+        </div>
+        {/* Row 3: Fixture mode toggle */}
+        <div className="flex flex-row gap-1.5 items-center">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
+          {(['base', 'custom', 'expert'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setFixtureMode(mode)}
+              className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
+                fixtureMode === mode
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'bg-background text-foreground border-input hover:border-purple-400'
+              }`}
+            >
+              {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
+            </button>
+          ))}
         </div>
       </div>
       <CardContent className="p-1">
