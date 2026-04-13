@@ -126,23 +126,28 @@ export default function ProjectedStandings() {
   const standingsData = viewMode === "projected" ? projectedStandingsData : currentStandingsData;
   const standingsLoading = viewMode === "projected" ? projectedLoading : currentLoading;
 
-  // Whether to absorb TBC into standings (hide +TBC column)
+  // Whether to absorb TBC into standings (hide +TBC column).
+  // In projected mode the backend always includes TBC fixtures, so we always absorb.
+  // In current mode we rely on the old client-side absorption logic.
   const shouldAbsorbTBC = useMemo(() => {
     if (!tbcData || tbcData.length === 0) return false;
+    if (viewMode === 'projected') return true; // Backend bakes TBC into projected standings
     if (fixtureMode === 'expert') return true;
     if (fixtureMode === 'custom') {
-      const end = selectedEndGameweek ?? (viewMode === 'projected' ? maxEndGameweek : lastFinishedGameweek);
+      const end = selectedEndGameweek ?? lastFinishedGameweek;
       return tbcData.every(f => {
         const a = tbcAssignments[f.fixtureId];
         return a !== undefined && a !== null && a >= 1 && a <= end;
       });
     }
     return false;
-  }, [fixtureMode, tbcData, tbcAssignments, selectedEndGameweek, viewMode, maxEndGameweek, lastFinishedGameweek]);
+  }, [fixtureMode, tbcData, tbcAssignments, selectedEndGameweek, viewMode, lastFinishedGameweek]);
 
-  // Resolved standings: absorb TBC when needed and re-sort
+  // Resolved standings: absorb TBC when needed and re-sort.
+  // Skip client-side absorption in projected mode — the backend already includes TBC.
   const resolvedStandingsData = useMemo(() => {
     if (!standingsData) return standingsData;
+    if (viewMode === 'projected') return standingsData; // Backend already includes TBC
     if (!shouldAbsorbTBC || tbcTeamImpactMap.size === 0) return standingsData;
     const absorbed = standingsData.map(team => {
       const tbc = tbcTeamImpactMap.get(team.shortName);
@@ -219,7 +224,7 @@ export default function ProjectedStandings() {
         </div>
       </div>
 
-      {tbcTeamImpactMap.size > 0 && viewMode === "projected" && (
+      {tbcTeamImpactMap.size > 0 && viewMode === "current" && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>

@@ -11047,6 +11047,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Also process TBC fixtures (event: null) using model projections.
+      // These are real season games that must be played to complete the 38-game schedule,
+      // so they should always be included regardless of the requested endGameweek.
+      const tbcFixturesRaw = fixturesData.filter((f: any) => f.event === null || f.event === undefined);
+      if (tbcFixturesRaw.length > 0) {
+        try {
+          const { TeamGoalsService: TGS } = await import('./team-goals-service');
+          const tbcProjections = await TGS.getTBCFixtureProjections();
+          tbcProjections.forEach((proj: any) => {
+            const homeTeam = teamStandings.get(proj.homeTeamId);
+            const awayTeam = teamStandings.get(proj.awayTeamId);
+            if (!homeTeam || !awayTeam) return;
+            // Use raw projected goals for stats; round for W/D/L determination
+            const homeRounded = Math.round(proj.homeGoals);
+            const awayRounded = Math.round(proj.awayGoals);
+            homeTeam.played++;
+            awayTeam.played++;
+            homeTeam.projectedGames++;
+            awayTeam.projectedGames++;
+            homeTeam.goalsFor += proj.homeGoals;
+            homeTeam.goalsAgainst += proj.awayGoals;
+            awayTeam.goalsFor += proj.awayGoals;
+            awayTeam.goalsAgainst += proj.homeGoals;
+            if (homeRounded > awayRounded) {
+              homeTeam.wins++;
+              homeTeam.points += 3;
+              awayTeam.losses++;
+            } else if (awayRounded > homeRounded) {
+              awayTeam.wins++;
+              awayTeam.points += 3;
+              homeTeam.losses++;
+            } else {
+              homeTeam.draws++;
+              awayTeam.draws++;
+              homeTeam.points += 1;
+              awayTeam.points += 1;
+            }
+          });
+        } catch (tbcErr) {
+          console.warn('Could not include TBC fixtures in projected standings:', tbcErr);
+        }
+      }
+
       // Calculate goal difference and create final standings
       const standings = Array.from(teamStandings.values()).map((team: any) => ({
         ...team,
