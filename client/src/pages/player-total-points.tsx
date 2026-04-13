@@ -1320,7 +1320,8 @@ export default function PlayerTotalPoints() {
       samplePlayer.totalExpectedPoints !== undefined;
     if (!hasValidData) return null;
 
-    // Always include GW39 when TBC fixture exists so tbcAdjustedData can move it into the assigned GW
+    // Always include GW39 data so tbcAdjustedData can move it into an assigned GW,
+    // but only COUNT it in the total when the user's selected range already includes GW39.
     const effectiveEndGW = (tbcTeamShortNames.size > 0 && viewMode === 'future')
       ? Math.max(endGameweek, 39)
       : endGameweek;
@@ -1337,8 +1338,10 @@ export default function PlayerTotalPoints() {
         }
       }
 
-      const newTotal = Object.values(filtered).reduce((s, v) => s + v, 0);
-      const numGWs = Object.keys(filtered).length || 1;
+      // Total and averages only count GWs within the user's selected range (not the extended GW39)
+      const userRangeKeys = Object.keys(filtered).filter(k => parseInt(k) <= endGameweek);
+      const newTotal = userRangeKeys.reduce((s, k) => s + (filtered[k] || 0), 0);
+      const numGWs = userRangeKeys.length || 1;
       const playerPrice = player.price || 0;
 
       const componentOverrides: { [key: string]: any } = {};
@@ -1354,7 +1357,10 @@ export default function PlayerTotalPoints() {
         componentOverrides[compKey] = filteredComp;
         const totalKey = TOTAL_COMPONENT_KEYS[compKey];
         if (totalKey) {
-          componentOverrides[totalKey] = Object.values(filteredComp).reduce((s, v) => s + v, 0);
+          // Component total only counts user's selected range, not the extended GW39
+          componentOverrides[totalKey] = Object.entries(filteredComp)
+            .filter(([k]) => parseInt(k) <= endGameweek)
+            .reduce((s, [, v]) => s + v, 0);
         }
       }
 
@@ -1590,38 +1596,13 @@ export default function PlayerTotalPoints() {
         if (fixtureId === undefined) return player;
         const raw = tbcAssignments[fixtureId];
         if (raw === undefined || raw === null || raw < startGW || raw > endGW) {
-          // TBC not assigned to a GW within the display range — zero out GW39 so it
-          // doesn't silently inflate the total without a visible GW39 column.
-          const componentKeys = [
-            'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
-            'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
-            'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
-          ];
-          const compTotalKeys: Record<string, string> = {
-            pointsFromGoals: 'totalPointsFromGoals', pointsFromAssists: 'totalPointsFromAssists',
-            pointsFromCleanSheets: 'totalPointsFromCleanSheets', pointsFromDefensiveContributions: 'totalPointsFromDefensiveContributions',
-            pointsFromMinutes: 'totalPointsFromMinutes', pointsFromBonus: 'totalPointsFromBonus',
-            pointsFromSaves: 'totalPointsFromSaves', pointsFromGoalsConceded: 'totalPointsFromGoalsConceded',
-            pointsFromYellowCards: 'totalPointsFromYellowCards', pointsFromRedCards: 'totalPointsFromRedCards',
-          };
-          const updatedComponents: Record<string, any> = {};
-          componentKeys.forEach(key => {
-            const compMap = (player as any)[key] as Record<string, number> | undefined;
-            if (!compMap) return;
-            const gw39Val = compMap['39'] || 0;
-            if (gw39Val === 0) return;
-            updatedComponents[key] = { ...compMap, '39': 0 };
-            const totalKey = compTotalKeys[key];
-            if (totalKey) updatedComponents[totalKey] = Math.max(0, ((player as any)[totalKey] || 0) - gw39Val);
-          });
-          const numGWsVisible = Object.keys(player.gameweekProjections || {}).filter(k => k !== '39').length || 1;
-          const newTotal = Math.max(0, (player.totalExpectedPoints || 0) - gw39Points);
+          // TBC not assigned to a GW within the display range.
+          // totalExpectedPoints already excludes GW39 (computed in totalPointsData),
+          // so just zero out GW39 from the per-GW map to keep data tidy.
+          if (gw39Points === 0) return player;
           return {
             ...player,
             gameweekProjections: { ...player.gameweekProjections, '39': 0 },
-            totalExpectedPoints: newTotal,
-            averagePerGameweek: newTotal / numGWsVisible,
-            ...updatedComponents,
           };
         }
         assignedGW = raw;
@@ -1638,18 +1619,29 @@ export default function PlayerTotalPoints() {
       };
 
       // Move per-component breakdowns from GW39 to assigned GW
-      const componentKeys = [
+      // Also add GW39's component values to the running totals (they were excluded from the base total)
+      const compMoveKeys = [
         'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
         'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
         'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
       ];
-      const newComponents: Record<string, Record<string, number>> = {};
-      componentKeys.forEach(key => {
+      const compTotalKeyMap: Record<string, string> = {
+        pointsFromGoals: 'totalPointsFromGoals', pointsFromAssists: 'totalPointsFromAssists',
+        pointsFromCleanSheets: 'totalPointsFromCleanSheets', pointsFromDefensiveContributions: 'totalPointsFromDefensiveContributions',
+        pointsFromMinutes: 'totalPointsFromMinutes', pointsFromBonus: 'totalPointsFromBonus',
+        pointsFromSaves: 'totalPointsFromSaves', pointsFromGoalsConceded: 'totalPointsFromGoalsConceded',
+        pointsFromYellowCards: 'totalPointsFromYellowCards', pointsFromRedCards: 'totalPointsFromRedCards',
+      };
+      const newComponents: Record<string, any> = {};
+      compMoveKeys.forEach(key => {
         const compMap = (player as any)[key] as Record<string, number> | undefined;
         if (!compMap) return;
         const gw39Val = compMap['39'] || 0;
         const existingVal = compMap[gwKey] || 0;
         newComponents[key] = { ...compMap, '39': 0, [gwKey]: existingVal + gw39Val };
+        // Add GW39's component contribution to the running total
+        const totalKey = compTotalKeyMap[key];
+        if (totalKey) newComponents[totalKey] = ((player as any)[totalKey] || 0) + gw39Val;
       });
 
       // Merge GW39 fixture details into the assigned GW (creates a virtual DGW)
@@ -1661,11 +1653,18 @@ export default function PlayerTotalPoints() {
         [gwKey]: [...existingFixtures, ...gw39Fixtures],
       };
 
+      // Add GW39 points to the total (they were excluded from the base totalExpectedPoints)
+      const newTotal = (player.totalExpectedPoints || 0) + gw39Points;
+      const numGWsVisible = Object.keys(newGameweekProjections).filter(k => parseInt(k) <= endGW).length || 1;
+
       return {
         ...player,
         gameweekProjections: newGameweekProjections,
         fixtureDetails: newFixtureDetails,
         ...newComponents,
+        totalExpectedPoints: newTotal,
+        averagePerGameweek: newTotal / numGWsVisible,
+        averageValue: (player.price || 0) > 0 ? newTotal / (player.price || 1) : 0,
       };
     });
   }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, excludedGameweeks, teamNameToShortName]);
