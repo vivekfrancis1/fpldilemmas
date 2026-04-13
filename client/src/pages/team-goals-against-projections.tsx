@@ -341,13 +341,24 @@ export default function TeamGoalsAgainstProjections() {
         
         switch (sortBy) {
           case "total": {
-            const aPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + ((gw === 39 && viewMode === 'future' && fixtureMode === 'base') ? (tbcGAMap.get(a.teamShort)?.goalsAgainst || 0) : (a.gameweekProjections[gw] || 0)), 0)
-              + ((activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(a.teamShort));
-            const bPeriodTotal = activeGameweeks
-              .reduce((sum, gw) => sum + ((gw === 39 && viewMode === 'future' && fixtureMode === 'base') ? (tbcGAMap.get(b.teamShort)?.goalsAgainst || 0) : (b.gameweekProjections[gw] || 0)), 0)
-              + ((activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(b.teamShort));
-            return aPeriodTotal - bPeriodTotal;
+            const computeAvgGA = (team: typeof a) => {
+              if (viewMode === "past") {
+                return activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+              }
+              const td = team as TeamGoalsAgainstProjection;
+              const fixtures = activeGameweeks.flatMap(gw => {
+                if (gw === 39 && fixtureMode === 'base') {
+                  const entry = tbcGAMap.get(team.teamShort);
+                  return entry ? [{ goalsAgainst: entry.goalsAgainst }] : [];
+                }
+                return td.fixtureDetails?.[gw.toString()] || [];
+              });
+              const totalGA = fixtures.reduce((sum, f) => sum + (f as FixtureDetail).goalsAgainst, 0);
+              const tbcGA = (activeGameweeks.includes(39) || excludedGameweeks.has(39)) ? 0 : getUnabsorbedTBC(team.teamShort);
+              const count = fixtures.length + (tbcGA > 0 ? 1 : 0);
+              return count > 0 ? (totalGA + tbcGA) / count : 0;
+            };
+            return computeAvgGA(a) - computeAvgGA(b);
           }
           case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
           case "average": return a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame; // Lower is better
