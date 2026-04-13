@@ -1028,6 +1028,13 @@ export default function TransferPlanner() {
   // Fixture mode — shared across both Team Selection and Projected Points sections
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
+  // If user switches away from Base mode while GW39 is selected, snap back to GW38
+  useEffect(() => {
+    if (fixtureMode !== 'base' && selectedGameweek === 39) {
+      setSelectedGameweek(38);
+    }
+  }, [fixtureMode]);
+
   // Draft management state
   const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -1441,8 +1448,8 @@ export default function TransferPlanner() {
       }
     }
 
-    // Append a synthetic GW39 entry when TBC fixtures exist (event=null in fixtures data)
-    if (hasTBCFixtures) {
+    // Append a synthetic GW39 entry only in Base mode (Expert/Custom handle TBC differently)
+    if (hasTBCFixtures && fixtureMode === 'base') {
       nextGameweeks.push({ id: 39, name: 'Gameweek 39', finished: false, is_current: false, is_next: false, is_previous: false });
     }
     
