@@ -1083,7 +1083,7 @@ export default function ManagerTeam() {
                 <ArrowLeftRight className="h-5 w-5" />
                 Transfer History
               </CardTitle>
-              <CardDescription>All transfers made this season (excluding Free Hit gameweeks)</CardDescription>
+              <CardDescription>All transfers made this season (excluding Free Hit and Wildcard gameweeks)</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingTransfers || historyLoading ? (
