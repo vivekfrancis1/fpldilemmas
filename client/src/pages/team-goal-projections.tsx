@@ -133,6 +133,16 @@ export default function TeamGoalProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (col: string) => {
+    if (col === sortBy) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(col);
+      setSortDir('desc');
+    }
+  };
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
@@ -403,6 +413,7 @@ export default function TeamGoalProjections() {
   const filteredProjections = useMemo(() => {
     if (!resolvedProjections.length) return [];
     
+    const dir = sortDir === 'desc' ? -1 : 1;
     return resolvedProjections
       .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
       .sort((a, b) => {
@@ -410,25 +421,24 @@ export default function TeamGoalProjections() {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
           const aValue = a.gameweekProjections[gwNumber] || 0;
           const bValue = b.gameweekProjections[gwNumber] || 0;
-          return bValue - aValue;
+          return (bValue - aValue) * dir;
         }
         
         switch (sortBy) {
           case "total": {
-            // GW projections already have absorbed TBC; add only unabsorbed remainder
             const aPeriodTotal = activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0)
               + getUnabsorbedTBC(a.teamShort);
             const bPeriodTotal = activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0)
               + getUnabsorbedTBC(b.teamShort);
-            return bPeriodTotal - aPeriodTotal;
+            return (bPeriodTotal - aPeriodTotal) * dir;
           }
-          case "season": return b.totalProjectedGoals - a.totalProjectedGoals;
-          case "average": return b.averageGoalsPerGame - a.averageGoalsPerGame;
-          case "position": return a.position - b.position;
-          default: return b.totalProjectedGoals - a.totalProjectedGoals;
+          case "season": return (b.totalProjectedGoals - a.totalProjectedGoals) * dir;
+          case "average": return (b.averageGoalsPerGame - a.averageGoalsPerGame) * dir;
+          case "position": return (a.position - b.position) * dir;
+          default: return (b.totalProjectedGoals - a.totalProjectedGoals) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments]);
 
 
   const totalGoals = useMemo(() => {
@@ -753,12 +763,12 @@ export default function TeamGoalProjections() {
                         <th 
                           key={gwNumber} 
                           className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'min-w-[52px] md:min-w-[64px]' : 'min-w-[30px] md:min-w-[44px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
-                          onClick={() => setSortBy(`gw${gwNumber}`)}
+                          onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
                             <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
                             <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
-                            {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                            {sortBy === `gw${gwNumber}` && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                           </div>
                         </th>
                       ))}
@@ -769,12 +779,12 @@ export default function TeamGoalProjections() {
                       )}
                       <th 
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
-                        onClick={() => setSortBy('total')}
+                        onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="md:hidden">Tot</span>
                           <span className="hidden md:inline">Total</span>
-                          {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
+                          {sortBy === 'total' && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                         </div>
                       </th>
                     </tr>
