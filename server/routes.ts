@@ -11596,6 +11596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For these players, we compute recentP60 using only current-club games.
         const minutesFixtureTeamMap = new Map<number, { home: number; away: number }>();
         let minutesBlendMap = new Map<number, { blendWeight: number; activeGames: number; teamGames: number }>();
+        const tbcTeamIds = new Set<number>();
         try {
           const fixturesRes = await internalFetch("api/fixtures");
           if (fixturesRes.ok) {
@@ -11603,13 +11604,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             allFixtures.filter((f: any) => f.finished).forEach((f: any) => {
               minutesFixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a });
             });
+            // GW39 TBC: collect team IDs with event=null fixtures
+            allFixtures.filter((f: any) => f.event === null).forEach((f: any) => {
+              tbcTeamIds.add(f.team_h);
+              tbcTeamIds.add(f.team_a);
+            });
             const { computeBlendMap: computeMinutesBlendMap } = await import('./blend-eligible-service');
             minutesBlendMap = computeMinutesBlendMap(
               bootstrapData.elements,
               allFixtures.filter((f: any) => f.finished),
               dbHistories
             );
-            console.log(`🔀 Minutes blend map computed: ${minutesBlendMap.size} blend-eligible players`);
+            console.log(`🔀 Minutes blend map computed: ${minutesBlendMap.size} blend-eligible players, TBC teams: ${tbcTeamIds.size}`);
           }
         } catch (e) {
           console.warn("⚠️ Could not build minutes blend map, using full-season recentP60 for all players");
@@ -11706,6 +11712,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const availProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
                 pointsFromMinutesPerGW[`gw${gw}`] = Math.round(baseMinutesPoints * availProb * 100) / 100;
               }
+              // GW39 TBC: only teams with a TBC fixture (event=null) get a non-zero entry
+              pointsFromMinutesPerGW['gw39'] = tbcTeamIds.has(player.team)
+                ? Math.round(baseMinutesPoints * 100) / 100
+                : 0;
               
               // Flat value for backward compatibility (use availability=1.0, i.e. "when playing")
               const pointsFromMinutes = Math.round(baseMinutesPoints * 100) / 100;
