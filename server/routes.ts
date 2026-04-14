@@ -1281,21 +1281,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch authenticated transfers (includes upcoming gameweek)
       console.log(`DEBUG my-transfers: Fetching transfers for manager ${user.fplManagerId}`);
-      const transfersResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${user.fplManagerId}/transfers/`, {
-        headers: {
-          'x-api-authorization': `Bearer ${bearerToken}`
-        }
-      });
+      try {
+        const transfersResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${user.fplManagerId}/transfers/`, {
+          headers: {
+            'x-api-authorization': `Bearer ${bearerToken}`
+          }
+        });
 
-      if (!transfersResponse.ok) {
-        console.log(`DEBUG my-transfers: FPL API returned ${transfersResponse.status}, falling back to public endpoint`);
+        if (!transfersResponse.ok) {
+          console.log(`DEBUG my-transfers: FPL API returned ${transfersResponse.status}, falling back to public endpoint`);
+          return await fetchPublicTransfers(user.fplManagerId);
+        }
+
+        const transfersData = await transfersResponse.json();
+        console.log(`DEBUG my-transfers: Found ${transfersData.length} transfers, latest GW: ${transfersData.length > 0 ? Math.max(...transfersData.map((t: any) => t.event)) : 'none'}`);
+        
+        return res.json(transfersData);
+      } catch (fetchError) {
+        console.log(`DEBUG my-transfers: Authenticated fetch threw network error, falling back to public endpoint:`, fetchError);
         return await fetchPublicTransfers(user.fplManagerId);
       }
-
-      const transfersData = await transfersResponse.json();
-      console.log(`DEBUG my-transfers: Found ${transfersData.length} transfers, latest GW: ${transfersData.length > 0 ? Math.max(...transfersData.map((t: any) => t.event)) : 'none'}`);
-      
-      res.json(transfersData);
     } catch (error) {
       console.error('FPL my-transfers error:', error);
       res.status(500).json({ error: 'Failed to fetch FPL transfers' });
