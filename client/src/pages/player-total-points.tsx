@@ -952,8 +952,8 @@ export default function PlayerTotalPoints() {
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
-  // Gameweek exclusion state
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  // Gameweek selection state (empty = show all; non-empty = show only selected)
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   
   // Opponent display toggle state
   const [showOpponent, setShowOpponent] = useState(false);
@@ -1246,13 +1246,13 @@ export default function PlayerTotalPoints() {
     return tbcTeamShortNames;
   }, [fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek]);
 
-  // Show the GW39 TBC column only when GW39 is in range and not excluded by the user
+  // Show the GW39 TBC column only when GW39 is in range and not filtered out by the user
   const showTBCColumn = useMemo(() => (
     endGameweek !== null && endGameweek >= 39 &&
-    !excludedGameweeks.has(39) &&
+    (selectedGameweeks.size === 0 || selectedGameweeks.has(39)) &&
     viewMode === 'future' &&
     effectiveTbcTeamShortNames.size > 0
-  ), [endGameweek, excludedGameweeks, viewMode, effectiveTbcTeamShortNames]);
+  ), [endGameweek, selectedGameweeks, viewMode, effectiveTbcTeamShortNames]);
 
   // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
   // TanStack Query does NOT refetch when the user changes the GW filter (instant client-side filtering).
@@ -1334,7 +1334,7 @@ export default function PlayerTotalPoints() {
       const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
 
       for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
-        if (excludedGameweeks.has(gw)) continue;
+        if (selectedGameweeks.size > 0 && !selectedGameweeks.has(gw)) continue;
         const key = gw.toString();
         if (key in gwProjections) {
           filtered[key] = gwProjections[key];
@@ -1353,7 +1353,7 @@ export default function PlayerTotalPoints() {
         if (!gwMap) continue;
         const filteredComp: { [key: string]: number } = {};
         for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
-          if (excludedGameweeks.has(gw)) continue;
+          if (selectedGameweeks.size > 0 && !selectedGameweeks.has(gw)) continue;
           const key = gw.toString();
           if (key in gwMap) filteredComp[key] = gwMap[key];
         }
@@ -1376,7 +1376,7 @@ export default function PlayerTotalPoints() {
         averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
       };
     });
-  }, [fullRangeData, startGameweek, endGameweek, excludedGameweeks, tbcTeamShortNames, viewMode]);
+  }, [fullRangeData, startGameweek, endGameweek, selectedGameweeks, tbcTeamShortNames, viewMode]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1460,9 +1460,9 @@ export default function PlayerTotalPoints() {
     }
   };
 
-  // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  // Toggle gameweek selection (select to include filter)
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -1473,9 +1473,9 @@ export default function PlayerTotalPoints() {
     });
   };
 
-  // Clear all exclusions
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  // Clear all gameweek selections (show all)
+  const clearGameweekSelections = () => {
+    setSelectedGameweeks(new Set());
   };
 
   // Display data - transforms history data to match projection format for past mode
@@ -1572,10 +1572,12 @@ export default function PlayerTotalPoints() {
     return range;
   }, [startGameweek, endGameweek]);
 
-  // Generate active gameweek range for table headers (excluding excluded ones)
+  // Generate active gameweek range for table headers (filtered to selected ones if any)
   const gameweekRange = useMemo(() => {
-    return fullGameweekRange.filter(gw => !excludedGameweeks.has(gw));
-  }, [fullGameweekRange, excludedGameweeks]);
+    return selectedGameweeks.size > 0
+      ? fullGameweekRange.filter(gw => selectedGameweeks.has(gw))
+      : fullGameweekRange;
+  }, [fullGameweekRange, selectedGameweeks]);
 
   // In base mode: GW39 is already a proper projected column from the backend — no adjustments needed.
   // In custom/expert mode: move real GW39 points (and per-component breakdowns) to the assigned GW
@@ -1611,7 +1613,7 @@ export default function PlayerTotalPoints() {
         assignedGW = raw;
       }
 
-      if (excludedGameweeks.has(39) || excludedGameweeks.has(assignedGW)) return player;
+      if (selectedGameweeks.size > 0 && !selectedGameweeks.has(assignedGW)) return player;
 
       const gwKey = assignedGW.toString();
       const existing = player.gameweekProjections?.[gwKey] || 0;
@@ -1670,7 +1672,7 @@ export default function PlayerTotalPoints() {
         averageValue: (player.price || 0) > 0 ? newTotal / (player.price || 1) : 0,
       };
     });
-  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, excludedGameweeks, teamNameToShortName]);
+  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, selectedGameweeks, teamNameToShortName]);
 
   // Get unique teams and positions for filters — normalize to short names to avoid duplicates
   const teams = useMemo(() => {
@@ -1701,13 +1703,14 @@ export default function PlayerTotalPoints() {
     if (!tbcAdjustedData) return [];
     
     let filtered = tbcAdjustedData.filter(player => {
-      // Position filter - normalize both sides for comparison (exclude semantics: set contains excluded positions)
+      // Position filter — include semantics: non-empty set = show only those positions
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(player.position);
-        const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-        if (excluded) return false;
+        const included = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        if (!included) return false;
       }
-      if (selectedTeams.has(normalizeTeam(player.team))) return false;
+      // Team filter — include semantics: non-empty set = show only those teams
+      if (selectedTeams.size > 0 && !selectedTeams.has(normalizeTeam(player.team))) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       
@@ -2031,7 +2034,7 @@ export default function PlayerTotalPoints() {
               <Tabs defaultValue="gws" className="w-full">
                 <TabsList className="w-full grid grid-cols-4 mb-2 h-auto p-1 bg-white shadow-sm border border-gray-100">
                   <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                    <span className="sm:hidden">GWs</span><span className="hidden sm:inline">Gameweek</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                    <span className="sm:hidden">GWs</span><span className="hidden sm:inline">Gameweek</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                   </TabsTrigger>
                   <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                     <span className="sm:hidden">Pos</span><span className="hidden sm:inline">Position</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
@@ -2046,33 +2049,18 @@ export default function PlayerTotalPoints() {
 
                 {/* GWs tab */}
                 <TabsContent value="gws" className="mt-0">
-                  <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setExcludedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))}
-                        className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300"
-                        data-testid="button-invert-gameweeks"
-                      >Invert</button>
-                      {excludedGameweeks.size > 0 && (
-                        <button
-                          onClick={clearExclusions}
-                          className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700"
-                          data-testid="button-clear-exclusions"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                          Clear
-                        </button>
-                      )}
-                    </div>
+                  <div className="flex justify-end gap-1 mb-1">
+                    <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                    <button onClick={() => setSelectedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {fullGameweekRange.map(gw => {
-                      const isExcluded = excludedGameweeks.has(gw);
+                      const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                       return (
                         <button
                           key={gw}
-                          onClick={() => toggleGameweekExclusion(gw)}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                          onClick={() => toggleGameweekSelection(gw)}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-gw-${gw}`}
                         >
                           GW{gw}
@@ -2087,17 +2075,16 @@ export default function PlayerTotalPoints() {
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
                     <button onClick={() => setSelectedPositions(prev => new Set(positions.filter(p => !prev.has(p))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
-                    <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {positions.map(position => {
-                      const isIncluded = !selectedPositions.has(position);
+                      const isActive = selectedPositions.size === 0 || selectedPositions.has(position);
                       const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : 'FWD';
                       return (
                         <button
                           key={position}
                           onClick={() => togglePositionSelection(position)}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-position-${position}`}
                         >
                           {shortForm}
@@ -2112,17 +2099,16 @@ export default function PlayerTotalPoints() {
                   <div className="flex justify-end gap-1 mb-1">
                     <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
                     <button onClick={() => setSelectedTeams(prev => new Set(allTeamShortNames.filter(t => !prev.has(t))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
-                    <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {teams.map(team => {
-                      const isIncluded = !selectedTeams.has(team);
+                      const isActive = selectedTeams.size === 0 || selectedTeams.has(team);
                       const shortName = teamNameToShortName.get(team) || team;
                       return (
                         <button
                           key={team}
                           onClick={() => toggleTeamSelection(team)}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-team-${team}`}
                         >
                           {shortName}
@@ -2200,9 +2186,9 @@ export default function PlayerTotalPoints() {
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
                     <h2 className="fpl-card-title">{viewMode === "future" ? "Player Points Projections" : "Player Points History"}: GW{startGameweek}-GW{endGameweek}</h2>
-                    {excludedGameweeks.size > 0 && (
+                    {selectedGameweeks.size > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
-                        {excludedGameweeks.size} excluded
+                        {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
                       </Badge>
                     )}
                   </div>
