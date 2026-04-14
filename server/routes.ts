@@ -13915,10 +13915,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'minutes-points':
           await fplScoringCacheService.cachePlayerMinutesPoints();
           break;
+        // Individual scoring components — all run the same underlying full-scoring refresh
+        case 'saves':
+        case 'goals-conceded':
+        case 'yellow-cards':
+        case 'red-cards':
+        case 'bonus':
+          await fplScoringCacheService.updateAllScoringData();
+          break;
+        // Team projections breakdown
+        case 'team-goals':
+        case 'team-assists':
+          await projectionCacheWorker.cacheTeamProjections();
+          break;
+        // Team Goals Against — clear module-level in-memory cache so next request recomputes
+        case 'team-goals-against':
+          teamGoalsAgainstCache = null;
+          teamCSCache = null;
+          break;
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, scoring-components, cbit-points, minutes-points` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, scoring-components, saves, goals-conceded, yellow-cards, red-cards, bonus, team-goals, team-assists, team-goals-against, cbit-points, minutes-points` 
           });
       }
       

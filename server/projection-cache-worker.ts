@@ -625,7 +625,7 @@ class ProjectionCacheWorker {
   /**
    * Cache team projections from API
    */
-  private async cacheTeamProjections(): Promise<void> {
+  async cacheTeamProjections(): Promise<void> {
     try {
       console.log(`📊 Caching team projections...`);
       const response = await internalFetch('api/team-goal-projections');
