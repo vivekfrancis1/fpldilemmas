@@ -13622,10 +13622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalPointsFromSaves = Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0);
         const totalPointsFromDefensiveContributions = Object.values(pointsFromDefensiveContributions).reduce((sum: number, pts: number) => sum + pts, 0);
         
-        // Calculate total as exact sum of all 10 components - ensures consistency between displayed total and component breakdown
-        const calculatedTotal = totalPointsFromGoals + totalPointsFromAssists + totalPointsFromCleanSheets + 
-                               totalPointsFromMinutes + totalPointsFromGoalsConceded + totalPointsFromYellowCards + 
-                               totalPointsFromRedCards + totalPointsFromBonus + totalPointsFromSaves + totalPointsFromDefensiveContributions;
+        // Use sum of gameweekProjections as the authoritative total — it already has:
+        //   • blank/BGW GWs zeroed (numFixtures === 0 path sets gameweekProjections[gw] = 0)
+        //   • per-fixture clamping via Math.max(0, fixtureTotalPoints)
+        //   • GW39 correctly zeroed when the TBC fixture has event=null
+        // This avoids the "component-sum > gwProjections-sum" divergence that can occur when
+        // some component maps retain non-zero GW39 values before the blank-GW check fires,
+        // or when per-GW totals are clamped to 0 but individual component values are not.
+        const calculatedTotal = Object.values(gameweekProjections).reduce((sum: number, pts: number) => sum + pts, 0);
         
         // Count only non-blank gameweeks (where player has a fixture) for accurate averages
         const nonBlankGameweeks = Object.values(gameweekProjections).filter((pts: number) => pts > 0).length || 1;
