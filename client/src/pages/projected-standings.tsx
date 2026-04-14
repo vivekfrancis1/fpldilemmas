@@ -72,11 +72,14 @@ export default function ProjectedStandings() {
     }
   }, [viewMode, maxEndGameweek, lastFinishedGameweek]);
 
+  const tbcAssignmentsJson = fixtureMode === 'custom' ? JSON.stringify(tbcAssignments) : null;
+
   const { data: projectedStandingsData, isLoading: projectedLoading } = useQuery<TeamStanding[]>({
-    queryKey: ["/api/projected-standings", selectedEndGameweek, fixtureMode],
+    queryKey: ["/api/projected-standings", selectedEndGameweek, fixtureMode, tbcAssignmentsJson],
     queryFn: async () => {
       let url = `/api/projected-standings?endGameweek=${selectedEndGameweek}&fixtureMode=${fixtureMode}`;
       if (fixtureMode === 'expert') url += `&tbcGameweek=36`;
+      if (fixtureMode === 'custom' && tbcAssignmentsJson) url += `&tbcAssignments=${encodeURIComponent(tbcAssignmentsJson)}`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch projected standings');

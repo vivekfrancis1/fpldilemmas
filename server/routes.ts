@@ -10942,9 +10942,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // tbcGameweek: the gameweek TBC fixtures should count toward.
+      // tbcGameweek: the gameweek TBC fixtures should count toward (expert/base modes only).
       // Expert mode passes tbcGameweek=36 (expert prediction); base mode omits it (defaults to 39).
       const tbcGameweek = req.query.tbcGameweek ? parseInt(req.query.tbcGameweek as string) : 39;
+
+      // Custom mode: per-fixture GW assignments from the user's localStorage { fixtureId: gw }
+      const fixtureMode = (req.query.fixtureMode as string) || 'base';
+      let customTBCAssignments: Record<number, number> = {};
+      if (fixtureMode === 'custom' && req.query.tbcAssignments) {
+        try { customTBCAssignments = JSON.parse(req.query.tbcAssignments as string); } catch {}
+      }
 
       // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead, or tbcGameweek for TBC)
       const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, tbcGameweek);
@@ -11062,14 +11069,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Also process TBC fixtures (event: null) using model projections.
-      // Include only when endGameweek >= tbcGameweek (e.g. >= 39 in base mode, >= 36 in expert mode).
-      // This ensures teams with a TBC fixture show one fewer game played when projecting before that gameweek.
+      // Base/expert: include all when endGameweek >= tbcGameweek.
+      // Custom: each fixture is checked individually against its assigned GW.
       const tbcFixturesRaw = fixturesData.filter((f: any) => f.event === null || f.event === undefined);
-      if (tbcFixturesRaw.length > 0 && endGameweek >= tbcGameweek) {
+      const hasPotentialTBC = tbcFixturesRaw.length > 0 && (
+        fixtureMode === 'custom'
+          ? Object.keys(customTBCAssignments).length > 0
+          : endGameweek >= tbcGameweek
+      );
+      if (hasPotentialTBC) {
         try {
           const { TeamGoalsService: TGS } = await import('./team-goals-service');
           const tbcProjections = await TGS.getTBCFixtureProjections();
           tbcProjections.forEach((proj: any) => {
+            // Determine the effective GW for this TBC fixture
+            let fixtureEffectiveGW: number;
+            if (fixtureMode === 'custom') {
+              fixtureEffectiveGW = customTBCAssignments[proj.fixtureId] ?? 39;
+            } else {
+              fixtureEffectiveGW = tbcGameweek;
+            }
+            // Skip if we haven't reached this fixture's gameweek yet
+            if (endGameweek < fixtureEffectiveGW) return;
+
             const homeTeam = teamStandings.get(proj.homeTeamId);
             const awayTeam = teamStandings.get(proj.awayTeamId);
             if (!homeTeam || !awayTeam) return;
