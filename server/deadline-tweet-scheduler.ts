@@ -147,7 +147,7 @@ export class DeadlineTweetScheduler {
       const players: any[] = await resp.json();
       console.log(`📊 Deadline tweets: loaded ${players.length} players`);
 
-      const footer = `\n\nFull list 👉 ${FULL_LIST_URL}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      const footer = `\n\n${FULL_LIST_URL}\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
       let tweetsPosted = 0;
 
       // Tweet 1: Forwards + Midfielders (top 3 each)
@@ -236,7 +236,7 @@ export class DeadlineTweetScheduler {
         return;
       }
 
-      const footer = `\nFull list 👉 ${TRANSFER_TRACKER_URL}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      const footer = `\n\n${TRANSFER_TRACKER_URL}\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
       let body = `🔄 GW${gwNumber} Deadline Passed!`;
 
       // Transfers In section
