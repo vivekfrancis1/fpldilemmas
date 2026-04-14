@@ -76,7 +76,7 @@ export default function PlayerGoalsScoredProjections() {
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [gwFilter, setGwFilter] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   const [initialized, setInitialized] = useState(false);
@@ -295,9 +295,9 @@ export default function PlayerGoalsScoredProjections() {
   // Get current gameweek from bootstrap data (for display purposes)
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
 
-  // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  // Toggle gameweek selection
+  const toggleGameweekSelection = (gw: number) => {
+    setGwFilter(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -308,24 +308,24 @@ export default function PlayerGoalsScoredProjections() {
     });
   };
 
-  // Clear all exclusions
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  // Clear all gameweek selections (show all)
+  const clearGameweekSelections = () => {
+    setGwFilter(new Set());
   };
 
-  // Dynamic gameweek range based on user selection (default: starts from next gameweek)
-  // Filters out excluded gameweeks; GW39 is handled separately as floating TBC column
-  const selectedGameweeks = useMemo(() => {
+  // Dynamic gameweek range: all GWs in range (or filtered to selected set)
+  // GW39 is handled separately as floating TBC column
+  const activeGameweeks = useMemo(() => {
     if (!startGameweek || !endGameweek) return [];
     const gameweeks = [];
     const cappedEnd = Math.min(endGameweek, 38);
     for (let gw = startGameweek; gw <= cappedEnd; gw++) {
-      if (!excludedGameweeks.has(gw)) {
+      if (gwFilter.size === 0 || gwFilter.has(gw)) {
         gameweeks.push(gw);
       }
     }
     return gameweeks;
-  }, [startGameweek, endGameweek, excludedGameweeks]);
+  }, [startGameweek, endGameweek, gwFilter]);
 
   // Helper to normalize position strings for filtering
   const normalizePosition = (pos: string): string => {
@@ -423,9 +423,9 @@ export default function PlayerGoalsScoredProjections() {
 
   // Whether the floating GW39 (TBC) column should be visible
   const showTBCColumn = useMemo(() => (
-    endGameweek !== null && endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    endGameweek !== null && endGameweek >= 39 && (gwFilter.size === 0 || gwFilter.has(39)) &&
     viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
-  ), [endGameweek, excludedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
+  ), [endGameweek, gwFilter, viewMode, fixtureMode, tbcTeamInfoMap]);
 
   // Filter and sort data
   const filteredProjections = useMemo(() => {
@@ -433,11 +433,11 @@ export default function PlayerGoalsScoredProjections() {
 
     return resolvedDisplayData
       .filter(player => {
-        // Position filter - exclude semantics (set contains excluded positions)
+        // Position filter - include semantics: non-empty set = show only those positions
         if (selectedPositions.size > 0) {
           const normalizedPos = normalizePosition(player.position);
-          const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-          if (excluded) return false;
+          const included = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+          if (!included) return false;
         }
         if (selectedTeams.size > 0 && !selectedTeams.has(player.teamShort)) return false;
         if (searchQuery && player.playerName && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -461,15 +461,15 @@ export default function PlayerGoalsScoredProjections() {
           case "total": {
             const aTBC = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
             const bTBC = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
-            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC;
-            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC;
+            const aPeriodTotal = getAdjustedTotal(a, activeGameweeks) + aTBC;
+            const bPeriodTotal = getAdjustedTotal(b, activeGameweeks) + bTBC;
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
             const aTBC2 = showTBCColumn ? (Number(a.gameweekProjections?.['39']) || 0) : 0;
             const bTBC2 = showTBCColumn ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
-            const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks) + aTBC2;
-            const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks) + bTBC2;
+            const aGoalsTotal = getAdjustedTotal(a, activeGameweeks) + aTBC2;
+            const bGoalsTotal = getAdjustedTotal(b, activeGameweeks) + bTBC2;
             const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
             const bPointsTotal = getPointsFromGoals(bGoalsTotal, b.position);
             return (bPointsTotal - aPointsTotal) * multiplier;
@@ -481,13 +481,13 @@ export default function PlayerGoalsScoredProjections() {
           case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
           case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
-            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks);
-            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks);
+            const aPeriodTotal = getAdjustedTotal(a, activeGameweeks);
+            const bPeriodTotal = getAdjustedTotal(b, activeGameweeks);
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
         }
       });
-  }, [resolvedDisplayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode, fixtureMode]);
+  }, [resolvedDisplayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, activeGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode, fixtureMode]);
 
   // TBC total goals across all filtered players (unabsorbed only)
   const tbcTotalGoals = useMemo(() => {
@@ -514,10 +514,10 @@ export default function PlayerGoalsScoredProjections() {
     let pointsOverallTotal = 0;
     let pointsSeasonTotal = 0;
     
-    const totalWeeks = selectedGameweeks.length;
+    const totalWeeks = activeGameweeks.length;
     
-    // Calculate totals for selected gameweeks
-    selectedGameweeks.forEach(gwNumber => {
+    // Calculate totals for active gameweeks
+    activeGameweeks.forEach(gwNumber => {
       const gwTotal = filteredProjections.reduce((sum, player) => sum + (player.gameweekProjections[gwNumber.toString()] || 0), 0);
       const gwPointsTotal = filteredProjections.reduce((sum, player) => {
         const goals = player.gameweekProjections[gwNumber.toString()] || 0;
@@ -549,7 +549,7 @@ export default function PlayerGoalsScoredProjections() {
       pointsSeasonTotal,
       pointsAveragePerGame
     };
-  }, [filteredProjections, selectedGameweeks, getPointsFromGoals]);
+  }, [filteredProjections, activeGameweeks, getPointsFromGoals]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -814,7 +814,7 @@ export default function PlayerGoalsScoredProjections() {
             <Tabs defaultValue="gws" className="w-full">
               <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                 <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{gwFilter.size > 0 && ` (${gwFilter.size})`}
                 </TabsTrigger>
                 <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                   <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
@@ -832,19 +832,16 @@ export default function PlayerGoalsScoredProjections() {
                   >
                     Avail: {applyAvailability ? 'ON' : 'OFF'}
                   </button>
-                  {excludedGameweeks.size > 0 && (
-                    <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
-                      <X className="h-2.5 w-2.5" />Clear
-                    </button>
-                  )}
+                  <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                  <button onClick={() => setGwFilter(prev => new Set(availableGameweeks.filter(gw => startGameweek && endGameweek && gw >= startGameweek && gw <= endGameweek && !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {availableGameweeks.filter(gw => startGameweek && endGameweek && gw >= startGameweek && gw <= endGameweek).map(gw => {
-                    const isExcluded = excludedGameweeks.has(gw);
+                    const isActive = gwFilter.size === 0 || gwFilter.has(gw);
                     const isTBC = gw === 39;
                     return (
-                      <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : isTBC ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                      <button key={gw} onClick={() => toggleGameweekSelection(gw)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? (isTBC ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300') : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{isTBC ? 'GW39 (TBC)' : `GW${gw}`}</button>
                     );
                   })}
@@ -854,14 +851,13 @@ export default function PlayerGoalsScoredProjections() {
               <TabsContent value="pos" className="mt-0">
                 <div className="flex justify-end gap-1 mb-1">
                   <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                  <button onClick={() => setSelectedPositions(new Set(['GKP','DEF','MID','FWD']))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {['GKP','DEF','MID','FWD'].map(pos => {
-                    const isIncluded = !selectedPositions.has(pos);
+                    const isActive = selectedPositions.size === 0 || selectedPositions.has(pos);
                     return (
                       <button key={pos} onClick={() => togglePositionSelection(pos)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{pos}</button>
                     );
                   })}
@@ -871,15 +867,14 @@ export default function PlayerGoalsScoredProjections() {
               <TabsContent value="teams" className="mt-0">
                 <div className="flex justify-end gap-1 mb-1">
                   <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                  <button onClick={() => setSelectedTeams(new Set(teams.map(t => t.short)))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {teams.map(team => {
                     const shortName = team.short;
-                    const isIncluded = !selectedTeams.has(shortName);
+                    const isActive = selectedTeams.size === 0 || selectedTeams.has(shortName);
                     return (
                       <button key={shortName} onClick={() => toggleTeamSelection(shortName)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{shortName}</button>
                     );
                   })}
@@ -899,9 +894,9 @@ export default function PlayerGoalsScoredProjections() {
                   <h2 className="fpl-card-title flex items-center gap-2">
                     <Target className="h-5 w-5" />
                     Player Goal Projections: GW{startGameweek}-GW{endGameweek}
-                    {excludedGameweeks.size > 0 && (
+                    {gwFilter.size > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
-                        {excludedGameweeks.size} excluded
+                        {gwFilter.size} GW{gwFilter.size === 1 ? '' : 's'} selected
                       </Badge>
                     )}
                   </h2>
@@ -944,7 +939,7 @@ export default function PlayerGoalsScoredProjections() {
                             {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
                           </Button>
                         </th>
-                    {selectedGameweeks.map(gw => (
+                    {activeGameweeks.map(gw => (
                       <th key={gw} className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]">
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           <span className="md:hidden">{gw}</span>
@@ -976,13 +971,13 @@ export default function PlayerGoalsScoredProjections() {
                   {filteredProjections.map((player, index) => {
                     const playerInfo = playerAvailabilityMap?.get(player.playerId);
                     const gwMultipliers = applyAvailability 
-                      ? getGameweekMultipliers(playerInfo, selectedGameweeks, currentGameweek, bootstrapData)
+                      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
                       : {};
                     const hasAnyAdjustment = applyAvailability && Object.values(gwMultipliers).some(m => m !== 1);
                     
                     let adjustedTotal = 0;
                     let originalTotal = 0;
-                    selectedGameweeks.forEach(gw => {
+                    activeGameweeks.forEach(gw => {
                       const val = player.gameweekProjections[gw.toString()] || 0;
                       const mult = gwMultipliers[gw] ?? 1;
                       adjustedTotal += val * mult;
@@ -1009,7 +1004,7 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </div>
                         </td>
-                        {selectedGameweeks.map(gw => {
+                        {activeGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
                           const fixtures: FixtureDetail[] = (player as any).fixtureDetails?.[gw.toString()] || [];
                           const isDGW = fixtures.length > 1;
@@ -1120,7 +1115,7 @@ export default function PlayerGoalsScoredProjections() {
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100 border-r border-gray-200">
                       TOTAL
                     </td>
-                    {selectedGameweeks.map(gw => (
+                    {activeGameweeks.map(gw => (
                       <td key={gw} className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
                         {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>

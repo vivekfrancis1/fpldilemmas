@@ -61,7 +61,7 @@ export default function TeamCSProjections() {
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("average");
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -92,15 +92,15 @@ export default function TeamCSProjections() {
     const endGW = parseInt(endGameweek);
     const gameweeks: number[] = [];
     for (let gw = startGW; gw <= endGW; gw++) {
-      if (!excludedGameweeks.has(gw)) {
+      if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
         gameweeks.push(gw);
       }
     }
     return gameweeks;
-  }, [startGameweek, endGameweek, excludedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks]);
 
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -111,8 +111,8 @@ export default function TeamCSProjections() {
     });
   };
 
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  const clearGameweekSelections = () => {
+    setSelectedGameweeks(new Set());
   };
 
   const toggleTeamSelection = (shortName: string) => {
@@ -418,7 +418,7 @@ export default function TeamCSProjections() {
                   <Tabs defaultValue="gws" className="w-full mt-3">
                     <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                       <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                        <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                        <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                       </TabsTrigger>
                       <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                         Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
@@ -428,18 +428,15 @@ export default function TeamCSProjections() {
                     {/* GWs tab */}
                     <TabsContent value="gws" className="mt-0">
                       <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                        {excludedGameweeks.size > 0 && (
-                          <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
-                            <X className="h-2.5 w-2.5" />Clear
-                          </button>
-                        )}
+                        <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                        <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300">Invert</button>
                       </div>
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
                         {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).map(gw => {
-                          const isExcluded = excludedGameweeks.has(gw);
+                          const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                           return (
-                            <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                              className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : gw === 39 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}>
+                            <button key={gw} onClick={() => toggleGameweekSelection(gw)}
+                              className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? (gw === 39 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300') : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
                               {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                             </button>
                           );
@@ -482,9 +479,9 @@ export default function TeamCSProjections() {
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
                 {`Team Clean Sheet Projections: GW${startGameweek}-GW${endGameweek}`}
-                {excludedGameweeks.size > 0 && (
+                {selectedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
-                    {excludedGameweeks.size} excluded
+                    {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
                   </Badge>
                 )}
                 <Badge variant="outline" className="ml-2">
@@ -517,7 +514,7 @@ export default function TeamCSProjections() {
                           </div>
                         </th>
                       ))}
-                      {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                      {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && selectedGameweeks.size === 0 || selectedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
                           GW39 (TBC)
                         </th>
@@ -619,7 +616,7 @@ export default function TeamCSProjections() {
                           );
                         })}
 
-                        {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && !excludedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                        {fixtureMode !== 'expert' && tbcCSMap.size > 0 && (!activeGameweeks.includes(39) && selectedGameweeks.size === 0 || selectedGameweeks.has(39) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                           const tbcEntry = tbcCSMap.get(team.teamShort);
                           if (!tbcEntry) {
                             return (

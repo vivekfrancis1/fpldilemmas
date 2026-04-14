@@ -89,8 +89,8 @@ export default function Fixtures() {
   const [customFDROpen, setCustomFDROpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'custom'>('official');
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
-  const [excludedTeams, setExcludedTeams] = useState<Set<number>>(new Set());
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Set<number>>(new Set());
   const [teamFilterId, setTeamFilterId] = useState<number | null>(() => {
     const params = new URLSearchParams(window.location.search);
     const teamParam = params.get('team');
@@ -291,9 +291,8 @@ export default function Fixtures() {
     }
   }, [bootstrapData?.events]);
 
-  // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -304,9 +303,8 @@ export default function Fixtures() {
     });
   };
 
-  // Toggle team exclusion
-  const toggleTeamExclusion = (teamId: number) => {
-    setExcludedTeams(prev => {
+  const toggleTeamSelection = (teamId: number) => {
+    setSelectedTeams(prev => {
       const newSet = new Set(prev);
       if (newSet.has(teamId)) {
         newSet.delete(teamId);
@@ -317,16 +315,8 @@ export default function Fixtures() {
     });
   };
 
-  // Clear all exclusions
-  const clearGameweekExclusions = () => setExcludedGameweeks(new Set());
-  const clearTeamExclusions = () => setExcludedTeams(new Set());
-  
-  // Exclude all teams
-  const excludeAllTeams = () => {
-    if (bootstrapData?.teams) {
-      setExcludedTeams(new Set(bootstrapData.teams.map(t => t.id)));
-    }
-  };
+  const clearGameweekSelections = () => setSelectedGameweeks(new Set());
+  const clearTeamSelections = () => setSelectedTeams(new Set());
 
   // Build fixture matrix with average FDR calculation
   const { fixtureMatrix, teamAverageFDR, teamGameCount } = useMemo(() => {
@@ -451,7 +441,7 @@ export default function Fixtures() {
     // Calculate average FDR for each team (only for non-excluded gameweeks)
     bootstrapData.teams.forEach(team => {
       const teamFixturesEntries = Object.entries(matrix[team.id] || {});
-      const filteredFixtures = teamFixturesEntries.filter(([gw]) => !excludedGameweeks.has(parseInt(gw)));
+      const filteredFixtures = teamFixturesEntries.filter(([gw]) => selectedGameweeks.size === 0 || selectedGameweeks.has(parseInt(gw)));
       if (filteredFixtures.length > 0) {
         let totalDifficulty = 0;
         let fixtureCount = 0;
@@ -476,7 +466,7 @@ export default function Fixtures() {
       teamAverageFDR: avgFDR,
       teamGameCount: gameCount
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks, viewMode, tbcAssignments]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, selectedGameweeks, viewMode, tbcAssignments]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -488,10 +478,10 @@ export default function Fixtures() {
     return gws;
   }, [gameweekRange]);
 
-  // Active gameweeks (excluding excluded ones) - used for display
+  // Active gameweeks (filtered by selections) - used for display
   const gameweeks = useMemo(() => {
-    return allGameweeksInRange.filter(gw => !excludedGameweeks.has(gw));
-  }, [allGameweeksInRange, excludedGameweeks]);
+    return allGameweeksInRange.filter(gw => selectedGameweeks.size === 0 || selectedGameweeks.has(gw));
+  }, [allGameweeksInRange, selectedGameweeks]);
 
   // Check if any team has TBC (event=null) fixtures that are unassigned in the current mode
   const hasTBCFixtures = useMemo(() => {
@@ -504,7 +494,7 @@ export default function Fixtures() {
   const rotationPairs = useMemo(() => {
     if (!bootstrapData?.teams || !fixtureMatrix || gameweeks.length === 0) return [];
     
-    const teams = bootstrapData.teams.filter(t => !excludedTeams.has(t.id));
+    const teams = bootstrapData.teams.filter(t => selectedTeams.size === 0 || selectedTeams.has(t.id));
     type FixtureEntry = { opponent: string; isHome: boolean; difficulty: number };
     const pairs: Array<{
       team1: typeof teams[0];
@@ -592,7 +582,7 @@ export default function Fixtures() {
       }
       return a.combinedAvgDifficulty - b.combinedAvgDifficulty;
     }).slice(0, 10); // Top 10 pairs
-  }, [bootstrapData, fixtureMatrix, gameweeks, excludedTeams]);
+  }, [bootstrapData, fixtureMatrix, gameweeks, selectedTeams]);
 
   // Handle column header click for sorting
   const handleSort = (column: string) => {
@@ -607,7 +597,7 @@ export default function Fixtures() {
   // Sort teams based on selected sort option (filtering out excluded teams)
   const sortedTeams = useMemo(() => {
     if (!bootstrapData?.teams) return [];
-    const teams = [...bootstrapData.teams].filter(team => !excludedTeams.has(team.id));
+    const teams = [...bootstrapData.teams].filter(team => selectedTeams.size === 0 || selectedTeams.has(team.id));
     
     switch (sortBy) {
       case 'team':
@@ -650,7 +640,7 @@ export default function Fixtures() {
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData, fixtureMatrix, teamAverageFDR, teamGameCount, sortBy, sortDirection, excludedTeams]);
+  }, [bootstrapData, fixtureMatrix, teamAverageFDR, teamGameCount, sortBy, sortDirection, selectedTeams]);
 
   if (isLoading) {
     return (
@@ -947,29 +937,33 @@ export default function Fixtures() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <label className="text-xs font-medium text-gray-700">Toggle:</label>
-                    {excludedGameweeks.size > 0 && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={clearGameweekExclusions}
-                        className="text-[10px] text-gray-500 hover:text-gray-700 px-1 py-0.5 h-auto"
-                        data-testid="button-clear-gw-exclusions"
-                      >
-                        <X className="h-3 w-3 mr-0.5" />
-                        Clear
-                      </Button>
-                    )}
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearGameweekSelections}
+                        className="text-[10px] bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-1.5 py-0.5 h-auto"
+                        data-testid="button-clear-gw-selections"
+                      >All</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedGameweeks(prev => new Set(allGameweeksInRange.filter(gw => !prev.has(gw))))}
+                        className="text-[10px] bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-300 px-1.5 py-0.5 h-auto"
+                        data-testid="button-invert-gameweeks"
+                      >Invert</Button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1 justify-center">
                     {allGameweeksInRange.map((gw) => {
-                      const isExcluded = excludedGameweeks.has(gw);
+                      const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                       return (
                         <Button
                           key={gw}
                           variant="outline"
                           size="sm"
-                          onClick={() => toggleGameweekExclusion(gw)}
-                          className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
+                          onClick={() => toggleGameweekSelection(gw)}
+                          className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isActive ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
                           data-testid={`button-toggle-gw-${gw}`}
                         >
                           {gw}
@@ -977,11 +971,6 @@ export default function Fixtures() {
                       );
                     })}
                   </div>
-                  {excludedGameweeks.size > 0 && (
-                    <p className="text-[10px] text-gray-500 text-center">
-                      Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -993,20 +982,11 @@ export default function Fixtures() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={clearTeamExclusions}
+                      onClick={clearTeamSelections}
                       className="text-[10px] bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-1.5 py-0.5 h-auto"
                       data-testid="button-include-all-teams"
                     >
                       All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={excludeAllTeams}
-                      className="text-[10px] bg-red-100 text-red-700 hover:bg-red-200 border-red-300 px-1.5 py-0.5 h-auto"
-                      data-testid="button-exclude-all-teams"
-                    >
-                      None
                     </Button>
                   </div>
                 </div>
@@ -1015,14 +995,14 @@ export default function Fixtures() {
                     ?.slice()
                     .sort((a, b) => a.short_name.localeCompare(b.short_name))
                     .map((team) => {
-                      const isExcluded = excludedTeams.has(team.id);
+                      const isActive = selectedTeams.size === 0 || selectedTeams.has(team.id);
                       return (
                         <Button
                           key={team.id}
                           variant="outline"
                           size="sm"
-                          onClick={() => toggleTeamExclusion(team.id)}
-                          className={`min-w-[32px] text-[10px] px-1 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'}`}
+                          onClick={() => toggleTeamSelection(team.id)}
+                          className={`min-w-[32px] text-[10px] px-1 py-0.5 h-6 ${isActive ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
                           data-testid={`button-toggle-team-${team.id}`}
                         >
                           {team.short_name}
@@ -1030,15 +1010,6 @@ export default function Fixtures() {
                       );
                     })}
                 </div>
-                {excludedTeams.size > 0 && (
-                  <p className="text-[10px] text-gray-500 mt-2 text-center">
-                    Excluded: {Array.from(excludedTeams)
-                      .map(id => bootstrapData?.teams.find(t => t.id === id)?.short_name || '')
-                      .filter(Boolean)
-                      .sort()
-                      .join(', ')}
-                  </p>
-                )}
               </div>
             </div>
           </div>

@@ -117,7 +117,7 @@ export default function PlayerDefensiveContributions() {
   const [currentDCSortOrder, setCurrentDCSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByTotal, setSortByTotal] = useState<boolean>(false);
   const [totalSortOrder, setTotalSortOrder] = useState<"asc" | "desc">("desc");
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   
@@ -341,14 +341,16 @@ export default function PlayerDefensiveContributions() {
     return allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
   }, [allGameweeks, startGameweek, endGameweek]);
 
-  // Get active gameweeks (range minus excluded)
+  // Get active gameweeks (all in range, or filtered to selected set)
   const activeGameweeks = useMemo(() => {
-    return gameweeks.filter(gw => !excludedGameweeks.has(gw));
-  }, [gameweeks, excludedGameweeks]);
+    return selectedGameweeks.size > 0
+      ? gameweeks.filter(gw => selectedGameweeks.has(gw))
+      : gameweeks;
+  }, [gameweeks, selectedGameweeks]);
 
-  // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  // Toggle gameweek selection
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -359,9 +361,9 @@ export default function PlayerDefensiveContributions() {
     });
   };
 
-  // Clear all exclusions
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  // Clear all gameweek selections (show all)
+  const clearGameweekSelections = () => {
+    setSelectedGameweeks(new Set());
   };
 
   // Calculate totals for each player
@@ -457,19 +459,17 @@ export default function PlayerDefensiveContributions() {
       );
     }
 
-    // Position filter - exclude semantics (set contains excluded positions)
+    // Position filter - include semantics: non-empty set = show only those positions
     if (selectedPositions.size > 0) {
       filtered = filtered.filter(p => {
         const normalizedPos = normalizePosition(p.position);
-        return !Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        return Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
       });
     }
 
-    // Team filter
-    if (selectedTeams.size > 0 && !selectedTeams.has('_none_')) {
+    // Team filter - include semantics: non-empty set = show only those teams
+    if (selectedTeams.size > 0) {
       filtered = filtered.filter(p => selectedTeams.has(p.teamName));
-    } else if (selectedTeams.has('_none_')) {
-      filtered = [];
     }
 
     // Sort by current DC/game if specified
@@ -696,7 +696,7 @@ export default function PlayerDefensiveContributions() {
                   <p className="text-2xl font-bold text-orange-700">{activeGameweeks.length}</p>
                   <p className="text-sm text-orange-600">
                     {activeGameweeks.length > 0 ? `${activeGameweeks.length} of ${gameweeks.length} GWs` : "Select range"}
-                    {excludedGameweeks.size > 0 && ` (${excludedGameweeks.size} excluded)`}
+                    {selectedGameweeks.size > 0 && ` (${selectedGameweeks.size} selected)`}
                   </p>
                 </div>
               </div>
@@ -772,7 +772,7 @@ export default function PlayerDefensiveContributions() {
           <Tabs defaultValue="gws" className="w-full mt-3">
             <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
               <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
               </TabsTrigger>
               <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                 <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
@@ -790,28 +790,23 @@ export default function PlayerDefensiveContributions() {
                   data-testid="button-toggle-availability">
                   {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
                 </button>
-                {excludedGameweeks.size > 0 && (
-                  <button onClick={clearExclusions}
-                    className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700"
-                    data-testid="button-clear-exclusions">
-                    <X className="h-2.5 w-2.5" />Clear
-                  </button>
-                )}
+                <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                <button onClick={() => setSelectedGameweeks(prev => new Set(gameweeks.filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 {gameweeks.filter(gw => gw <= 38).map(gwNumber => {
-                  const isExcluded = excludedGameweeks.has(gwNumber);
+                  const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gwNumber);
                   return (
-                    <button key={gwNumber} onClick={() => toggleGameweekExclusion(gwNumber)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                    <button key={gwNumber} onClick={() => toggleGameweekSelection(gwNumber)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-gw-${gwNumber}`}>
                       GW{gwNumber}
                     </button>
                   );
                 })}
                 {tbcTeamInfoMap.size > 0 && endGameweek >= 39 && viewMode === 'future' && (
-                  <button onClick={() => toggleGameweekExclusion(39)}
-                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+                  <button onClick={() => toggleGameweekSelection(39)}
+                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                     data-testid="button-toggle-gw-39">
                     GW39 (TBC)
                   </button>
@@ -826,17 +821,13 @@ export default function PlayerDefensiveContributions() {
                   className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
                 </button>
-                <button onClick={() => setSelectedPositions(new Set(['Defender', 'Midfielder', 'Forward']))}
-                  className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">
-                  None
-                </button>
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 {[{full: 'Defender', short: 'DEF'}, {full: 'Midfielder', short: 'MID'}, {full: 'Forward', short: 'FWD'}].map(({full, short}) => {
-                  const isIncluded = !selectedPositions.has(full);
+                  const isActive = selectedPositions.size === 0 || selectedPositions.has(full);
                   return (
                     <button key={full} onClick={() => togglePositionSelection(full)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-position-${full}`}>
                       {short}
                     </button>
@@ -852,25 +843,15 @@ export default function PlayerDefensiveContributions() {
                   className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
                 </button>
-                <button onClick={() => setSelectedTeams(new Set(['_none_']))}
-                  className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">
-                  None
-                </button>
-                {selectedTeams.size > 0 && !selectedTeams.has('_none_') && (
-                  <button onClick={() => setSelectedTeams(new Set())}
-                    className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
-                    <X className="h-2.5 w-2.5" />Clear
-                  </button>
-                )}
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 {teams.map(team => {
-                  const isIncluded = selectedTeams.size === 0 || selectedTeams.has(team);
+                  const isActive = selectedTeams.size === 0 || selectedTeams.has(team);
                   const bsTeam = bootstrapData?.teams?.find((t: { name: string; short_name: string }) => t.name === team);
                   const displayName = bsTeam?.short_name || team;
                   return (
                     <button key={team} onClick={() => toggleTeamSelection(team)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-team-${team}`}>
                       {displayName}
                     </button>
@@ -888,9 +869,9 @@ export default function PlayerDefensiveContributions() {
         <div className="fpl-card-header">
           <h2 className="fpl-card-title flex items-center gap-2">
             Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
-            {excludedGameweeks.size > 0 && (
+            {selectedGameweeks.size > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">
-                {excludedGameweeks.size} excluded
+                {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
               </Badge>
             )}
           </h2>

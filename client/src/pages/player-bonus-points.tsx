@@ -53,7 +53,7 @@ export default function PlayerBonusPoints() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
@@ -213,8 +213,8 @@ export default function PlayerBonusPoints() {
   };
 
   // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -225,28 +225,28 @@ export default function PlayerBonusPoints() {
     });
   };
 
-  // Clear all exclusions
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  // Clear all gameweek selections (show all)
+  const clearGameweekSelections = () => {
+    setSelectedGameweeks(new Set());
   };
 
   // Whether the floating GW39 (TBC) column should be visible
   const showTBCColumn = useMemo(() => (
-    endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    endGameweek >= 39 && (selectedGameweeks.size === 0 || selectedGameweeks.has(39)) &&
     fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
-  ), [endGameweek, excludedGameweeks, fixtureMode, tbcTeamInfoMap]);
+  ), [endGameweek, selectedGameweeks, fixtureMode, tbcTeamInfoMap]);
 
-  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks, capped at GW38)
+  // Generate dynamic gameweek columns based on selected range (capped at GW38)
   const dynamicGameweekColumns = useMemo(() => {
     const cappedEnd = Math.min(endGameweek, 38);
     const columns = [];
     for (let gw = startGameweek; gw <= cappedEnd; gw++) {
-      if (!excludedGameweeks.has(gw)) {
+      if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
         columns.push(gw);
       }
     }
     return columns;
-  }, [startGameweek, endGameweek, excludedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks]);
 
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: BonusPointsProjection, useAvailability: boolean = false) => {
@@ -295,11 +295,11 @@ export default function PlayerBonusPoints() {
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Position filter - exclude semantics (set contains excluded positions)
+      // Position filter - include semantics: non-empty set = show only those positions
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(projection.position);
-        const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-        if (excluded) return false;
+        const included = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        if (!included) return false;
       }
       if (selectedTeams.size > 0 && !selectedTeams.has(projection.teamName)) return false;
       
@@ -473,7 +473,7 @@ export default function PlayerBonusPoints() {
             <Tabs defaultValue="gws" className="w-full">
               <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                 <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                 </TabsTrigger>
                 <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                   <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
@@ -491,25 +491,22 @@ export default function PlayerBonusPoints() {
                   >
                     Avail: {applyAvailability ? 'ON' : 'OFF'}
                   </button>
-                  {excludedGameweeks.size > 0 && (
-                    <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
-                      <X className="h-2.5 w-2.5" />Clear
-                    </button>
-                  )}
+                  <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                  <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => startGameweek + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => {
                     const gw = startGameweek + i;
-                    const isExcluded = excludedGameweeks.has(gw);
+                    const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                     return (
-                      <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                      <button key={gw} onClick={() => toggleGameweekSelection(gw)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >GW{gw}</button>
                     );
                   })}
                   {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
-                    <button onClick={() => toggleGameweekExclusion(39)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+                    <button onClick={() => toggleGameweekSelection(39)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                     >GW39 (TBC)</button>
                   )}
                 </div>
@@ -518,14 +515,13 @@ export default function PlayerBonusPoints() {
               <TabsContent value="pos" className="mt-0">
                 <div className="flex justify-end gap-1 mb-1">
                   <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                  <button onClick={() => setSelectedPositions(new Set(['GKP','DEF','MID','FWD']))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {['GKP','DEF','MID','FWD'].map(pos => {
-                    const isIncluded = !selectedPositions.has(pos);
+                    const isActive = selectedPositions.size === 0 || selectedPositions.has(pos);
                     return (
                       <button key={pos} onClick={() => togglePositionSelection(pos)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{pos}</button>
                     );
                   })}
@@ -535,14 +531,13 @@ export default function PlayerBonusPoints() {
               <TabsContent value="teams" className="mt-0">
                 <div className="flex justify-end gap-1 mb-1">
                   <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                  <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {teams.map(team => {
-                    const isIncluded = !selectedTeams.has(team);
+                    const isActive = selectedTeams.size === 0 || selectedTeams.has(team);
                     return (
                       <button key={team} onClick={() => toggleTeamSelection(team)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{team}</button>
                     );
                   })}
@@ -564,9 +559,9 @@ export default function PlayerBonusPoints() {
             <div className="fpl-card-header">
               <h2 className="fpl-card-title flex items-center gap-2">
                 Bonus Points Projections
-                {excludedGameweeks.size > 0 && (
+                {selectedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
-                    {excludedGameweeks.size} excluded
+                    {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
                   </Badge>
                 )}
               </h2>

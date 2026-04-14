@@ -66,7 +66,7 @@ export default function PlayerSaves() {
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
-  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
@@ -254,8 +254,8 @@ export default function PlayerSaves() {
         const points = originalPoints[gwKey] || 0;
         filteredSaves[gwKey] = saves;
         filteredPoints[gwKey] = points;
-        // Only sum non-excluded gameweeks
-        if (!excludedGameweeks.has(gw)) {
+        // Only sum selected gameweeks (empty set = all)
+        if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
           totalSaves += saves;
           totalPoints += points;
           activeCount++;
@@ -271,7 +271,7 @@ export default function PlayerSaves() {
         averagePerGameweek: activeCount > 0 ? totalSaves / activeCount : 0
       };
     });
-  }, [allSavesProjections, startGameweek, endGameweek, excludedGameweeks]);
+  }, [allSavesProjections, startGameweek, endGameweek, selectedGameweeks]);
 
   // Unified display data - transforms history data to match projection format
   const displayData = useMemo(() => {
@@ -284,7 +284,7 @@ export default function PlayerSaves() {
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const gwSaves = player.gameweekSaves[gw] || 0;
           saves[`gw${gw}`] = gwSaves;
-          if (!excludedGameweeks.has(gw)) {
+          if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
             totalSaves += gwSaves;
             activeCount++;
           }
@@ -304,7 +304,7 @@ export default function PlayerSaves() {
       });
     }
     return savesProjections || [];
-  }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, excludedGameweeks]);
+  }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, selectedGameweeks]);
 
   // Absorb GW39 real saves data into the assigned GW's saves when fixtureMode is custom/expert
   const resolvedDisplayData = useMemo(() => {
@@ -371,8 +371,8 @@ export default function PlayerSaves() {
   };
 
   // Toggle gameweek exclusion
-  const toggleGameweekExclusion = (gw: number) => {
-    setExcludedGameweeks(prev => {
+  const toggleGameweekSelection = (gw: number) => {
+    setSelectedGameweeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gw)) {
         newSet.delete(gw);
@@ -383,28 +383,28 @@ export default function PlayerSaves() {
     });
   };
 
-  // Clear all exclusions
-  const clearExclusions = () => {
-    setExcludedGameweeks(new Set());
+  // Clear all gameweek selections (show all)
+  const clearGameweekSelections = () => {
+    setSelectedGameweeks(new Set());
   };
 
   // Whether the floating GW39 (TBC) column should be visible
   const showTBCColumn = useMemo(() => (
-    endGameweek >= 39 && !excludedGameweeks.has(39) &&
+    endGameweek >= 39 && (selectedGameweeks.size === 0 || selectedGameweeks.has(39)) &&
     viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0
-  ), [endGameweek, excludedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
+  ), [endGameweek, selectedGameweeks, viewMode, fixtureMode, tbcTeamInfoMap]);
 
-  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks, capped at GW38)
+  // Generate dynamic gameweek columns based on selected range (capped at GW38)
   const dynamicGameweekColumns = useMemo(() => {
     const cappedEnd = Math.min(endGameweek, 38);
     const columns = [];
     for (let gw = startGameweek; gw <= cappedEnd; gw++) {
-      if (!excludedGameweeks.has(gw)) {
+      if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
         columns.push(gw);
       }
     }
     return columns;
-  }, [startGameweek, endGameweek, excludedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks]);
 
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: SavesProjection, useAvailability: boolean = false) => {
@@ -663,7 +663,7 @@ export default function PlayerSaves() {
             <Tabs defaultValue="gws" className="w-full">
               <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                 <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                  <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                 </TabsTrigger>
                 <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                   Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
@@ -678,25 +678,22 @@ export default function PlayerSaves() {
                   >
                     Avail: {applyAvailability ? 'ON' : 'OFF'}
                   </button>
-                  {excludedGameweeks.size > 0 && (
-                    <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
-                      <X className="h-2.5 w-2.5" />Clear
-                    </button>
-                  )}
+                  <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                  <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => startGameweek + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => {
                     const gw = startGameweek + i;
-                    const isExcluded = excludedGameweeks.has(gw);
+                    const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                     return (
-                      <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                      <button key={gw} onClick={() => toggleGameweekSelection(gw)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >GW{gw}</button>
                     );
                   })}
                   {viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
-                    <button onClick={() => toggleGameweekExclusion(39)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${excludedGameweeks.has(39) ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+                    <button onClick={() => toggleGameweekSelection(39)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                     >GW39 (TBC)</button>
                   )}
                 </div>
@@ -705,15 +702,14 @@ export default function PlayerSaves() {
               <TabsContent value="teams" className="mt-0">
                 <div className="flex justify-end gap-1 mb-1">
                   <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                  <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {teams.map(team => {
-                    const isIncluded = selectedTeams.size === 0 || selectedTeams.has(team);
+                    const isActive = selectedTeams.size === 0 || selectedTeams.has(team);
                     const shortName = teamNameToShort?.get(team) || team;
                     return (
                       <button key={team} onClick={() => toggleTeamSelection(team)}
-                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       >{shortName}</button>
                     );
                   })}
@@ -757,9 +753,9 @@ export default function PlayerSaves() {
               <h2 className="fpl-card-title flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-600" />
                 {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
-                {excludedGameweeks.size > 0 && (
+                {selectedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
-                    {excludedGameweeks.size} excluded
+                    {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
                   </Badge>
                 )}
               </h2>
