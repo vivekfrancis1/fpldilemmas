@@ -934,7 +934,7 @@ export default function PlayerGoalsScoredProjections() {
                     <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
+                        <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -950,7 +950,7 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]">
+                      <th key={gw} className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]">
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           <span className="md:hidden">{gw}</span>
                           <span className="hidden md:inline">GW{gw}</span>
@@ -962,11 +962,11 @@ export default function PlayerGoalsScoredProjections() {
                       </th>
                     ))}
                     {showTBCColumn && (
-                      <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                      <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                         GW39 (TBC)
                       </th>
                     )}
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 md:min-w-[56px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
@@ -1000,7 +1000,7 @@ export default function PlayerGoalsScoredProjections() {
                     
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
-                        <td className="px-1 md:px-3 py-2 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
+                        <td className="px-1 md:px-3 py-2 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <PlayerNameCell 
                               name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
@@ -1026,7 +1026,7 @@ export default function PlayerGoalsScoredProjections() {
                           const isHome = opponentInfo?.isHome ?? true;
                           
                           return (
-                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
                               <div>
                                 {isDGW && viewMode === "future" ? (
                                   <Popover>
@@ -1080,7 +1080,7 @@ export default function PlayerGoalsScoredProjections() {
                           );
                         })}
                         {showTBCColumn && (
-                          <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                          <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300">
                             {tbcEntry && tbcGoals > 0 ? (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -1106,7 +1106,7 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </td>
                         )}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 md:min-w-[56px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>

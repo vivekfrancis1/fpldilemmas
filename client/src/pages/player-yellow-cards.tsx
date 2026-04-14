@@ -360,20 +360,20 @@ export default function PlayerYellowCards() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
+                        <th className="text-left fpl-col-player">Player</th>
+                        <th className="text-center fpl-col-pos">Pos</th>
+                        <th className="text-center fpl-col-team">Team</th>
                         {displayGWs.map(gw => (
-                          <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
+                          <th key={gw} className={`text-center fpl-col-gw${gw === 39 ? ' text-orange-600' : ''}`}>
                             {gw === 39 ? 'TBC' : `GW${gw}`}
                           </th>
                         ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalYellowCards")}>
+                        <th className="text-center cursor-pointer fpl-col-stat" onClick={() => handleSort("totalYellowCards")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalYellowCards")}
                           </div>
                         </th>
-                        <th className="text-center">Avg/GW</th>
+                        <th className="text-center fpl-col-stat">Avg/GW</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -381,9 +381,9 @@ export default function PlayerYellowCards() {
                         const displayTotalYC = displayGWs.reduce((sum, gw) => sum + (projection.yellowCards[`gw${gw}`] || 0), 0);
                         return (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium fpl-col-player overflow-hidden">{projection.playerName}</td>
+                          <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
+                          <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
@@ -448,20 +448,20 @@ export default function PlayerYellowCards() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left">Player</th>
-                        <th className="text-center">Pos</th>
-                        <th className="text-center">Team</th>
+                        <th className="text-left fpl-col-player">Player</th>
+                        <th className="text-center fpl-col-pos">Pos</th>
+                        <th className="text-center fpl-col-team">Team</th>
                         {displayGWs.map(gw => (
-                          <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
+                          <th key={gw} className={`text-center fpl-col-gw${gw === 39 ? ' text-orange-600' : ''}`}>
                             {gw === 39 ? 'TBC' : `GW${gw}`}
                           </th>
                         ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
+                        <th className="text-center cursor-pointer fpl-col-stat" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
                           </div>
                         </th>
-                        <th className="text-center">Avg/GW</th>
+                        <th className="text-center fpl-col-stat">Avg/GW</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -469,9 +469,9 @@ export default function PlayerYellowCards() {
                         const displayTotalPts = displayGWs.reduce((sum, gw) => sum + (projection.pointsFromYellowCards[`gw${gw}`] || 0), 0);
                         return (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium fpl-col-player overflow-hidden">{projection.playerName}</td>
+                          <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
+                          <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;

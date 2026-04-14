@@ -37,7 +37,7 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'min-w-[96px]',
+      className: 'w-[130px] min-w-[130px]',
       render: (_, player) => (
         <div>
           <PlayerNameCell name={player.name} />

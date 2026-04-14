@@ -455,7 +455,7 @@ export default function PlayerCleanSheetPoints() {
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                     <tr>
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors sticky left-0 bg-blue-600 border-r border-blue-500 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] z-20 min-w-[56px] md:min-w-[80px] text-xs md:text-sm"
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors sticky left-0 bg-blue-600 border-r border-blue-500 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] z-20 w-[130px] min-w-[130px] text-xs md:text-sm"
                           onClick={() => handleSort('playerName')}>
                         <div className="flex items-center gap-1">
                           Player {getSortIcon('playerName')}
@@ -474,17 +474,17 @@ export default function PlayerCleanSheetPoints() {
                         </div>
                       </th>
                       {gameweekRange.map(gw => (
-                        <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">
+                        <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold w-[52px] min-w-[52px] text-xs md:text-sm">
                           <span className="md:hidden">{gw}</span>
                           <span className="hidden md:inline">GW{gw}</span>
                         </th>
                       ))}
                       {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && filteredAndSortedData.some(p => (p.gameweekProjections?.['39'] || 0) > 0) && (
-                        <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                        <th className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                           GW39 (TBC)
                         </th>
                       )}
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 w-16 md:w-auto md:min-w-[70px] text-xs md:text-sm sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 w-[65px] min-w-[65px] text-xs md:text-sm sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                           onClick={() => handleSort('totalExpectedPoints')}>
                         <div className="flex items-center justify-center gap-1">
                           Total {getSortIcon('totalExpectedPoints')}
@@ -495,7 +495,7 @@ export default function PlayerCleanSheetPoints() {
                   <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedData.map((player, index) => (
                       <tr key={player.playerId} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                        <td className="px-1 md:px-3 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
+                        <td className="px-1 md:px-3 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                           <div className="font-semibold text-gray-900 text-xs md:text-sm truncate max-w-[60px] md:max-w-none">{player.playerName}</div>
                           <div className="text-[10px] md:text-xs text-gray-500">
                             <span className="md:hidden">{player.position.slice(0,3)} • {player.team}</span>
@@ -523,7 +523,7 @@ export default function PlayerCleanSheetPoints() {
                           const singleFixture = !isDGW && fixtures.length === 1 ? fixtures[0] : null;
                           
                           return (
-                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
                               <div className="flex flex-col items-center">
                               {isDGW ? (
                                 <Popover>
@@ -577,7 +577,7 @@ export default function PlayerCleanSheetPoints() {
                           const tbcCSEntry = tbcTeamInfoMap.get(player.team);
                           const tbcCSPoints = player.gameweekProjections?.['39'] || 0;
                           return (
-                            <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                            <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300">
                               {tbcCSEntry && tbcCSPoints > 0 ? (
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -604,7 +604,7 @@ export default function PlayerCleanSheetPoints() {
                             </td>
                           );
                         })()}
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {(player.totalExpectedPoints + (player.gameweekProjections?.['39'] || 0)).toFixed(1)}
                           </span>

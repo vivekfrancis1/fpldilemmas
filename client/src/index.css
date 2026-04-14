@@ -886,6 +886,7 @@ input, select, textarea {
 
 .fpl-table {
   @apply w-full table-scroll;
+  table-layout: fixed;
 }
 
 .fpl-table-header {
@@ -895,6 +896,17 @@ input, select, textarea {
 .fpl-table-cell {
   @apply px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm;
 }
+
+/* ─── Standard projection-table column widths ─────────────────────────────
+   Apply these classes to <th> (and matching <td>) elements so every table
+   uses identical widths for the same column type.
+   ─────────────────────────────────────────────────────────────────────── */
+.fpl-col-player  { width: 130px; min-width: 130px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpl-col-pos     { width: 40px;  min-width: 40px;  max-width: 40px;  }
+.fpl-col-team    { width: 75px;  min-width: 75px;  max-width: 75px;  }
+.fpl-col-gw      { width: 52px;  min-width: 52px;  max-width: 52px;  }
+.fpl-col-stat    { width: 65px;  min-width: 65px;  max-width: 65px;  }
+.fpl-col-team-lg { width: 110px; min-width: 110px; max-width: 110px; }
 
 /* Position Colors */
 .fpl-pos-gkp { @apply bg-yellow-500 text-white; }

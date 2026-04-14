@@ -378,34 +378,34 @@ export default function PlayerGoalsConceded() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left cursor-pointer" onClick={() => handleSort("playerName")}>
+                        <th className="text-left cursor-pointer fpl-col-player" onClick={() => handleSort("playerName")}>
                           <div className="flex items-center gap-1">
                             Player {getSortIcon("playerName")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("position")}>
+                        <th className="text-center cursor-pointer fpl-col-pos" onClick={() => handleSort("position")}>
                           <div className="flex items-center justify-center gap-1">
                             Pos {getSortIcon("position")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("teamName")}>
+                        <th className="text-center cursor-pointer fpl-col-team" onClick={() => handleSort("teamName")}>
                           <div className="flex items-center justify-center gap-1">
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
                         {displayGWs.map(gw => (
-                          <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`gw${gw}`)}>
+                          <th key={gw} className={`text-center cursor-pointer fpl-col-gw${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
                               {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`gw${gw}`)}
                             </div>
                           </th>
                         ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalGoalsConceded")}>
+                        <th className="text-center cursor-pointer fpl-col-stat" onClick={() => handleSort("totalGoalsConceded")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalGoalsConceded")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("averagePerGameweek")}>
+                        <th className="text-center cursor-pointer fpl-col-stat" onClick={() => handleSort("averagePerGameweek")}>
                           <div className="flex items-center justify-center gap-1">
                             Avg/GW {getSortIcon("averagePerGameweek")}
                           </div>
@@ -417,9 +417,9 @@ export default function PlayerGoalsConceded() {
                         const displayTotalGC = displayGWs.reduce((sum, gw) => sum + (projection.goalsConceded[`gw${gw}`] || 0), 0);
                         return (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium fpl-col-player overflow-hidden">{projection.playerName}</td>
+                          <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
+                          <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => (
                             <td key={gw} className="text-center">{projection.goalsConceded[`gw${gw}`]}</td>
                           ))}
@@ -452,34 +452,34 @@ export default function PlayerGoalsConceded() {
                   <table className="fpl-table">
                     <thead>
                       <tr>
-                        <th className="text-left cursor-pointer" onClick={() => handleSort("playerName")}>
+                        <th className="text-left cursor-pointer fpl-col-player" onClick={() => handleSort("playerName")}>
                           <div className="flex items-center gap-1">
                             Player {getSortIcon("playerName")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("position")}>
+                        <th className="text-center cursor-pointer fpl-col-pos" onClick={() => handleSort("position")}>
                           <div className="flex items-center justify-center gap-1">
                             Pos {getSortIcon("position")}
                           </div>
                         </th>
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("teamName")}>
+                        <th className="text-center cursor-pointer fpl-col-team" onClick={() => handleSort("teamName")}>
                           <div className="flex items-center justify-center gap-1">
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
                         {displayGWs.map(gw => (
-                          <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`pts_gw${gw}`)}>
+                          <th key={gw} className={`text-center cursor-pointer fpl-col-gw${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`pts_gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
                               {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`pts_gw${gw}`)}
                             </div>
                           </th>
                         ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
+                        <th className="text-center cursor-pointer fpl-col-stat" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
                             Total {getSortIcon("totalPoints")}
                           </div>
                         </th>
-                        <th className="text-center">Avg/GW</th>
+                        <th className="text-center fpl-col-stat">Avg/GW</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -487,9 +487,9 @@ export default function PlayerGoalsConceded() {
                         const displayTotalPts = displayGWs.reduce((sum, gw) => sum + (projection.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
                         return (
                         <tr key={projection.playerId}>
-                          <td className="font-medium">{projection.playerName}</td>
-                          <td className="text-center text-xs font-semibold">{projection.position}</td>
-                          <td className="text-center text-sm">{projection.teamName}</td>
+                          <td className="font-medium fpl-col-player overflow-hidden">{projection.playerName}</td>
+                          <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
+                          <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => (
                             <td key={gw} className="text-center">{projection.pointsFromGoalsConceded[`gw${gw}`]}</td>
                           ))}

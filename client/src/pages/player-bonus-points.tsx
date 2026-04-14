@@ -581,7 +581,7 @@ export default function PlayerBonusPoints() {
                   <table className="w-full">
                     <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
                       <tr>
-                        <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px] text-xs md:text-sm">
+                        <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px] text-xs md:text-sm">
                           <button
                             onClick={() => handleSort('name')}
                             className="flex items-center gap-1 hover:text-blue-600 transition-colors"
@@ -591,7 +591,7 @@ export default function PlayerBonusPoints() {
                           </button>
                         </th>
                         {dynamicGameweekColumns.map((gw) => (
-                          <th key={`gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm font-semibold text-gray-700 min-w-[40px] md:min-w-[50px]">
+                          <th key={`gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm font-semibold text-gray-700 w-[52px] min-w-[52px]">
                             <button
                               onClick={() => handleSort(`gw${gw}`)}
                               className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors w-full"
@@ -602,11 +602,11 @@ export default function PlayerBonusPoints() {
                           </th>
                         ))}
                         {showTBCColumn && (
-                          <th className="text-center py-2 px-1 text-xs md:text-sm font-medium uppercase tracking-wider min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
+                          <th className="text-center py-2 px-1 text-xs md:text-sm font-medium uppercase tracking-wider w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300 text-amber-700">
                             GW39 (TBC)
                           </th>
                         )}
-                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-16 md:w-auto md:min-w-[70px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-[65px] min-w-[65px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
                             className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
@@ -615,7 +615,7 @@ export default function PlayerBonusPoints() {
                             <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="text-center py-2 px-1 text-xs md:text-sm font-semibold bg-green-50 border-l border-green-200 min-w-[40px] md:min-w-[60px] hidden md:table-cell">
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-semibold bg-green-50 border-l border-green-200 w-[52px] min-w-[52px] hidden md:table-cell">
                           Avg
                         </th>
                       </tr>
@@ -641,7 +641,7 @@ export default function PlayerBonusPoints() {
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
-                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[56px] md:min-w-[80px]">
+                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                             <div className="flex items-center gap-0.5 flex-wrap">
                               <PlayerNameCell 
                                 name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
@@ -663,7 +663,7 @@ export default function PlayerBonusPoints() {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             return (
-                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
                                 {isDGW ? (
                                   <Popover>
                                     <PopoverTrigger asChild>
@@ -706,7 +706,7 @@ export default function PlayerBonusPoints() {
                             const tbcBonusEntry = tbcTeamInfoMap.get(projection.teamName);
                             const tbcBonusVal = projection.bonusPoints?.['gw39'] || 0;
                             return (
-                              <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-amber-50/60 border-l border-amber-300">
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] bg-amber-50/60 border-l border-amber-300">
                                 {tbcBonusEntry && tbcBonusVal > 0 ? (
                                   <Popover>
                                     <PopoverTrigger asChild>
@@ -733,7 +733,7 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-16 md:w-auto md:min-w-[70px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {(() => {
                               const tbcBonusVal2 = showTBCColumn ? (projection.bonusPoints?.['gw39'] || 0) : 0;
                               return hasAnyAdjustment ? (
@@ -746,7 +746,7 @@ export default function PlayerBonusPoints() {
                               );
                             })()}
                           </td>
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>

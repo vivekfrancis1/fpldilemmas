@@ -387,7 +387,7 @@ export default function TeamAssistProjections() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                    <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                       Team
                     </th>
                     {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
@@ -395,7 +395,7 @@ export default function TeamAssistProjections() {
                       return (
                         <th 
                           key={gwNumber} 
-                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
+                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]"
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -407,12 +407,12 @@ export default function TeamAssistProjections() {
                       );
                     })}
                     {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
-                      <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
+                      <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
                         GW39 (TBC)
                       </th>
                     )}
                     <th 
-                      className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]"
+                      className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-[65px] min-w-[65px]"
                       onClick={() => setSortBy('total')}
                     >
                       <div className="flex items-center justify-center gap-0.5">
@@ -435,7 +435,7 @@ export default function TeamAssistProjections() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProjections.map((team, index) => (
                     <tr key={team.id} className="hover:bg-gray-50" data-testid={`team-projection-row-${team.id}`}>
-                      <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-gray-400 w-4">{index + 1}</span>
                           <div>
@@ -452,7 +452,7 @@ export default function TeamAssistProjections() {
                         const fixtures: FixtureDetail[] = team.fixtureDetails?.[gwNumber.toString()] || [];
                         const isDGW = fixtures.length > 1;
                         return (
-                          <td key={weekIndex} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getAssistsColor(assists)}`}>
+                          <td key={weekIndex} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getAssistsColor(assists)}`}>
                             {isDGW ? (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -487,13 +487,13 @@ export default function TeamAssistProjections() {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
-                            <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 min-w-[44px] md:min-w-[56px]">
+                            <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 w-[52px] min-w-[52px]">
                               <span className="text-gray-300">-</span>
                             </td>
                           );
                         }
                         return (
-                          <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
+                          <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
@@ -523,7 +523,7 @@ export default function TeamAssistProjections() {
                         );
                       })()}
 
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {(() => {
                             const startGW = parseInt(startGameweek);
@@ -545,7 +545,7 @@ export default function TeamAssistProjections() {
                   
                   {/* Total Row */}
                   <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
-                    <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[64px] md:min-w-[96px]">
+                    <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-gray-400 w-4">-</span>
                         <div>
@@ -559,7 +559,7 @@ export default function TeamAssistProjections() {
                       const gwNumber = parseInt(startGameweek) + weekIndex;
                       const gwTotal = totalAssists.gameweekTotals[gwNumber] || 0;
                       return (
-                        <td key={weekIndex} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
+                        <td key={weekIndex} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 w-[52px] min-w-[52px]">
                           {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
                         </td>
                       );
@@ -568,13 +568,13 @@ export default function TeamAssistProjections() {
                     {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                       const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
-                        <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 min-w-[44px] md:min-w-[56px]">
+                        <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 w-[52px] min-w-[52px]">
                           {tbcTotal.toFixed(2)}
                         </td>
                       );
                     })()}
 
-                    <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 min-w-[50px] md:min-w-[70px]">
+                    <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-[65px] min-w-[65px]">
                       <span className="text-sm md:text-lg font-bold text-blue-900">
                         {(totalAssists.overallTotal + filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0)).toFixed(2)}
                       </span>
