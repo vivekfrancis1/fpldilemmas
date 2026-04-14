@@ -1640,6 +1640,9 @@ export default function MyDashboard() {
                           <p className="text-[10px] sm:text-sm font-medium text-teal-600 leading-tight sm:mb-2">Squad</p>
                           <p className="text-sm sm:text-2xl font-bold text-teal-900 truncate">
                             {formatPrice((() => {
+                              const value = teamData?.entry_history?.value;
+                              const bank = nextTeamData?.transfers?.bank ?? nextTeamData?.entry_history?.bank ?? teamData?.entry_history?.bank ?? 0;
+                              if (value) return value - bank;
                               const picks = nextTeamData?.picks || teamData?.picks;
                               if (!picks) return 0;
                               return picks.reduce((total: number, pick: any) => {
@@ -1986,7 +1989,7 @@ export default function MyDashboard() {
                       <CardContent className="p-2 sm:p-3">
                         <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
                         <p className="text-base sm:text-lg font-bold text-orange-900">
-                          {formatPrice(getTotalTeamValue())}
+                          {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
                         </p>
                       </CardContent>
                     </Card>
