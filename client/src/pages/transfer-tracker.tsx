@@ -9,6 +9,7 @@ import { TrendingUp, TrendingDown, AlertTriangle, Search, BarChart3, ChevronUp, 
 import { Button } from "@/components/ui/button";
 import { PlayerNameCell, TeamBadge, PositionBadge, ValueCell } from "@/components/enhanced-table";
 import { BootstrapData } from "@shared/schema";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TransferData {
   player_id: number;
@@ -45,6 +46,7 @@ export default function TransferTracker() {
   const [transferTypeFilter, setTransferTypeFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>('net_transfers_event');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const isMobile = useIsMobile();
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -358,7 +360,7 @@ export default function TransferTracker() {
                       <th className="text-left py-2 px-3 sticky left-0 bg-gray-50/80 dark:bg-gray-800/50 z-10 border-r border-gray-200 dark:border-gray-700 min-w-[120px]">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">Player</div>
                       </th>
-                      <th className="text-right py-2 px-2 min-w-[60px]">
+                      <th className="text-right py-2 px-2 min-w-[60px] hidden sm:table-cell">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">Price</div>
                       </th>
                       <th className="text-right py-2 px-2 min-w-[70px]">
@@ -368,48 +370,56 @@ export default function TransferTracker() {
                       </th>
                       
                       {/* Gameweek Section */}
-                      <th className="text-center py-1 px-2 border-l-2 border-green-200 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20" colSpan={3}>
-                        <div className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">This Gameweek</div>
+                      <th className="text-center py-1 px-2 border-l-2 border-green-200 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20" colSpan={isMobile ? 2 : 3}>
+                        <div className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">This GW</div>
                       </th>
                       
-                      {/* Season Section */}
-                      <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={2}>
-                        <div className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Season Totals</div>
-                      </th>
+                      {/* Season Section — hidden on mobile */}
+                      {!isMobile && (
+                        <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={2}>
+                          <div className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Season Totals</div>
+                        </th>
+                      )}
                     </tr>
                     <tr className="border-b bg-gray-25 dark:bg-gray-900/30">
                       <th></th>
-                      <th></th>
+                      <th className="hidden sm:table-cell"></th>
                       <th></th>
                       
                       {/* Gameweek Sub-headers */}
                       <th className="text-right py-1 px-2 border-l border-green-200 dark:border-green-700 min-w-[80px]">
                         <SortableHeader field="net_transfers_event" className="text-right text-xs">
-                          Net Transfers
+                          Net Δ
                         </SortableHeader>
                       </th>
-                      <th className="text-right py-1 px-2 min-w-[60px]">
-                        <SortableHeader field="net_transfers_event_percentage" className="text-right text-xs">
-                          Net %
-                        </SortableHeader>
-                      </th>
+                      {!isMobile && (
+                        <th className="text-right py-1 px-2 min-w-[60px]">
+                          <SortableHeader field="net_transfers_event_percentage" className="text-right text-xs">
+                            Net %
+                          </SortableHeader>
+                        </th>
+                      )}
                       <th className="text-right py-1 px-2 min-w-[70px]">
                         <SortableHeader field="price_change_event" className="text-right text-xs">
                           Price Δ
                         </SortableHeader>
                       </th>
                       
-                      {/* Season Sub-headers */}
-                      <th className="text-right py-1 px-2 border-l border-blue-200 dark:border-blue-700 min-w-[80px]">
-                        <SortableHeader field="net_transfers" className="text-right text-xs">
-                          Net Transfers
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right py-1 px-2 min-w-[70px]">
-                        <SortableHeader field="price_change_season" className="text-right text-xs">
-                          Price Δ
-                        </SortableHeader>
-                      </th>
+                      {/* Season Sub-headers — hidden on mobile */}
+                      {!isMobile && (
+                        <>
+                          <th className="text-right py-1 px-2 border-l border-blue-200 dark:border-blue-700 min-w-[80px]">
+                            <SortableHeader field="net_transfers" className="text-right text-xs">
+                              Net Transfers
+                            </SortableHeader>
+                          </th>
+                          <th className="text-right py-1 px-2 min-w-[70px]">
+                            <SortableHeader field="price_change_season" className="text-right text-xs">
+                              Price Δ
+                            </SortableHeader>
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -436,7 +446,8 @@ export default function TransferTracker() {
                             />
                           </div>
                         </td>
-                        <td className="py-2 px-2 text-right">
+                        {/* Price — hidden on mobile */}
+                        <td className="py-2 px-2 text-right hidden sm:table-cell">
                           <span className="font-semibold text-gray-900 dark:text-gray-100">
                             {formatPrice(transfer.current_price)}
                           </span>
@@ -447,7 +458,7 @@ export default function TransferTracker() {
                           </span>
                         </td>
                         
-                        {/* Gameweek section with improved compact styling */}
+                        {/* Gameweek section */}
                         <td className="py-2 px-2 text-right border-l border-green-200 dark:border-green-700 bg-green-50/20 dark:bg-green-900/10">
                           <span className={`font-semibold text-sm ${
                             (transfer.net_transfers_event || 0) > 0 ? "text-green-700 dark:text-green-400" : 
@@ -458,14 +469,17 @@ export default function TransferTracker() {
                               (transfer.net_transfers_event || 0).toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
-                          <span className={`font-semibold text-sm ${
-                            (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-700 dark:text-green-400" : 
-                            (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(1)}%
-                          </span>
-                        </td>
+                        {/* GW Net% — hidden on mobile */}
+                        {!isMobile && (
+                          <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
+                            <span className={`font-semibold text-sm ${
+                              (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-700 dark:text-green-400" : 
+                              (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+                            }`}>
+                              {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(1)}%
+                            </span>
+                          </td>
+                        )}
                         <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
                           <span className={`font-bold text-sm px-1 py-0.5 rounded ${
                             (transfer.price_change_event || 0) > 0 ? "text-green-800 dark:text-green-300 bg-green-100 dark:bg-green-800/30" : 
@@ -476,26 +490,30 @@ export default function TransferTracker() {
                           </span>
                         </td>
 
-                        {/* Season totals section with improved compact styling */}
-                        <td className="py-2 px-2 text-right border-l border-blue-200 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-900/10">
-                          <span className={`font-semibold text-sm ${
-                            transfer.net_transfers > 0 ? "text-blue-700 dark:text-blue-400" : 
-                            transfer.net_transfers < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {transfer.net_transfers > 0 ? "+" : ""}{Math.abs(transfer.net_transfers) >= 1000 ? 
-                              `${(transfer.net_transfers / 1000).toFixed(0)}k` : 
-                              transfer.net_transfers?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
-                          <span className={`font-bold text-sm px-1 py-0.5 rounded ${
-                            (transfer.price_change_season || 0) > 0 ? "text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/30" : 
-                            (transfer.price_change_season || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
-                            "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
-                          }`}>
-                            {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}
-                          </span>
-                        </td>
+                        {/* Season totals — hidden on mobile */}
+                        {!isMobile && (
+                          <>
+                            <td className="py-2 px-2 text-right border-l border-blue-200 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-900/10">
+                              <span className={`font-semibold text-sm ${
+                                transfer.net_transfers > 0 ? "text-blue-700 dark:text-blue-400" : 
+                                transfer.net_transfers < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+                              }`}>
+                                {transfer.net_transfers > 0 ? "+" : ""}{Math.abs(transfer.net_transfers) >= 1000 ? 
+                                  `${(transfer.net_transfers / 1000).toFixed(0)}k` : 
+                                  transfer.net_transfers?.toLocaleString() || "0"}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
+                              <span className={`font-bold text-sm px-1 py-0.5 rounded ${
+                                (transfer.price_change_season || 0) > 0 ? "text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/30" : 
+                                (transfer.price_change_season || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
+                                "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
+                              }`}>
+                                {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}
+                              </span>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>

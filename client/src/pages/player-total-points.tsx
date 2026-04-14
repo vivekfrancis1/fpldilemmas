@@ -2185,7 +2185,10 @@ export default function PlayerTotalPoints() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
-                    <h2 className="fpl-card-title">{viewMode === "future" ? "Player Points Projections" : "Player Points History"}: GW{startGameweek}-GW{endGameweek}</h2>
+                    <h2 className="fpl-card-title">
+                      <span className="hidden sm:inline">{viewMode === "future" ? "Player Points Projections" : "Player Points History"}: GW{startGameweek}-GW{endGameweek}</span>
+                      <span className="sm:hidden">{viewMode === "future" ? "Projections" : "History"}: GW{startGameweek}-{endGameweek}</span>
+                    </h2>
                     {selectedGameweeks.size > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
                         {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
@@ -2206,11 +2209,11 @@ export default function PlayerTotalPoints() {
                       disabled={isRefreshing}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-1.5"
                       data-testid="button-refresh-data"
                     >
                       <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                      <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
                     </Button>
                     <Badge className="bg-indigo-100 text-indigo-700">
                       {filteredAndSortedData.length} players
