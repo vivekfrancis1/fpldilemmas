@@ -540,11 +540,6 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="p-2 sm:p-3 text-right">
                               <div className="font-medium text-xs sm:text-sm">{formatPrice(change.current_price)}</div>
-                              <div className="sm:hidden">
-                                <Badge variant={change.price_change > 0 ? "success" : "destructive"} className="text-[10px] px-1 py-0">
-                                  {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
-                                </Badge>
-                              </div>
                             </td>
                           </tr>
                         </React.Fragment>
