@@ -45,6 +45,26 @@ export default function ProjectedGoalsCS() {
   // View mode: "future" for projections, "past" for historical results
   const [viewMode, setViewMode] = useState<"future" | "past">("future");
 
+  // Fixture mode: which GW to assign TBC fixtures to
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
+  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  });
+
+  // Sync tbcAssignments from localStorage when mode changes or window regains focus
+  useEffect(() => {
+    const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+    try { setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}')); } catch {}
+  }, [fixtureMode]);
+  useEffect(() => {
+    const onFocus = () => {
+      const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
+      try { setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}')); } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fixtureMode]);
+
   // Calculate last finished gameweek
   const lastFinishedGW = useMemo(() => {
     if (!bootstrapData?.events) return 24;
@@ -81,23 +101,34 @@ export default function ProjectedGoalsCS() {
   });
   const hasTBCFixture = (tbcFixtures?.length ?? 0) > 0;
 
+  // Effective GW for TBC fixtures based on fixture mode
+  const tbcEffectiveGW = useMemo(() => {
+    if (!hasTBCFixture || viewMode !== 'future') return null;
+    if (fixtureMode === 'expert') return 36;
+    if (fixtureMode === 'custom') {
+      const firstAssigned = tbcFixtures?.[0]?.id ? (tbcAssignments[tbcFixtures[0].id] ?? null) : null;
+      return firstAssigned ?? 39;
+    }
+    return 39; // base
+  }, [fixtureMode, hasTBCFixture, tbcFixtures, tbcAssignments, viewMode]);
+
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past") {
       return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
     }
     if (!bootstrapData?.events) {
-      return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback starting from GW7
+      return Array.from({ length: 12 }, (_, i) => i + 7);
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-    // Append GW39 for the TBC fixture if not already present
-    if (hasTBCFixture && !gws.includes(39)) {
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    // Only add GW39 in base mode (expert/custom remap TBC to a regular GW)
+    if (fixtureMode === 'base' && hasTBCFixture && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture, fixtureMode]);
 
-  // Update state when bootstrap data or view mode changes
+  // Update state when bootstrap data, view mode, or fixture mode changes
   useEffect(() => {
     if (viewMode === "past" && lastFinishedGW > 0) {
       const startGW = Math.max(1, lastFinishedGW - 5);
@@ -106,10 +137,14 @@ export default function ProjectedGoalsCS() {
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
-      // Extend default end to GW39 when a TBC fixture exists
-      setEndGameweek(hasTBCFixture ? "39" : newRange.endGameweek);
+      // In base mode extend to GW39 when TBC exists; in expert/custom use remapped GW
+      if (hasTBCFixture && tbcEffectiveGW !== null) {
+        setEndGameweek(String(tbcEffectiveGW));
+      } else {
+        setEndGameweek(newRange.endGameweek);
+      }
     }
-  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture, tbcEffectiveGW]);
 
   // Fetch team goal projections with gameweek range
   const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
@@ -128,13 +163,22 @@ export default function ProjectedGoalsCS() {
     queryKey: [`/api/fixtures`],
     enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
     select: (data) => {
-      // Normalize TBC fixtures (event: null) to GW39 so they flow through the model
       const startGW = parseInt(startGameweek);
       const endGW = parseInt(endGameweek);
       return data
-        .map((fixture: any) =>
-          (fixture.event === null || fixture.event === undefined) ? { ...fixture, event: 39 } : fixture
-        )
+        .map((fixture: any) => {
+          if (fixture.event !== null && fixture.event !== undefined) return fixture;
+          // Remap TBC fixture to the appropriate GW based on fixture mode
+          let assignedGW: number;
+          if (fixtureMode === 'expert') {
+            assignedGW = 36;
+          } else if (fixtureMode === 'custom') {
+            assignedGW = tbcAssignments[fixture.id] ?? 39;
+          } else {
+            assignedGW = 39;
+          }
+          return { ...fixture, event: assignedGW };
+        })
         .filter((fixture: any) => fixture.event >= startGW && fixture.event <= endGW);
     },
   });
@@ -461,6 +505,30 @@ export default function ProjectedGoalsCS() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Fixture mode toggle — only relevant in future mode when TBC exists */}
+                  {viewMode === 'future' && hasTBCFixture && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-gray-500 font-medium">Fixtures:</span>
+                      <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+                        <button
+                          onClick={() => setFixtureMode('base')}
+                          className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                        >Base Fixtures</button>
+                        {Object.keys(tbcAssignments).length > 0 && (
+                          <button
+                            onClick={() => setFixtureMode('custom')}
+                            className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                          >My Fixtures</button>
+                        )}
+                        <button
+                          onClick={() => setFixtureMode('expert')}
+                          className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}
+                        >Expert Fixtures</button>
+                      </div>
+                      <a href="/fixtures" className="text-xs text-blue-600 hover:underline">⚙ Edit</a>
+                    </div>
+                  )}
 
                   <div className="mt-2">
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Team</label>
