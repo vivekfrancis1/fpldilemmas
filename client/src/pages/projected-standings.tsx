@@ -51,13 +51,13 @@ export default function ProjectedStandings() {
     return finishedEvents.length > 0 ? Math.max(...finishedEvents.map(e => e.id)) : currentGameweek - 1;
   }, [bootstrapData?.events, currentGameweek]);
   
-  const maxEndGameweek = Math.min(currentGameweek + 12, 38);
+  const maxEndGameweek = Math.min(currentGameweek + 12, 39);
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
   
   useEffect(() => {
     if (bootstrapData && selectedEndGameweek === null) {
       if (viewMode === "projected") {
-        setSelectedEndGameweek(maxEndGameweek);
+        setSelectedEndGameweek(39);
       } else {
         setSelectedEndGameweek(lastFinishedGameweek);
       }
@@ -66,7 +66,7 @@ export default function ProjectedStandings() {
 
   useEffect(() => {
     if (viewMode === "projected") {
-      setSelectedEndGameweek(maxEndGameweek);
+      setSelectedEndGameweek(39);
     } else {
       setSelectedEndGameweek(lastFinishedGameweek);
     }
@@ -224,7 +224,7 @@ export default function ProjectedStandings() {
         </div>
       </div>
 
-      {tbcTeamImpactMap.size > 0 && viewMode === "current" && (
+      {tbcTeamImpactMap.size > 0 && viewMode === "projected" && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
@@ -287,13 +287,16 @@ export default function ProjectedStandings() {
                       <SelectContent>
                         {bootstrapData && Array.from({ length: 12 }, (_, i) => {
                           const gw = currentGameweek + 1 + i;
-                          if (gw > 38) return null;
+                          if (gw > 39) return null;
                           return (
                             <SelectItem key={gw} value={gw.toString()}>
-                              GW{gw}
+                              {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                             </SelectItem>
                           );
                         }).filter(Boolean)}
+                        {(currentGameweek + 12) < 39 && (
+                          <SelectItem key={39} value="39">GW39 (TBC)</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -323,7 +326,9 @@ export default function ProjectedStandings() {
                   {isRefreshing ? '...' : 'Refresh'}
                 </Button>
                 <span className="px-2 py-1 text-xs bg-white/20 text-white border border-white/30 rounded">
-                  {viewMode === "projected" ? `To GW${totalGameweeks}` : `GW${totalGameweeks}`}
+                  {viewMode === "projected"
+                    ? `To ${totalGameweeks === 39 ? 'GW39 (TBC)' : `GW${totalGameweeks}`}`
+                    : `GW${totalGameweeks}`}
                 </span>
               </div>
             </div>
