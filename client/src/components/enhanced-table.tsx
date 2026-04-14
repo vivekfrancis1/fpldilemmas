@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 
 export interface TableColumn<T = any> {
   key: string;
-  header: string;
+  header: string | React.ReactNode;
   sortable?: boolean;
   hideSortIcon?: boolean;
   className?: string;
+  style?: React.CSSProperties;
   render?: (value: any, item: T, index: number) => React.ReactNode;
   width?: string;
   align?: 'left' | 'center' | 'right';
@@ -190,7 +191,7 @@ export function EnhancedTable<T = any>({
                     column.className,
                     column.width && `w-${column.width}`,
                   )}
-                  style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 30, backgroundColor: 'white' } : undefined}
+                  style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 30, backgroundColor: 'white', ...column.style } : column.style}
                 >
                   {column.sortable && onSort ? (
                     <Button
@@ -256,7 +257,7 @@ export function EnhancedTable<T = any>({
                           getAlignment(column.align),
                           column.className,
                         )}
-                        style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: highlightRow && highlightRow(item, index) ? '#eef2ff' : 'white' } : undefined}
+                        style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: highlightRow && highlightRow(item, index) ? '#eef2ff' : 'white', ...column.style } : column.style}
                       >
                         {renderedValue as React.ReactNode}
                       </td>

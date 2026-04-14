@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type CSSProperties, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
@@ -669,16 +669,17 @@ function createPlayerTotalPointsColumns(
       header: 'Player',
       sortable: true,
       hideSortIcon: true,
-      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[56px] md:min-w-[80px]',
+      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]',
+      style: { width: '120px', minWidth: '80px', maxWidth: '140px' } as CSSProperties,
       render: (_, player) => (
-        <div className="min-w-[56px] md:min-w-[80px]">
+        <div className="w-[80px] md:w-[110px] overflow-hidden">
           <div className="flex items-center gap-0.5 flex-wrap">
             {myTeamPlayerIds?.has(player.playerId) && (
               <span className="text-purple-600 flex-shrink-0" title="In My Team">
                 <Users className="h-3 w-3" />
               </span>
             )}
-            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-none">
+            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px]">
               {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
             </span>
             <PlayerAvailabilityBadge player={player} />
@@ -701,7 +702,8 @@ function createPlayerTotalPointsColumns(
         sortable: true,
         hideSortIcon: true,
         align: 'center' as const,
-        className: 'min-w-[36px] md:min-w-[44px] bg-blue-50/30 px-0.5',
+        className: 'bg-blue-50/30 px-0.5',
+        style: { width: '50px', minWidth: '50px' } as CSSProperties,
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
@@ -753,11 +755,12 @@ function createPlayerTotalPointsColumns(
     }),
     ...(tbcTeamShortNames && tbcTeamShortNames.size > 0 && !isPastMode ? [{
       key: 'gw39',
-      header: 'GW39 (TBC)',
+      header: (<>GW39<br/><span className="text-[10px] text-amber-600 font-normal">(TBC)</span></>) as ReactNode,
       sortable: true,
       hideSortIcon: true,
       align: 'center' as const,
-      className: 'min-w-[36px] md:min-w-[44px] bg-amber-50/60 border-l border-amber-300 px-0.5',
+      className: 'bg-amber-50/60 border-l border-amber-300 px-0.5',
+      style: { width: '50px', minWidth: '50px' } as CSSProperties,
       render: (_: any, player: PlayerTotalPointsData) => {
         const playerTeamShort = (teamNameToShortName?.get((player as any).teamName || player.team)) || (player as any).teamShort || player.team || '';
         const isTBCPlayer = tbcTeamShortNames.has(playerTeamShort);
@@ -784,7 +787,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'w-14 bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[224px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[272px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -803,7 +806,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-[168px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'hidden md:table-cell md:w-[68px] bg-purple-50 border-l border-gray-300 px-1 md:sticky md:right-[204px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -819,7 +822,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-teal-50 border-l border-gray-300 px-1 md:sticky md:right-28 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'hidden md:table-cell md:w-[68px] bg-teal-50 border-l border-gray-300 px-1 md:sticky md:right-[136px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={parseFloat(value) || 0} 
@@ -835,7 +838,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-14 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'hidden md:table-cell md:w-[68px] bg-sky-50 border-l border-gray-300 px-1 md:sticky md:right-[68px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -851,7 +854,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'hidden md:table-cell md:w-14 bg-rose-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'hidden md:table-cell md:w-[68px] bg-rose-50 border-l border-gray-300 px-1 md:sticky md:right-0 md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (value) => (
         <ValueCell 
           value={parseFloat(value) || 0} 
