@@ -65,24 +65,24 @@ export class PriceSplitWorker {
       // Get all price changes from database table
       const allPriceChanges = await storage.getPriceChanges(1000);
       
-      // Find any 0.2 changes (price_change = ±2) in the database
-      const twoPointChanges = allPriceChanges.filter(change => Math.abs(change.priceChange) === 2);
+      // Find any multi-step changes (abs > 1) — FPL prices can only change 0.1m per day
+      const multiStepChanges = allPriceChanges.filter(change => Math.abs(change.priceChange) > 1);
       
-      if (twoPointChanges.length === 0) {
-        console.log("✅ No 0.2 price changes found in database - all changes are properly split");
+      if (multiStepChanges.length === 0) {
+        console.log("✅ No multi-step price changes found — all changes are properly split into 0.1m increments");
         return;
       }
       
-      console.log(`🔄 Found ${twoPointChanges.length} database records with 0.2 price changes that need splitting`);
+      console.log(`🔄 Found ${multiStepChanges.length} records with multi-step price changes that need splitting`);
       
-      for (const change of twoPointChanges) {
+      for (const change of multiStepChanges) {
         await this.splitSinglePriceChange(change);
       }
       
       const endTime = Date.now();
       const duration = (endTime - startTime) / 1000;
       
-      console.log(`✅ Price split check complete: processed ${twoPointChanges.length} database splits in ${duration.toFixed(2)}s`);
+      console.log(`✅ Price split check complete: split ${multiStepChanges.length} records in ${duration.toFixed(2)}s`);
       
     } catch (error) {
       console.error("❌ Error during price split check:", error);
@@ -91,53 +91,64 @@ export class PriceSplitWorker {
     }
   }
 
+  /**
+   * Splits a multi-step price change into individual 0.1m (±1 in tenths) daily records.
+   * Dates are spread backwards from the original changeDate so the most recent change
+   * retains the original date and earlier changes get prior days.
+   * e.g. a +3 change on Apr 13 becomes: Apr 11 +1, Apr 12 +1, Apr 13 +1
+   */
   private async splitSinglePriceChange(originalChange: any): Promise<void> {
     try {
       const direction = originalChange.priceChange > 0 ? 1 : -1;
-      const midPrice = originalChange.oldPrice + direction;
+      const steps = Math.abs(originalChange.priceChange);
       
-      console.log(`🔄 Splitting database record: ${originalChange.playerName} ${originalChange.oldPrice} → ${originalChange.newPrice} (change: ${originalChange.priceChange})`);
+      console.log(`🔄 Splitting: ${originalChange.playerName} ${originalChange.oldPrice} → ${originalChange.newPrice} (${originalChange.priceChange}) into ${steps} × ${direction > 0 ? '+' : '-'}0.1m changes`);
       
-      // Remove the original 0.2 change from database
+      // Remove the original multi-step record
       await storage.removePriceChange(originalChange.id);
-      console.log(`🗑️ Removed original 0.2 change record for ${originalChange.playerName}`);
+      console.log(`🗑️ Removed original record for ${originalChange.playerName}`);
       
-      // Add first 0.1 change
-      const firstChange = {
-        playerId: originalChange.playerId,
-        playerName: originalChange.playerName,
-        teamId: originalChange.teamId,
-        teamName: originalChange.teamName,
-        position: originalChange.position,
-        oldPrice: originalChange.oldPrice,
-        newPrice: midPrice,
-        priceChange: direction,
-        changeDate: originalChange.changeDate,
-        ownership: originalChange.ownership,
-        transfersIn: originalChange.transfersIn,
-        transfersOut: originalChange.transfersOut,
-        transfersInGw: originalChange.transfersInGw,
-        transfersOutGw: originalChange.transfersOutGw,
-        totalSeasonChange: originalChange.totalSeasonChange
-      };
+      // Parse the original changeDate so we can offset days
+      const baseDate = new Date(originalChange.changeDate);
       
-      await storage.addPriceChange(firstChange);
-      console.log(`➕ Added first 0.1 change: ${originalChange.playerName} (${originalChange.oldPrice} → ${midPrice})`);
+      // Generate N individual ±1 records, oldest first
+      // The most recent (last) entry uses the original changeDate; earlier entries go back 1 day each
+      for (let i = 0; i < steps; i++) {
+        const stepOldPrice = originalChange.oldPrice + direction * i;
+        const stepNewPrice = stepOldPrice + direction;
+        
+        // Offset: step 0 is (steps-1) days before changeDate; last step is changeDate itself
+        const dayOffset = -(steps - 1 - i);
+        const stepDate = new Date(baseDate);
+        stepDate.setDate(stepDate.getDate() + dayOffset);
+        const stepDateStr = stepDate.toISOString().split('T')[0];
+        
+        const stepChange = {
+          playerId: originalChange.playerId,
+          playerName: originalChange.playerName,
+          teamId: originalChange.teamId,
+          teamName: originalChange.teamName,
+          position: originalChange.position,
+          oldPrice: stepOldPrice,
+          newPrice: stepNewPrice,
+          priceChange: direction,
+          changeDate: stepDateStr,
+          ownership: originalChange.ownership,
+          transfersIn: originalChange.transfersIn,
+          transfersOut: originalChange.transfersOut,
+          transfersInGw: originalChange.transfersInGw,
+          transfersOutGw: originalChange.transfersOutGw,
+          totalSeasonChange: originalChange.totalSeasonChange
+        };
+        
+        await storage.addPriceChange(stepChange);
+        console.log(`➕ Added step ${i + 1}/${steps}: ${originalChange.playerName} ${stepOldPrice} → ${stepNewPrice} on ${stepDateStr}`);
+      }
       
-      // Add second 0.1 change
-      const secondChange = {
-        ...firstChange,
-        oldPrice: midPrice,
-        newPrice: originalChange.newPrice
-      };
-      
-      await storage.addPriceChange(secondChange);
-      console.log(`➕ Added second 0.1 change: ${originalChange.playerName} (${midPrice} → ${originalChange.newPrice})`);
-      
-      console.log(`✅ Database split complete: ${originalChange.playerName} (${originalChange.oldPrice} → ${midPrice} → ${originalChange.newPrice})`);
+      console.log(`✅ Split complete: ${originalChange.playerName} (${originalChange.oldPrice} → ${originalChange.newPrice}) → ${steps} daily records`);
       
     } catch (error) {
-      console.error(`❌ Error splitting database record for ${originalChange.playerName}:`, error);
+      console.error(`❌ Error splitting record for ${originalChange.playerName}:`, error);
     }
   }
 
