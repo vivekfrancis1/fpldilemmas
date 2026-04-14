@@ -582,14 +582,10 @@ export default function MyDashboard() {
     staleTime: 60000,
   });
 
-  // Use authenticated transfers endpoint for own team (includes upcoming GW transfers)
-  // Otherwise use public transfers endpoint
-  // Use separate cache keys to ensure proper refetch when auth state changes
+  // Always use public transfers endpoint — upcoming transfers are handled via nextTeamData
   const { data: transfersData, isLoading: isLoadingTransfers, error: transfersError } = useQuery<Transfer[]>({
-    queryKey: isOwnTeam 
-      ? ["/api/fpl/my-transfers"] 
-      : ["/api/manager", searchedId, "transfers"],
-    enabled: !!searchedId && (isOwnTeam ? !!user : true),
+    queryKey: ["/api/manager", searchedId, "transfers"],
+    enabled: !!searchedId,
   });
 
   // Search handlers
@@ -3199,20 +3195,20 @@ export default function MyDashboard() {
                                       const net = transfer.element_out_cost - transfer.element_in_cost;
                                       return (
                                         <div key={idx} className="flex items-center gap-2 px-3 py-2 text-sm">
-                                          {/* IN */}
-                                          <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                          <span className="font-medium text-green-800 truncate min-w-0">
-                                            {playerIn ? playerIn.web_name : `#${transfer.element_in}`}
-                                          </span>
-                                          <span className="text-xs text-green-700 shrink-0">{formatPrice(transfer.element_in_cost)}</span>
-                                          {/* Arrow */}
-                                          <span className="text-gray-400 shrink-0">→</span>
                                           {/* OUT */}
                                           <TrendingDown className="h-3.5 w-3.5 text-red-400 shrink-0" />
                                           <span className="font-medium text-red-800 truncate min-w-0">
                                             {playerOut ? playerOut.web_name : `#${transfer.element_out}`}
                                           </span>
                                           <span className="text-xs text-red-700 shrink-0">{formatPrice(transfer.element_out_cost)}</span>
+                                          {/* Arrow */}
+                                          <span className="text-gray-400 shrink-0">→</span>
+                                          {/* IN */}
+                                          <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                          <span className="font-medium text-green-800 truncate min-w-0">
+                                            {playerIn ? playerIn.web_name : `#${transfer.element_in}`}
+                                          </span>
+                                          <span className="text-xs text-green-700 shrink-0">{formatPrice(transfer.element_in_cost)}</span>
                                           {/* Net per transfer */}
                                           <span className={`text-xs font-medium ml-auto shrink-0 ${net > 0 ? 'text-green-600' : net < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                                             {net > 0 ? '+' : ''}{formatPrice(net)}
