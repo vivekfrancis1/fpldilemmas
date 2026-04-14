@@ -10942,10 +10942,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead)
-      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 38);
-      const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
-      const endGameweek = Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), maxAllowedEndGameweek);
+      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead, or 39 for TBC)
+      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 39);
+      const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
+      // Allow 39 explicitly to include TBC fixtures; otherwise cap at maxAllowed
+      const endGameweek = requestedEndGameweek === 39
+        ? 39
+        : Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), Math.min(maxAllowedEndGameweek, 38));
       
       console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
       
@@ -11055,10 +11058,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Also process TBC fixtures (event: null) using model projections.
-      // These are real season games that must be played to complete the 38-game schedule,
-      // so they should always be included regardless of the requested endGameweek.
+      // Only include when projecting to GW39 — if projecting to an earlier gameweek,
+      // teams with a TBC fixture (e.g. MCI, CRY) should show one fewer game played.
       const tbcFixturesRaw = fixturesData.filter((f: any) => f.event === null || f.event === undefined);
-      if (tbcFixturesRaw.length > 0) {
+      if (tbcFixturesRaw.length > 0 && endGameweek >= 39) {
         try {
           const { TeamGoalsService: TGS } = await import('./team-goals-service');
           const tbcProjections = await TGS.getTBCFixtureProjections();
