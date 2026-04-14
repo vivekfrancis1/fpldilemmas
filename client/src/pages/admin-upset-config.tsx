@@ -330,7 +330,7 @@ export default function AdminUpsetConfig() {
 
   if (isLoading || !formData) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="w-full py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Loading configuration...</div>
         </div>
@@ -340,7 +340,7 @@ export default function AdminUpsetConfig() {
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="container mx-auto py-8 space-y-6" data-testid="admin-upset-config">
+      <div className="w-full py-4 sm:py-8 space-y-6" data-testid="admin-upset-config">
       <div className="flex items-center gap-3">
         <Settings className="h-8 w-8 text-blue-600" />
         <div>

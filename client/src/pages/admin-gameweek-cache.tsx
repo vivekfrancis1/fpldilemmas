@@ -114,7 +114,7 @@ export default function AdminGameweekCache() {
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="w-full p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gameweek Data Cache Admin</h1>

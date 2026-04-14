@@ -287,7 +287,7 @@ export default function MatchStats() {
 
   if (!fixture && !isLoading && fixturesData) {
     return (
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
         <Button variant="outline" size="sm" onClick={() => window.history.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -305,7 +305,7 @@ export default function MatchStats() {
 
   if (isLoading || !fixturesData || !bootstrapData) {
     return (
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => window.history.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -326,7 +326,7 @@ export default function MatchStats() {
   const dateTime = fixture?.kickoff_time ? formatDateTime(fixture.kickoff_time) : null;
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-5 max-w-3xl">
+    <div className="w-full py-3 sm:py-6 space-y-3 sm:space-y-5">
       <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 -ml-1" onClick={() => window.history.back()}>
         <ArrowLeft className="h-4 w-4 mr-1.5" />
         <span className="text-sm">Back to Results</span>

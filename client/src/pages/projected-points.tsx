@@ -594,7 +594,7 @@ export default function ProjectedPoints() {
   if (!searchedId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-4 sm:space-y-6">
           {/* Header - Compact */}
           <div className="text-center py-2">
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">My Team Projected Points</h1>
@@ -691,7 +691,7 @@ export default function ProjectedPoints() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-950 dark:to-gray-900 p-2 sm:p-4">
-      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-6">
+      <div className="w-full space-y-3 sm:space-y-6">
         {/* Header */}
         <div className="text-center py-2 sm:py-0">
           <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 dark:bg-purple-900 rounded-full mb-2 sm:mb-4">

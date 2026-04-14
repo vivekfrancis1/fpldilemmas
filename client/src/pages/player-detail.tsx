@@ -330,7 +330,7 @@ export default function PlayerDetail() {
 
   if (!player && !isLoading) {
     return (
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="w-full p-4 sm:p-6">
         <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
@@ -344,7 +344,7 @@ export default function PlayerDetail() {
   }
 
   return (
-    <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="w-full p-2 sm:p-4 md:p-6 space-y-4">
       <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-2">
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>

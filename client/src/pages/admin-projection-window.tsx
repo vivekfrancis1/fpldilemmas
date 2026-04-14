@@ -81,7 +81,7 @@ function AdminProjectionWindowContent() {
   const isBusy = saveMutation.isPending || resetMutation.isPending;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="w-full py-4 sm:py-8 max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <CalendarRange className="h-8 w-8 text-primary" />
         <div>

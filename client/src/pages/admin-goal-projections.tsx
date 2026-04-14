@@ -666,7 +666,7 @@ export default function AdminGoalProjections() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-6">
           <Settings className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>
@@ -678,7 +678,7 @@ export default function AdminGoalProjections() {
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="container mx-auto p-6">
+      <div className="w-full p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Configuration Portal - Team Goals Scored</h1>

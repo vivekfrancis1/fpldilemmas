@@ -830,7 +830,7 @@ export default function ManagerTeam() {
     `Manager ${managerId}`;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center gap-4">

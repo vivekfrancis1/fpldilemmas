@@ -1283,7 +1283,7 @@ export default function BestFreehitTeam() {
   // Show loading state while bootstrap data or cached data is loading
   if (!bootstrapData || isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full py-4 sm:py-8">
         <div className="space-y-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -1296,7 +1296,7 @@ export default function BestFreehitTeam() {
 
   if (error || (allCachedData && snapshots.length === 0)) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full py-4 sm:py-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1317,7 +1317,7 @@ export default function BestFreehitTeam() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="w-full py-4 sm:py-8 space-y-6">
       {/* Optimization Loading Screen */}
       {isOptimizing && (
         <div 

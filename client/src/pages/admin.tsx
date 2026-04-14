@@ -180,7 +180,7 @@ export default function Admin() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full p-4 sm:p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Loading admin panel...</div>
         </div>
@@ -190,7 +190,7 @@ export default function Admin() {
 
   return (
     <ProtectedRoute requireAdmin={true}>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="w-full p-4 sm:p-6 space-y-6">
         {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">

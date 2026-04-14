@@ -7,7 +7,7 @@ import { ArrowRight, BarChart3, Calendar, RefreshCw, Award, Eye, TrendingUp, Use
 export default function Home() {
   return (
     
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="w-full py-4 sm:py-8">
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4" data-testid="text-main-title">

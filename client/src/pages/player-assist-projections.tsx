@@ -599,7 +599,7 @@ export default function PlayerAssistProjections() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-        <div className="w-full max-w-7xl mx-auto px-2 py-4 sm:px-4 sm:py-8">
+        <div className="w-full py-4 sm:py-8">
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">

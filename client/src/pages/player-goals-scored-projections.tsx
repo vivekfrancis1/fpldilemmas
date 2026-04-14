@@ -654,7 +654,7 @@ export default function PlayerGoalsScoredProjections() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50/30">
-        <div className="w-full max-w-7xl mx-auto px-2 py-4 sm:px-4 sm:py-8">
+        <div className="w-full py-4 sm:py-8">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
               <Target className="h-8 w-8 text-red-600" />

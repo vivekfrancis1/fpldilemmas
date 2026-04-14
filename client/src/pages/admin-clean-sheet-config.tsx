@@ -107,7 +107,7 @@ export default function AdminCleanSheetConfig() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="container mx-auto p-6">
+        <div className="w-full p-4 sm:p-6">
           <div className="text-center">Loading clean sheet configuration...</div>
         </div>
       </ProtectedRoute>
@@ -116,7 +116,7 @@ export default function AdminCleanSheetConfig() {
 
   return (
     <ProtectedRoute>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="w-full p-4 sm:p-6 space-y-6">
         {/* Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">

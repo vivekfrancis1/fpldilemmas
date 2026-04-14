@@ -671,7 +671,7 @@ export default function Fixtures() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-        <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4 lg:py-8">
+        <div className="w-full py-2 sm:py-4 lg:py-8">
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">

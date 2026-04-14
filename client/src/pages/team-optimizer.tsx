@@ -1097,7 +1097,7 @@ export default function TeamOptimizer() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+      <div className="w-full space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header - Compact */}
         <div className="text-center py-2 relative">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">

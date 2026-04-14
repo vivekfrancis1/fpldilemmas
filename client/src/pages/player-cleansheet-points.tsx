@@ -239,7 +239,7 @@ export default function PlayerCleanSheetPoints() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-3 py-4 sm:px-6 sm:py-8">
+      <div className="w-full py-4 sm:py-8">
         <div className="text-center">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             Error loading clean sheet points data. Please try again.
