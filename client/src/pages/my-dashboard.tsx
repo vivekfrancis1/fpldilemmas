@@ -833,7 +833,20 @@ export default function MyDashboard() {
   const getUpcomingActiveChip = (): string | null => {
     if (!isOwnTeam) return null;
     if (nextTeamData?.active_chip) {
-      return nextTeamData.active_chip.toLowerCase();
+      const chipName = nextTeamData.active_chip.toLowerCase();
+      // The FPL /api/my-team/ endpoint sometimes returns the CURRENT GW's active_chip
+      // (e.g. Bench Boost played in GW32) rather than a genuinely upcoming chip.
+      // Guard: if historyData already records this chip for the current GW, it has
+      // already been played — don't surface it as an upcoming chip for the next GW.
+      const currentGWId = bootstrapData?.events.find((e: any) => e.is_current)?.id;
+      const alreadyPlayedThisGW = historyData?.chips?.some(
+        (c: any) => c.name.toLowerCase() === chipName && c.event === currentGWId
+      );
+      if (alreadyPlayedThisGW) {
+        // Fall through to simulated chip (likely null)
+        return dashboardChip;
+      }
+      return chipName;
     }
     // Fall back to manually selected chip simulation
     return dashboardChip;
@@ -3245,7 +3258,7 @@ export default function MyDashboard() {
                         Active Chip for GW{getNextGameweekDashboard()}
                       </CardTitle>
                       <CardDescription className="text-purple-700 text-sm sm:text-base mt-2">
-                        This chip is locked in and cannot be cancelled
+                        This chip is active for the upcoming gameweek — you can cancel it in the FPL app before the deadline
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
@@ -3263,7 +3276,7 @@ export default function MyDashboard() {
                             </Badge>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            Gameweek {getNextGameweekDashboard()} • Cannot be cancelled
+                            Gameweek {getNextGameweekDashboard()} • Cancel in FPL app before deadline
                           </div>
                         </div>
                         <div className="text-right">
