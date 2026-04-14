@@ -76,6 +76,8 @@ export default function PlayerDefensiveContributions() {
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerDefensiveHistory>({
     queryKey: ["/api/player-defensive-history"],
     enabled: viewMode === "past",
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Create playerIdToWebName mapping for short names

@@ -8414,6 +8414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Past Player Defensive Contributions endpoint - actual defensive stats from finished gameweeks
   app.get("/api/player-defensive-history", async (req, res) => {
     try {
+      res.set("Cache-Control", "no-store");
       console.log(`DEBUG: Player Defensive History API called`);
       
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
