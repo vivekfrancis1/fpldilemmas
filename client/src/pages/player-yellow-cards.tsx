@@ -41,9 +41,10 @@ export default function PlayerYellowCards() {
   const [sortBy, setSortBy] = useState<"totalYellowCards" | "totalPoints">("totalYellowCards");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [includeTBC, setIncludeTBC] = useState(false);
+  const [includeTBC, setIncludeTBC] = useState(true);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
+  const [excludedGWs, setExcludedGWs] = useState<Set<number>>(new Set());
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -94,7 +95,7 @@ export default function PlayerYellowCards() {
   // Effective start/end for display (clamped to available gameweeks)
   const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? 1);
   const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (gameweeks[gameweeks.length - 1] ?? 38);
-  const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW);
+  const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW && !excludedGWs.has(gw));
   
   const gameweekRange = displayGWs.length > 0 ? `${displayGWs[0]}-${displayGWs[displayGWs.length - 1]}` : "6-11";
 
@@ -315,6 +316,22 @@ export default function PlayerYellowCards() {
                         className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                         GW39 (TBC)
                       </button>
+                    </div>
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1 mt-2">
+                      {gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW).map(gw => {
+                        const isIncluded = !excludedGWs.has(gw);
+                        return (
+                          <button key={gw}
+                            onClick={() => {
+                              const newSet = new Set(excludedGWs);
+                              if (isIncluded) newSet.add(gw); else newSet.delete(gw);
+                              setExcludedGWs(newSet);
+                            }}
+                            className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? (gw === 39 ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-purple-100 text-purple-700 border-purple-300') : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            {gw === 39 ? 'TBC' : `GW${gw}`}
+                          </button>
+                        );
+                      })}
                     </div>
                   </TabsContent>
                 </Tabs>
