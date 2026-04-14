@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,18 +44,42 @@ export default function PlayerYellowCards() {
   const [includeTBC, setIncludeTBC] = useState(false);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
 
-  // When includeTBC is on, fetch with endGameweek=39 (bypasses cache to include GW39)
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // TBC team info map from event=null fixtures
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
+    (fixturesData as any[]).filter((f: any) => f.event === null || f.event === undefined).forEach((f: any) => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData?.teams]);
+
+  const tbcAssignments = useMemo<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  }, [fixtureMode]);
+
+  // Fetch GW39 data when TBC toggle is on (base mode) OR when in custom/expert mode for merging
+  const needsGW39Data = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0);
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery<YellowCardProjection[]>({
-    queryKey: [includeTBC
+    queryKey: [needsGW39Data
       ? "/api/player-yellow-cards-projections?endGameweek=39"
       : "/api/cached/player-yellow-cards-projections"],
-    staleTime: includeTBC ? 10 * 60 * 1000 : 60 * 60 * 1000,
+    staleTime: needsGW39Data ? 10 * 60 * 1000 : 60 * 60 * 1000,
   });
 
   // Extract gameweeks dynamically from API response
@@ -63,8 +87,9 @@ export default function PlayerYellowCards() {
     ? Object.keys(yellowCardProjections[0].yellowCards).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
     : [];
   
-  // Filter out GW39 if not includeTBC
-  const gameweeks = includeTBC ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
+  // In custom/expert mode, GW39 is absorbed into assigned GW — no separate column
+  const showGW39Column = fixtureMode === 'base' && includeTBC;
+  const gameweeks = showGW39Column ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
 
   // Effective start/end for display (clamped to available gameweeks)
   const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? 1);
@@ -73,7 +98,27 @@ export default function PlayerYellowCards() {
   
   const gameweekRange = displayGWs.length > 0 ? `${displayGWs[0]}-${displayGWs[displayGWs.length - 1]}` : "6-11";
 
-  const filteredProjections = (yellowCardProjections || []).filter((projection: YellowCardProjection) => {
+  // Resolve GW39 data: in custom/expert mode, absorb GW39 into the assigned GW
+  const resolvedProjections = useMemo<YellowCardProjection[]>(() => {
+    if (!yellowCardProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
+      return yellowCardProjections || [];
+    }
+    return yellowCardProjections.map((projection: YellowCardProjection) => {
+      const tbcInfo = tbcTeamInfoMap.get(projection.teamName);
+      if (!tbcInfo) return projection;
+      const gw39YC = projection.yellowCards['gw39'] || 0;
+      const gw39Pts = projection.pointsFromYellowCards['gw39'] || 0;
+      if (!gw39YC && !gw39Pts) return projection;
+      const assignedGW: number | null = fixtureMode === 'expert' ? 36 : (tbcAssignments[tbcInfo.fixtureId] ?? null);
+      if (assignedGW === null) return projection;
+      const gwKey = `gw${assignedGW}`;
+      const newYellowCards = { ...projection.yellowCards, [gwKey]: (projection.yellowCards[gwKey] || 0) + gw39YC, 'gw39': 0 };
+      const newPointsFromYellowCards = { ...projection.pointsFromYellowCards, [gwKey]: (projection.pointsFromYellowCards[gwKey] || 0) + gw39Pts, 'gw39': 0 };
+      return { ...projection, yellowCards: newYellowCards, pointsFromYellowCards: newPointsFromYellowCards };
+    });
+  }, [yellowCardProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+
+  const filteredProjections = resolvedProjections.filter((projection: YellowCardProjection) => {
     const matchesSearch = !searchTerm || 
       projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -143,6 +188,17 @@ export default function PlayerYellowCards() {
           </p>
         </div>
       </div>
+
+      {tbcTeamInfoMap.size > 0 && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+        </div>
+      )}
 
       <div className="fpl-section-spacing">
         {/* Filters */}

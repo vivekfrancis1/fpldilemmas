@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,18 +36,45 @@ export default function PlayerGoalsConceded() {
   const [includeTBC, setIncludeTBC] = useState(false);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
+  const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // TBC team info map from event=null fixtures
+  const tbcTeamInfoMap = useMemo(() => {
+    const map = new Map<string, { opponent: string; isHome: boolean; fixtureId: number }>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return map;
+    (fixturesData as any[]).filter((f: any) => f.event === null || f.event === undefined).forEach((f: any) => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) map.set(homeTeam.short_name, { opponent: awayTeam?.short_name || '?', isHome: true, fixtureId: f.id });
+      if (awayTeam) map.set(awayTeam.short_name, { opponent: homeTeam?.short_name || '?', isHome: false, fixtureId: f.id });
+    });
+    return map;
+  }, [fixturesData, bootstrapData?.teams]);
+
+  const tbcAssignments = useMemo<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  }, [fixtureMode]);
+
   // Get current gameweek and calculate next 6 gameweeks
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
   const nextGameweek = currentGameweek + 1;
   const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
-  const gameweeks = includeTBC ? [...baseGameweeks, 39] : baseGameweeks;
-  const endGameweek = includeTBC ? 39 : gameweeks[gameweeks.length - 1];
+  // In custom/expert mode, GW39 is absorbed into the assigned GW — no separate column
+  const showGW39Column = fixtureMode === 'base' && includeTBC;
+  const gameweeks = showGW39Column ? [...baseGameweeks, 39] : baseGameweeks;
+  // API needs GW39 data for merging in custom/expert mode
+  const apiEndGameweek = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0) ? 39 : baseGameweeks[baseGameweeks.length - 1];
+  const endGameweek = apiEndGameweek;
 
   // Effective start/end for display (clamped to available gameweeks)
   const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? nextGameweek);
@@ -61,7 +88,27 @@ export default function PlayerGoalsConceded() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const filteredProjections = (goalsConcededProjections || []).filter((projection: GoalsConcededProjection) => {
+  // Resolve GW39 data: in custom/expert mode, absorb GW39 into the assigned GW
+  const resolvedProjections = useMemo<GoalsConcededProjection[]>(() => {
+    if (!goalsConcededProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
+      return (goalsConcededProjections as GoalsConcededProjection[]) || [];
+    }
+    return (goalsConcededProjections as GoalsConcededProjection[]).map((projection: GoalsConcededProjection) => {
+      const tbcInfo = tbcTeamInfoMap.get(projection.teamName);
+      if (!tbcInfo) return projection;
+      const gw39GC = projection.goalsConceded['gw39'] || 0;
+      const gw39Pts = projection.pointsFromGoalsConceded['gw39'] || 0;
+      if (!gw39GC && !gw39Pts) return projection;
+      const assignedGW: number | null = fixtureMode === 'expert' ? 36 : (tbcAssignments[tbcInfo.fixtureId] ?? null);
+      if (assignedGW === null) return projection;
+      const gwKey = `gw${assignedGW}`;
+      const newGoalsConceded = { ...projection.goalsConceded, [gwKey]: (projection.goalsConceded[gwKey] || 0) + gw39GC, 'gw39': 0 };
+      const newPointsFromGoalsConceded = { ...projection.pointsFromGoalsConceded, [gwKey]: (projection.pointsFromGoalsConceded[gwKey] || 0) + gw39Pts, 'gw39': 0 };
+      return { ...projection, goalsConceded: newGoalsConceded, pointsFromGoalsConceded: newPointsFromGoalsConceded };
+    });
+  }, [goalsConcededProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+
+  const filteredProjections = resolvedProjections.filter((projection: GoalsConcededProjection) => {
     const matchesSearch = !searchTerm || 
       projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -159,6 +206,17 @@ export default function PlayerGoalsConceded() {
           </p>
         </div>
       </div>
+
+      {tbcTeamInfoMap.size > 0 && (
+        <div className="flex justify-center mb-5">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
+            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
+            {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
+            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
+          </div>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+        </div>
+      )}
 
       <div className="fpl-section-spacing">
         {/* Filters */}
