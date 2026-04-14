@@ -8437,8 +8437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const liveData = await liveResponse.json();
             liveData.elements.forEach((el: any) => {
               const player = bootstrapData.elements.find((p: any) => p.id === el.id);
-              // Include GKP and DEF
-              if (player && (player.element_type === 1 || player.element_type === 2)) {
+              // Include DEF, MID, FWD only — GKP do not earn DC points
+              if (player && (player.element_type === 2 || player.element_type === 3 || player.element_type === 4)) {
                 if (!playerDefenseMap.has(el.id)) {
                   const team = bootstrapData.teams.find((t: any) => t.id === player.team);
                   const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
@@ -8458,14 +8458,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Only count games where player actually played (minutes > 0)
                   if (minutesPlayed > 0) {
                     // Defensive contribution using official FPL rules:
-                    // Defenders (GKP/DEF): CBIT (no recoveries)
-                    // Mids/Forwards: CBIRT (with recoveries)
+                    // DEF: CBIT (no recoveries)
+                    // MID/FWD: CBIRT (with recoveries)
                     const cbiVal = el.stats.clearances_blocks_interceptions || 0;
                     const tacklesVal = el.stats.tackles || 0;
                     const recoveriesVal = el.stats.recoveries || 0;
-                    // player.element_type: 1=GKP, 2=DEF - both use CBIT
-                    const dc = (player.element_type === 1 || player.element_type === 2)
-                      ? cbiVal + tacklesVal  // GKP/DEF: CBIT only
+                    // element_type: 2=DEF uses CBIT only; 3=MID, 4=FWD use CBIRT
+                    const dc = player.element_type === 2
+                      ? cbiVal + tacklesVal  // DEF: CBIT only
                       : cbiVal + tacklesVal + recoveriesVal;  // MID/FWD: CBIRT
                     playerData.gameweekStats[gw] = {
                       defensiveContribution: dc,
