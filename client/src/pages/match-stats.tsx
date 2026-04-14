@@ -398,8 +398,8 @@ export default function MatchStats() {
 
           {renderStatSection(
             "Clean Sheets",
-            matchData.homeTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60).sort((a, b) => b.total_points - a.total_points),
-            matchData.awayTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60).sort((a, b) => b.total_points - a.total_points),
+            matchData.homeTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
+            matchData.awayTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
             (player) => {
               const pts = player.position === 'GKP' || player.position === 'DEF' ? 4 : player.position === 'MID' ? 1 : 0;
               return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
