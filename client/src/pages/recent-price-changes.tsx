@@ -389,7 +389,7 @@ export default function RecentPriceChanges() {
                   <thead>
                     <tr className="border-b bg-muted/20">
                       <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="text-left p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('change_date')}
                       >
                         <div className="flex items-center gap-1">
@@ -400,7 +400,7 @@ export default function RecentPriceChanges() {
                         </div>
                       </th>
                       <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="text-left p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('player_name')}
                       >
                         <div className="flex items-center gap-1">
@@ -411,7 +411,7 @@ export default function RecentPriceChanges() {
                         </div>
                       </th>
                       <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="hidden sm:table-cell text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('team_name')}
                       >
                         <div className="flex items-center gap-1">
@@ -422,61 +422,60 @@ export default function RecentPriceChanges() {
                         </div>
                       </th>
                       <th 
-                        className="text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="hidden sm:table-cell text-left p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('position')}
                       >
                         <div className="flex items-center gap-1">
-                          Position
+                          Pos
                           {sortField === 'position' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
                       </th>
                       <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('ownership')}
                       >
                         <div className="flex items-center justify-end gap-1">
-                          Ownership %
+                          Own%
                           {sortField === 'ownership' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
                       </th>
                       <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('old_price')}
                       >
                         <div className="flex items-center justify-end gap-1">
-                          Old Price
+                          Old
                           {sortField === 'old_price' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
                       </th>
                       <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('price_change')}
                       >
                         <div className="flex items-center justify-end gap-1">
-                          Price Change
+                          Change
                           {sortField === 'price_change' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
                       </th>
                       <th 
-                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('current_price')}
                       >
                         <div className="flex items-center justify-end gap-1">
-                          Current Price
+                          Price
                           {sortField === 'current_price' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
                       </th>
-
                     </tr>
                   </thead>
                   <tbody>
@@ -498,50 +497,56 @@ export default function RecentPriceChanges() {
                             className="border-b hover:bg-muted/50 transition-colors"
                             data-testid={`price-change-${change.player_id}`}
                           >
-                        <td className="p-3">
-                          <div className="text-sm text-muted-foreground">
-                            {new Date(change.change_date).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            {change.price_change > 0 ? (
-                              <TrendingUp className="h-4 w-4 text-green-600" />
-                            ) : change.price_change < 0 ? (
-                              <TrendingDown className="h-4 w-4 text-red-600" />
-                            ) : (
-                              <BarChart3 className="h-4 w-4 text-blue-600" />
-                            )}
-                            <div>
-                              <p className="font-medium">{change.player_name}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium text-sm">{change.team_name}</div>
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm text-muted-foreground">{change.position}</div>
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          <div className="text-sm">
-                            {typeof change.ownership === 'number' 
-                              ? `${change.ownership.toFixed(1)}%` 
-                              : `${parseFloat(change.ownership || "0").toFixed(1)}%`}
-                          </div>
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {formatPrice(change.old_price)}
-                        </td>
-                        <td className="p-3 text-right">
-                          <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
-                            {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {formatPrice(change.current_price)}
-                        </td>
-                      </tr>
+                            <td className="p-2 sm:p-3">
+                              <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                                {new Date(change.change_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                              </div>
+                            </td>
+                            <td className="p-2 sm:p-3">
+                              <div className="flex items-center gap-1.5">
+                                {change.price_change > 0 ? (
+                                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
+                                ) : change.price_change < 0 ? (
+                                  <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 shrink-0" />
+                                ) : (
+                                  <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                                )}
+                                <div>
+                                  <p className="font-medium text-xs sm:text-sm leading-tight">{change.player_name}</p>
+                                  <p className="text-xs text-muted-foreground sm:hidden leading-tight">{change.team_name} · {change.position}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3">
+                              <div className="font-medium text-sm">{change.team_name}</div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3">
+                              <div className="text-sm text-muted-foreground">{change.position}</div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              <div className="text-sm">
+                                {typeof change.ownership === 'number' 
+                                  ? `${change.ownership.toFixed(1)}%` 
+                                  : `${parseFloat(change.ownership || "0").toFixed(1)}%`}
+                              </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              {formatPrice(change.old_price)}
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right">
+                              <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
+                                {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
+                              </Badge>
+                            </td>
+                            <td className="p-2 sm:p-3 text-right">
+                              <div className="font-medium text-xs sm:text-sm">{formatPrice(change.current_price)}</div>
+                              <div className="sm:hidden">
+                                <Badge variant={change.price_change > 0 ? "success" : "destructive"} className="text-[10px] px-1 py-0">
+                                  {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
+                                </Badge>
+                              </div>
+                            </td>
+                          </tr>
                         </React.Fragment>
                       );
                     })}
