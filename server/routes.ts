@@ -1202,6 +1202,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get authenticated transfers including upcoming gameweek (for Free Hit/Wildcard)
   // Falls back to public endpoint if FPL session is expired
   app.get("/api/fpl/my-transfers", isAuthenticated, async (req: any, res) => {
+    // Hoist managerId so the outer catch can still fall back to public endpoint
+    let knownManagerId: number | null = null;
+
+    // Helper: fetch from public endpoint; returns empty array rather than throwing
+    const fetchPublicTransfers = async (managerId: number): Promise<void> => {
+      console.log(`DEBUG my-transfers: Falling back to public endpoint for manager ${managerId}`);
+      try {
+        const publicResponse = await internalFetch(`api/manager/${managerId}/transfers`);
+        if (publicResponse.ok) {
+          const data = await publicResponse.json();
+          console.log(`DEBUG my-transfers: Public fallback returned ${data.length} transfers`);
+          return res.json(data);
+        }
+        console.log(`DEBUG my-transfers: Public endpoint returned ${publicResponse.status}, returning empty transfers`);
+      } catch (publicErr) {
+        console.log(`DEBUG my-transfers: Public endpoint threw error:`, publicErr);
+      }
+      // Last resort — return empty array so the dashboard still loads
+      return res.json([]);
+    };
+
     try {
       const userId = (req.user as any).id;
 
@@ -1212,21 +1233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fplCookiesExpiry: users.fplCookiesExpiry
       }).from(users).where(eq(users.id, userId));
 
-      // Helper function to fall back to public transfers endpoint
-      const fetchPublicTransfers = async (managerId: number) => {
-        console.log(`DEBUG my-transfers: Falling back to public endpoint for manager ${managerId}`);
-        const publicResponse = await internalFetch(`api/manager/${managerId}/transfers`);
-        if (publicResponse.ok) {
-          const data = await publicResponse.json();
-          console.log(`DEBUG my-transfers: Public fallback returned ${data.length} transfers`);
-          return res.json(data);
-        }
-        throw new Error('Public endpoint also failed');
-      };
+      if (user?.fplManagerId) knownManagerId = user.fplManagerId;
 
       if (!user || !user.fplManagerId || !user.fplSessionCookies) {
         console.log('DEBUG my-transfers: FPL account not connected');
-        // Fall back to public endpoint if we have managerId
         if (user?.fplManagerId) {
           return await fetchPublicTransfers(user.fplManagerId);
         }
@@ -1243,49 +1253,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let bearerToken: string | null = null;
       const sessionData = user.fplSessionCookies;
       
-      // Pattern 1: cURL format with single quotes: -H 'x-api-authorization: Bearer xxx'
       const bearerMatch1 = sessionData.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/i);
-      if (bearerMatch1) {
-        bearerToken = bearerMatch1[1].trim();
-        console.log('DEBUG my-transfers: Extracted token via cURL single quote format');
-      }
+      if (bearerMatch1) { bearerToken = bearerMatch1[1].trim(); console.log('DEBUG my-transfers: Extracted token via cURL single quote format'); }
       
-      // Pattern 2: cURL format with double quotes: -H "x-api-authorization: Bearer xxx"
       if (!bearerToken) {
         const bearerMatch2 = sessionData.match(/-H\s+"x-api-authorization:\s*Bearer\s+([^"]+)"/i);
-        if (bearerMatch2) {
-          bearerToken = bearerMatch2[1].trim();
-          console.log('DEBUG my-transfers: Extracted token via cURL double quote format');
-        }
+        if (bearerMatch2) { bearerToken = bearerMatch2[1].trim(); console.log('DEBUG my-transfers: Extracted token via cURL double quote format'); }
       }
       
-      // Pattern 3: Raw token starting with Bearer
       if (!bearerToken) {
         const bearerMatch3 = sessionData.match(/^Bearer\s+(.+)$/i);
-        if (bearerMatch3) {
-          bearerToken = bearerMatch3[1].trim();
-          console.log('DEBUG my-transfers: Extracted token from raw Bearer format');
-        }
+        if (bearerMatch3) { bearerToken = bearerMatch3[1].trim(); console.log('DEBUG my-transfers: Extracted token from raw Bearer format'); }
       }
       
-      // Pattern 4: Just the token itself (alphanumeric/base64-like, 20+ chars)
       if (!bearerToken && sessionData.match(/^[A-Za-z0-9_-]{20,}$/)) {
         bearerToken = sessionData.trim();
         console.log('DEBUG my-transfers: Using raw token value');
       }
       
       if (!bearerToken) {
-        console.log('DEBUG my-transfers: Could not extract valid bearer token from session data');
-        return res.status(401).json({ error: 'Invalid FPL session format, please reconnect' });
+        console.log('DEBUG my-transfers: Could not extract valid bearer token, falling back to public endpoint');
+        return await fetchPublicTransfers(user.fplManagerId);
       }
 
       // Fetch authenticated transfers (includes upcoming gameweek)
       console.log(`DEBUG my-transfers: Fetching transfers for manager ${user.fplManagerId}`);
       try {
         const transfersResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${user.fplManagerId}/transfers/`, {
-          headers: {
-            'x-api-authorization': `Bearer ${bearerToken}`
-          }
+          headers: { 'x-api-authorization': `Bearer ${bearerToken}` }
         });
 
         if (!transfersResponse.ok) {
@@ -1294,8 +1289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const transfersData = await transfersResponse.json();
-        console.log(`DEBUG my-transfers: Found ${transfersData.length} transfers, latest GW: ${transfersData.length > 0 ? Math.max(...transfersData.map((t: any) => t.event)) : 'none'}`);
-        
+        console.log(`DEBUG my-transfers: Found ${transfersData.length} transfers`);
         return res.json(transfersData);
       } catch (fetchError) {
         console.log(`DEBUG my-transfers: Authenticated fetch threw network error, falling back to public endpoint:`, fetchError);
@@ -1303,7 +1297,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error('FPL my-transfers error:', error);
-      res.status(500).json({ error: 'Failed to fetch FPL transfers' });
+      // Final safety net: if we know the manager ID, try public endpoint before giving up
+      if (knownManagerId) {
+        console.log(`DEBUG my-transfers: Outer catch with known managerId ${knownManagerId}, attempting public fallback`);
+        return await fetchPublicTransfers(knownManagerId);
+      }
+      // Cannot recover — return empty array so dashboard still loads
+      return res.json([]);
     }
   });
 
