@@ -16395,7 +16395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Goals Conceded Projections - API-first with cache fallback
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
-      const gcCacheKey = 'default';
+      const gcCacheKey = `gc-${req.query.startGameweek || 'def'}-${req.query.endGameweek || 'def'}`;
       const gcHit = goalsConcededCache.get(gcCacheKey);
       if (gcHit && Date.now() - gcHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(gcHit.data);
@@ -16415,19 +16415,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
         
         // Get FPL bootstrap data from cached endpoint and team projections in parallel
-        const [fplResponse, teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
+        const [fplResponse, teamProjectionsResponse, playerMinutesResponse, gcFixturesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
           internalFetch("api/team-goals-against-projections"),
-          internalFetch("api/player-minutes-projections")
+          internalFetch("api/player-minutes-projections"),
+          internalFetch("api/fixtures")
         ]);
         const fplData = await fplResponse.json();
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
         // Get team goals AGAINST (conceded) projections and player minutes data
-        const [teamProjections, playerMinutesData] = await Promise.all([
+        const [teamProjections, playerMinutesData, gcFixturesData] = await Promise.all([
           teamProjectionsResponse.json(),
-          playerMinutesResponse.json()
+          playerMinutesResponse.json(),
+          gcFixturesResponse.json()
         ]);
         
         // Filter to only GKP and DEF (affected by goals conceded)
@@ -16456,7 +16458,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
             let gwGoalsConceded = 0;
             let gwPoints = 0;
-            
+
+            // GW39 TBC: treat event=null fixtures as GW39 using GW38 proxy for goals against
+            if (gw === 39) {
+              const hasTBCFixture = gcFixturesData.some((f: any) =>
+                f.event === null && (f.team_h === player.team || f.team_a === player.team)
+              );
+              if (hasTBCFixture && teamGoalData?.gameweekProjections) {
+                const proxyGA = parseFloat(String(
+                  teamGoalData.gameweekProjections['38'] ?? teamGoalData.gameweekProjections[38] ?? 0
+                ));
+                const availabilityProb = calculateAvailabilityProbability(player, 39, currentGameweek, events);
+                gwGoalsConceded = availabilityProb * pct60Plus * proxyGA;
+                if (gwGoalsConceded > 0) {
+                  const lambda = gwGoalsConceded;
+                  let expectedPenalty = 0;
+                  let cumulativeProb = 0;
+                  let logFactorial = 0;
+                  const maxK = Math.max(20, Math.ceil(lambda * 3));
+                  for (let k = 0; k <= maxK; k++) {
+                    if (k > 0) logFactorial += Math.log(k);
+                    const prob = Math.exp(-lambda + k * Math.log(lambda) - logFactorial);
+                    cumulativeProb += prob;
+                    expectedPenalty += Math.floor(k / 2) * prob;
+                    if (cumulativeProb > 0.9999) break;
+                  }
+                  gwPoints = -expectedPenalty;
+                }
+              }
+              goalsConceded['gw39'] = parseFloat(gwGoalsConceded.toFixed(2));
+              pointsFromGoalsConceded['gw39'] = parseFloat(gwPoints.toFixed(2));
+              totalGoalsConceded += gwGoalsConceded;
+              totalPoints += gwPoints;
+              continue;
+            }
+
             if (teamGoalData && teamGoalData.gameweekProjections) {
               const teamGoalsAgainst = teamGoalData.gameweekProjections[gw.toString()] || teamGoalData.gameweekProjections[gw];
               
@@ -16537,7 +16573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Yellow Cards Projections - API-first with cache fallback
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
-      const ycCacheKey = 'default';
+      const ycCacheKey = req.query.endGameweek ? `yc-gw${req.query.endGameweek}` : 'default';
       const ycHit = yellowCardsCache.get(ycCacheKey);
       if (ycHit && Date.now() - ycHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(ycHit.data);
@@ -16562,7 +16598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
-        const endGameweek = gameweekRange.end;
+        const requestedEndYC = parseInt(req.query.endGameweek as string);
+        const endGameweek = (requestedEndYC && requestedEndYC > gameweekRange.end) ? requestedEndYC : gameweekRange.end;
         
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
@@ -16603,9 +16640,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Per-GW availability probability
             const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
             
-            // Find fixtures for this team in this gameweek
+            // Find fixtures for this team in this gameweek (GW39 = TBC fixtures with event=null)
             const fixtures = fixturesData.filter((f: any) => 
-              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+              ((f.event === gw) || (gw === 39 && f.event === null)) && (f.team_h === player.team || f.team_a === player.team)
             );
             
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; yellowCards: number }> = [];
@@ -16683,7 +16720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Red Cards Projections - API-first with cache fallback
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
-      const rcCacheKey = 'default';
+      const rcCacheKey = req.query.endGameweek ? `rc-gw${req.query.endGameweek}` : 'default';
       const rcHit = redCardsCache.get(rcCacheKey);
       if (rcHit && Date.now() - rcHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(rcHit.data);
@@ -16708,7 +16745,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, 6);
         const startGameweek = gameweekRange.start;
-        const endGameweek = gameweekRange.end;
+        const requestedEndRC = parseInt(req.query.endGameweek as string);
+        const endGameweek = (requestedEndRC && requestedEndRC > gameweekRange.end) ? requestedEndRC : gameweekRange.end;
         
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
@@ -16749,9 +16787,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Per-GW availability probability
             const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
             
-            // Find fixtures for this team in this gameweek
+            // Find fixtures for this team in this gameweek (GW39 = TBC fixtures with event=null)
             const fixtures = fixturesData.filter((f: any) => 
-              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+              ((f.event === gw) || (gw === 39 && f.event === null)) && (f.team_h === player.team || f.team_a === player.team)
             );
             
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; redCards: number }> = [];

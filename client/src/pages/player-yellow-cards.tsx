@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,36 +40,30 @@ export default function PlayerYellowCards() {
   const [sortBy, setSortBy] = useState<"totalYellowCards" | "totalPoints">("totalYellowCards");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [includeTBC, setIncludeTBC] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
 
-  // Cached API call for yellow card projections - 10-20x faster!
+  // When includeTBC is on, fetch with endGameweek=39 (bypasses cache to include GW39)
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery<YellowCardProjection[]>({
-    queryKey: ["/api/cached/player-yellow-cards-projections"],
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+    queryKey: [includeTBC
+      ? "/api/player-yellow-cards-projections?endGameweek=39"
+      : "/api/cached/player-yellow-cards-projections"],
+    staleTime: includeTBC ? 10 * 60 * 1000 : 60 * 60 * 1000,
   });
 
   // Extract gameweeks dynamically from API response
-  const gameweeks = yellowCardProjections && yellowCardProjections.length > 0 
+  const allGameweeks = yellowCardProjections && yellowCardProjections.length > 0 
     ? Object.keys(yellowCardProjections[0].yellowCards).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
     : [];
   
+  // Filter out GW39 if not includeTBC
+  const gameweeks = includeTBC ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
+  
   const gameweekRange = gameweeks.length > 0 ? `${gameweeks[0]}-${gameweeks[gameweeks.length - 1]}` : "6-11";
-
-  const teams = bootstrapData?.teams?.map(team => ({
-    id: team.id,
-    name: team.short_name
-  })) || [];
-
-  const positions = [
-    { id: "GKP", name: "Goalkeeper" },
-    { id: "DEF", name: "Defender" },
-    { id: "MID", name: "Midfielder" },
-    { id: "FWD", name: "Forward" }
-  ];
 
   const filteredProjections = (yellowCardProjections || []).filter((projection: YellowCardProjection) => {
     const matchesSearch = !searchTerm || 
@@ -124,7 +117,6 @@ export default function PlayerYellowCards() {
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="fpl-page-container">
-      {/* Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
@@ -175,12 +167,15 @@ export default function PlayerYellowCards() {
                 </div>
 
                 <Tabs defaultValue="pos" className="w-full">
-                  <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+                  <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                     <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                       <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{positionFilter !== "all" && " (1)"}
                     </TabsTrigger>
                     <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                       Teams{teamFilter !== "all" && " (1)"}
+                    </TabsTrigger>
+                    <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                      Gameweeks
                     </TabsTrigger>
                   </TabsList>
 
@@ -215,6 +210,16 @@ export default function PlayerYellowCards() {
                       ))}
                     </div>
                   </TabsContent>
+
+                  <TabsContent value="gws" className="mt-0">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      <button
+                        onClick={() => setIncludeTBC(!includeTBC)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        GW39 (TBC)
+                      </button>
+                    </div>
+                  </TabsContent>
                 </Tabs>
               </div>
             </CollapsibleContent>
@@ -231,7 +236,7 @@ export default function PlayerYellowCards() {
           <TabsContent value="cards" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Yellow Cards (Gameweeks {gameweekRange})</CardTitle>
+                <CardTitle>Expected Yellow Cards (Gameweeks {gameweekRange}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
                   Projected yellow card probability based on position and fixture difficulty
                 </CardDescription>
@@ -245,7 +250,9 @@ export default function PlayerYellowCards() {
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
                         {gameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
+                          <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
+                            {gw === 39 ? 'TBC' : `GW${gw}`}
+                          </th>
                         ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalYellowCards")}>
                           <div className="flex items-center justify-center gap-1">
@@ -271,7 +278,7 @@ export default function PlayerYellowCards() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
-                                        {typeof value === 'number' ? value.toFixed(1) : value}
+                                        {typeof value === 'number' ? value.toFixed(2) : value}
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -281,26 +288,26 @@ export default function PlayerYellowCards() {
                                           <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                             {f.opponent} ({f.isHome ? 'H' : 'A'})
                                           </span>
-                                          <span className="font-medium text-xs">{f.yellowCards.toFixed(1)}</span>
+                                          <span className="font-medium text-xs">{f.yellowCards.toFixed(2)}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                         <span>Total</span>
-                                        <span>{typeof value === 'number' ? value.toFixed(1) : value}</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
                                 ) : (
-                                  typeof value === 'number' ? value.toFixed(1) : value
+                                  typeof value === 'number' ? value.toFixed(2) : value
                                 )}
                               </td>
                             );
                           })}
                           <td className="text-center font-semibold text-yellow-600">
-                            {projection.totalYellowCards}
+                            {typeof projection.totalYellowCards === 'number' ? projection.totalYellowCards.toFixed(2) : projection.totalYellowCards}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {projection.averagePerGameweek}
+                            {typeof projection.averagePerGameweek === 'number' ? projection.averagePerGameweek.toFixed(2) : projection.averagePerGameweek}
                           </td>
                         </tr>
                       ))}
@@ -314,7 +321,7 @@ export default function PlayerYellowCards() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Yellow Cards (Gameweeks {gameweekRange})</CardTitle>
+                <CardTitle>Points from Yellow Cards (Gameweeks {gameweekRange}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
                   FPL point penalties (-1 point per yellow card) across all positions
                 </CardDescription>
@@ -328,7 +335,9 @@ export default function PlayerYellowCards() {
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
                         {gameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
+                          <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
+                            {gw === 39 ? 'TBC' : `GW${gw}`}
+                          </th>
                         ))}
                         <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
                           <div className="flex items-center justify-center gap-1">
@@ -354,7 +363,7 @@ export default function PlayerYellowCards() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
-                                        {typeof value === 'number' ? value.toFixed(1) : value}
+                                        {typeof value === 'number' ? value.toFixed(2) : value}
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -364,26 +373,26 @@ export default function PlayerYellowCards() {
                                           <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                             {f.opponent} ({f.isHome ? 'H' : 'A'})
                                           </span>
-                                          <span className="font-medium text-xs">{(-f.yellowCards).toFixed(1)}</span>
+                                          <span className="font-medium text-xs">{(-f.yellowCards).toFixed(2)}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
                                         <span>Total</span>
-                                        <span>{typeof value === 'number' ? value.toFixed(1) : value}</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
                                 ) : (
-                                  typeof value === 'number' ? value.toFixed(1) : value
+                                  typeof value === 'number' ? value.toFixed(2) : value
                                 )}
                               </td>
                             );
                           })}
                           <td className="text-center font-semibold text-red-600">
-                            {projection.totalPoints}
+                            {typeof projection.totalPoints === 'number' ? projection.totalPoints.toFixed(2) : projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(1) : '0.0'}
+                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
                       ))}

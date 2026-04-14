@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProtectedRoute from "@/components/protected-route";
@@ -33,6 +32,7 @@ export default function PlayerGoalsConceded() {
   const [sortBy, setSortBy] = useState<string>("totalGoalsConceded");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [includeTBC, setIncludeTBC] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -42,24 +42,16 @@ export default function PlayerGoalsConceded() {
   // Get current gameweek and calculate next 6 gameweeks
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
   const nextGameweek = currentGameweek + 1;
-  const gameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+  const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+  const gameweeks = includeTBC ? [...baseGameweeks, 39] : baseGameweeks;
+  const endGameweek = includeTBC ? 39 : gameweeks[gameweeks.length - 1];
 
-  // Live API call for goals conceded projections for next 6 gameweeks
+  // Live API call for goals conceded projections
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: [`/api/player-goals-conceded-projections?startGameweek=${nextGameweek}&endGameweek=${gameweeks[gameweeks.length - 1]}`],
+    queryKey: [`/api/player-goals-conceded-projections?startGameweek=${nextGameweek}&endGameweek=${endGameweek}`],
     enabled: !!nextGameweek && gameweeks.length > 0,
-    staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
+    staleTime: 10 * 60 * 1000,
   });
-
-  const teams = bootstrapData?.teams?.map(team => ({
-    id: team.id,
-    name: team.short_name
-  })) || [];
-
-  const positions = [
-    { id: "GKP", name: "Goalkeeper" },
-    { id: "DEF", name: "Defender" }
-  ];
 
   const filteredProjections = (goalsConcededProjections || []).filter((projection: GoalsConcededProjection) => {
     const matchesSearch = !searchTerm || 
@@ -74,7 +66,6 @@ export default function PlayerGoalsConceded() {
     let aValue: any;
     let bValue: any;
     
-    // Handle different sort columns
     if (sortBy === "playerName") {
       aValue = a.playerName.toLowerCase();
       bValue = b.playerName.toLowerCase();
@@ -88,16 +79,13 @@ export default function PlayerGoalsConceded() {
       bValue = b.position;
       return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
     } else if (sortBy.startsWith("gw")) {
-      // Handle gameweek sorting
       aValue = a.goalsConceded[sortBy] || 0;
       bValue = b.goalsConceded[sortBy] || 0;
     } else if (sortBy.startsWith("pts_gw")) {
-      // Handle points gameweek sorting
       const gw = sortBy.replace("pts_", "");
       aValue = a.pointsFromGoalsConceded[gw] || 0;
       bValue = b.pointsFromGoalsConceded[gw] || 0;
     } else {
-      // Handle numeric columns (totalGoalsConceded, totalPoints, averagePerGameweek)
       aValue = a[sortBy as keyof GoalsConcededProjection] || 0;
       bValue = b[sortBy as keyof GoalsConcededProjection] || 0;
     }
@@ -110,11 +98,10 @@ export default function PlayerGoalsConceded() {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortBy(column);
-      // Default sort direction based on column type
       if (column === "playerName" || column === "teamName" || column === "position") {
         setSortDirection("asc");
       } else {
-        setSortDirection("desc"); // Numeric columns default to desc (high to low)
+        setSortDirection("desc");
       }
     }
   };
@@ -147,7 +134,6 @@ export default function PlayerGoalsConceded() {
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="fpl-page-container">
-      {/* Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
@@ -198,12 +184,15 @@ export default function PlayerGoalsConceded() {
                 </div>
 
                 <Tabs defaultValue="pos" className="w-full">
-                  <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+                  <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                     <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                       <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{positionFilter !== "all" && " (1)"}
                     </TabsTrigger>
                     <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                       Teams{teamFilter !== "all" && " (1)"}
+                    </TabsTrigger>
+                    <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                      Gameweeks
                     </TabsTrigger>
                   </TabsList>
 
@@ -238,6 +227,16 @@ export default function PlayerGoalsConceded() {
                       ))}
                     </div>
                   </TabsContent>
+
+                  <TabsContent value="gws" className="mt-0">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      <button
+                        onClick={() => setIncludeTBC(!includeTBC)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        GW39 (TBC)
+                      </button>
+                    </div>
+                  </TabsContent>
                 </Tabs>
               </div>
             </CollapsibleContent>
@@ -254,9 +253,9 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="conceded" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Goals Conceded (Next 6 Gameweeks)</CardTitle>
+                <CardTitle>Expected Goals Conceded (GW{nextGameweek}-{endGameweek}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
-                  Projected goals conceded based on team defensive strength vs opponent attack power for GW{nextGameweek}-{gameweeks[gameweeks.length - 1]}
+                  Projected goals conceded based on team defensive strength vs opponent attack power
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -280,9 +279,9 @@ export default function PlayerGoalsConceded() {
                           </div>
                         </th>
                         {gameweeks.map(gw => (
-                          <th key={gw} className="text-center cursor-pointer" onClick={() => handleSort(`gw${gw}`)}>
+                          <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
-                              GW{gw} {getSortIcon(`gw${gw}`)}
+                              {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`gw${gw}`)}
                             </div>
                           </th>
                         ))}
@@ -325,9 +324,9 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Goals Conceded (Next 6 Gameweeks)</CardTitle>
+                <CardTitle>Points from Goals Conceded (GW{nextGameweek}-{endGameweek}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
-                  FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders for GW{nextGameweek}-{gameweeks[gameweeks.length - 1]}
+                  FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -351,9 +350,9 @@ export default function PlayerGoalsConceded() {
                           </div>
                         </th>
                         {gameweeks.map(gw => (
-                          <th key={gw} className="text-center cursor-pointer" onClick={() => handleSort(`pts_gw${gw}`)}>
+                          <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`pts_gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
-                              GW{gw} {getSortIcon(`pts_gw${gw}`)}
+                              {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`pts_gw${gw}`)}
                             </div>
                           </th>
                         ))}
@@ -378,7 +377,7 @@ export default function PlayerGoalsConceded() {
                             {projection.totalPoints}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / 6).toFixed(1)}
+                            {(projection.totalPoints / gameweeks.length).toFixed(1)}
                           </td>
                         </tr>
                       ))}
