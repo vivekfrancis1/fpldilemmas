@@ -10942,13 +10942,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead, or 39 for TBC)
-      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 39);
-      const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
-      // Allow 39 explicitly to include TBC fixtures; otherwise cap at maxAllowed
-      const endGameweek = requestedEndGameweek === 39
-        ? 39
-        : Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), Math.min(maxAllowedEndGameweek, 38));
+      // tbcGameweek: the gameweek TBC fixtures should count toward.
+      // Expert mode passes tbcGameweek=36 (expert prediction); base mode omits it (defaults to 39).
+      const tbcGameweek = req.query.tbcGameweek ? parseInt(req.query.tbcGameweek as string) : 39;
+
+      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead, or tbcGameweek for TBC)
+      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, tbcGameweek);
+      const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, tbcGameweek);
+      // Allow tbcGameweek explicitly (handles GW39 which is outside the normal 1-38 fixture range); otherwise cap at maxAllowed
+      const endGameweek = requestedEndGameweek >= tbcGameweek
+        ? tbcGameweek
+        : Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), Math.min(maxAllowedEndGameweek, tbcGameweek - 1));
       
       console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
       
@@ -11058,10 +11062,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Also process TBC fixtures (event: null) using model projections.
-      // Only include when projecting to GW39 — if projecting to an earlier gameweek,
-      // teams with a TBC fixture (e.g. MCI, CRY) should show one fewer game played.
+      // Include only when endGameweek >= tbcGameweek (e.g. >= 39 in base mode, >= 36 in expert mode).
+      // This ensures teams with a TBC fixture show one fewer game played when projecting before that gameweek.
       const tbcFixturesRaw = fixturesData.filter((f: any) => f.event === null || f.event === undefined);
-      if (tbcFixturesRaw.length > 0 && endGameweek >= 39) {
+      if (tbcFixturesRaw.length > 0 && endGameweek >= tbcGameweek) {
         try {
           const { TeamGoalsService: TGS } = await import('./team-goals-service');
           const tbcProjections = await TGS.getTBCFixtureProjections();
