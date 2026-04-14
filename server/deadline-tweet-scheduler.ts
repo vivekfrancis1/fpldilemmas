@@ -4,6 +4,13 @@ import { internalFetch } from './config';
 const RANK_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
 const FULL_LIST_URL = 'https://fpldilemmas.com/player-total-points';
 const TRANSFER_TRACKER_URL = 'https://fpldilemmas.com/transfer-tracker';
+
+const POSITION_ALIASES: Record<string, string[]> = {
+  'FWD': ['FWD', 'Forward', 'Forwards'],
+  'MID': ['MID', 'Midfielder', 'Midfielders'],
+  'DEF': ['DEF', 'Defender', 'Defenders'],
+  'GKP': ['GKP', 'Goalkeeper', 'Goalkeepers'],
+};
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 
@@ -109,8 +116,9 @@ export class DeadlineTweetScheduler {
     label: string,
     topN: number
   ): { lines: string; count: number } {
+    const aliases = POSITION_ALIASES[positionKey] || [positionKey];
     const top = players
-      .filter(p => p.position === positionKey)
+      .filter(p => aliases.includes(p.position))
       .map(p => ({
         name: p.playerName || p.name,
         team: p.teamName || p.team || '',
