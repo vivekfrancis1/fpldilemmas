@@ -684,27 +684,24 @@ export default function PlayerAssistProjections() {
       <div className="fpl-section-spacing">
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-purple-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6 pt-0">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-purple-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <div className="p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-600">From GW</label>
@@ -865,9 +862,8 @@ export default function PlayerAssistProjections() {
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-            </CollapsibleContent>
-          </Card>
+          </div>
+          </CollapsibleContent>
         </Collapsible>
 
         {/* Loading State */}
@@ -880,23 +876,23 @@ export default function PlayerAssistProjections() {
         {/* Results */}
         {!isLoading && initialized && filteredAndSortedData.length > 0 && (
           <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <CardTitle className="flex items-center gap-2 flex-wrap">
-                      <Zap className="h-5 w-5 text-green-600" />
-                      {viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW{startGameweek}-GW{endGameweek}
-                      {excludedGameweeks.size > 0 && (
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                          {excludedGameweeks.size} excluded
-                        </Badge>
-                      )}
-                      <button onClick={() => setShowOpponent(!showOpponent)}
-                        className={`ml-auto inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                        data-testid="button-toggle-opponent">
-                        <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-                      </button>
-                    </CardTitle>
+              <div className="fpl-card">
+                <div className="fpl-card-header">
+                  <h2 className="fpl-card-title flex items-center gap-2 flex-wrap">
+                    <Zap className="h-5 w-5 text-green-600" />
+                    {viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW{startGameweek}-GW{endGameweek}
+                    {excludedGameweeks.size > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {excludedGameweeks.size} excluded
+                      </Badge>
+                    )}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setShowOpponent(!showOpponent)}
+                      className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                      data-testid="button-toggle-opponent">
+                      <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                    </button>
                     <Button
                       onClick={handleRefreshData}
                       disabled={isRefreshing}
@@ -909,8 +905,8 @@ export default function PlayerAssistProjections() {
                       {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="fpl-card-content p-0">
                   <div className="overflow-x-auto -mx-4 sm:mx-0">
                     <div className="min-w-full inline-block align-middle">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -1087,20 +1083,20 @@ export default function PlayerAssistProjections() {
                       </table>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
           </div>
         )}
 
         {/* No Results */}
         {!isLoading && filteredAndSortedData.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center">
+          <div className="fpl-card">
+            <div className="fpl-card-content p-8 text-center">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
               <p className="text-gray-600">Try adjusting your filters to see more results.</p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>

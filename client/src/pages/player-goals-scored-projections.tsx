@@ -4,7 +4,6 @@ import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, Ref
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -750,27 +749,24 @@ export default function PlayerGoalsScoredProjections() {
       <div className="fpl-section-spacing">
 
         {/* Controls */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4 md:mb-6">
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-orange-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-          <CardContent className="p-3 sm:p-4 lg:p-6 pt-0">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-4 md:mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-orange-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <div className="p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">From GW</label>
@@ -890,18 +886,17 @@ export default function PlayerGoalsScoredProjections() {
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-            </CollapsibleContent>
-          </Card>
+          </div>
+          </CollapsibleContent>
         </Collapsible>
 
 
         {/* Main Content */}
         <div className="w-full">
-            <Card>
-              <CardHeader>
+            <div className="fpl-card">
+              <div className="fpl-card-header">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <CardTitle className="flex items-center gap-2">
+                  <h2 className="fpl-card-title flex items-center gap-2">
                     <Target className="h-5 w-5" />
                     Player Goal Projections: GW{startGameweek}-GW{endGameweek}
                     {excludedGameweeks.size > 0 && (
@@ -909,7 +904,7 @@ export default function PlayerGoalsScoredProjections() {
                         {excludedGameweeks.size} excluded
                       </Badge>
                     )}
-                  </CardTitle>
+                  </h2>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setShowOpponent(!showOpponent)}
                       className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
@@ -927,8 +922,8 @@ export default function PlayerGoalsScoredProjections() {
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="fpl-card-content p-0">
                 <div className="overflow-x-auto -mx-4 sm:mx-0">
                   <div className="min-w-full inline-block align-middle">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -1145,8 +1140,8 @@ export default function PlayerGoalsScoredProjections() {
                     </table>
                   </div>
                 </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         </div>
       </div>
     </div>

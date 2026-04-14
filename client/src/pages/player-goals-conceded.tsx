@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -221,25 +221,24 @@ export default function PlayerGoalsConceded() {
 
       <div className="fpl-section-spacing">
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-            <CollapsibleTrigger asChild>
-              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-indigo-600" />
-                  <h3 className="text-sm font-semibold">Filters & Controls</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isFiltersOpen ? (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  )}
-                </div>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-indigo-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
               </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-4 pb-4">
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-3 sm:p-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
                   <div className="relative">
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Search</label>
@@ -355,7 +354,6 @@ export default function PlayerGoalsConceded() {
                 </Tabs>
               </div>
             </CollapsibleContent>
-          </div>
         </Collapsible>
 
         {/* Results */}
@@ -366,14 +364,14 @@ export default function PlayerGoalsConceded() {
           </TabsList>
 
           <TabsContent value="conceded" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Expected Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</CardTitle>
-                <CardDescription>
+            <div className="fpl-card">
+              <div className="fpl-card-header">
+                <h2 className="fpl-card-title">Expected Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</h2>
+                <p className="text-sm text-gray-600">
                   Projected goals conceded based on team defensive strength vs opponent attack power
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </div>
+              <div className="fpl-card-content p-0">
                 <div className="overflow-x-auto">
                   <table className="fpl-table">
                     <thead>
@@ -435,19 +433,19 @@ export default function PlayerGoalsConceded() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="points" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Points from Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</CardTitle>
-                <CardDescription>
+            <div className="fpl-card">
+              <div className="fpl-card-header">
+                <h2 className="fpl-card-title">Points from Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</h2>
+                <p className="text-sm text-gray-600">
                   FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </div>
+              <div className="fpl-card-content p-0">
                 <div className="overflow-x-auto">
                   <table className="fpl-table">
                     <thead>
@@ -505,8 +503,8 @@ export default function PlayerGoalsConceded() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

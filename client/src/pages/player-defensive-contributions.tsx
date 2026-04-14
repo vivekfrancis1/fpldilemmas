@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
@@ -705,27 +705,24 @@ export default function PlayerDefensiveContributions() {
         </div>
 
       {/* Filters and Controls */}
-      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between w-full">
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters & Controls
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {isFiltersOpen ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6">
+      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+        <CollapsibleTrigger asChild>
+          <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              <h2 className="fpl-card-title">Filters & Controls</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {isFiltersOpen ? (
+                <ChevronUp className="h-5 w-5 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-500" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-3 sm:p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-600">From GW</label>
@@ -882,38 +879,30 @@ export default function PlayerDefensiveContributions() {
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
+        </div>
         </CollapsibleContent>
-        </Card>
       </Collapsible>
 
       {/* Main Content */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
-                {excludedGameweeks.size > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {excludedGameweeks.size} excluded
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Fixture-aware projections with opponent difficulty indicators
-              </CardDescription>
-            </div>
-            <button
-              onClick={() => setShowOpponent(!showOpponent)}
-              className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-              data-testid="button-toggle-opponent"
-            >
-              {showOpponent ? 'Hide Opp' : 'Show Opp'}
-            </button>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <div className="fpl-card">
+        <div className="fpl-card-header">
+          <h2 className="fpl-card-title flex items-center gap-2">
+            Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
+            {excludedGameweeks.size > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {excludedGameweeks.size} excluded
+              </Badge>
+            )}
+          </h2>
+          <button
+            onClick={() => setShowOpponent(!showOpponent)}
+            className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+            data-testid="button-toggle-opponent"
+          >
+            {showOpponent ? 'Hide Opp' : 'Show Opp'}
+          </button>
+        </div>
+        <div className="fpl-card-content p-0">
           <div className="w-full mt-4">
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <Table>
@@ -1072,15 +1061,15 @@ export default function PlayerDefensiveContributions() {
             </Table>
           </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Legend */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Legend</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="fpl-card mt-6">
+        <div className="fpl-card-header">
+          <h2 className="fpl-card-title">Legend</h2>
+        </div>
+        <div className="fpl-card-content p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Opponent Difficulty</h4>
@@ -1122,8 +1111,8 @@ export default function PlayerDefensiveContributions() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       </div>
     </div>
   );

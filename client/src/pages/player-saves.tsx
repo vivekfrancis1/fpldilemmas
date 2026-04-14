@@ -4,7 +4,6 @@ import { Shield, Search, ArrowUpDown, Users, X, Filter, ChevronDown, ChevronUp, 
 import { LoadingExperience } from "@/components/loading-experience";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -594,27 +593,24 @@ export default function PlayerSaves() {
 
       <div className="fpl-section-spacing">
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-blue-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6 pt-0">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-blue-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <div className="p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-600">From GW</label>
@@ -729,9 +725,8 @@ export default function PlayerSaves() {
               <Users className="h-4 w-4" />
               <span>{filteredAndSortedData.length} goalkeepers</span>
             </div>
-          </CardContent>
-            </CollapsibleContent>
-          </Card>
+          </div>
+          </CollapsibleContent>
         </Collapsible>
 
         {/* Fixture Mode Toggle — only when TBC fixtures exist and in future mode */}
@@ -757,34 +752,25 @@ export default function PlayerSaves() {
 
         {/* Results */}
         {filteredAndSortedData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-blue-600" />
-                    {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
-                    {excludedGameweeks.size > 0 && (
-                      <Badge variant="secondary" className="ml-1 text-xs">
-                        {excludedGameweeks.size} excluded
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    {viewMode === "future"
-                      ? "Projected number of saves for each goalkeeper based on opponent strength and team defensive quality"
-                      : "Actual saves recorded for each goalkeeper in past gameweeks"}
-                  </CardDescription>
-                </div>
-                <button
-                  onClick={() => setShowOpponent(!showOpponent)}
-                  className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                >
-                  <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
+          <div className="fpl-card">
+            <div className="fpl-card-header">
+              <h2 className="fpl-card-title flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
+              </h2>
+              <button
+                onClick={() => setShowOpponent(!showOpponent)}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+              >
+                <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+              </button>
+            </div>
+            <div className="fpl-card-content p-0">
               <div className="overflow-x-auto -mx-4 sm:mx-0">
                 <div className="min-w-full inline-block align-middle">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -975,19 +961,19 @@ export default function PlayerSaves() {
                   </table>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* No Results */}
         {filteredAndSortedData.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center">
+          <div className="fpl-card">
+            <div className="fpl-card-content p-8 text-center">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No goalkeepers found</h3>
               <p className="text-gray-600">Try adjusting your filters to see more results.</p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>

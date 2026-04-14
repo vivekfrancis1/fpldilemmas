@@ -408,27 +408,24 @@ export default function PlayerBonusPoints() {
 
       <div className="fpl-section-spacing">
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-yellow-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6 pt-0">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-yellow-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <div className="p-3 sm:p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-600">From GW</label>
@@ -557,25 +554,24 @@ export default function PlayerBonusPoints() {
               <Users className="h-4 w-4" />
               <span>{filteredAndSortedData.length} players</span>
             </div>
-          </CardContent>
-            </CollapsibleContent>
-          </Card>
+          </div>
+          </CollapsibleContent>
         </Collapsible>
 
         {/* Results */}
         {filteredAndSortedData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="fpl-card">
+            <div className="fpl-card-header">
+              <h2 className="fpl-card-title flex items-center gap-2">
                 Bonus Points Projections
                 {excludedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
                     {excludedGameweeks.size} excluded
                   </Badge>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+              </h2>
+            </div>
+            <div className="fpl-card-content p-0">
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -763,19 +759,19 @@ export default function PlayerBonusPoints() {
                   </table>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {filteredAndSortedData.length === 0 && bonusPointsProjections && (
-          <Card>
-            <CardContent className="py-12">
+          <div className="fpl-card">
+            <div className="fpl-card-content py-12">
               <div className="text-center text-gray-500">
                 <p className="text-lg font-medium">No players found</p>
                 <p className="text-sm mt-2">Try adjusting your filters</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>

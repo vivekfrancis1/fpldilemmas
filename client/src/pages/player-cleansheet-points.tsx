@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Filter, Search, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -299,25 +299,24 @@ export default function PlayerCleanSheetPoints() {
       <div className="fpl-section-spacing">
 
         {/* Filters and Controls */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-8">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-            <CollapsibleTrigger asChild>
-              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-3 sm:py-4 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-green-600" />
-                  <h3 className="text-base sm:text-lg font-semibold">Filters & Controls</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isFiltersOpen ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  )}
-                </div>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-green-600" />
+                <h2 className="fpl-card-title">Filters & Controls</h2>
               </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-3 sm:p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {/* Gameweek Range */}
             <div className="">
@@ -421,21 +420,14 @@ export default function PlayerCleanSheetPoints() {
           </Tabs>
               </div>
             </CollapsibleContent>
-          </div>
         </Collapsible>
 
         {/* Main Table */}
-        <Card className="overflow-hidden shadow-xl">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle className="text-base sm:text-lg">
-                  Clean Sheet Points: GW{startGameweek}–GW{endGameweek}
-                </CardTitle>
-                <CardDescription className="text-xs mt-0.5">
-                  Expected clean sheet points for goalkeepers, defenders and midfielders
-                </CardDescription>
-              </div>
+        <div className="fpl-card">
+          <div className="fpl-card-header">
+            <h2 className="fpl-card-title">
+              Clean Sheet Points: GW{startGameweek}–GW{endGameweek}
+            </h2>
               <button
                 onClick={() => setShowOpponent(!showOpponent)}
                 className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
@@ -443,8 +435,7 @@ export default function PlayerCleanSheetPoints() {
                 {showOpponent ? 'Hide Opp' : 'Show Opp'}
               </button>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+          <div className="fpl-card-content p-0">
             {isLoading ? (
               <div className="p-12 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
@@ -615,8 +606,8 @@ export default function PlayerCleanSheetPoints() {
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Footer Info */}
         <div className="mt-8 text-center text-sm text-gray-500">
