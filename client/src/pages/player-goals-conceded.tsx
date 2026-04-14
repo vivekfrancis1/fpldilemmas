@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
 
 interface BootstrapData {
@@ -33,6 +34,8 @@ export default function PlayerGoalsConceded() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [includeTBC, setIncludeTBC] = useState(false);
+  const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
+  const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -45,6 +48,11 @@ export default function PlayerGoalsConceded() {
   const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
   const gameweeks = includeTBC ? [...baseGameweeks, 39] : baseGameweeks;
   const endGameweek = includeTBC ? 39 : gameweeks[gameweeks.length - 1];
+
+  // Effective start/end for display (clamped to available gameweeks)
+  const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? nextGameweek);
+  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (gameweeks[gameweeks.length - 1] ?? endGameweek);
+  const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW);
 
   // Live API call for goals conceded projections
   const { data: goalsConcededProjections, isLoading: isLoadingProjections } = useQuery({
@@ -78,6 +86,12 @@ export default function PlayerGoalsConceded() {
       aValue = a.position;
       bValue = b.position;
       return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    } else if (sortBy === "totalGoalsConceded") {
+      aValue = displayGWs.reduce((sum, gw) => sum + (a.goalsConceded[`gw${gw}`] || 0), 0);
+      bValue = displayGWs.reduce((sum, gw) => sum + (b.goalsConceded[`gw${gw}`] || 0), 0);
+    } else if (sortBy === "totalPoints") {
+      aValue = displayGWs.reduce((sum, gw) => sum + (a.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
+      bValue = displayGWs.reduce((sum, gw) => sum + (b.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
     } else if (sortBy.startsWith("gw")) {
       aValue = a.goalsConceded[sortBy] || 0;
       bValue = b.goalsConceded[sortBy] || 0;
@@ -229,7 +243,33 @@ export default function PlayerGoalsConceded() {
                   </TabsContent>
 
                   <TabsContent value="gws" className="mt-0">
-                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">From</label>
+                        <Select value={String(effectiveStartGW)} onValueChange={(v) => { setSelectedStartGW(Number(v)); if (selectedEndGW !== null && Number(v) > selectedEndGW) setSelectedEndGW(Number(v)); }}>
+                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gameweeks.map(gw => (
+                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">To</label>
+                        <Select value={String(effectiveEndGW)} onValueChange={(v) => setSelectedEndGW(Number(v))}>
+                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gameweeks.filter(gw => gw >= effectiveStartGW).map(gw => (
+                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <button
                         onClick={() => setIncludeTBC(!includeTBC)}
                         className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
@@ -253,7 +293,7 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="conceded" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Expected Goals Conceded (GW{nextGameweek}-{endGameweek}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
+                <CardTitle>Expected Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
                   Projected goals conceded based on team defensive strength vs opponent attack power
                 </CardDescription>
@@ -278,7 +318,7 @@ export default function PlayerGoalsConceded() {
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
-                        {gameweeks.map(gw => (
+                        {displayGWs.map(gw => (
                           <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
                               {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`gw${gw}`)}
@@ -298,22 +338,25 @@ export default function PlayerGoalsConceded() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjections.map((projection: GoalsConcededProjection) => (
+                      {filteredProjections.map((projection: GoalsConcededProjection) => {
+                        const displayTotalGC = displayGWs.reduce((sum, gw) => sum + (projection.goalsConceded[`gw${gw}`] || 0), 0);
+                        return (
                         <tr key={projection.playerId}>
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => (
+                          {displayGWs.map(gw => (
                             <td key={gw} className="text-center">{projection.goalsConceded[`gw${gw}`]}</td>
                           ))}
                           <td className="text-center font-semibold text-red-600">
-                            {projection.totalGoalsConceded}
+                            {displayTotalGC.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {projection.averagePerGameweek}
+                            {displayGWs.length > 0 ? (displayTotalGC / displayGWs.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -324,7 +367,7 @@ export default function PlayerGoalsConceded() {
           <TabsContent value="points" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Points from Goals Conceded (GW{nextGameweek}-{endGameweek}{includeTBC ? ' incl. TBC' : ''})</CardTitle>
+                <CardTitle>Points from Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</CardTitle>
                 <CardDescription>
                   FPL point penalties (-1 point for every 2 goals conceded) for goalkeepers and defenders
                 </CardDescription>
@@ -349,7 +392,7 @@ export default function PlayerGoalsConceded() {
                             Team {getSortIcon("teamName")}
                           </div>
                         </th>
-                        {gameweeks.map(gw => (
+                        {displayGWs.map(gw => (
                           <th key={gw} className={`text-center cursor-pointer${gw === 39 ? ' text-orange-600' : ''}`} onClick={() => handleSort(`pts_gw${gw}`)}>
                             <div className="flex items-center justify-center gap-1">
                               {gw === 39 ? 'TBC' : `GW${gw}`} {getSortIcon(`pts_gw${gw}`)}
@@ -365,22 +408,25 @@ export default function PlayerGoalsConceded() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjections.map((projection: GoalsConcededProjection) => (
+                      {filteredProjections.map((projection: GoalsConcededProjection) => {
+                        const displayTotalPts = displayGWs.reduce((sum, gw) => sum + (projection.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
+                        return (
                         <tr key={projection.playerId}>
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => (
+                          {displayGWs.map(gw => (
                             <td key={gw} className="text-center">{projection.pointsFromGoalsConceded[`gw${gw}`]}</td>
                           ))}
                           <td className="text-center font-semibold text-red-600">
-                            {projection.totalPoints}
+                            {displayTotalPts.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / gameweeks.length).toFixed(1)}
+                            {displayGWs.length > 0 ? (displayTotalPts / displayGWs.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

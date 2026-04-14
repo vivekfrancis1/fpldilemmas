@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
 
 interface FixtureDetail {
@@ -41,6 +42,8 @@ export default function PlayerYellowCards() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [includeTBC, setIncludeTBC] = useState(false);
+  const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
+  const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -62,8 +65,13 @@ export default function PlayerYellowCards() {
   
   // Filter out GW39 if not includeTBC
   const gameweeks = includeTBC ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
+
+  // Effective start/end for display (clamped to available gameweeks)
+  const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? 1);
+  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (gameweeks[gameweeks.length - 1] ?? 38);
+  const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW);
   
-  const gameweekRange = gameweeks.length > 0 ? `${gameweeks[0]}-${gameweeks[gameweeks.length - 1]}` : "6-11";
+  const gameweekRange = displayGWs.length > 0 ? `${displayGWs[0]}-${displayGWs[displayGWs.length - 1]}` : "6-11";
 
   const filteredProjections = (yellowCardProjections || []).filter((projection: YellowCardProjection) => {
     const matchesSearch = !searchTerm || 
@@ -75,8 +83,15 @@ export default function PlayerYellowCards() {
     
     return matchesSearch && matchesPosition && matchesTeam;
   }).sort((a: YellowCardProjection, b: YellowCardProjection) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
+    let aValue: number;
+    let bValue: number;
+    if (sortBy === "totalYellowCards") {
+      aValue = displayGWs.reduce((sum, gw) => sum + (a.yellowCards[`gw${gw}`] || 0), 0);
+      bValue = displayGWs.reduce((sum, gw) => sum + (b.yellowCards[`gw${gw}`] || 0), 0);
+    } else {
+      aValue = displayGWs.reduce((sum, gw) => sum + (a.pointsFromYellowCards[`gw${gw}`] || 0), 0);
+      bValue = displayGWs.reduce((sum, gw) => sum + (b.pointsFromYellowCards[`gw${gw}`] || 0), 0);
+    }
     return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
   });
 
@@ -212,7 +227,33 @@ export default function PlayerYellowCards() {
                   </TabsContent>
 
                   <TabsContent value="gws" className="mt-0">
-                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">From</label>
+                        <Select value={String(effectiveStartGW)} onValueChange={(v) => { setSelectedStartGW(Number(v)); if (selectedEndGW !== null && Number(v) > selectedEndGW) setSelectedEndGW(Number(v)); }}>
+                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gameweeks.map(gw => (
+                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">To</label>
+                        <Select value={String(effectiveEndGW)} onValueChange={(v) => setSelectedEndGW(Number(v))}>
+                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gameweeks.filter(gw => gw >= effectiveStartGW).map(gw => (
+                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <button
                         onClick={() => setIncludeTBC(!includeTBC)}
                         className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
@@ -249,7 +290,7 @@ export default function PlayerYellowCards() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        {gameweeks.map(gw => (
+                        {displayGWs.map(gw => (
                           <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
                             {gw === 39 ? 'TBC' : `GW${gw}`}
                           </th>
@@ -263,12 +304,14 @@ export default function PlayerYellowCards() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjections.map((projection: YellowCardProjection) => (
+                      {filteredProjections.map((projection: YellowCardProjection) => {
+                        const displayTotalYC = displayGWs.reduce((sum, gw) => sum + (projection.yellowCards[`gw${gw}`] || 0), 0);
+                        return (
                         <tr key={projection.playerId}>
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => {
+                          {displayGWs.map(gw => {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             const value = projection.yellowCards[`gw${gw}`];
@@ -304,13 +347,14 @@ export default function PlayerYellowCards() {
                             );
                           })}
                           <td className="text-center font-semibold text-yellow-600">
-                            {typeof projection.totalYellowCards === 'number' ? projection.totalYellowCards.toFixed(2) : projection.totalYellowCards}
+                            {displayTotalYC.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {typeof projection.averagePerGameweek === 'number' ? projection.averagePerGameweek.toFixed(2) : projection.averagePerGameweek}
+                            {displayGWs.length > 0 ? (displayTotalYC / displayGWs.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -334,7 +378,7 @@ export default function PlayerYellowCards() {
                         <th className="text-left">Player</th>
                         <th className="text-center">Pos</th>
                         <th className="text-center">Team</th>
-                        {gameweeks.map(gw => (
+                        {displayGWs.map(gw => (
                           <th key={gw} className={`text-center${gw === 39 ? ' text-orange-600' : ''}`}>
                             {gw === 39 ? 'TBC' : `GW${gw}`}
                           </th>
@@ -348,12 +392,14 @@ export default function PlayerYellowCards() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjections.map((projection: YellowCardProjection) => (
+                      {filteredProjections.map((projection: YellowCardProjection) => {
+                        const displayTotalPts = displayGWs.reduce((sum, gw) => sum + (projection.pointsFromYellowCards[`gw${gw}`] || 0), 0);
+                        return (
                         <tr key={projection.playerId}>
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => {
+                          {displayGWs.map(gw => {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             const value = projection.pointsFromYellowCards[`gw${gw}`];
@@ -389,13 +435,14 @@ export default function PlayerYellowCards() {
                             );
                           })}
                           <td className="text-center font-semibold text-red-600">
-                            {typeof projection.totalPoints === 'number' ? projection.totalPoints.toFixed(2) : projection.totalPoints}
+                            {displayTotalPts.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {gameweeks.length > 0 ? (projection.totalPoints / gameweeks.length).toFixed(2) : '0.00'}
+                            {displayGWs.length > 0 ? (displayTotalPts / displayGWs.length).toFixed(2) : '0.00'}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
