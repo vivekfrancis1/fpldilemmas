@@ -258,7 +258,7 @@ export default function TopNav() {
             key={section.section}
             section={section}
             isActive={isSectionActive(section)}
-            twoCol={section.section === "Popular Tools"}
+            twoCol={false}
           />
         ))}
         {isAdmin && (
