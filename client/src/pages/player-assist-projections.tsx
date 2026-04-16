@@ -215,12 +215,12 @@ export default function PlayerAssistProjections() {
       const startGW = 1;
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(parseInt(newRange.startGameweek));
       setEndGameweek(parseInt(newRange.endGameweek));
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     }
   }, [viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, bootstrapData?.events]);
 

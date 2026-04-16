@@ -231,12 +231,12 @@ export default function TeamGoalsAgainstProjections() {
       const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     }
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
 
@@ -245,7 +245,7 @@ export default function TeamGoalsAgainstProjections() {
     if (fixtureMode !== 'base' && endGameweek === "39" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setEndGameweek(newRange.endGameweek);
-      setExcludedGameweeks(prev => { const s = new Set(prev); s.delete(39); return s; });
+      setSelectedGameweeks(prev => { const s = new Set(prev); s.delete(39); return s; });
     }
   }, [fixtureMode]);
 

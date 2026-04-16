@@ -154,7 +154,7 @@ export default function PlayerDefensiveContributions() {
       setGameweekRange({ start: 1, end: lastFinished });
       setStartGameweek(start);
       setEndGameweek(lastFinished);
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && nextGameweek && nextGameweek > 0) {
       const start = nextGameweek;
       const maxEnd = tbcTeamInfoMap.size > 0 ? 39 : 38;
@@ -162,7 +162,7 @@ export default function PlayerDefensiveContributions() {
       setGameweekRange({ start, end });
       setStartGameweek(start);
       setEndGameweek(Math.min(start + 7, maxEnd));
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     }
   }, [nextGameweek, viewMode, historyData?.lastFinishedGW, tbcTeamInfoMap.size]);
 

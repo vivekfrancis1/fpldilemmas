@@ -215,7 +215,7 @@ export default function Fixtures() {
   // Clear excluded gameweeks when gameweek range changes
   const handleGameweekRangeChange = (start: number, end: number) => {
     setGameweekRange({ start, end });
-    setExcludedGameweeks(new Set()); // Clear exclusions when range changes
+    setSelectedGameweeks(new Set()); // Clear exclusions when range changes
   };
 
   // Calculate default FDR values from official FPL API ratings

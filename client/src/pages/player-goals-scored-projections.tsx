@@ -223,7 +223,7 @@ export default function PlayerGoalsScoredProjections() {
       const startGW = 1;
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
       setInitialized(true);
     } else if (viewMode === "future" && bootstrapData?.events) {
       const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
@@ -232,7 +232,7 @@ export default function PlayerGoalsScoredProjections() {
       if (start > 0 && end > 0 && start <= end && end <= 39) {
         setStartGameweek(start);
         setEndGameweek(end);
-        setExcludedGameweeks(new Set());
+        setSelectedGameweeks(new Set());
         setInitialized(true);
       }
     }
