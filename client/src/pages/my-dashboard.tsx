@@ -2895,10 +2895,11 @@ export default function MyDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-                        {/* Free Transfers at Start - use FPL API limit if available, else calculate from history */}
+                        {/* Free Transfers at Start - always use history-based calculation (FPL API limit field
+                            applies old pre-2024/25 wildcard rules and cannot be trusted) */}
                         <div className="text-center">
                           <div className="text-2xl sm:text-3xl font-bold text-blue-700">
-                            {nextTeamData?.transfers?.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())}
+                            {calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())}
                           </div>
                           <div className="text-xs sm:text-sm text-blue-600 font-medium">
                             Free at Start
@@ -2919,7 +2920,7 @@ export default function MyDashboard() {
                             {/* Point Hit - only show if transfers exceed free transfer limit */}
                             {(() => {
                               const made = nextTeamData.transfers.made || 0;
-                              const limit = nextTeamData.transfers.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard());
+                              const limit = calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard());
                               const hitCost = Math.max(0, (made - limit) * 4);
                               if (hitCost > 0) {
                                 return (
@@ -2938,7 +2939,7 @@ export default function MyDashboard() {
                             {/* Remaining Free Transfers */}
                             <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
                               <div className="text-2xl sm:text-3xl font-bold text-emerald-700">
-                                {Math.max(0, (nextTeamData.transfers.limit ?? calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())) - (nextTeamData.transfers.made || 0))}
+                                {Math.max(0, calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard()) - (nextTeamData.transfers.made || 0))}
                               </div>
                               <div className="text-xs sm:text-sm text-emerald-600 font-medium">
                                 Remaining

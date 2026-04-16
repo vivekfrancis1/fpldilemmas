@@ -1396,21 +1396,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate free transfers based on authenticated transfer data
       // If user has made transfers in unconfirmed team, adjust accordingly
       const transfersMade = myTeamData.transfers.made || 0;
-      let transferLimit = myTeamData.transfers.limit || 1;
       
-      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-      // All managers get 5 free transfers in GW16 regardless of what FPL API reports
-      // Check if planning starts at GW16 (current GW is 15)
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-      const bootstrapData = await bootstrapResponse.json();
-      const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 
-                        bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
-      const planningStartGW = Math.min(currentGW + 1, 38);
-      
-      if (planningStartGW === 16) {
-        transferLimit = 5;
-        console.log(`🎁 GW16 AFCON BONUS (authenticated): Applying 5 FTs for GW16 (AFCON top-up)`);
-      }
+      // Use the history-based FT calculation from the unauthenticated endpoint, NOT the FPL API's
+      // transfers.limit field. The FPL API applies the old "wildcard resets FTs to 1" rule, but in
+      // FPL 2024/25 banked FTs are PRESERVED through wildcard/freehit usage.
+      // recommendations.freeTransfers was calculated from history with the correct rule.
+      let transferLimit = recommendations.freeTransfers || myTeamData.transfers.limit || 1;
       
       const freeTransfersRemaining = Math.max(0, transferLimit - transfersMade);
       
@@ -4381,7 +4372,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const chipUsed = chipsByGWFT.get(gw.event);
           if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
-            runningFTs = 1;
+            // FPL 2024/25 rule: banked FTs are PRESERVED through wildcard/freehit.
+            // The chip covers all transfers for that GW, so accumulated FTs are untouched.
             continue;
           }
 
