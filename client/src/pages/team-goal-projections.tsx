@@ -236,13 +236,13 @@ export default function TeamGoalProjections() {
       const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
       // Extend default end to GW39 only in base mode (expert/custom absorb TBC into a regular GW)
       setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
-      setExcludedGameweeks(new Set());
+      setSelectedGameweeks(new Set());
     }
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
 
@@ -251,7 +251,7 @@ export default function TeamGoalProjections() {
     if (fixtureMode !== 'base' && endGameweek === "39" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setEndGameweek(newRange.endGameweek);
-      setExcludedGameweeks(prev => { const s = new Set(prev); s.delete(39); return s; });
+      setSelectedGameweeks(new Set());
     }
   }, [fixtureMode]);
 
