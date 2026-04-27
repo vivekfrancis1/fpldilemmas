@@ -1208,6 +1208,23 @@ export default function PlayerTotalPoints() {
     return map;
   }, [fixturesData, bootstrapData?.teams]);
 
+  // Map from "playerTeamShort-opponentShort" → fixtureId for TBC fixtures.
+  // Allows per-fixture GW assignment when a team has multiple TBC games (e.g. MCI has BOU-MCI and MCI-CRY).
+  const tbcFixtureByOpponent = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!fixturesData || !bootstrapData?.teams || !Array.isArray(fixturesData)) return map;
+    (fixturesData as any[]).forEach(f => {
+      if (f.event !== null && f.event !== undefined) return;
+      const home = (bootstrapData.teams as any[]).find(t => t.id === f.team_h);
+      const away = (bootstrapData.teams as any[]).find(t => t.id === f.team_a);
+      if (home && away) {
+        map.set(`${home.short_name}-${away.short_name}`, f.id);
+        map.set(`${away.short_name}-${home.short_name}`, f.id);
+      }
+    });
+    return map;
+  }, [fixturesData, bootstrapData?.teams]);
+
   // Opponent + home/away info for TBC fixtures — used by showOpponent in the GW39 TBC column
   const tbcTeamInfoMap = useMemo(() => {
     const map = new Map<string, { opponent: string; isHome: boolean }>();
@@ -1593,39 +1610,6 @@ export default function PlayerTotalPoints() {
       const gw39Points = player.gameweekProjections?.['39'] || 0;
       if (gw39Points === 0) return player;
 
-      let assignedGW: number;
-      if (fixtureMode === 'expert') {
-        const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
-        assignedGW = fixtureId === 307 ? 36 : 37;
-      } else {
-        const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
-        if (fixtureId === undefined) return player;
-        const raw = tbcAssignments[fixtureId];
-        if (raw === undefined || raw === null || raw < startGW || raw > endGW) {
-          // TBC not assigned to a GW within the display range.
-          // totalExpectedPoints already excludes GW39 (computed in totalPointsData),
-          // so just zero out GW39 from the per-GW map to keep data tidy.
-          if (gw39Points === 0) return player;
-          return {
-            ...player,
-            gameweekProjections: { ...player.gameweekProjections, '39': 0 },
-          };
-        }
-        assignedGW = raw;
-      }
-
-      if (selectedGameweeks.size > 0 && !selectedGameweeks.has(assignedGW)) return player;
-
-      const gwKey = assignedGW.toString();
-      const existing = player.gameweekProjections?.[gwKey] || 0;
-      const newGameweekProjections = {
-        ...player.gameweekProjections,
-        '39': 0,
-        [gwKey]: existing + gw39Points,
-      };
-
-      // Move per-component breakdowns from GW39 to assigned GW
-      // Also add GW39's component values to the running totals (they were excluded from the base total)
       const compMoveKeys = [
         'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
         'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
@@ -1638,6 +1622,84 @@ export default function PlayerTotalPoints() {
         pointsFromSaves: 'totalPointsFromSaves', pointsFromGoalsConceded: 'totalPointsFromGoalsConceded',
         pointsFromYellowCards: 'totalPointsFromYellowCards', pointsFromRedCards: 'totalPointsFromRedCards',
       };
+
+      if (fixtureMode === 'expert') {
+        // Per-fixture split: each TBC fixture has its own fixtureDetail entry.
+        // Use the opponent name to look up the fixture ID and determine the expert GW.
+        // This correctly handles teams (like MCI) with multiple TBC fixtures.
+        const gw39Fixtures = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
+        if (gw39Fixtures.length === 0) return player;
+
+        let newGameweekProjections = { ...player.gameweekProjections, '39': 0 };
+        const newComponentMaps: Record<string, Record<string, number>> = {};
+        compMoveKeys.forEach(key => {
+          const compMap = (player as any)[key] as Record<string, number> | undefined;
+          newComponentMaps[key] = compMap ? { ...compMap, '39': 0 } : {};
+        });
+        const newFixtureDetails: Record<string, FixtureDetail[]> = {
+          ...((player as any).fixtureDetails || {}),
+          '39': [],
+        };
+        let addedTotal = 0;
+        const addedComponents: Record<string, number> = {};
+
+        gw39Fixtures.forEach(fd => {
+          const fixtureId = tbcFixtureByOpponent.get(`${playerTeamShort}-${fd.opponent}`);
+          const expertGW = fixtureId === 307 ? 36 : 37;
+          const gwKey = expertGW.toString();
+          newGameweekProjections[gwKey] = (newGameweekProjections[gwKey] || 0) + fd.totalPoints;
+          addedTotal += fd.totalPoints;
+          newFixtureDetails[gwKey] = [...(newFixtureDetails[gwKey] || (player as any).fixtureDetails?.[gwKey] || []), fd];
+          compMoveKeys.forEach(key => {
+            const val = (fd as any)[key] as number || 0;
+            newComponentMaps[key][gwKey] = (newComponentMaps[key][gwKey] || 0) + val;
+            addedComponents[key] = (addedComponents[key] || 0) + val;
+          });
+        });
+
+        const newComponents: Record<string, any> = {};
+        compMoveKeys.forEach(key => {
+          newComponents[key] = newComponentMaps[key];
+          const totalKey = compTotalKeyMap[key];
+          if (totalKey) newComponents[totalKey] = ((player as any)[totalKey] || 0) + (addedComponents[key] || 0);
+        });
+
+        const newTotal = (player.totalExpectedPoints || 0) + addedTotal;
+        const numGWsVisible = Object.keys(newGameweekProjections).filter(k => parseInt(k) <= endGW).length || 1;
+        return {
+          ...player,
+          gameweekProjections: newGameweekProjections,
+          fixtureDetails: newFixtureDetails,
+          ...newComponents,
+          totalExpectedPoints: newTotal,
+          averagePerGameweek: newTotal / numGWsVisible,
+          averageValue: (player.price || 0) > 0 ? newTotal / (player.price || 1) : 0,
+        };
+      }
+
+      // Custom mode: use the user's assigned GW (single fixture per team assumed)
+      const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
+      if (fixtureId === undefined) return player;
+      const raw = tbcAssignments[fixtureId];
+      if (raw === undefined || raw === null || raw < startGW || raw > endGW) {
+        if (gw39Points === 0) return player;
+        return {
+          ...player,
+          gameweekProjections: { ...player.gameweekProjections, '39': 0 },
+        };
+      }
+      const assignedGW = raw;
+
+      if (selectedGameweeks.size > 0 && !selectedGameweeks.has(assignedGW)) return player;
+
+      const gwKey = assignedGW.toString();
+      const existing = player.gameweekProjections?.[gwKey] || 0;
+      const newGameweekProjections = {
+        ...player.gameweekProjections,
+        '39': 0,
+        [gwKey]: existing + gw39Points,
+      };
+
       const newComponents: Record<string, any> = {};
       compMoveKeys.forEach(key => {
         const compMap = (player as any)[key] as Record<string, number> | undefined;
@@ -1645,21 +1707,18 @@ export default function PlayerTotalPoints() {
         const gw39Val = compMap['39'] || 0;
         const existingVal = compMap[gwKey] || 0;
         newComponents[key] = { ...compMap, '39': 0, [gwKey]: existingVal + gw39Val };
-        // Add GW39's component contribution to the running total
         const totalKey = compTotalKeyMap[key];
         if (totalKey) newComponents[totalKey] = ((player as any)[totalKey] || 0) + gw39Val;
       });
 
-      // Merge GW39 fixture details into the assigned GW (creates a virtual DGW)
-      const gw39Fixtures = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
+      const gw39FixturesCust = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
       const existingFixtures = ((player as any).fixtureDetails?.[gwKey] || []) as FixtureDetail[];
       const newFixtureDetails = {
         ...((player as any).fixtureDetails || {}),
         '39': [],
-        [gwKey]: [...existingFixtures, ...gw39Fixtures],
+        [gwKey]: [...existingFixtures, ...gw39FixturesCust],
       };
 
-      // Add GW39 points to the total (they were excluded from the base totalExpectedPoints)
       const newTotal = (player.totalExpectedPoints || 0) + gw39Points;
       const numGWsVisible = Object.keys(newGameweekProjections).filter(k => parseInt(k) <= endGW).length || 1;
 
@@ -1673,7 +1732,7 @@ export default function PlayerTotalPoints() {
         averageValue: (player.price || 0) > 0 ? newTotal / (player.price || 1) : 0,
       };
     });
-  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, selectedGameweeks, teamNameToShortName]);
+  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcFixtureByOpponent, tbcAssignments, startGameweek, endGameweek, selectedGameweeks, teamNameToShortName]);
 
   // Get unique teams and positions for filters — normalize to short names to avoid duplicates
   const teams = useMemo(() => {
