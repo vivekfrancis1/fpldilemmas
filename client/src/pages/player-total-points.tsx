@@ -1225,6 +1225,27 @@ export default function PlayerTotalPoints() {
     return map;
   }, [fixturesData, bootstrapData?.teams]);
 
+  // Map from teamShort → Set<fixtureId> for ALL TBC fixtures for that team.
+  // Used to correctly determine unassigned status when a team has multiple TBC games.
+  const tbcFixturesByTeam = useMemo(() => {
+    const map = new Map<string, Set<number>>();
+    if (!fixturesData || !bootstrapData?.teams || !Array.isArray(fixturesData)) return map;
+    (fixturesData as any[]).forEach(f => {
+      if (f.event !== null && f.event !== undefined) return;
+      const home = (bootstrapData.teams as any[]).find(t => t.id === f.team_h);
+      const away = (bootstrapData.teams as any[]).find(t => t.id === f.team_a);
+      if (home) {
+        if (!map.has(home.short_name)) map.set(home.short_name, new Set());
+        map.get(home.short_name)!.add(f.id);
+      }
+      if (away) {
+        if (!map.has(away.short_name)) map.set(away.short_name, new Set());
+        map.get(away.short_name)!.add(f.id);
+      }
+    });
+    return map;
+  }, [fixturesData, bootstrapData?.teams]);
+
   // Opponent + home/away info for TBC fixtures — used by showOpponent in the GW39 TBC column
   const tbcTeamInfoMap = useMemo(() => {
     const map = new Map<string, { opponent: string; isHome: boolean }>();
@@ -1242,7 +1263,8 @@ export default function PlayerTotalPoints() {
   }, [fixturesData, bootstrapData?.teams]);
 
   // In base mode: show GW39 column for all TBC teams.
-  // In custom mode: hide GW39 column for teams whose fixture has been assigned to a GW in range.
+  // In custom mode: hide GW39 column only for teams where ALL fixtures are assigned within range.
+  //   A team with multiple TBC fixtures (e.g. MCI) stays in TBC column as long as any fixture is unassigned.
   // In expert mode: GW39 is moved to GW36 (MCI-CRY) or GW37 (others), so never show the column.
   const effectiveTbcTeamShortNames = useMemo(() => {
     if (fixtureMode === 'expert') return new Set<string>();
@@ -1251,17 +1273,19 @@ export default function PlayerTotalPoints() {
       const endGW = endGameweek ?? 39;
       const unassigned = new Set<string>();
       tbcTeamShortNames.forEach(teamShort => {
-        const fixtureId = tbcFixtureIdMap.get(teamShort);
-        if (fixtureId === undefined) { unassigned.add(teamShort); return; }
-        const assigned = tbcAssignments[fixtureId];
-        if (assigned === undefined || assigned === null || assigned < startGW || assigned > endGW) {
-          unassigned.add(teamShort);
-        }
+        const fixtureIds = tbcFixturesByTeam.get(teamShort);
+        if (!fixtureIds || fixtureIds.size === 0) { unassigned.add(teamShort); return; }
+        // Team stays unassigned if ANY of its TBC fixtures is not assigned within the display range
+        const hasUnassigned = [...fixtureIds].some(fid => {
+          const assigned = tbcAssignments[fid];
+          return assigned === undefined || assigned === null || assigned < startGW || assigned > endGW;
+        });
+        if (hasUnassigned) unassigned.add(teamShort);
       });
       return unassigned;
     }
     return tbcTeamShortNames;
-  }, [fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek]);
+  }, [fixtureMode, tbcTeamShortNames, tbcFixturesByTeam, tbcAssignments, startGameweek, endGameweek]);
 
   // Show the GW39 TBC column only when GW39 is in range and not filtered out by the user
   const showTBCColumn = useMemo(() => (
@@ -1677,62 +1701,87 @@ export default function PlayerTotalPoints() {
         };
       }
 
-      // Custom mode: use the user's assigned GW (single fixture per team assumed)
-      const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
-      if (fixtureId === undefined) return player;
-      const raw = tbcAssignments[fixtureId];
-      if (raw === undefined || raw === null || raw < startGW || raw > endGW) {
-        if (gw39Points === 0) return player;
-        return {
-          ...player,
-          gameweekProjections: { ...player.gameweekProjections, '39': 0 },
-        };
-      }
-      const assignedGW = raw;
+      // Custom mode: per-fixture split — each TBC fixture is independently checked for a user assignment.
+      // For teams with multiple TBC fixtures (like MCI), only assigned fixtures are moved; unassigned ones stay in GW39.
+      const gw39FixturesCust = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
+      if (gw39FixturesCust.length === 0) return player;
 
-      if (selectedGameweeks.size > 0 && !selectedGameweeks.has(assignedGW)) return player;
-
-      const gwKey = assignedGW.toString();
-      const existing = player.gameweekProjections?.[gwKey] || 0;
-      const newGameweekProjections = {
-        ...player.gameweekProjections,
-        '39': 0,
-        [gwKey]: existing + gw39Points,
-      };
-
-      const newComponents: Record<string, any> = {};
+      let newGameweekProjections = { ...player.gameweekProjections, '39': 0 };
+      const newComponentMapsCust: Record<string, Record<string, number>> = {};
       compMoveKeys.forEach(key => {
         const compMap = (player as any)[key] as Record<string, number> | undefined;
-        if (!compMap) return;
-        const gw39Val = compMap['39'] || 0;
-        const existingVal = compMap[gwKey] || 0;
-        newComponents[key] = { ...compMap, '39': 0, [gwKey]: existingVal + gw39Val };
-        const totalKey = compTotalKeyMap[key];
-        if (totalKey) newComponents[totalKey] = ((player as any)[totalKey] || 0) + gw39Val;
+        newComponentMapsCust[key] = compMap ? { ...compMap, '39': 0 } : {};
       });
-
-      const gw39FixturesCust = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
-      const existingFixtures = ((player as any).fixtureDetails?.[gwKey] || []) as FixtureDetail[];
-      const newFixtureDetails = {
+      const newFixtureDetailsCust: Record<string, FixtureDetail[]> = {
         ...((player as any).fixtureDetails || {}),
         '39': [],
-        [gwKey]: [...existingFixtures, ...gw39FixturesCust],
       };
+      let addedTotalCust = 0;
+      const addedComponentsCust: Record<string, number> = {};
+      let remainingGW39Points = 0;
+      const remainingGW39Fixtures: FixtureDetail[] = [];
 
-      const newTotal = (player.totalExpectedPoints || 0) + gw39Points;
-      const numGWsVisible = Object.keys(newGameweekProjections).filter(k => parseInt(k) <= endGW).length || 1;
+      gw39FixturesCust.forEach(fd => {
+        const fixtureId = tbcFixtureByOpponent.get(`${playerTeamShort}-${fd.opponent}`);
+        const rawGW = fixtureId !== undefined ? tbcAssignments[fixtureId] : undefined;
+        if (rawGW === undefined || rawGW === null || rawGW < startGW || rawGW > endGW) {
+          // This specific fixture is not assigned — keep it in GW39
+          remainingGW39Points += fd.totalPoints;
+          remainingGW39Fixtures.push(fd);
+          return;
+        }
+        if (selectedGameweeks.size > 0 && !selectedGameweeks.has(rawGW)) {
+          remainingGW39Points += fd.totalPoints;
+          remainingGW39Fixtures.push(fd);
+          return;
+        }
+        const gwKey = rawGW.toString();
+        newGameweekProjections[gwKey] = (newGameweekProjections[gwKey] || 0) + fd.totalPoints;
+        addedTotalCust += fd.totalPoints;
+        newFixtureDetailsCust[gwKey] = [
+          ...(newFixtureDetailsCust[gwKey] || (player as any).fixtureDetails?.[gwKey] || []),
+          fd,
+        ];
+        compMoveKeys.forEach(key => {
+          const val = (fd as any)[key] as number || 0;
+          newComponentMapsCust[key][gwKey] = (newComponentMapsCust[key][gwKey] || 0) + val;
+          addedComponentsCust[key] = (addedComponentsCust[key] || 0) + val;
+        });
+      });
+
+      // Put remaining unassigned fixture contributions back in GW39
+      if (remainingGW39Points > 0) {
+        newGameweekProjections['39'] = remainingGW39Points;
+        newFixtureDetailsCust['39'] = remainingGW39Fixtures;
+        compMoveKeys.forEach(key => {
+          const remaining = (gw39FixturesCust
+            .filter(fd => remainingGW39Fixtures.includes(fd))
+            .reduce((acc, fd) => acc + ((fd as any)[key] as number || 0), 0));
+          newComponentMapsCust[key]['39'] = remaining;
+        });
+      }
+
+      const newComponentsCust: Record<string, any> = {};
+      compMoveKeys.forEach(key => {
+        newComponentsCust[key] = newComponentMapsCust[key];
+        const totalKey = compTotalKeyMap[key];
+        if (totalKey) newComponentsCust[totalKey] = ((player as any)[totalKey] || 0) + (addedComponentsCust[key] || 0);
+      });
+
+      const newTotalCust = (player.totalExpectedPoints || 0) + addedTotalCust;
+      const numGWsVisibleCust = Object.keys(newGameweekProjections).filter(k => parseInt(k) <= endGW).length || 1;
 
       return {
         ...player,
         gameweekProjections: newGameweekProjections,
-        fixtureDetails: newFixtureDetails,
-        ...newComponents,
-        totalExpectedPoints: newTotal,
-        averagePerGameweek: newTotal / numGWsVisible,
-        averageValue: (player.price || 0) > 0 ? newTotal / (player.price || 1) : 0,
+        fixtureDetails: newFixtureDetailsCust,
+        ...newComponentsCust,
+        totalExpectedPoints: newTotalCust,
+        averagePerGameweek: newTotalCust / numGWsVisibleCust,
+        averageValue: (player.price || 0) > 0 ? newTotalCust / (player.price || 1) : 0,
       };
     });
-  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcFixtureByOpponent, tbcAssignments, startGameweek, endGameweek, selectedGameweeks, teamNameToShortName]);
+  }, [displayData, viewMode, fixtureMode, tbcTeamShortNames, tbcFixtureIdMap, tbcFixtureByOpponent, tbcFixturesByTeam, tbcAssignments, startGameweek, endGameweek, selectedGameweeks, teamNameToShortName]);
 
   // Get unique teams and positions for filters — normalize to short names to avoid duplicates
   const teams = useMemo(() => {
