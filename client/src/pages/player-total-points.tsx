@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -936,9 +937,7 @@ export default function PlayerTotalPoints() {
   }, [managerTeamData]);
 
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
-  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
-    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
-  });
+  const { assignments: tbcAssignments, setAssignments: setTbcAssignments } = useTbcAssignments();
   const [viewMode, setViewMode] = useState<"past" | "future">("future");
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
@@ -1104,23 +1103,13 @@ export default function PlayerTotalPoints() {
     }
   }, [fixtureMode, endGameweek, bootstrapData?.events]);
 
-  // Sync tbcAssignments from localStorage when window regains focus or fixtureMode changes
+  // Sync expert assignments from localStorage when fixtureMode changes to expert
   useEffect(() => {
-    const onFocus = () => {
+    if (fixtureMode === 'expert') {
       try {
-        const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
-        setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}'));
+        setTbcAssignments(JSON.parse(localStorage.getItem('fpl-tbc-expert-assignments') || '{}'));
       } catch {}
-    };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [fixtureMode]);
-
-  useEffect(() => {
-    try {
-      const key = fixtureMode === 'expert' ? 'fpl-tbc-expert-assignments' : 'fpl-tbc-assignments';
-      setTbcAssignments(JSON.parse(localStorage.getItem(key) || '{}'));
-    } catch {}
+    }
   }, [fixtureMode]);
 
   // Calculate current gameweek and upcoming gameweeks
@@ -2263,7 +2252,7 @@ export default function PlayerTotalPoints() {
                   onClick={() => setFixtureMode('base')}
                   className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
                 >Base Fixtures</button>
-                {(() => { try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; } })() && (
+                {Object.keys(tbcAssignments).length > 0 && (
                   <button
                     onClick={() => setFixtureMode('custom')}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}

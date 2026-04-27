@@ -1128,6 +1128,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Per-user TBC fixture assignments (persisted per account)
+  app.get("/api/user/tbc-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const assignments = await storage.getUserTbcAssignments(userId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching TBC assignments:", error);
+      res.status(500).json({ error: "Failed to fetch TBC assignments" });
+    }
+  });
+
+  app.post("/api/user/tbc-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const assignments = req.body;
+      if (typeof assignments !== "object" || Array.isArray(assignments)) {
+        return res.status(400).json({ error: "Invalid assignments format" });
+      }
+      await storage.saveUserTbcAssignments(userId, assignments);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving TBC assignments:", error);
+      res.status(500).json({ error: "Failed to save TBC assignments" });
+    }
+  });
+
   app.post("/api/fpl/disconnect", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;

@@ -1698,3 +1698,13 @@ export const blendEligiblePlayers = pgTable("blend_eligible_players", {
   blendWeight: real("blend_weight").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Per-user TBC fixture assignments: records which gameweek each TBC fixture is assigned to
+export const userTbcAssignments = pgTable("user_tbc_assignments", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  assignments: jsonb("assignments").notNull().default({}),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type UserTbcAssignment = typeof userTbcAssignments.$inferSelect;
+export type InsertUserTbcAssignment = typeof userTbcAssignments.$inferInsert;

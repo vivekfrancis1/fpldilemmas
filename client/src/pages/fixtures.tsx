@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 
 interface Fixture {
   id: number;
@@ -120,14 +121,8 @@ export default function Fixtures() {
   }, [customFDR]);
 
   // TBC fixture assignments for My Fixtures: { [fixtureId]: gwNumber }
-  const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
-    const stored = localStorage.getItem('fpl-tbc-assignments');
-    if (stored) { try { return JSON.parse(stored); } catch { return {}; } }
-    return {};
-  });
-  useEffect(() => {
-    localStorage.setItem('fpl-tbc-assignments', JSON.stringify(tbcAssignments));
-  }, [tbcAssignments]);
+  // Persisted per user account (server) when logged in; falls back to localStorage otherwise
+  const { assignments: tbcAssignments, setAssignments: setTbcAssignments } = useTbcAssignments();
 
   // TBC fixture overrides for Expert Fixtures: { [fixtureId]: gwNumber } — defaults to GW36, separate from My Fixtures
   const [expertAssignments, setExpertAssignments] = useState<Record<number, number>>(() => {

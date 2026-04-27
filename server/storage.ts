@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc, and } from "drizzle-orm";
@@ -131,6 +131,10 @@ export interface IStorage {
   upsertManagerProfile(profile: InsertManagerProfile): Promise<void>;
   bulkUpsertManagerProfiles(profiles: InsertManagerProfile[]): Promise<void>;
   searchManagerProfiles(query: string): Promise<ManagerProfile[]>;
+
+  // User TBC assignments operations
+  getUserTbcAssignments(userId: string): Promise<Record<number, number>>;
+  saveUserTbcAssignments(userId: string, assignments: Record<number, number>): Promise<void>;
   
 }
 
@@ -538,6 +542,13 @@ export class MemStorage implements IStorage {
 
   async searchManagerProfiles(query: string): Promise<ManagerProfile[]> {
     return [];
+  }
+
+  async getUserTbcAssignments(_userId: string): Promise<Record<number, number>> {
+    return {};
+  }
+
+  async saveUserTbcAssignments(_userId: string, _assignments: Record<number, number>): Promise<void> {
   }
 
 }
@@ -1943,6 +1954,29 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error searching manager profiles:", error);
       return [];
+    }
+  }
+
+  async getUserTbcAssignments(userId: string): Promise<Record<number, number>> {
+    try {
+      const [row] = await db.select().from(userTbcAssignments).where(eq(userTbcAssignments.userId, userId));
+      return (row?.assignments as Record<number, number>) || {};
+    } catch (error) {
+      console.error("Error getting user TBC assignments:", error);
+      return {};
+    }
+  }
+
+  async saveUserTbcAssignments(userId: string, assignments: Record<number, number>): Promise<void> {
+    try {
+      await db.insert(userTbcAssignments)
+        .values({ userId, assignments, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: userTbcAssignments.userId,
+          set: { assignments, updatedAt: new Date() },
+        });
+    } catch (error) {
+      console.error("Error saving user TBC assignments:", error);
     }
   }
 
