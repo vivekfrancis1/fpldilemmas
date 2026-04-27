@@ -1089,16 +1089,16 @@ export default function PlayerTotalPoints() {
     }
   }, [viewMode, bootstrapData?.events, lastFinishedGW]);
 
-  // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
+  // Auto-extend endGameweek to 39 in base or custom mode when TBC fixtures exist
   useEffect(() => {
-    if (tbcTeamShortNames.size > 0 && fixtureMode === 'base' && viewMode === 'future') {
+    if (tbcTeamShortNames.size > 0 && (fixtureMode === 'base' || fixtureMode === 'custom') && viewMode === 'future') {
       setEndGameweek(39);
     }
   }, [tbcTeamShortNames.size, fixtureMode, viewMode]);
 
-  // Snap endGameweek back from 39 when leaving base mode
+  // Snap endGameweek back from 39 only when entering expert mode (all TBC fixtures are pre-assigned)
   useEffect(() => {
-    if (fixtureMode !== 'base' && endGameweek === 39 && bootstrapData?.events) {
+    if (fixtureMode === 'expert' && endGameweek === 39 && bootstrapData?.events) {
       const defaultRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setEndGameweek(parseInt(defaultRange.endGameweek));
     }
