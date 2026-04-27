@@ -170,7 +170,7 @@ export default function PlayerCleanSheetPoints() {
       if (!gw39CS) return player;
       let assignedGW: number | null = null;
       if (fixtureMode === 'expert') {
-        assignedGW = 36;
+        assignedGW = tbcInfo.fixtureId === 307 ? 36 : 37;
       } else {
         const raw = tbcAssignments[tbcInfo.fixtureId] ?? null;
         if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;

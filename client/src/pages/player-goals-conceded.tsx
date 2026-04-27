@@ -100,7 +100,7 @@ export default function PlayerGoalsConceded() {
       const gw39GC = projection.goalsConceded['gw39'] || 0;
       const gw39Pts = projection.pointsFromGoalsConceded['gw39'] || 0;
       if (!gw39GC && !gw39Pts) return projection;
-      const assignedGW: number | null = fixtureMode === 'expert' ? 36 : (tbcAssignments[tbcInfo.fixtureId] ?? null);
+      const assignedGW: number | null = fixtureMode === 'expert' ? (tbcInfo.fixtureId === 307 ? 36 : 37) : (tbcAssignments[tbcInfo.fixtureId] ?? null);
       if (assignedGW === null) return projection;
       const gwKey = `gw${assignedGW}`;
       const newGoalsConceded = { ...projection.goalsConceded, [gwKey]: (projection.goalsConceded[gwKey] || 0) + gw39GC, 'gw39': 0 };

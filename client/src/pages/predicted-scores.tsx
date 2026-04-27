@@ -106,7 +106,7 @@ export default function PredictedScores() {
 
   // Determine the label for TBC GW badge based on mode
   const getTBCGWLabel = (fixtureId: number): string => {
-    if (fixtureMode === 'expert') return 'GW 36';
+    if (fixtureMode === 'expert') return 'GW 36/37';
     if (fixtureMode === 'custom') {
       const gw = tbcAssignments[fixtureId];
       return gw ? `GW ${gw}` : 'TBC';
@@ -392,7 +392,7 @@ export default function PredictedScores() {
                       <>
                         <tr className="bg-amber-50/40 border-t-2 border-amber-200">
                           <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-amber-700 uppercase tracking-wider">
-                            {fixtureMode === 'expert' ? 'GW 36 — Expert Assigned Fixtures (FPL Model)' : fixtureMode === 'custom' && tbcData?.[0] && tbcAssignments[tbcData[0].fixtureId] ? `GW ${tbcAssignments[tbcData[0].fixtureId]} — My Assigned Fixtures (FPL Model)` : 'GW39 (TBC) — Unscheduled Fixtures (FPL Model Projections)'}
+                            {fixtureMode === 'expert' ? 'GW 36/37 — Expert Assigned Fixtures (FPL Model)' : fixtureMode === 'custom' && tbcData?.[0] && tbcAssignments[tbcData[0].fixtureId] ? `GW ${tbcAssignments[tbcData[0].fixtureId]} — My Assigned Fixtures (FPL Model)` : 'GW39 (TBC) — Unscheduled Fixtures (FPL Model Projections)'}
                           </td>
                         </tr>
                         {filteredTBCMatches.map((f) => {

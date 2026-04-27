@@ -142,7 +142,7 @@ export default function Fixtures() {
   // Modal state for assigning a TBC fixture to a gameweek
   const [tbcModal, setTbcModal] = useState<{ fixtureId: number; label: string; selectedGW: number } | null>(null);
 
-  // Toggle between base fixtures (TBC intact), user-assigned, and expert (all TBC → GW36)
+  // Toggle between base fixtures (TBC intact), user-assigned, and expert (MCI-CRY → GW36, others → GW37)
   const [viewMode, setViewMode] = useState<'base' | 'custom' | 'expert'>('base');
   const hasAssignments = Object.keys(tbcAssignments).length > 0;
   
@@ -369,15 +369,15 @@ export default function Fixtures() {
     // Compute effective assignments based on view mode:
     // base → no assignments (TBC stays in TBC column)
     // custom → user's manual assignments only
-    // expert → GW36 by default, but respects manual overrides from the assignment modal
+    // expert → MCI-CRY(307)→GW36, others→GW37 by default, but respects manual overrides from the assignment modal
     const computedAssignments: Record<number, number> = {};
     if (viewMode === 'custom') {
       Object.assign(computedAssignments, tbcAssignments);
     } else if (viewMode === 'expert') {
       fixturesData.forEach(f => {
         if (f.event === null) {
-          // Use expert-specific override if set, otherwise default to GW36 (never reads My Fixtures assignments)
-          computedAssignments[f.id] = expertAssignments[f.id] ?? 36;
+          // Use expert-specific override if set, otherwise default: MCI-CRY(307)→GW36, all others→GW37
+          computedAssignments[f.id] = expertAssignments[f.id] ?? (f.id === 307 ? 36 : 37);
         }
       });
     }
@@ -486,7 +486,7 @@ export default function Fixtures() {
   // Check if any team has TBC (event=null) fixtures that are unassigned in the current mode
   const hasTBCFixtures = useMemo(() => {
     if (!fixturesData) return false;
-    if (viewMode === 'expert') return false; // expert assigns all TBC → GW36
+    if (viewMode === 'expert') return false; // expert assigns all TBC (MCI-CRY→GW36, others→GW37)
     return fixturesData.some(f => f.event === null && (viewMode === 'base' || !tbcAssignments[f.id]));
   }, [fixturesData, viewMode, tbcAssignments]);
 
@@ -1200,7 +1200,7 @@ export default function Fixtures() {
                                         onClick={() => {
                                           if (fixture.fixtureId) {
                                             const currentGW = viewMode === 'expert'
-                                              ? (expertAssignments[fixture.fixtureId] ?? 36)
+                                              ? (expertAssignments[fixture.fixtureId] ?? (fixture.fixtureId === 307 ? 36 : 37))
                                               : (tbcAssignments[fixture.fixtureId] ?? (gameweekRange ? Math.min(36, gameweekRange.end) : 36));
                                             setTbcModal({ fixtureId: fixture.fixtureId, label: `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`, selectedGW: currentGW });
                                           }

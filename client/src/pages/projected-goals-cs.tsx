@@ -104,7 +104,7 @@ export default function ProjectedGoalsCS() {
   // Effective GW for TBC fixtures based on fixture mode
   const tbcEffectiveGW = useMemo(() => {
     if (!hasTBCFixture || viewMode !== 'future') return null;
-    if (fixtureMode === 'expert') return 36;
+    if (fixtureMode === 'expert') return 37; // majority of TBC fixtures → GW37 (MCI-CRY handled per-fixture below)
     if (fixtureMode === 'custom') {
       const firstAssigned = tbcFixtures?.[0]?.id ? (tbcAssignments[tbcFixtures[0].id] ?? null) : null;
       return firstAssigned ?? 39;
@@ -171,7 +171,7 @@ export default function ProjectedGoalsCS() {
           // Remap TBC fixture to the appropriate GW based on fixture mode
           let assignedGW: number;
           if (fixtureMode === 'expert') {
-            assignedGW = 36;
+            assignedGW = fixture.id === 307 ? 36 : 37;
           } else if (fixtureMode === 'custom') {
             assignedGW = tbcAssignments[fixture.id] ?? 39;
           } else {

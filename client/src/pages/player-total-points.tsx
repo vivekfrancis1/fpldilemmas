@@ -1226,7 +1226,7 @@ export default function PlayerTotalPoints() {
 
   // In base mode: show GW39 column for all TBC teams.
   // In custom mode: hide GW39 column for teams whose fixture has been assigned to a GW in range.
-  // In expert mode: GW39 is always moved to GW36, so never show the column.
+  // In expert mode: GW39 is moved to GW36 (MCI-CRY) or GW37 (others), so never show the column.
   const effectiveTbcTeamShortNames = useMemo(() => {
     if (fixtureMode === 'expert') return new Set<string>();
     if (fixtureMode === 'custom') {
@@ -1595,7 +1595,8 @@ export default function PlayerTotalPoints() {
 
       let assignedGW: number;
       if (fixtureMode === 'expert') {
-        assignedGW = 36;
+        const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
+        assignedGW = fixtureId === 307 ? 36 : 37;
       } else {
         const fixtureId = tbcFixtureIdMap.get(playerTeamShort);
         if (fixtureId === undefined) return player;

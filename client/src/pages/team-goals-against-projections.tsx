@@ -303,7 +303,7 @@ export default function TeamGoalsAgainstProjections() {
       if (!tbcEntry) return team;
       let assignedGW: number | null = null;
       if (fixtureMode === 'expert') {
-        assignedGW = 36;
+        assignedGW = tbcFixture.fixtureId === 307 ? 36 : 37;
       } else {
         const raw = tbcAssignments[tbcFixture.fixtureId] ?? null;
         if (raw !== null && raw >= startGW && raw <= endGW) assignedGW = raw;

@@ -415,7 +415,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       const fixtureId = fixtureIdByTeam.get(teamShort);
       let assignedGW: number;
       if (fixtureMode === 'expert') {
-        assignedGW = (fixtureId ? assignments[fixtureId] : undefined) || 36;
+        assignedGW = (fixtureId ? assignments[fixtureId] : undefined) || (fixtureId === 307 ? 36 : 37);
       } else {
         if (!fixtureId) return player;
         const raw = assignments[fixtureId];

@@ -110,7 +110,7 @@ export default function PlayerRedCards() {
       const gw39RC = projection.redCards['gw39'] || 0;
       const gw39Pts = projection.pointsFromRedCards['gw39'] || 0;
       if (!gw39RC && !gw39Pts) return projection;
-      const assignedGW: number | null = fixtureMode === 'expert' ? 36 : (tbcAssignments[tbcInfo.fixtureId] ?? null);
+      const assignedGW: number | null = fixtureMode === 'expert' ? (tbcInfo.fixtureId === 307 ? 36 : 37) : (tbcAssignments[tbcInfo.fixtureId] ?? null);
       if (assignedGW === null) return projection;
       const gwKey = `gw${assignedGW}`;
       const newRedCards = { ...projection.redCards, [gwKey]: (projection.redCards[gwKey] || 0) + gw39RC, 'gw39': 0 };

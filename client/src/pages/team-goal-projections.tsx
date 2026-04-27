@@ -370,7 +370,7 @@ export default function TeamGoalProjections() {
       const tbcOpponent = isHome ? tbcFixture.awayTeamShort : tbcFixture.homeTeamShort;
       let assignedGW: number | null = null;
       if (fixtureMode === 'expert') {
-        assignedGW = 36;
+        assignedGW = tbcFixture.fixtureId === 307 ? 36 : 37;
       } else {
         const raw = tbcAssignments[tbcFixture.fixtureId] ?? null;
         // Only absorb if assigned GW is within the currently visible range

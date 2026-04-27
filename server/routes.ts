@@ -11077,7 +11077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Determine the effective GW for this TBC fixture
             let fixtureEffectiveGW: number;
             if (fixtureMode === 'custom') {
-              fixtureEffectiveGW = customTBCAssignments[proj.fixtureId] ?? 39;
+              fixtureEffectiveGW = customTBCAssignments[proj.fixtureId] ?? tbcGameweek;
             } else {
               fixtureEffectiveGW = tbcGameweek;
             }

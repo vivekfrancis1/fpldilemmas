@@ -78,7 +78,11 @@ export default function ProjectedStandings() {
     queryKey: ["/api/projected-standings", selectedEndGameweek, fixtureMode, tbcAssignmentsJson],
     queryFn: async () => {
       let url = `/api/projected-standings?endGameweek=${selectedEndGameweek}&fixtureMode=${fixtureMode}`;
-      if (fixtureMode === 'expert') url += `&tbcGameweek=36`;
+      if (fixtureMode === 'expert') {
+        // MCI-CRY (307) → GW36, all other TBC fixtures → GW37; use custom mode + tbcGameweek fallback
+        url = url.replace('fixtureMode=expert', 'fixtureMode=custom');
+        url += `&tbcAssignments=${encodeURIComponent(JSON.stringify({ 307: 36 }))}&tbcGameweek=37`;
+      }
       if (fixtureMode === 'custom' && tbcAssignmentsJson) url += `&tbcAssignments=${encodeURIComponent(tbcAssignmentsJson)}`;
       const response = await fetch(url);
       if (!response.ok) {
