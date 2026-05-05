@@ -2457,7 +2457,7 @@ export default function TransferPlanner() {
 
     // Use the shared calculateFreeTransfers utility (same logic the dashboard uses)
     // It correctly handles wildcard/freehit banking, AFCON top-ups, and point hits
-    const currentInitial = historyData?.current
+    let currentInitial = historyData?.current
       ? calculateFreeTransfers(historyData.current, historyData.chips, firstPlanningGW)
       : (teamData.transfers.limit ?? 1);
 
