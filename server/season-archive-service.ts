@@ -1,5 +1,6 @@
 import { pool } from "./db";
 import { internalFetch } from "./config";
+import { FPLScoringCacheService } from "./fpl-scoring-cache-service";
 
 const CURRENT_SEASON = "2025/26";
 
@@ -170,6 +171,11 @@ export class SeasonArchiveService {
       }
 
       result.fixturesInserted = result.fixturesUpdated; // total rows upserted
+
+      // Invalidate GW-range caches so stale data isn't served after backfill
+      if (result.fixturesUpdated > 0) {
+        FPLScoringCacheService.notifyDataUpdated();
+      }
     } catch (e) {
       result.errors.push(`Fatal: ${e instanceof Error ? e.message : String(e)}`);
     }

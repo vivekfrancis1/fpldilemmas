@@ -1,5 +1,6 @@
 import { db, pool } from "./db";
 import { internalFetch } from "./config";
+import { FPLScoringCacheService } from "./fpl-scoring-cache-service";
 
 // Direct database queries since these are new tables
 const gameweekPlayerDataTable = "gameweek_player_data";
@@ -283,6 +284,11 @@ class GameweekCacheService {
       logEntry.duration = Date.now() - startTime;
 
       console.log(`✅ Gameweek ${gameweek} caching completed: ${processedCount} players processed, ${errors.length} errors`);
+
+      // Invalidate GW-range caches so they don't serve stale data after ingestion
+      if (processedCount > 0) {
+        FPLScoringCacheService.notifyDataUpdated();
+      }
 
     } catch (error) {
       console.error(`❌ Gameweek ${gameweek} caching failed:`, error);

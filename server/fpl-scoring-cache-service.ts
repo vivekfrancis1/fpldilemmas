@@ -25,6 +25,18 @@ export class FPLScoringCacheService {
     }
   }
 
+  /**
+   * Notify all registered onRefresh listeners that gameweek data has been
+   * written to the DB (e.g. by the ingestion job).  Call this whenever
+   * gameweek_player_data is updated outside of updateAllScoringData so that
+   * the GW-range caches (cbitGWRangeCache, minutesGWRangeCache,
+   * savePointsGWRangeCache) are immediately invalidated.
+   */
+  static notifyDataUpdated(): void {
+    console.log("🗑️ Invalidating GW-range caches after gameweek data ingestion");
+    FPLScoringCacheService.fireRefreshCallbacks();
+  }
+
   async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
     if (FPLScoringCacheService.updateLock) {
       console.log("⏳ Cache update already in progress, skipping duplicate request");
