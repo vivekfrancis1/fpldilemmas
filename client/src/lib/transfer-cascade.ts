@@ -11,6 +11,24 @@ export interface BrokenTransferEntry {
   inPlayerId: number;
 }
 
+export interface CrossGWDepEntry {
+  gwId: number;
+  transferIndex: number;
+  outPlayerId: number;
+  inPlayerId: number;
+  outPlayerName: string;
+  inPlayerName: string;
+}
+
+export interface ChainBreakPayload {
+  transferIndex: number;
+  gwId: number;
+  transferName: string;
+  dependentTransfers: string[];
+  dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[];
+  crossGwDependents: Array<{ gwId: number; transferIndex: number }>;
+}
+
 export function computeCascadeIndicesToRemove(
   completed: CompletedTransfer[],
   transferIndex: number
@@ -47,4 +65,78 @@ export function filterBrokenTransfersAfterCascade(
   return brokenTransfers.filter(
     b => !(b.gwId === gwId && removedTransferKeys.has(`${b.outPlayerId}:${b.inPlayerId}`))
   );
+}
+
+/**
+ * Builds the payload for the chain-break confirmation dialog given the
+ * completed transfers, the target transfer index, the gameweek id, and any
+ * cross-GW dependents already discovered by findCrossGWDependents.
+ *
+ * Returns null when there are no dependents (same-GW or cross-GW), which
+ * signals that the direct undo handler should be called without a dialog.
+ */
+export function buildChainBreakPayload(
+  completed: CompletedTransfer[],
+  transferIndex: number,
+  gwId: number,
+  crossGwDeps: CrossGWDepEntry[]
+): ChainBreakPayload | null {
+  const transfer = completed[transferIndex];
+  if (!transfer) return null;
+
+  const cascadeIndices = computeCascadeIndicesToRemove(completed, transferIndex);
+  const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
+
+  const dependentTransfers: string[] = dependentIndices.map(
+    i => `${completed[i].outPlayerName} → ${completed[i].inPlayerName}`
+  );
+  const dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[] =
+    dependentIndices.map(i => ({
+      outPlayerId: completed[i].outPlayerId,
+      inPlayerId: completed[i].inPlayerId,
+      depGwId: gwId,
+    }));
+
+  const crossGwDependents: Array<{ gwId: number; transferIndex: number }> = [];
+  for (const dep of crossGwDeps) {
+    dependentTransfers.push(`GW${dep.gwId}: ${dep.outPlayerName} → ${dep.inPlayerName}`);
+    dependentPlayerPairs.push({ outPlayerId: dep.outPlayerId, inPlayerId: dep.inPlayerId, depGwId: dep.gwId });
+    crossGwDependents.push({ gwId: dep.gwId, transferIndex: dep.transferIndex });
+  }
+
+  if (dependentTransfers.length === 0) return null;
+
+  return {
+    transferIndex,
+    gwId,
+    transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
+    dependentTransfers,
+    dependentPlayerPairs,
+    crossGwDependents,
+  };
+}
+
+/**
+ * Executes the full branch decision for "undo single transfer with chain check".
+ * Builds the payload via buildChainBreakPayload and then:
+ *   - calls onChainDetected(payload) if dependents exist (opens the dialog), or
+ *   - calls onDirectUndo() if there are no dependents (proceeds immediately).
+ *
+ * Accepts injectable callbacks so the branch behavior is directly testable
+ * without mounting the React component.
+ */
+export function executeUndoChainCheck(
+  completed: CompletedTransfer[],
+  transferIndex: number,
+  gwId: number,
+  crossGwDeps: CrossGWDepEntry[],
+  onChainDetected: (payload: ChainBreakPayload) => void,
+  onDirectUndo: () => void
+): void {
+  const payload = buildChainBreakPayload(completed, transferIndex, gwId, crossGwDeps);
+  if (payload !== null) {
+    onChainDetected(payload);
+  } else {
+    onDirectUndo();
+  }
 }

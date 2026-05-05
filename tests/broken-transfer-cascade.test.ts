@@ -1,9 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+  buildChainBreakPayload,
   computeCascadeIndicesToRemove,
+  executeUndoChainCheck,
   filterBrokenTransfersAfterCascade,
+  type ChainBreakPayload,
   type CompletedTransfer,
   type BrokenTransferEntry,
+  type CrossGWDepEntry,
 } from '../client/src/lib/transfer-cascade';
 
 const t = (out: number, inp: number): CompletedTransfer => ({
@@ -385,5 +389,288 @@ describe('filterBrokenTransfersAfterCascade', () => {
     const indicesToRemove = computeCascadeIndicesToRemove(completed, 0);
     const result = filterBrokenTransfersAfterCascade([], GW, indicesToRemove, completed);
     expect(result).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildChainBreakPayload — the pure helper used by both
+// handleUndoSingleTransferWithCheck and handleUndoSingleTransferWithCheckForGW
+// to decide whether to open the confirmation dialog or call the direct undo.
+// Tests here exercise the real production function exported from
+// client/src/lib/transfer-cascade.ts.
+// ---------------------------------------------------------------------------
+
+describe('buildChainBreakPayload — returns null (direct undo path) when no dependents', () => {
+  it('returns null for two unrelated transfers', () => {
+    const completed = [t(1, 2), t(3, 4)];
+    expect(buildChainBreakPayload(completed, 0, 10, [])).toBeNull();
+  });
+
+  it('returns null when the target is the last transfer in the list', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    expect(buildChainBreakPayload(completed, 1, 10, [])).toBeNull();
+  });
+
+  it('returns null when there are no cross-GW dependents and no same-GW chain', () => {
+    const completed = [t(5, 6)];
+    expect(buildChainBreakPayload(completed, 0, 10, [])).toBeNull();
+  });
+
+  it('returns null for an invalid transferIndex', () => {
+    const completed = [t(1, 2)];
+    expect(buildChainBreakPayload(completed, 99, 10, [])).toBeNull();
+  });
+});
+
+describe('buildChainBreakPayload — returns payload (dialog path) when dependents exist', () => {
+  it('returns a non-null payload when a direct same-GW dependent exists', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 10, []);
+    expect(result).not.toBeNull();
+  });
+
+  it('sets transferName to "outPlayerName → inPlayerName" of the target transfer', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 10, [])!;
+    expect(result.transferName).toBe('Player1 → Player2');
+  });
+
+  it('sets transferIndex and gwId from the arguments', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 22, [])!;
+    expect(result.transferIndex).toBe(0);
+    expect(result.gwId).toBe(22);
+  });
+
+  it('lists the dependent transfer label in dependentTransfers', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 10, [])!;
+    expect(result.dependentTransfers).toEqual(['Player2 → Player3']);
+  });
+
+  it('includes the dependent player pair with the correct depGwId', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 10, [])!;
+    expect(result.dependentPlayerPairs).toEqual([
+      { outPlayerId: 2, inPlayerId: 3, depGwId: 10 },
+    ]);
+  });
+
+  it('lists all dependents for a full chain (A→B, B→C, C→D)', () => {
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const result = buildChainBreakPayload(completed, 0, 10, [])!;
+    expect(result.dependentTransfers).toEqual(['Player2 → Player3', 'Player3 → Player4']);
+    expect(result.dependentPlayerPairs).toHaveLength(2);
+  });
+
+  it('does not include the target transfer itself in dependentTransfers', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const result = buildChainBreakPayload(completed, 0, 10, [])!;
+    expect(result.dependentTransfers).not.toContain('Player1 → Player2');
+  });
+
+  it('only includes downstream dependents when undoing from the middle of a chain', () => {
+    // index 0: 1→2 (upstream, untouched)
+    // index 1: 2→3 (target)
+    // index 2: 3→4 (downstream dependent)
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const result = buildChainBreakPayload(completed, 1, 10, [])!;
+    expect(result.dependentTransfers).toEqual(['Player3 → Player4']);
+    expect(result.dependentTransfers).not.toContain('Player1 → Player2');
+  });
+
+  it('includes cross-GW dependents in dependentTransfers with the GW prefix', () => {
+    const completed = [t(1, 2)];
+    const crossGwDeps: CrossGWDepEntry[] = [{
+      gwId: 11,
+      transferIndex: 0,
+      outPlayerId: 2,
+      inPlayerId: 3,
+      outPlayerName: 'Player2',
+      inPlayerName: 'Player3',
+    }];
+    const result = buildChainBreakPayload(completed, 0, 10, crossGwDeps)!;
+    expect(result).not.toBeNull();
+    expect(result.dependentTransfers).toContain('GW11: Player2 → Player3');
+  });
+
+  it('includes cross-GW dependents in crossGwDependents with gwId and transferIndex', () => {
+    const completed = [t(1, 2)];
+    const crossGwDeps: CrossGWDepEntry[] = [{
+      gwId: 11,
+      transferIndex: 2,
+      outPlayerId: 2,
+      inPlayerId: 3,
+      outPlayerName: 'Player2',
+      inPlayerName: 'Player3',
+    }];
+    const result = buildChainBreakPayload(completed, 0, 10, crossGwDeps)!;
+    expect(result.crossGwDependents).toEqual([{ gwId: 11, transferIndex: 2 }]);
+  });
+
+  it('includes cross-GW dependents in dependentPlayerPairs with the cross-GW gwId', () => {
+    const completed = [t(1, 2)];
+    const crossGwDeps: CrossGWDepEntry[] = [{
+      gwId: 11,
+      transferIndex: 0,
+      outPlayerId: 2,
+      inPlayerId: 3,
+      outPlayerName: 'Player2',
+      inPlayerName: 'Player3',
+    }];
+    const result = buildChainBreakPayload(completed, 0, 10, crossGwDeps)!;
+    expect(result.dependentPlayerPairs).toContainEqual({ outPlayerId: 2, inPlayerId: 3, depGwId: 11 });
+  });
+
+  it('returns null when the only cross-GW list is empty and there are no same-GW dependents', () => {
+    const completed = [t(1, 2), t(3, 4)];
+    expect(buildChainBreakPayload(completed, 0, 10, [])).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// executeUndoChainCheck — the function used by both
+// handleUndoSingleTransferWithCheck and handleUndoSingleTransferWithCheckForGW
+// to dispatch the branch decision to mocked/injectable callbacks.
+// Tests here call the real exported production function with vi.fn() mocks
+// and verify exactly which branch is taken and what payload is passed.
+// ---------------------------------------------------------------------------
+
+describe('executeUndoChainCheck — calls onChainDetected (dialog) when dependents exist', () => {
+  it('calls onChainDetected and NOT onDirectUndo when a same-GW dependent exists', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    expect(onChainDetected).toHaveBeenCalledOnce();
+    expect(onDirectUndo).not.toHaveBeenCalled();
+  });
+
+  it('passes the correct transferName in the payload to onChainDetected', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.transferName).toBe('Player1 → Player2');
+  });
+
+  it('passes the correct dependentTransfers in the payload to onChainDetected', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.dependentTransfers).toEqual(['Player2 → Player3']);
+  });
+
+  it('passes the correct dependentPlayerPairs in the payload to onChainDetected', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.dependentPlayerPairs).toEqual([{ outPlayerId: 2, inPlayerId: 3, depGwId: 10 }]);
+  });
+
+  it('passes gwId and transferIndex correctly in the payload', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 22, [], onChainDetected, onDirectUndo);
+
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.gwId).toBe(22);
+    expect(payload.transferIndex).toBe(0);
+  });
+
+  it('lists all dependents in the payload for a full chain (A→B, B→C, C→D)', () => {
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.dependentTransfers).toEqual(['Player2 → Player3', 'Player3 → Player4']);
+    expect(payload.dependentPlayerPairs).toHaveLength(2);
+  });
+
+  it('calls onChainDetected when a cross-GW dependent is present (no same-GW chain)', () => {
+    const completed = [t(1, 2)];
+    const crossGwDeps: CrossGWDepEntry[] = [{
+      gwId: 11,
+      transferIndex: 0,
+      outPlayerId: 2,
+      inPlayerId: 3,
+      outPlayerName: 'Player2',
+      inPlayerName: 'Player3',
+    }];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, crossGwDeps, onChainDetected, onDirectUndo);
+
+    expect(onChainDetected).toHaveBeenCalledOnce();
+    const payload = onChainDetected.mock.calls[0][0];
+    expect(payload.dependentTransfers).toContain('GW11: Player2 → Player3');
+    expect(payload.crossGwDependents).toEqual([{ gwId: 11, transferIndex: 0 }]);
+    expect(onDirectUndo).not.toHaveBeenCalled();
+  });
+});
+
+describe('executeUndoChainCheck — calls onDirectUndo when no dependents', () => {
+  it('calls onDirectUndo and NOT onChainDetected when transfers are unrelated', () => {
+    const completed = [t(1, 2), t(3, 4)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    expect(onDirectUndo).toHaveBeenCalledOnce();
+    expect(onChainDetected).not.toHaveBeenCalled();
+  });
+
+  it('calls onDirectUndo when the target is the last transfer (no downstream)', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 1, 10, [], onChainDetected, onDirectUndo);
+
+    expect(onDirectUndo).toHaveBeenCalledOnce();
+    expect(onChainDetected).not.toHaveBeenCalled();
+  });
+
+  it('calls onDirectUndo for a single-item list with no cross-GW deps', () => {
+    const completed = [t(5, 6)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 0, 10, [], onChainDetected, onDirectUndo);
+
+    expect(onDirectUndo).toHaveBeenCalledOnce();
+    expect(onChainDetected).not.toHaveBeenCalled();
+  });
+
+  it('calls onDirectUndo when mid-chain upstream transfer has no downstream', () => {
+    // index 0: 1→2 (unrelated), index 1: 3→4 (target, no downstream)
+    const completed = [t(1, 2), t(3, 4), t(5, 6)];
+    const onChainDetected = vi.fn<[ChainBreakPayload], void>();
+    const onDirectUndo = vi.fn();
+
+    executeUndoChainCheck(completed, 1, 10, [], onChainDetected, onDirectUndo);
+
+    expect(onDirectUndo).toHaveBeenCalledOnce();
+    expect(onChainDetected).not.toHaveBeenCalled();
   });
 });

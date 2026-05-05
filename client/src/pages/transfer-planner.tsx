@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
 import { extractManagerId } from "@/lib/manager-id-utils";
-import { computeCascadeIndicesToRemove, filterBrokenTransfersAfterCascade } from "@/lib/transfer-cascade";
+import { computeCascadeIndicesToRemove, executeUndoChainCheck, filterBrokenTransfersAfterCascade } from "@/lib/transfer-cascade";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
@@ -4334,38 +4334,15 @@ export default function TransferPlanner() {
   const handleUndoSingleTransferWithCheck = (transferIndex: number) => {
     const gwId = selectedGameweek!;
     const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
-    const transfer = currentCompleted[transferIndex];
-    if (!transfer) return;
+    if (!currentCompleted[transferIndex]) return;
 
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
-    const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
-    const dependentTransfers: string[] = dependentIndices.map(i => `${currentCompleted[i].outPlayerName} → ${currentCompleted[i].inPlayerName}`);
-    const dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[] = dependentIndices.map(i => ({
-      outPlayerId: currentCompleted[i].outPlayerId,
-      inPlayerId: currentCompleted[i].inPlayerId,
-      depGwId: gwId,
-    }));
-
     const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
-    const crossGwDependents: Array<{ gwId: number; transferIndex: number }> = [];
-    for (const dep of crossGwDeps) {
-      dependentTransfers.push(`GW${dep.gwId}: ${dep.outPlayerName} → ${dep.inPlayerName}`);
-      dependentPlayerPairs.push({ outPlayerId: dep.outPlayerId, inPlayerId: dep.inPlayerId, depGwId: dep.gwId });
-      crossGwDependents.push({ gwId: dep.gwId, transferIndex: dep.transferIndex });
-    }
-
-    if (dependentTransfers.length > 0) {
-      setChainBreakConfirmation({
-        transferIndex,
-        gwId,
-        transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
-        dependentTransfers,
-        dependentPlayerPairs,
-        crossGwDependents,
-      });
-    } else {
-      handleUndoSingleTransfer(transferIndex);
-    }
+    executeUndoChainCheck(
+      currentCompleted, transferIndex, gwId, crossGwDeps,
+      (payload) => setChainBreakConfirmation(payload),
+      () => handleUndoSingleTransfer(transferIndex)
+    );
   };
 
   // GW-aware single transfer undo — works for any gameweek, not just selectedGameweek
@@ -4724,38 +4701,15 @@ export default function TransferPlanner() {
   // GW-aware chain-break check before undoing a single transfer
   const handleUndoSingleTransferWithCheckForGW = (transferIndex: number, gwId: number) => {
     const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
-    const transfer = currentCompleted[transferIndex];
-    if (!transfer) return;
+    if (!currentCompleted[transferIndex]) return;
 
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
-    const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
-    const dependentTransfers: string[] = dependentIndices.map(i => `${currentCompleted[i].outPlayerName} → ${currentCompleted[i].inPlayerName}`);
-    const dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[] = dependentIndices.map(i => ({
-      outPlayerId: currentCompleted[i].outPlayerId,
-      inPlayerId: currentCompleted[i].inPlayerId,
-      depGwId: gwId,
-    }));
-
     const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
-    const crossGwDependents: Array<{ gwId: number; transferIndex: number }> = [];
-    for (const dep of crossGwDeps) {
-      dependentTransfers.push(`GW${dep.gwId}: ${dep.outPlayerName} → ${dep.inPlayerName}`);
-      dependentPlayerPairs.push({ outPlayerId: dep.outPlayerId, inPlayerId: dep.inPlayerId, depGwId: dep.gwId });
-      crossGwDependents.push({ gwId: dep.gwId, transferIndex: dep.transferIndex });
-    }
-
-    if (dependentTransfers.length > 0) {
-      setChainBreakConfirmation({
-        transferIndex,
-        gwId,
-        transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
-        dependentTransfers,
-        dependentPlayerPairs,
-        crossGwDependents,
-      });
-    } else {
-      handleUndoSingleTransferForGW(transferIndex, gwId);
-    }
+    executeUndoChainCheck(
+      currentCompleted, transferIndex, gwId, crossGwDeps,
+      (payload) => setChainBreakConfirmation(payload),
+      () => handleUndoSingleTransferForGW(transferIndex, gwId)
+    );
   };
 
   // Reset all transfers across all gameweeks
