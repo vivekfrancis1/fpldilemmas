@@ -14009,6 +14009,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Season Archive Admin Endpoints ──────────────────────────────────────────
+  // Backfill all per-fixture history for the current season from player_history_cache.
+  // Populates the extended columns (xG, xA, xGI, xGC, ICT, value, selected, transfers,
+  // match scores) that were absent in earlier gameweek cache runs.
+  app.post("/api/admin/season-archive/backfill-fixtures", requireAdmin, async (req, res) => {
+    try {
+      const season = (req.query.season as string) || "2024/25";
+      const { seasonArchiveService } = await import('./season-archive-service');
+      console.log(`[Admin] Starting season fixture history backfill for ${season}…`);
+      const result = await seasonArchiveService.backfillFixtureHistory(season);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error in season fixture backfill:", error);
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Snapshot all player data from bootstrap-static for the current season.
+  // Call this at/near season end before next-season element IDs change.
+  app.post("/api/admin/season-archive/snapshot-players", requireAdmin, async (req, res) => {
+    try {
+      const season = (req.query.season as string) || "2024/25";
+      const { seasonArchiveService } = await import('./season-archive-service');
+      console.log(`[Admin] Snapshotting season player data for ${season}…`);
+      const result = await seasonArchiveService.snapshotSeasonPlayers(season);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error in season player snapshot:", error);
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Status: row counts for both archive tables
+  app.get("/api/admin/season-archive/status", requireAdmin, async (req, res) => {
+    try {
+      const { seasonArchiveService } = await import('./season-archive-service');
+      const status = await seasonArchiveService.getArchiveStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting season archive status:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Query archived per-fixture data (for use in next-season projections)
+  app.get("/api/admin/season-archive/fixtures", requireAdmin, async (req, res) => {
+    try {
+      const { season, playerId, gameweek } = req.query;
+      let where = "WHERE 1=1";
+      const params: any[] = [];
+      let idx = 1;
+      if (season)   { where += ` AND season=$${idx++}`;   params.push(season); }
+      if (playerId) { where += ` AND player_id=$${idx++}`; params.push(Number(playerId)); }
+      if (gameweek) { where += ` AND gameweek=$${idx++}`; params.push(Number(gameweek)); }
+      const result = await pool.query(
+        `SELECT * FROM gameweek_player_data ${where} ORDER BY season, gameweek, player_id LIMIT 500`,
+        params
+      );
+      res.json({ rows: result.rows, count: result.rowCount });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Query archived season player snapshots
+  app.get("/api/admin/season-archive/snapshots", requireAdmin, async (req, res) => {
+    try {
+      const { season, playerId, elementType } = req.query;
+      let where = "WHERE 1=1";
+      const params: any[] = [];
+      let idx = 1;
+      if (season)      { where += ` AND season=$${idx++}`;       params.push(season); }
+      if (playerId)    { where += ` AND player_id=$${idx++}`;    params.push(Number(playerId)); }
+      if (elementType) { where += ` AND element_type=$${idx++}`; params.push(Number(elementType)); }
+      const result = await pool.query(
+        `SELECT * FROM season_player_snapshot ${where} ORDER BY season, total_points DESC LIMIT 1000`,
+        params
+      );
+      res.json({ rows: result.rows, count: result.rowCount });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   // FIXED: Missing cache regeneration endpoint that properly triggers centralized adjustments system  
   // TEMP: Authentication disabled for testing - bypass authentication to test adjustment system
   app.post("/api/admin/regenerate-projection-caches", /* requireAdmin, */ async (req, res) => {

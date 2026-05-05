@@ -1081,6 +1081,22 @@ export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
   clearances_blocks_interceptions: integer("clearances_blocks_interceptions").default(0),
   starts: integer("starts").default(0),
   
+  // Extended FPL fields: xStats, ICT index, price, ownership, match result
+  expected_goals: decimal("expected_goals", { precision: 6, scale: 3 }).default('0'),
+  expected_assists: decimal("expected_assists", { precision: 6, scale: 3 }).default('0'),
+  expected_goal_involvements: decimal("expected_goal_involvements", { precision: 6, scale: 3 }).default('0'),
+  expected_goals_conceded: decimal("expected_goals_conceded", { precision: 6, scale: 3 }).default('0'),
+  influence: decimal("influence", { precision: 7, scale: 1 }).default('0'),
+  creativity: decimal("creativity", { precision: 7, scale: 1 }).default('0'),
+  threat: decimal("threat", { precision: 7, scale: 1 }).default('0'),
+  ict_index: decimal("ict_index", { precision: 7, scale: 1 }).default('0'),
+  value: integer("value").default(0),      // price in FPL units (e.g. 65 = £6.5m)
+  selected: integer("selected").default(0), // selected_by count at time of GW
+  transfers_in: integer("transfers_in").default(0),
+  transfers_out: integer("transfers_out").default(0),
+  team_h_score: integer("team_h_score"),
+  team_a_score: integer("team_a_score"),
+  
   // Metadata
   wasHome: boolean("was_home").default(false),
   opponentTeam: integer("opponent_team"),
@@ -1093,6 +1109,70 @@ export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
   index("idx_gameweek_player_data_player_gw").on(table.playerId, table.gameweek),
   index("idx_gameweek_player_data_season_gw").on(table.season, table.gameweek),
 ]);
+
+// Season-end player snapshot: full bootstrap-static data per player per season
+// Preserved before next-season reset so it can drive future projection blending
+export const seasonPlayerSnapshot = pgTable("season_player_snapshot", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  playerId: integer("player_id").notNull(),
+  elementCode: integer("element_code"),   // FPL element_code — stable across seasons
+  webName: varchar("web_name", { length: 100 }),
+  firstName: varchar("first_name", { length: 100 }),
+  secondName: varchar("second_name", { length: 100 }),
+  teamId: integer("team_id"),
+  elementType: integer("element_type"),   // 1=GK 2=DEF 3=MID 4=FWD
+  // Season totals
+  totalPoints: integer("total_points").default(0),
+  minutes: integer("minutes").default(0),
+  goalsScored: integer("goals_scored").default(0),
+  assists: integer("assists").default(0),
+  cleanSheets: integer("clean_sheets").default(0),
+  goalsConceded: integer("goals_conceded").default(0),
+  ownGoals: integer("own_goals").default(0),
+  penaltiesSaved: integer("penalties_saved").default(0),
+  penaltiesMissed: integer("penalties_missed").default(0),
+  yellowCards: integer("yellow_cards").default(0),
+  redCards: integer("red_cards").default(0),
+  saves: integer("saves").default(0),
+  bonus: integer("bonus").default(0),
+  bps: integer("bps").default(0),
+  // ICT
+  influence: decimal("influence", { precision: 10, scale: 1 }).default('0'),
+  creativity: decimal("creativity", { precision: 10, scale: 1 }).default('0'),
+  threat: decimal("threat", { precision: 10, scale: 1 }).default('0'),
+  ictIndex: decimal("ict_index", { precision: 10, scale: 1 }).default('0'),
+  // xStats
+  expectedGoals: decimal("expected_goals", { precision: 7, scale: 2 }),
+  expectedAssists: decimal("expected_assists", { precision: 7, scale: 2 }),
+  expectedGoalInvolvements: decimal("expected_goal_involvements", { precision: 7, scale: 2 }),
+  expectedGoalsConceded: decimal("expected_goals_conceded", { precision: 7, scale: 2 }),
+  // Availability
+  starts: integer("starts").default(0),
+  // Pricing
+  nowCost: integer("now_cost").default(0),
+  startCost: integer("start_cost").default(0),
+  // Ownership / transfers
+  selectedByPercent: decimal("selected_by_percent", { precision: 6, scale: 2 }),
+  transfersInEvent: integer("transfers_in_event").default(0),
+  transfersOutEvent: integer("transfers_out_event").default(0),
+  // Form indicators
+  form: decimal("form", { precision: 5, scale: 2 }),
+  pointsPerGame: decimal("points_per_game", { precision: 5, scale: 2 }),
+  valueForm: decimal("value_form", { precision: 7, scale: 2 }),
+  valueSeason: decimal("value_season", { precision: 7, scale: 2 }),
+  snapshotDate: timestamp("snapshot_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("season_player_snapshot_season_player_unique").on(table.season, table.playerId),
+  index("idx_season_snapshot_season").on(table.season),
+  index("idx_season_snapshot_player").on(table.playerId, table.season),
+  index("idx_season_snapshot_team").on(table.teamId, table.season),
+  index("idx_season_snapshot_element_type").on(table.elementType, table.season),
+]);
+
+export type SeasonPlayerSnapshot = typeof seasonPlayerSnapshot.$inferSelect;
+export type InsertSeasonPlayerSnapshot = typeof seasonPlayerSnapshot.$inferInsert;
 
 export const gameweekUpdateLogTable = pgTable("gameweek_update_log", {
   id: serial("id").primaryKey(),
