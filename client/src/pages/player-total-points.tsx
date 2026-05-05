@@ -654,7 +654,7 @@ function createPlayerTotalPointsColumns(
   maxPointsPerGameweek: { [key: string]: number },
   teamNameToShortName: Map<string, string>,
   playerIdToWebName: Map<number, string>,
-  opponentMap?: Map<string, { opponent: string; opponentId: number; isHome: boolean }>,
+  opponentMap?: Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>,
   showOpponent?: boolean,
   excludedComponents?: Set<string>,
   myTeamPlayerIds?: Set<number>,
@@ -714,7 +714,7 @@ function createPlayerTotalPointsColumns(
           const isBGWCell = !availAdj && numFixtures === 0;
           const isDGWCell = !availAdj && numFixtures !== null && numFixtures > 1;
           
-          // Get opponent info for this player's team and gameweek
+          // Get opponent info for this player's team and gameweek (array for DGW support)
           const teamShort = (teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || '';
           const opponentInfo = opponentMap?.get(`${teamShort}-${gw}`);
           
@@ -744,9 +744,11 @@ function createPlayerTotalPointsColumns(
                   <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
                 )}
               </div>
-              {showOpponent && opponentInfo && (
+              {showOpponent && opponentInfo && opponentInfo.length > 0 && (
                 <div className="text-[9px] text-gray-500 mt-0.5">
-                  {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                  {opponentInfo.map((o, i) => (
+                    <span key={i}>{i > 0 && ' / '}{o.opponent} ({o.isHome ? 'H' : 'A'})</span>
+                  ))}
                 </div>
               )}
             </div>
@@ -1156,27 +1158,21 @@ export default function PlayerTotalPoints() {
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
       
       if (homeTeam && awayTeam && fixture.event) {
-        // Home team's opponent is away team
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
-        // Away team's opponent is home team
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
+        const homeKey = `${homeTeam.short_name}-${fixture.event}`;
+        const awayKey = `${awayTeam.short_name}-${fixture.event}`;
+        if (!map.has(homeKey)) map.set(homeKey, []);
+        map.get(homeKey)!.push({ opponent: awayTeam.short_name, opponentId: fixture.team_a, isHome: true });
+        if (!map.has(awayKey)) map.set(awayKey, []);
+        map.get(awayKey)!.push({ opponent: homeTeam.short_name, opponentId: fixture.team_h, isHome: false });
       }
     });
     
