@@ -1090,7 +1090,7 @@ export default function TransferPlanner() {
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
-  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; transferName: string; dependentTransfers: string[] } | null>(null);
+  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[] } | null>(null);
   
   // Delete all drafts confirmation dialog
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -4161,7 +4161,8 @@ export default function TransferPlanner() {
 
   // Check for chain breaks before undoing a single transfer; show confirmation if needed
   const handleUndoSingleTransferWithCheck = (transferIndex: number) => {
-    const currentCompleted = (gameweekTransfers[selectedGameweek!] || { completed: [] }).completed;
+    const gwId = selectedGameweek!;
+    const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
@@ -4173,11 +4174,131 @@ export default function TransferPlanner() {
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
         transferIndex,
+        gwId,
         transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
         dependentTransfers,
       });
     } else {
       handleUndoSingleTransfer(transferIndex);
+    }
+  };
+
+  // GW-aware single transfer undo — works for any gameweek, not just selectedGameweek
+  const handleUndoSingleTransferForGW = async (transferIndex: number, gwId: number) => {
+    if (!teamData?.picks) return;
+
+    const gwEvent = bootstrapData?.events.find(e => e.id === gwId);
+    if (gwEvent?.finished) return;
+
+    const currentGwData = gameweekTransfers[gwId] || { transferredOut: [], completed: [] };
+    const currentCompleted = currentGwData.completed;
+
+    if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
+
+    const removedTransfer = currentCompleted[transferIndex];
+
+    const baseline = getBaselineLineup(gwId);
+    let simLineup = [...baseline];
+    const slotMap: number[] = currentCompleted.map(transfer => {
+      const pick = simLineup.find(p => p.element === transfer.outPlayerId);
+      const slot = pick?.position ?? -1;
+      if (slot !== -1) {
+        simLineup = simLineup.map(p => {
+          if (p.element === transfer.outPlayerId) {
+            const inPlayer = getPlayerById(transfer.inPlayerId);
+            if (inPlayer) {
+              const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+              return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+            }
+          }
+          return p;
+        });
+      }
+      return slot;
+    });
+
+    const remainingCompleted = currentCompleted.filter((_, i) => i !== transferIndex);
+    const remainingSlots = slotMap.filter((_, i) => i !== transferIndex);
+
+    let newLineup = [...baseline];
+    remainingCompleted.forEach((transfer, i) => {
+      const slot = remainingSlots[i];
+      if (slot === -1) return;
+      const inPlayer = getPlayerById(transfer.inPlayerId);
+      if (!inPlayer) return;
+      const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+      newLineup = newLineup.map(p => {
+        if (p.position === slot) {
+          return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+        }
+        return p;
+      });
+    });
+
+    const appliedCompleted = remainingCompleted;
+    const newTransferredOut = currentGwData.transferredOut.filter(
+      t => t.playerId !== removedTransfer.inPlayerId
+    );
+
+    const pendingOutIds = new Set(newTransferredOut.map(t => t.playerId));
+    newLineup = newLineup.map(pick =>
+      pendingOutIds.has(pick.element) ? { ...pick, is_transferred_out: true } : pick
+    );
+
+    const optimizationKey = getOptimizationKey(activeDraft, gwId);
+    delete isLineupOptimizedRef.current[optimizationKey];
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[gwId];
+      return updated;
+    });
+
+    if (gwId === selectedGameweek) {
+      setManualLineup(newLineup);
+      setCompletedTransfers(appliedCompleted);
+      setTransferredOutPlayers(newTransferredOut);
+    }
+
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
+      [gwId]: {
+        transferredOut: newTransferredOut,
+        completed: appliedCompleted,
+      },
+    };
+    setGameweekTransfers(updatedGameweekTransfers);
+
+    toast({
+      title: "Transfer Undone",
+      description: `${removedTransfer.outPlayerName} → ${removedTransfer.inPlayerName} has been reversed.`,
+    });
+
+    if (activeDraft !== "Base") {
+      const draftToSave = activeDraft;
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
+    }
+  };
+
+  // GW-aware chain-break check before undoing a single transfer
+  const handleUndoSingleTransferWithCheckForGW = (transferIndex: number, gwId: number) => {
+    const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
+    const transfer = currentCompleted[transferIndex];
+    if (!transfer) return;
+
+    const dependentTransfers = currentCompleted
+      .slice(transferIndex + 1)
+      .filter(t => t.outPlayerId === transfer.inPlayerId)
+      .map(t => `${t.outPlayerName} → ${t.inPlayerName}`);
+
+    if (dependentTransfers.length > 0) {
+      setChainBreakConfirmation({
+        transferIndex,
+        gwId,
+        transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
+        dependentTransfers,
+      });
+    } else {
+      handleUndoSingleTransferForGW(transferIndex, gwId);
     }
   };
 
@@ -7004,6 +7125,37 @@ export default function TransferPlanner() {
                           });
                         })}
                       </div>
+                      {/* Per-transfer undo buttons — only for non-finished gameweeks with completed transfers */}
+                      {(() => {
+                        const gwEvent = bootstrapData?.events.find(e => e.id === gw.id);
+                        const isFinished = gwEvent?.finished ?? false;
+                        if (isFinished || gwTransfers.completed.length === 0) return null;
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                            {gwTransfers.completed.map((transfer, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between gap-1 text-[10px]"
+                                data-testid={`evolution-gw${gw.id}-transfer-row-${idx}`}
+                              >
+                                <span className="min-w-0 truncate">
+                                  <span className="font-semibold text-red-600">{transfer.outPlayerName}</span>
+                                  <span className="text-muted-foreground mx-0.5">→</span>
+                                  <span className="font-semibold text-green-600">{transfer.inPlayerName}</span>
+                                </span>
+                                <button
+                                  onClick={() => handleUndoSingleTransferWithCheckForGW(idx, gw.id)}
+                                  className="shrink-0 h-4 w-4 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 flex items-center justify-center text-red-600 dark:text-red-400 transition-colors"
+                                  aria-label={`Undo transfer: ${transfer.outPlayerName} → ${transfer.inPlayerName}`}
+                                  data-testid={`evolution-gw${gw.id}-undo-transfer-${idx}`}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -7401,7 +7553,7 @@ export default function TransferPlanner() {
             <AlertDialogAction
               onClick={() => {
                 if (chainBreakConfirmation) {
-                  handleUndoSingleTransfer(chainBreakConfirmation.transferIndex);
+                  handleUndoSingleTransferForGW(chainBreakConfirmation.transferIndex, chainBreakConfirmation.gwId);
                   setChainBreakConfirmation(null);
                 }
               }}
