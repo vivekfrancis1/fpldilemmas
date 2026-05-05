@@ -672,6 +672,12 @@ export default function PlayerSaves() {
                     </button>
                   );
                 })}
+                <button
+                  onClick={() => { const last = historyData?.lastFinishedGW || 24; setStartGameweek(1); setEndGameweek(last); }}
+                  className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                >
+                  All GWs
+                </button>
               </div>
             )}
 
