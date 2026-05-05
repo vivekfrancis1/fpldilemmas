@@ -8067,8 +8067,12 @@ export default function TransferPlanner() {
               </ul>
               <p className="text-sm text-muted-foreground">
                 <strong>Undo This &amp; Dependents</strong> will remove all {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers listed above.
-                <br />
-                <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} will remain but may produce unexpected results.
+                {chainBreakConfirmation && chainBreakConfirmation.crossGwDependents.length === 0 && (
+                  <>
+                    <br />
+                    <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} will remain but may produce unexpected results.
+                  </>
+                )}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -8085,25 +8089,27 @@ export default function TransferPlanner() {
             >
               Undo This & Dependents ({chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0})
             </AlertDialogAction>
-            <AlertDialogAction
-              onClick={() => {
-                if (chainBreakConfirmation) {
-                  const { transferIndex, gwId, dependentTransfers, dependentPlayerPairs } = chainBreakConfirmation;
-                  handleUndoSingleTransferForGW(transferIndex, gwId);
-                  const newBroken = dependentPlayerPairs.map(pair => ({ gwId: pair.depGwId, outPlayerId: pair.outPlayerId, inPlayerId: pair.inPlayerId }));
-                  setBrokenTransfers(prev => [...prev, ...newBroken]);
-                  toast({
-                    title: "Warning: Squad May Be Broken",
-                    description: `${dependentTransfers.length} dependent transfer${dependentTransfers.length > 1 ? "s" : ""} still reference${dependentTransfers.length === 1 ? "s" : ""} players that may no longer be in your squad. Review the highlighted transfer${dependentTransfers.length > 1 ? "s" : ""} below.`,
-                    variant: "destructive",
-                  });
-                  setChainBreakConfirmation(null);
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Undo Anyway
-            </AlertDialogAction>
+            {chainBreakConfirmation && chainBreakConfirmation.crossGwDependents.length === 0 && (
+              <AlertDialogAction
+                onClick={() => {
+                  if (chainBreakConfirmation) {
+                    const { transferIndex, gwId, dependentTransfers, dependentPlayerPairs } = chainBreakConfirmation;
+                    handleUndoSingleTransferForGW(transferIndex, gwId);
+                    const newBroken = dependentPlayerPairs.map(pair => ({ gwId: pair.depGwId, outPlayerId: pair.outPlayerId, inPlayerId: pair.inPlayerId }));
+                    setBrokenTransfers(prev => [...prev, ...newBroken]);
+                    toast({
+                      title: "Warning: Squad May Be Broken",
+                      description: `${dependentTransfers.length} dependent transfer${dependentTransfers.length > 1 ? "s" : ""} still reference${dependentTransfers.length === 1 ? "s" : ""} players that may no longer be in your squad. Review the highlighted transfer${dependentTransfers.length > 1 ? "s" : ""} below.`,
+                      variant: "destructive",
+                    });
+                    setChainBreakConfirmation(null);
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Undo Anyway
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
