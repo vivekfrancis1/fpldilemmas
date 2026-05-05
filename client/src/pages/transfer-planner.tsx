@@ -4048,6 +4048,50 @@ export default function TransferPlanner() {
     }
   };
 
+  // Reset all transfers for a specific gameweek (used from Team Evolution "Undo All" button)
+  const handleResetTransfersForGW = async (gwId: number) => {
+    if (!teamData?.picks) return;
+
+    // Guard: refuse to undo transfers in a finished/past gameweek
+    const gwEvent = bootstrapData?.events.find(e => e.id === gwId);
+    if (gwEvent?.finished) return;
+
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
+      [gwId]: {
+        transferredOut: [],
+        completed: []
+      }
+    };
+    setGameweekTransfers(updatedGameweekTransfers);
+
+    // If this is also the currently selected gameweek, keep the in-memory state in sync
+    if (gwId === selectedGameweek) {
+      const baseline = getBaselineLineup(gwId);
+      setManualLineup(baseline);
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
+    }
+
+    // Clear optimized lineup for this gameweek
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[gwId];
+      return updated;
+    });
+
+    toast({
+      title: "Transfers Reset",
+      description: `All transfers for GW${gwId} have been undone.`
+    });
+
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      const draftToSave = activeDraft;
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
+    }
+  };
+
   // Undo a single completed transfer by index within the current gameweek, leaving all others intact
   const handleUndoSingleTransfer = async (transferIndex: number) => {
     if (!teamData?.picks || !selectedGameweek) return;
@@ -7229,19 +7273,35 @@ export default function TransferPlanner() {
                   const captain = finalLineup.find(p => p.is_captain);
                   const viceCaptain = finalLineup.find(p => p.is_vice_captain);
                   
+                  const gwEventForHeader = bootstrapData?.events.find(e => e.id === gw.id);
+                  const isGwFinished = gwEventForHeader?.finished ?? false;
+                  const hasCompletedTransfers = gwTransfers.completed.length > 0;
+
                   return (
                     <div key={gw.id} className="flex-shrink-0 w-48 rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-900 p-3">
-                      <div className="text-center font-bold mb-2 flex items-center justify-center gap-1">
-                        <span>GW{gw.id}</span>
-                        {plannedChip && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Sparkles className="h-3 w-3 text-amber-600" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">{getChipDisplayName(plannedChip)} {getChipNumber(plannedChip)}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                      <div className="font-bold mb-2 flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1">
+                          <span>GW{gw.id}</span>
+                          {plannedChip && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Sparkles className="h-3 w-3 text-amber-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">{getChipDisplayName(plannedChip)} {getChipNumber(plannedChip)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        {!isGwFinished && hasCompletedTransfers && (
+                          <button
+                            onClick={() => handleResetTransfersForGW(gw.id)}
+                            className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-600 dark:text-red-400 font-medium transition-colors leading-tight"
+                            aria-label={`Undo all transfers for GW${gw.id}`}
+                            data-testid={`evolution-gw${gw.id}-undo-all`}
+                          >
+                            Undo All
+                          </button>
                         )}
                       </div>
                       <div className="space-y-0.5">
