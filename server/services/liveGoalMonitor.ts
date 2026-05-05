@@ -105,7 +105,7 @@ export class LiveGoalMonitor {
 
   start() {
     console.log('⚽ Live match monitor starting...');
-    console.log(`📋 Will tweet all goals regardless of ownership (ownership threshold of ${this.OWNERSHIP_THRESHOLD}% applies to red cards only)`);
+    console.log(`📋 Will tweet all goals and red cards regardless of ownership`);
     console.log(`📋 Tracking: goals, assists, red cards, DC, bonus points`);
     console.log(`📋 Bonus points monitored for ${this.BONUS_MONITOR_HOURS} hours after match ends`);
 
@@ -530,17 +530,15 @@ export class LiveGoalMonitor {
       const player = this.bootstrapPlayers.get(playerId);
       if (!player) continue;
       const ownership = parseFloat(player.selected_by_percent);
-      if (ownership > this.OWNERSHIP_THRESHOLD) {
-        const redCardCtx: MatchContext = {
-          homeTeamName,
-          awayTeamName,
-          homeScore: liveHomeScore,
-          awayScore: liveAwayScore,
-          minute: fixture.minutes ?? '?',
-          fixtureId,
-        };
-        await this.postEventTweet(this.formatRedCardTweet(player.web_name, ownership, redCardCtx));
-      }
+      const redCardCtx: MatchContext = {
+        homeTeamName,
+        awayTeamName,
+        homeScore: liveHomeScore,
+        awayScore: liveAwayScore,
+        minute: fixture.minutes ?? '?',
+        fixtureId,
+      };
+      await this.postEventTweet(this.formatRedCardTweet(player.web_name, ownership, redCardCtx));
     }
 
     // Update tracked state with our computed live scores (not stale fixture cache scores)
