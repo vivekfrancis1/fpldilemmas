@@ -19056,14 +19056,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const cbitGWRangeCache = new Map<string, any>();
   const minutesGWRangeCache = new Map<string, any>();
   const savePointsGWRangeCache = new Map<string, any>();
-  FPLScoringCacheService.onRefresh(() => {
+
+  function transformSavePointsData(rawData: any[], sgw: number | null, egw: number | null): { [playerId: number]: { gameweeks: any[], seasonTotal: number } } {
+    const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
+    rawData.forEach(player => {
+      const allGWs = Object.entries(player.savePoints).map(([gw, points]) => ({
+        gameweek: parseInt(gw),
+        saves: player.saves[gw] || 0,
+        savePoints: points as number,
+        penaltySaves: player.penaltySaves[gw] || 0
+      }));
+      const filteredGWs = (sgw !== null && egw !== null)
+        ? allGWs.filter(gw => gw.gameweek >= sgw && gw.gameweek <= egw)
+        : allGWs;
+      const total = (sgw !== null && egw !== null)
+        ? filteredGWs.reduce((sum, gw) => sum + (gw.savePoints || 0), 0)
+        : player.totalSavePoints;
+      transformedData[player.playerId] = { gameweeks: filteredGWs, seasonTotal: total };
+    });
+    return transformedData;
+  }
+
+  async function prewarmScoringCaches() {
+    try {
+      let cbitData = fplScoringCacheService.getCachedPlayerCbitPoints();
+      if (Object.keys(cbitData).length === 0) {
+        console.log("🔄 CBIT in-memory cache empty — populating from DB for pre-warm...");
+        await fplScoringCacheService.cachePlayerCbitPoints();
+        cbitData = fplScoringCacheService.getCachedPlayerCbitPoints();
+      }
+      if (Object.keys(cbitData).length > 0) {
+        cbitGWRangeCache.set("all", cbitData);
+        console.log("✅ Pre-warmed CBIT 'all' cache");
+      }
+
+      let minutesData = fplScoringCacheService.getCachedPlayerMinutesPoints();
+      if (Object.keys(minutesData).length === 0) {
+        console.log("🔄 Minutes in-memory cache empty — populating from DB for pre-warm...");
+        await fplScoringCacheService.cachePlayerMinutesPoints();
+        minutesData = fplScoringCacheService.getCachedPlayerMinutesPoints();
+      }
+      if (Object.keys(minutesData).length > 0) {
+        minutesGWRangeCache.set("all", minutesData);
+        console.log("✅ Pre-warmed minutes 'all' cache");
+      }
+
+      let saveData = fplScoringCacheService.getCachedPlayerSavePoints();
+      if (saveData.length === 0) {
+        console.log("🔄 Save-points in-memory cache empty — populating from DB for pre-warm...");
+        await fplScoringCacheService.cachePlayerSavePoints();
+        saveData = fplScoringCacheService.getCachedPlayerSavePoints();
+      }
+      if (saveData.length > 0) {
+        savePointsGWRangeCache.set("all", transformSavePointsData(saveData, null, null));
+        console.log("✅ Pre-warmed save-points 'all' cache");
+      }
+    } catch (err) {
+      console.warn("⚠️ Failed to pre-warm scoring caches:", err);
+    }
+  }
+
+  let startupPrewarmPromise: Promise<void> | null = null;
+
+  FPLScoringCacheService.onRefresh(async () => {
     cbitGWRangeCache.clear();
     minutesGWRangeCache.clear();
     savePointsGWRangeCache.clear();
+    await prewarmScoringCaches();
+  });
+
+  startupPrewarmPromise = prewarmScoringCaches().finally(() => {
+    startupPrewarmPromise = null;
   });
 
   app.get("/api/player-cbit-points", async (req, res) => {
     try {
+      if (startupPrewarmPromise) await startupPrewarmPromise;
       const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
       const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
       if (startGW !== null && endGW !== null) {
@@ -19122,6 +19190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/player-minutes-points", async (req, res) => {
     try {
+      if (startupPrewarmPromise) await startupPrewarmPromise;
       const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
       const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
       if (startGW !== null && endGW !== null) {
@@ -19180,6 +19249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/player-save-points", async (req, res) => {
     try {
+      if (startupPrewarmPromise) await startupPrewarmPromise;
       const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
       const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
       if (startGW !== null && endGW !== null) {
@@ -19195,26 +19265,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Serving player save points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerSavePoints();
 
-      const transformSavePoints = (rawData: any[], sgw: number | null, egw: number | null) => {
-        const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
-        rawData.forEach(player => {
-          const allGWs = Object.entries(player.savePoints).map(([gw, points]) => ({
-            gameweek: parseInt(gw),
-            saves: player.saves[gw] || 0,
-            savePoints: points as number,
-            penaltySaves: player.penaltySaves[gw] || 0
-          }));
-          const filteredGWs = (sgw !== null && egw !== null)
-            ? allGWs.filter(gw => gw.gameweek >= sgw && gw.gameweek <= egw)
-            : allGWs;
-          const total = (sgw !== null && egw !== null)
-            ? filteredGWs.reduce((sum, gw) => sum + (gw.savePoints || 0), 0)
-            : player.totalSavePoints;
-          transformedData[player.playerId] = { gameweeks: filteredGWs, seasonTotal: total };
-        });
-        return transformedData;
-      };
-      
       // If cache is empty, try to populate it immediately
       if (cachedData.length === 0) {
         console.log("🔄 Save points cache is empty - attempting immediate population...");
@@ -19224,7 +19274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (refreshedData.length > 0) {
             console.log("✅ Successfully populated save points cache");
-            const result = transformSavePoints(refreshedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
+            const result = transformSavePointsData(refreshedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
             savePointsGWRangeCache.set(cacheKey, result);
             res.json(result);
           } else {
@@ -19236,7 +19286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({});
         }
       } else {
-        const result = transformSavePoints(cachedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
+        const result = transformSavePointsData(cachedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
         savePointsGWRangeCache.set(cacheKey, result);
         res.json(result);
       }

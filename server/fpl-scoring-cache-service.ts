@@ -7,19 +7,19 @@ import { CURRENT_SEASON } from "@shared/schema";
 export class FPLScoringCacheService {
   private static updateLock = false;
   static lastRunAt: Date | null = null;
-  private static refreshCallbacks: Array<() => void> = [];
+  private static refreshCallbacks: Array<() => Promise<void>> = [];
 
   private static cbitCache: Record<string, any> = {};
   private static minutesCache: Record<string, any> = {};
   private static savePointsCache: any[] = [];
 
-  static onRefresh(cb: () => void): void {
+  static onRefresh(cb: () => Promise<void>): void {
     FPLScoringCacheService.refreshCallbacks.push(cb);
   }
 
-  private static fireRefreshCallbacks(): void {
+  private static async fireRefreshCallbacks(): Promise<void> {
     for (const cb of FPLScoringCacheService.refreshCallbacks) {
-      try { cb(); } catch (err) {
+      try { await cb(); } catch (err) {
         console.warn("⚠️ GW-range cache invalidation callback failed:", err);
       }
     }
@@ -32,9 +32,9 @@ export class FPLScoringCacheService {
    * the GW-range caches (cbitGWRangeCache, minutesGWRangeCache,
    * savePointsGWRangeCache) are immediately invalidated.
    */
-  static notifyDataUpdated(): void {
+  static async notifyDataUpdated(): Promise<void> {
     console.log("🗑️ Invalidating GW-range caches after gameweek data ingestion");
-    FPLScoringCacheService.fireRefreshCallbacks();
+    await FPLScoringCacheService.fireRefreshCallbacks();
   }
 
   async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
@@ -99,7 +99,7 @@ export class FPLScoringCacheService {
       console.log(`🔥 Scoring sub-caches pre-warm: ${prewarmSucceeded}/${prewarmLabels.length} succeeded (CBIT, minutes-points, save-points)`);
 
       FPLScoringCacheService.lastRunAt = new Date();
-      FPLScoringCacheService.fireRefreshCallbacks();
+      await FPLScoringCacheService.fireRefreshCallbacks();
       console.log("✅ FPL scoring component cache update completed successfully — memory cache cleared");
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);
