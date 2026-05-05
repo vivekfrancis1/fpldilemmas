@@ -186,6 +186,127 @@ describe('handleUndoSingleTransferWithCheckForGW BFS (dependency-finder for "Und
   });
 });
 
+// Mirrors the logic inside handleUndoSingleTransferWithCheck (the non-GW variant).
+// That function reads currentCompleted from gameweekTransfers[selectedGameweek],
+// then delegates to computeCascadeIndicesToRemove for dependency discovery.
+// The dependency-building code is identical to the GW variant — both paths are
+// exercised here independently to confirm the non-GW path behaves the same.
+function buildDependentInfoNonGW(
+  completed: CompletedTransfer[],
+  transferIndex: number
+): {
+  dependentIndices: number[];
+  dependentTransfers: string[];
+  dependentPlayerPairs: { outPlayerId: number; inPlayerId: number }[];
+} {
+  // Replicates lines 4258-4267 of transfer-planner.tsx (handleUndoSingleTransferWithCheck)
+  const cascadeIndices = computeCascadeIndicesToRemove(completed, transferIndex);
+  const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
+  const dependentTransfers = dependentIndices.map(i => {
+    const tr = completed[i];
+    return `${tr.outPlayerName} → ${tr.inPlayerName}`;
+  });
+  const dependentPlayerPairs = dependentIndices.map(i => ({
+    outPlayerId: completed[i].outPlayerId,
+    inPlayerId: completed[i].inPlayerId,
+  }));
+  return { dependentIndices, dependentTransfers, dependentPlayerPairs };
+}
+
+describe('handleUndoSingleTransferWithCheck BFS (non-GW variant dependency-finder for "Undo Anyway" dialog)', () => {
+  it('returns empty dependents when there are no downstream transfers', () => {
+    const completed = [t(1, 2), t(3, 4)];
+    const { dependentIndices, dependentTransfers, dependentPlayerPairs } =
+      buildDependentInfoNonGW(completed, 0);
+    expect(dependentIndices).toEqual([]);
+    expect(dependentTransfers).toEqual([]);
+    expect(dependentPlayerPairs).toEqual([]);
+  });
+
+  it('returns the single direct dependent when one transfer uses the undone inPlayer', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const { dependentIndices, dependentTransfers, dependentPlayerPairs } =
+      buildDependentInfoNonGW(completed, 0);
+    expect(dependentIndices).toEqual([1]);
+    expect(dependentTransfers).toEqual(['Player2 → Player3']);
+    expect(dependentPlayerPairs).toEqual([{ outPlayerId: 2, inPlayerId: 3 }]);
+  });
+
+  it('returns all downstream dependents for a full chain (A→B, B→C, C→D)', () => {
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const { dependentIndices, dependentTransfers, dependentPlayerPairs } =
+      buildDependentInfoNonGW(completed, 0);
+    expect(dependentIndices).toEqual([1, 2]);
+    expect(dependentTransfers).toEqual(['Player2 → Player3', 'Player3 → Player4']);
+    expect(dependentPlayerPairs).toEqual([
+      { outPlayerId: 2, inPlayerId: 3 },
+      { outPlayerId: 3, inPlayerId: 4 },
+    ]);
+  });
+
+  it('does not include the target transfer itself in dependentIndices', () => {
+    const completed = [t(1, 2), t(2, 3)];
+    const { dependentIndices } = buildDependentInfoNonGW(completed, 0);
+    expect(dependentIndices).not.toContain(0);
+  });
+
+  it('does not include transfers earlier than the target even if their outPlayer matches', () => {
+    // index 0: 5→6 (unrelated, earlier)
+    // index 1: 1→2 (target)
+    // index 2: 2→3 (dependent)
+    const completed = [t(5, 6), t(1, 2), t(2, 3)];
+    const { dependentIndices } = buildDependentInfoNonGW(completed, 1);
+    expect(dependentIndices).toEqual([2]);
+    expect(dependentIndices).not.toContain(0);
+  });
+
+  it('finds dependents for a branching chain where two transfers share the same outPlayer', () => {
+    // index 0: 1→2 (target)
+    // index 1: 2→3 (dependent)
+    // index 2: 2→4 (also dependent — same outPlayer as index 1)
+    const completed = [t(1, 2), t(2, 3), t(2, 4)];
+    const { dependentIndices, dependentPlayerPairs } = buildDependentInfoNonGW(completed, 0);
+    expect(dependentIndices).toContain(1);
+    expect(dependentIndices).toContain(2);
+    expect(dependentPlayerPairs).toContainEqual({ outPlayerId: 2, inPlayerId: 3 });
+    expect(dependentPlayerPairs).toContainEqual({ outPlayerId: 2, inPlayerId: 4 });
+  });
+
+  it('only returns downstream dependents when undoing from the middle of a chain', () => {
+    // index 0: 1→2 (not the target — should be absent)
+    // index 1: 2→3 (target)
+    // index 2: 3→4 (dependent)
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const { dependentIndices, dependentTransfers, dependentPlayerPairs } =
+      buildDependentInfoNonGW(completed, 1);
+    expect(dependentIndices).toEqual([2]);
+    expect(dependentTransfers).toEqual(['Player3 → Player4']);
+    expect(dependentPlayerPairs).toEqual([{ outPlayerId: 3, inPlayerId: 4 }]);
+    expect(dependentIndices).not.toContain(0);
+  });
+
+  it('returns empty dependents when the target is the last transfer', () => {
+    const completed = [t(1, 2), t(2, 3), t(3, 4)];
+    const { dependentIndices } = buildDependentInfoNonGW(completed, 2);
+    expect(dependentIndices).toEqual([]);
+  });
+
+  it('produces dependentPlayerPairs that match broken-transfer entries created by "Undo Anyway"', () => {
+    // Simulates the case where "Undo Anyway" was used: the pairs discovered here
+    // are the same pairs stored as BrokenTransferEntry objects.
+    const completed = [t(10, 20), t(20, 30), t(30, 40)];
+    const { dependentPlayerPairs } = buildDependentInfoNonGW(completed, 0);
+    const expectedBrokenEntries: BrokenTransferEntry[] = [
+      { gwId: 5, outPlayerId: 20, inPlayerId: 30 },
+      { gwId: 5, outPlayerId: 30, inPlayerId: 40 },
+    ];
+    dependentPlayerPairs.forEach((pair, idx) => {
+      expect(pair.outPlayerId).toBe(expectedBrokenEntries[idx].outPlayerId);
+      expect(pair.inPlayerId).toBe(expectedBrokenEntries[idx].inPlayerId);
+    });
+  });
+});
+
 describe('filterBrokenTransfersAfterCascade', () => {
   const GW = 30;
 
