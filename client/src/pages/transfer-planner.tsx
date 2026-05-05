@@ -4051,18 +4051,28 @@ export default function TransferPlanner() {
   const handleUndoSingleTransfer = async (transferIndex: number) => {
     if (!teamData?.picks || !selectedGameweek) return;
 
+    // Guard: refuse to undo transfers in a finished/past gameweek
+    const gwEvent = bootstrapData?.events.find(e => e.id === selectedGameweek);
+    if (gwEvent?.finished) return;
+
     const currentGwData = gameweekTransfers[selectedGameweek] || { transferredOut: [], completed: [] };
     const currentCompleted = currentGwData.completed;
 
     if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
 
     const removedTransfer = currentCompleted[transferIndex];
-    const newCompleted = currentCompleted.filter((_, i) => i !== transferIndex);
+    const candidateCompleted = currentCompleted.filter((_, i) => i !== transferIndex);
 
-    // Re-derive lineup: start from baseline (prior GW transfers applied), then replay remaining transfers
+    // Re-derive lineup: start from baseline (prior GW transfers applied), then replay remaining transfers.
+    // Only keep transfers that actually apply (outPlayerId found in current lineup at replay time),
+    // so chained transfers whose predecessor was removed are automatically discarded.
     let newLineup = getBaselineLineup(selectedGameweek);
+    const appliedCompleted: CompletedTransfer[] = [];
 
-    newCompleted.forEach(transfer => {
+    candidateCompleted.forEach(transfer => {
+      const found = newLineup.some(pick => pick.element === transfer.outPlayerId);
+      if (!found) return; // chain is broken — skip and discard this transfer
+
       newLineup = newLineup.map(pick => {
         if (pick.element === transfer.outPlayerId) {
           const inPlayer = getPlayerById(transfer.inPlayerId);
@@ -4079,22 +4089,40 @@ export default function TransferPlanner() {
         }
         return pick;
       });
+      appliedCompleted.push(transfer);
     });
 
     // Remove any pending transfer-out slot whose player was brought in by the removed transfer
+    // or by any transfer that was also discarded due to chain breakage
+    const discardedInPlayerIds = new Set(
+      candidateCompleted
+        .filter(t => !appliedCompleted.includes(t))
+        .map(t => t.inPlayerId)
+    );
+    discardedInPlayerIds.add(removedTransfer.inPlayerId);
+
     const newTransferredOut = currentGwData.transferredOut.filter(
-      t => t.playerId !== removedTransfer.inPlayerId
+      t => !discardedInPlayerIds.has(t.playerId)
     );
 
+    // Clear any optimized lineup for this gameweek so the undo takes effect immediately
+    const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+    delete isLineupOptimizedRef.current[optimizationKey];
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[selectedGameweek];
+      return updated;
+    });
+
     setManualLineup(newLineup);
-    setCompletedTransfers(newCompleted);
+    setCompletedTransfers(appliedCompleted);
     setTransferredOutPlayers(newTransferredOut);
 
     const updatedGameweekTransfers = {
       ...gameweekTransfers,
       [selectedGameweek]: {
         transferredOut: newTransferredOut,
-        completed: newCompleted,
+        completed: appliedCompleted,
       },
     };
     setGameweekTransfers(updatedGameweekTransfers);
@@ -5892,39 +5920,44 @@ export default function TransferPlanner() {
                 </div>
 
                 {/* Per-transfer undo list — shows each completed transfer for this GW with an individual undo button */}
-                {completedTransfers.length > 0 && (
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                      GW{selectedGameweek} Transfers
-                    </div>
-                    <div className="space-y-1.5">
-                      {completedTransfers.map((transfer, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md bg-white dark:bg-gray-900 border text-xs"
-                          data-testid={`completed-transfer-row-${idx}`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-semibold text-red-600 truncate">{transfer.outPlayerName}</span>
-                            <span className="text-muted-foreground shrink-0">→</span>
-                            <span className="font-semibold text-green-600 truncate">{transfer.inPlayerName}</span>
-                            <span className="text-muted-foreground shrink-0 hidden sm:inline">
-                              £{transfer.sellingPrice.toFixed(1)}m / £{transfer.buyingPrice.toFixed(1)}m
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleUndoSingleTransfer(idx)}
-                            className="shrink-0 h-6 w-6 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 flex items-center justify-center text-red-600 dark:text-red-400 transition-colors"
-                            aria-label={`Undo transfer: ${transfer.outPlayerName} → ${transfer.inPlayerName}`}
-                            data-testid={`button-undo-transfer-${idx}`}
+                {completedTransfers.length > 0 && (() => {
+                  const isGWFinished = bootstrapData?.events.find(e => e.id === selectedGameweek)?.finished ?? false;
+                  return (
+                    <div className="mb-4">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                        GW{selectedGameweek} Transfers
+                      </div>
+                      <div className="space-y-1.5">
+                        {completedTransfers.map((transfer, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md bg-white dark:bg-gray-900 border text-xs"
+                            data-testid={`completed-transfer-row-${idx}`}
                           >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-red-600 truncate">{transfer.outPlayerName}</span>
+                              <span className="text-muted-foreground shrink-0">→</span>
+                              <span className="font-semibold text-green-600 truncate">{transfer.inPlayerName}</span>
+                              <span className="text-muted-foreground shrink-0 hidden sm:inline">
+                                £{transfer.sellingPrice.toFixed(1)}m / £{transfer.buyingPrice.toFixed(1)}m
+                              </span>
+                            </div>
+                            {!isGWFinished && (
+                              <button
+                                onClick={() => handleUndoSingleTransfer(idx)}
+                                className="shrink-0 h-6 w-6 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 flex items-center justify-center text-red-600 dark:text-red-400 transition-colors"
+                                aria-label={`Undo transfer: ${transfer.outPlayerName} → ${transfer.inPlayerName}`}
+                                data-testid={`button-undo-transfer-${idx}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
               {/* Formation */}
