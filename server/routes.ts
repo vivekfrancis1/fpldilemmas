@@ -19216,6 +19216,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const venue = (req.query.venue as string) || 'all';
       const requestedSeason = (req.query.season as string) || '2025/26';
+      const startGWParam = req.query.startGW as string | undefined;
+      const endGWParam = req.query.endGW as string | undefined;
+
+      // Reject partial GW range — both params must be supplied together
+      if ((startGWParam == null) !== (endGWParam == null)) {
+        return res.status(400).json({ error: "Both startGW and endGW must be provided together" });
+      }
+
+      const hasGWFilter = startGWParam != null && endGWParam != null;
+      const startGW = hasGWFilter ? parseInt(startGWParam!) : null;
+      const endGW = hasGWFilter ? parseInt(endGWParam!) : null;
       
       // Map 'current' to actual season '2025/26'
       const season = requestedSeason === 'current' ? '2025/26' : requestedSeason;
@@ -19223,9 +19234,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!['all', 'home', 'away'].includes(venue)) {
         return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
       }
+
+      if (hasGWFilter && (isNaN(startGW!) || isNaN(endGW!) || startGW! > endGW!)) {
+        return res.status(400).json({ error: "Invalid gameweek range" });
+      }
       
-      console.log(`📊 Serving player venue statistics for ${venue} matches (${season})`);
+      console.log(`📊 Serving player venue statistics for ${venue} matches (${season})${hasGWFilter ? ` GW${startGW}-${endGW}` : ''}`);
+
+      // When a GW range is active, query gameweek_player_data directly so the
+      // venue filter and GW filter are applied together (player_venue_splits is
+      // season-wide pre-aggregated data and cannot be GW-filtered).
+      if (hasGWFilter) {
+        const venueCondition = venue === 'all' ? '' : ` AND was_home = ${venue === 'home'}`;
+        const gwFilteredResult = await pool.query(`
+          SELECT
+            player_id,
+            COUNT(CASE WHEN minutes > 0 THEN 1 END)::int AS matches,
+            COALESCE(SUM(starts), 0)::int AS starts,
+            COALESCE(SUM(minutes), 0)::int AS minutes,
+            COALESCE(SUM(total_points), 0)::int AS total_points,
+            COALESCE(SUM(goals_scored), 0)::int AS goals_scored,
+            COALESCE(SUM(assists), 0)::int AS assists,
+            COALESCE(SUM(clean_sheets), 0)::int AS clean_sheets,
+            COALESCE(SUM(goals_conceded), 0)::int AS goals_conceded,
+            COALESCE(SUM(own_goals), 0)::int AS own_goals,
+            COALESCE(SUM(penalties_saved), 0)::int AS penalties_saved,
+            COALESCE(SUM(penalties_missed), 0)::int AS penalties_missed,
+            COALESCE(SUM(yellow_cards), 0)::int AS yellow_cards,
+            COALESCE(SUM(red_cards), 0)::int AS red_cards,
+            COALESCE(SUM(saves), 0)::int AS saves,
+            COALESCE(SUM(bonus), 0)::int AS bonus,
+            COALESCE(SUM(bps), 0)::int AS bps,
+            COALESCE(SUM(tackles), 0)::int AS tackles,
+            COALESCE(SUM(recoveries), 0)::int AS recoveries,
+            COALESCE(SUM(clearances_blocks_interceptions), 0)::int AS clearances_blocks_interceptions,
+            COALESCE(SUM(defensive_contribution), 0)::int AS defensive_contribution,
+            COALESCE(SUM(CASE WHEN defensive_contribution >= 10 THEN 2 ELSE 0 END), 0)::int AS cbit_points,
+            COALESCE(SUM(CASE WHEN saves >= 3 THEN (saves / 3)::int ELSE 0 END), 0)::int AS save_points,
+            COALESCE(SUM(CASE WHEN minutes >= 60 THEN 2 WHEN minutes > 0 THEN 1 ELSE 0 END), 0)::int AS minutes_points
+          FROM gameweek_player_data
+          WHERE season = $1 AND gameweek >= $2 AND gameweek <= $3${venueCondition}
+          GROUP BY player_id
+        `, [season, startGW, endGW]);
+
+        const transformedData: { [playerId: string]: any } = {};
+        gwFilteredResult.rows.forEach((row: any) => {
+          transformedData[row.player_id.toString()] = {
+            playerId: row.player_id,
+            matches: row.matches || 0,
+            starts: row.starts || 0,
+            minutes: row.minutes || 0,
+            totalPoints: row.total_points || 0,
+            goalsScored: row.goals_scored || 0,
+            assists: row.assists || 0,
+            cleanSheets: row.clean_sheets || 0,
+            goalsConceded: row.goals_conceded || 0,
+            ownGoals: row.own_goals || 0,
+            penaltiesSaved: row.penalties_saved || 0,
+            penaltiesMissed: row.penalties_missed || 0,
+            yellowCards: row.yellow_cards || 0,
+            redCards: row.red_cards || 0,
+            saves: row.saves || 0,
+            bonus: row.bonus || 0,
+            bps: row.bps || 0,
+            tackles: row.tackles || 0,
+            recoveries: row.recoveries || 0,
+            clearancesBlocksInterceptions: row.clearances_blocks_interceptions || 0,
+            defensiveContribution: row.defensive_contribution || 0,
+            cbitPoints: row.cbit_points || 0,
+            savePoints: row.save_points || 0,
+            minutesPoints: row.minutes_points || 0
+          };
+        });
+        return res.json(transformedData);
+      }
       
+      // No GW filter — serve from the pre-aggregated player_venue_splits table
       // Import the venue split aggregator
       const { venueSplitAggregator } = await import("./venue-split-aggregator");
       

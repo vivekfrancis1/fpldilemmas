@@ -346,6 +346,11 @@ export default function PlayerStatsTable({
   const hasGWFilter = !!filteredPlayers && startGameweek != null && endGameweek != null;
   const gwFilterSuffix = hasGWFilter ? `?startGW=${startGameweek}&endGW=${endGameweek}` : '';
 
+  // For venue stats, base the GW filter solely on the selected range — not on
+  // whether filteredPlayers has already loaded. This prevents a transient window
+  // where the venue stats query fires without GW params while filtered data loads.
+  const venueHasGWFilter = startGameweek != null && endGameweek != null;
+
   // Fetch CBIT points data from the API
   const { data: cbitPointsData, isLoading: isCbitPointsLoading, isError: isCbitPointsError } = useQuery<CbitPointsData>({
     queryKey: ['/api/player-cbit-points', startGameweek, endGameweek, hasGWFilter],
@@ -387,16 +392,21 @@ export default function PlayerStatsTable({
 
   // Fetch venue-specific stats when venue filter is active
   const { data: venueStatsData, isLoading: isVenueStatsLoading, isError: isVenueStatsError } = useQuery<{ [playerId: string]: any }>({
-    queryKey: ['/api/player-venue-stats', { venue: venueFilter, season: season || 'current' }],
+    queryKey: ['/api/player-venue-stats', { venue: venueFilter, season: season || 'current', startGW: venueHasGWFilter ? startGameweek : null, endGW: venueHasGWFilter ? endGameweek : null }],
     queryFn: async () => {
-      const response = await fetch(`/api/player-venue-stats?venue=${venueFilter}&season=${season || 'current'}`);
+      const params = new URLSearchParams({ venue: venueFilter, season: season || 'current' });
+      if (venueHasGWFilter && startGameweek != null && endGameweek != null) {
+        params.set('startGW', String(startGameweek));
+        params.set('endGW', String(endGameweek));
+      }
+      const response = await fetch(`/api/player-venue-stats?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch venue stats');
       return response.json();
     },
     enabled: venueFilter !== 'all' && !isHistoricalSeason && season === 'current',
-    staleTime: 10 * 60 * 1000, // 10 minutes - longer since data changes less frequently
+    staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    retry: 1, // Only retry once if it fails
+    retry: 1,
   });
 
   // Helper function to get CBIT points for a player
@@ -584,6 +594,43 @@ export default function PlayerStatsTable({
     } else if (filteredPlayers && Array.isArray(filteredPlayers) && filteredPlayers.length > 0) {
       // Use gameweek-filtered player stats when available
       players = [...filteredPlayers];
+
+      // Also apply venue-specific stats when the venue filter is active alongside a GW range
+      if (venueFilter !== 'all' && venueStatsData && Object.keys(venueStatsData).length > 0) {
+        players = players.map(player => {
+          const venueStats = venueStatsData[(player.id ?? player.player_id)?.toString()];
+          if (venueStats) {
+            return {
+              ...player,
+              total_points: venueStats.totalPoints || 0,
+              minutes: venueStats.minutes || 0,
+              goals_scored: venueStats.goalsScored || 0,
+              assists: venueStats.assists || 0,
+              clean_sheets: venueStats.cleanSheets || 0,
+              goals_conceded: venueStats.goalsConceded || 0,
+              own_goals: venueStats.ownGoals || 0,
+              penalties_saved: venueStats.penaltiesSaved || 0,
+              penalties_missed: venueStats.penaltiesMissed || 0,
+              yellow_cards: venueStats.yellowCards || 0,
+              red_cards: venueStats.redCards || 0,
+              saves: venueStats.saves || 0,
+              bonus: venueStats.bonus || 0,
+              bps: venueStats.bps || 0,
+              starts: venueStats.starts || 0,
+              tackles: venueStats.tackles || 0,
+              recoveries: venueStats.recoveries || 0,
+              clearances_blocks_interceptions: venueStats.clearancesBlocksInterceptions || 0,
+              defensive_contribution: venueStats.defensiveContribution || 0,
+              points_per_game: venueStats.matches > 0
+                ? ((venueStats.totalPoints / venueStats.matches).toFixed(1))
+                : "0.0",
+              _venueFiltered: true,
+              _venueMatches: venueStats.matches || 0
+            };
+          }
+          return player;
+        });
+      }
     } else if (data && data.elements && Array.isArray(data.elements)) {
       players = [...data.elements];
       
