@@ -19111,6 +19111,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         savePointsGWRangeCache.set("all", transformSavePointsData(saveData, null, null));
         console.log("✅ Pre-warmed save-points 'all' cache");
       }
+
+      // Pre-warm common GW-range slices: last 5, 10, and 19 gameweeks.
+      // Derive maxGW from the best available dataset so each cache can
+      // be pre-warmed independently even if another dataset is empty.
+      function deriveMaxGW(data: Record<string, any>): number {
+        let max = 1;
+        for (const playerData of Object.values(data)) {
+          for (const gw of (playerData.gameweeks || [])) {
+            if (gw.gameweek > max) max = gw.gameweek;
+          }
+        }
+        return max;
+      }
+
+      const commonWindows = [5, 10, 19];
+
+      if (Object.keys(cbitData).length > 0) {
+        const maxGW = deriveMaxGW(cbitData);
+        const warmedKeys: string[] = [];
+        for (const window of commonWindows) {
+          const startGW = Math.max(1, maxGW - window + 1);
+          const endGW = maxGW;
+          if (startGW >= endGW) continue;
+          const key = `${startGW}-${endGW}`;
+          if (!cbitGWRangeCache.has(key)) {
+            cbitGWRangeCache.set(key, filterCbitByGW(cbitData, startGW, endGW));
+            warmedKeys.push(key);
+          }
+        }
+        if (warmedKeys.length > 0) {
+          console.log(`✅ Pre-warmed CBIT GW-range slices: ${warmedKeys.join(", ")} (maxGW=${maxGW})`);
+        }
+      }
+
+      if (Object.keys(minutesData).length > 0) {
+        const maxGW = deriveMaxGW(minutesData);
+        const warmedKeys: string[] = [];
+        for (const window of commonWindows) {
+          const startGW = Math.max(1, maxGW - window + 1);
+          const endGW = maxGW;
+          if (startGW >= endGW) continue;
+          const key = `${startGW}-${endGW}`;
+          if (!minutesGWRangeCache.has(key)) {
+            minutesGWRangeCache.set(key, filterMinutesByGW(minutesData, startGW, endGW));
+            warmedKeys.push(key);
+          }
+        }
+        if (warmedKeys.length > 0) {
+          console.log(`✅ Pre-warmed minutes GW-range slices: ${warmedKeys.join(", ")} (maxGW=${maxGW})`);
+        }
+      }
+
+      if (saveData.length > 0) {
+        // Derive maxGW for save points from the GW keys present in the raw data
+        let maxGW = 1;
+        for (const player of saveData) {
+          for (const gwKey of Object.keys(player.savePoints || {})) {
+            const gw = parseInt(gwKey);
+            if (gw > maxGW) maxGW = gw;
+          }
+        }
+        const warmedKeys: string[] = [];
+        for (const window of commonWindows) {
+          const startGW = Math.max(1, maxGW - window + 1);
+          const endGW = maxGW;
+          if (startGW >= endGW) continue;
+          const key = `${startGW}-${endGW}`;
+          if (!savePointsGWRangeCache.has(key)) {
+            savePointsGWRangeCache.set(key, transformSavePointsData(saveData, startGW, endGW));
+            warmedKeys.push(key);
+          }
+        }
+        if (warmedKeys.length > 0) {
+          console.log(`✅ Pre-warmed save-points GW-range slices: ${warmedKeys.join(", ")} (maxGW=${maxGW})`);
+        }
+      }
     } catch (err) {
       console.warn("⚠️ Failed to pre-warm scoring caches:", err);
     }
