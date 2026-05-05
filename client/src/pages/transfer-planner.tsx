@@ -7986,26 +7986,68 @@ export default function TransferPlanner() {
         <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Dependent Transfer Detected</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain.
-                The following {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers will be removed:
-              </p>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li><span className="font-medium">{chainBreakConfirmation?.transferName}</span> <span className="text-xs">(this transfer)</span></li>
-                {chainBreakConfirmation?.dependentTransfers.map((name, i) => (
-                  <li key={i}>{name}</li>
-                ))}
-              </ul>
-              <p className="text-sm text-muted-foreground">
-                <strong>Undo This &amp; Dependents</strong> will remove all {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers listed above.
-                {chainBreakConfirmation && chainBreakConfirmation.crossGwDependents.length === 0 && (
-                  <>
-                    <br />
-                    <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} will remain but may produce unexpected results.
-                  </>
-                )}
-              </p>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain.
+                  The following {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers will be removed:
+                </p>
+
+                {/* Current GW section (this transfer + same-GW dependents) */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                    GW {chainBreakConfirmation?.gwId} — transfers to remove
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>
+                      <span className="font-medium text-foreground">{chainBreakConfirmation?.transferName}</span>{" "}
+                      <span className="text-xs">(this transfer)</span>
+                    </li>
+                    {chainBreakConfirmation?.dependentPlayerPairs
+                      .map((pair, i) => ({ pair, name: chainBreakConfirmation.dependentTransfers[i] }))
+                      .filter(({ pair }) => pair.depGwId === chainBreakConfirmation.gwId)
+                      .map(({ name }, i) => (
+                        <li key={i}>{name}</li>
+                      ))}
+                  </ul>
+                </div>
+
+                {/* Cross-GW sections grouped by future GW */}
+                {chainBreakConfirmation && chainBreakConfirmation.crossGwDependents.length > 0 && (() => {
+                  const crossItems = chainBreakConfirmation.dependentPlayerPairs
+                    .map((pair, i) => ({ pair, name: chainBreakConfirmation.dependentTransfers[i] }))
+                    .filter(({ pair }) => pair.depGwId !== chainBreakConfirmation.gwId);
+                  const byGw = crossItems.reduce<Record<number, string[]>>((acc, { pair, name }) => {
+                    if (!acc[pair.depGwId]) acc[pair.depGwId] = [];
+                    acc[pair.depGwId].push(name.replace(/^GW\d+:\s*/, ""));
+                    return acc;
+                  }, {});
+                  return Object.entries(byGw)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([futureGwId, names]) => (
+                      <div key={futureGwId}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+                          GW {futureGwId} — future gameweek affected
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                          {names.map((name, i) => (
+                            <li key={i}>{name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ));
+                })()}
+
+                <p className="text-muted-foreground">
+                  <strong>Undo This &amp; Dependents</strong> will remove all {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers listed above.
+                  {chainBreakConfirmation && chainBreakConfirmation.crossGwDependents.length === 0 && (
+                    <>
+                      <br />
+                      <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation.dependentTransfers.length > 1 ? "s" : ""} will remain but may produce unexpected results.
+                    </>
+                  )}
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
