@@ -12,6 +12,7 @@ interface FixtureState {
   playerRedCards: Map<number, number>;
   playerDC: Map<number, number>;
   tweetedEvents: Set<string>;
+  overturnCounts: Map<number, number>;
 }
 
 interface DCEntry {
@@ -447,6 +448,7 @@ export class LiveGoalMonitor {
         playerRedCards: currentPlayerRedCards,
         playerDC: currentPlayerDC,
         tweetedEvents: new Set(),
+        overturnCounts: new Map(),
       });
       return;
     }
@@ -461,9 +463,24 @@ export class LiveGoalMonitor {
 
     // Process overturned goals first so the score is correct before any new-goal tweets
     const overturnedGoalScorers = this.findRemovedEntries(prevState.playerGoals, currentPlayerGoals);
+    const overturnBatchOccurrences = new Map<number, number>(); // resets each poll
+    const newOverturnCounts = new Map<number, number>(); // committed to state at end of poll
     for (const scorerId of overturnedGoalScorers) {
       const scorer = this.bootstrapPlayers.get(scorerId);
       if (!scorer) continue;
+
+      // batchOccurrence tracks how many times this scorer appears in this poll's removal list
+      const batchOccurrence = (overturnBatchOccurrences.get(scorerId) || 0) + 1;
+      overturnBatchOccurrences.set(scorerId, batchOccurrence);
+
+      // committedCount = total distinct overturns already tweeted in previous polls
+      // Key uses committed count so duplicate polls produce the same key (caught by tweetedEvents),
+      // while future distinct overturns for the same scorer get a higher committed count → new key.
+      const committedCount = (prevState.overturnCounts?.get(scorerId)) || 0;
+      const eventKey = `overturn_${scorerId}_${committedCount + batchOccurrence}`;
+      if (prevState.tweetedEvents.has(eventKey)) continue;
+      prevState.tweetedEvents.add(eventKey);
+      newOverturnCounts.set(scorerId, committedCount + batchOccurrence);
 
       if (scorer.team === fixture.team_h) {
         liveHomeScore = Math.max(0, liveHomeScore - 1);
@@ -548,6 +565,13 @@ export class LiveGoalMonitor {
     prevState.playerAssists = currentPlayerAssists;
     prevState.playerRedCards = currentPlayerRedCards;
     prevState.playerDC = currentPlayerDC;
+    // Commit overturn counts atomically with playerGoals so that if this block is
+    // never reached (e.g. an exception), duplicate polls still produce the same
+    // event key and are caught by tweetedEvents.
+    if (!prevState.overturnCounts) prevState.overturnCounts = new Map();
+    for (const [scorerId, count] of newOverturnCounts) {
+      prevState.overturnCounts.set(scorerId, count);
+    }
   }
 
   private findNewEntries(prev: Map<number, number>, current: Map<number, number>): number[] {

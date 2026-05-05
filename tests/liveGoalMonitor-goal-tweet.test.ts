@@ -84,6 +84,7 @@ function seedPrevState(monitor: LiveGoalMonitor, fixtureId: number, teamH: numbe
     playerRedCards: new Map<number, number>(),
     playerDC: new Map<number, number>(),
     tweetedEvents: new Set<string>(),
+    overturnCounts: new Map<number, number>(),
   });
 }
 
@@ -107,6 +108,7 @@ function seedPrevStateWithGoals(
     playerRedCards: new Map<number, number>(),
     playerDC: new Map<number, number>(),
     tweetedEvents: new Set<string>(),
+    overturnCounts: new Map<number, number>(),
   });
 }
 
@@ -131,6 +133,7 @@ function seedPrevStateWithGoalsAndAssists(
     playerRedCards: new Map<number, number>(),
     playerDC: new Map<number, number>(),
     tweetedEvents: new Set<string>(),
+    overturnCounts: new Map<number, number>(),
   });
 }
 
@@ -405,6 +408,60 @@ describe('LiveGoalMonitor — goal-overturned (VAR) tweet path', () => {
     expect(postTweetMock).toHaveBeenCalledTimes(1);
     const tweetArg: string = postTweetMock.mock.calls[0][0];
     expect(tweetArg).toContain('OVERTURNED');
+  });
+
+  it('does NOT double-tweet an overturn when the same removed-goal state is polled twice', async () => {
+    const goalsMap = new Map([[HOME_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    // Simulate a second poll arriving before state has advanced: manually restore
+    // playerGoals and overturnCounts in prevState so findRemovedEntries sees the
+    // same removal again, while tweetedEvents retains the key from the first poll.
+    const state = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    state.playerGoals = new Map([[HOME_SCORER_ID, 1]]);
+    state.overturnCounts = new Map(); // reset committed count to mimic non-committed state
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tweets a second OVERTURNED when the same scorer has a distinct goal overturned later', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+
+    // Poll 1: scorer has 1 goal, gets overturned to 0 → first overturn tweet
+    const goalsMap1 = new Map([[HOME_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap1);
+    const liveData1 = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, liveData1);
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+    const firstTweet: string = postTweetMock.mock.calls[0][0];
+    expect(firstTweet).toContain('OVERTURNED');
+
+    // Poll 2: scorer scores again (goals: 0 → 1). Advance state manually to represent
+    // a processed "new goal" poll (goal tweet is outside scope of this test).
+    const state = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    state.playerGoals = new Map([[HOME_SCORER_ID, 1]]);
+    state.homeScore = 1;
+
+    // Poll 3: second goal overturned (goals: 1 → 0) → second distinct overturn tweet
+    const liveData3 = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, liveData3);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(2);
+    const secondTweet: string = postTweetMock.mock.calls[1][0];
+    expect(secondTweet).toContain('OVERTURNED');
   });
 });
 
