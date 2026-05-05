@@ -1090,7 +1090,8 @@ export default function TransferPlanner() {
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
-  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[] } | null>(null);
+  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[]; dependentPlayerPairs: { outPlayerId: number; inPlayerId: number }[] } | null>(null);
+  const [brokenTransfers, setBrokenTransfers] = useState<{ gwId: number; outPlayerId: number; inPlayerId: number }[]>([]);
   
   // Delete all drafts confirmation dialog
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -4229,6 +4230,10 @@ export default function TransferPlanner() {
       const t = currentCompleted[i];
       return `${t.outPlayerName} → ${t.inPlayerName}`;
     });
+    const dependentPlayerPairs = dependentIndices.map(i => ({
+      outPlayerId: currentCompleted[i].outPlayerId,
+      inPlayerId: currentCompleted[i].inPlayerId,
+    }));
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -4236,6 +4241,7 @@ export default function TransferPlanner() {
         gwId,
         transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
         dependentTransfers,
+        dependentPlayerPairs,
       });
     } else {
       handleUndoSingleTransfer(transferIndex);
@@ -4489,6 +4495,10 @@ export default function TransferPlanner() {
       const t = currentCompleted[i];
       return `${t.outPlayerName} → ${t.inPlayerName}`;
     });
+    const dependentPlayerPairs = dependentIndices.map(i => ({
+      outPlayerId: currentCompleted[i].outPlayerId,
+      inPlayerId: currentCompleted[i].inPlayerId,
+    }));
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -4496,6 +4506,7 @@ export default function TransferPlanner() {
         gwId,
         transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
         dependentTransfers,
+        dependentPlayerPairs,
       });
     } else {
       handleUndoSingleTransferForGW(transferIndex, gwId);
@@ -4512,6 +4523,7 @@ export default function TransferPlanner() {
     setTransferredOutPlayers([]);
     setCompletedTransfers([]);
     setGameweekTransfers({});
+    setBrokenTransfers([]);
     
     // Clear all optimized lineups
     setOptimizedLineups({});
@@ -5109,6 +5121,7 @@ export default function TransferPlanner() {
       setPlannedChips({}); // Reset planned chips
       setOptimizedLineups({}); // Reset optimized lineups
       setSavedCaptainInfo(null); // Clear saved captain info
+      setBrokenTransfers([]);
       setActiveDraft("Base");
       setHasUnsavedChanges(false);
       if (teamData?.picks) {
@@ -5163,6 +5176,7 @@ export default function TransferPlanner() {
         // Set active draft - this will trigger useEffect to rebuild lineup
         setActiveDraft(draftLetter);
         setHasUnsavedChanges(false);
+        setBrokenTransfers([]);
         
         // Reset transferred out players and completed transfers
         setTransferredOutPlayers([]);
@@ -6292,13 +6306,27 @@ export default function TransferPlanner() {
                         GW{selectedGameweek} Transfers
                       </div>
                       <div className="space-y-1.5">
-                        {completedTransfers.map((transfer, idx) => (
+                        {completedTransfers.map((transfer, idx) => {
+                          const isBroken = brokenTransfers.some(b => b.gwId === selectedGameweek && b.outPlayerId === transfer.outPlayerId && b.inPlayerId === transfer.inPlayerId);
+                          return (
                           <div
                             key={idx}
-                            className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md bg-white dark:bg-gray-900 border text-xs"
+                            className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-xs border ${isBroken ? "bg-orange-50 dark:bg-orange-950/30 border-orange-400 dark:border-orange-600" : "bg-white dark:bg-gray-900"}`}
                             data-testid={`completed-transfer-row-${idx}`}
                           >
                             <div className="flex items-center gap-1.5 min-w-0">
+                              {isBroken && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <AlertTriangle className="h-3 w-3 shrink-0 text-orange-500" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      This transfer may reference a player no longer in your squad
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                               <span className="font-semibold text-red-600 truncate">{transfer.outPlayerName}</span>
                               <span className="text-muted-foreground shrink-0">→</span>
                               <span className="font-semibold text-green-600 truncate">{transfer.inPlayerName}</span>
@@ -6317,7 +6345,8 @@ export default function TransferPlanner() {
                               </button>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -7348,13 +7377,27 @@ export default function TransferPlanner() {
                         if (isFinished || gwTransfers.completed.length === 0) return null;
                         return (
                           <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                            {gwTransfers.completed.map((transfer, idx) => (
+                            {gwTransfers.completed.map((transfer, idx) => {
+                              const isBroken = brokenTransfers.some(b => b.gwId === gw.id && b.outPlayerId === transfer.outPlayerId && b.inPlayerId === transfer.inPlayerId);
+                              return (
                               <div
                                 key={idx}
-                                className="flex items-center justify-between gap-1 text-[10px]"
+                                className={`flex items-center justify-between gap-1 text-[10px] rounded px-0.5 ${isBroken ? "bg-orange-50 dark:bg-orange-950/30 outline outline-1 outline-orange-400 dark:outline-orange-600" : ""}`}
                                 data-testid={`evolution-gw${gw.id}-transfer-row-${idx}`}
                               >
-                                <span className="min-w-0 truncate">
+                                <span className="min-w-0 truncate flex items-center gap-0.5">
+                                  {isBroken && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertTriangle className="h-2.5 w-2.5 shrink-0 text-orange-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                          This transfer may reference a player no longer in your squad
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
                                   <span className="font-semibold text-red-600">{transfer.outPlayerName}</span>
                                   <span className="text-muted-foreground mx-0.5">→</span>
                                   <span className="font-semibold text-green-600">{transfer.inPlayerName}</span>
@@ -7368,7 +7411,8 @@ export default function TransferPlanner() {
                                   <X className="h-2.5 w-2.5" />
                                 </button>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         );
                       })()}
@@ -7782,7 +7826,15 @@ export default function TransferPlanner() {
             <AlertDialogAction
               onClick={() => {
                 if (chainBreakConfirmation) {
-                  handleUndoSingleTransferForGW(chainBreakConfirmation.transferIndex, chainBreakConfirmation.gwId);
+                  const { transferIndex, gwId, dependentTransfers, dependentPlayerPairs } = chainBreakConfirmation;
+                  handleUndoSingleTransferForGW(transferIndex, gwId);
+                  const newBroken = dependentPlayerPairs.map(pair => ({ gwId, outPlayerId: pair.outPlayerId, inPlayerId: pair.inPlayerId }));
+                  setBrokenTransfers(prev => [...prev, ...newBroken]);
+                  toast({
+                    title: "Warning: Squad May Be Broken",
+                    description: `${dependentTransfers.length} dependent transfer${dependentTransfers.length > 1 ? "s" : ""} still reference${dependentTransfers.length === 1 ? "s" : ""} players that may no longer be in your squad. Review the highlighted transfer${dependentTransfers.length > 1 ? "s" : ""} below.`,
+                    variant: "destructive",
+                  });
                   setChainBreakConfirmation(null);
                 }
               }}
