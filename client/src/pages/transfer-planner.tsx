@@ -6151,7 +6151,8 @@ export default function TransferPlanner() {
       {/* Team Selection & Projected Points — side-by-side on desktop */}
       {searchedId && teamData && selectedGameweek && (
         <div className="flex flex-col gap-3">
-        {/* Fixture Mode Toggle — page-level, shared by Team Selection + Projected Points */}
+        {/* Fixture Mode Toggle — only shown when there are TBC fixtures to assign */}
+        {hasTBCFixtures && (
         <div className="flex flex-row gap-1.5 items-center">
           <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
           {(['base', 'custom', 'expert'] as const)
@@ -6174,6 +6175,7 @@ export default function TransferPlanner() {
             ))}
           <a href="/fixtures" className="text-xs text-blue-600 hover:underline flex-shrink-0 ml-1">⚙ Edit fixtures</a>
         </div>
+        )}
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
           <div className="w-full lg:w-[60%] flex-shrink-0">
