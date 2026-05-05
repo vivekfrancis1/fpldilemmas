@@ -19072,9 +19072,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const hasGWFilter = startGW !== null && endGW !== null;
-      const rangeKey = hasGWFilter ? `${startGW}-${endGW}` : null;
-      if (rangeKey && cbitGWRangeCache.has(rangeKey)) {
-        return res.json(cbitGWRangeCache.get(rangeKey));
+      const cacheKey = hasGWFilter ? `${startGW}-${endGW}` : "all";
+      if (cbitGWRangeCache.has(cacheKey)) {
+        return res.json(cbitGWRangeCache.get(cacheKey));
       }
       console.log("📊 Serving player CBIT points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerCbitPoints();
@@ -19089,7 +19089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (Object.keys(refreshedData).length > 0) {
             console.log("✅ Successfully populated CBIT cache");
             const result = hasGWFilter ? filterCbitByGW(refreshedData, startGW!, endGW!) : refreshedData;
-            if (rangeKey) cbitGWRangeCache.set(rangeKey, result);
+            cbitGWRangeCache.set(cacheKey, result);
             res.json(result);
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
@@ -19101,7 +19101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         const result = hasGWFilter ? filterCbitByGW(cachedData, startGW!, endGW!) : cachedData;
-        if (rangeKey) cbitGWRangeCache.set(rangeKey, result);
+        cbitGWRangeCache.set(cacheKey, result);
         res.json(result);
       }
     } catch (error) {
@@ -19130,9 +19130,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const hasGWFilter = startGW !== null && endGW !== null;
-      const rangeKey = hasGWFilter ? `${startGW}-${endGW}` : null;
-      if (rangeKey && minutesGWRangeCache.has(rangeKey)) {
-        return res.json(minutesGWRangeCache.get(rangeKey));
+      const cacheKey = hasGWFilter ? `${startGW}-${endGW}` : "all";
+      if (minutesGWRangeCache.has(cacheKey)) {
+        return res.json(minutesGWRangeCache.get(cacheKey));
       }
       console.log("📊 Serving player minutes points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerMinutesPoints();
@@ -19147,7 +19147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (Object.keys(refreshedData).length > 0) {
             console.log("✅ Successfully populated minutes points cache");
             const result = hasGWFilter ? filterMinutesByGW(refreshedData, startGW!, endGW!) : refreshedData;
-            if (rangeKey) minutesGWRangeCache.set(rangeKey, result);
+            minutesGWRangeCache.set(cacheKey, result);
             res.json(result);
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
@@ -19159,7 +19159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         const result = hasGWFilter ? filterMinutesByGW(cachedData, startGW!, endGW!) : cachedData;
-        if (rangeKey) minutesGWRangeCache.set(rangeKey, result);
+        minutesGWRangeCache.set(cacheKey, result);
         res.json(result);
       }
     } catch (error) {
@@ -19188,9 +19188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const hasGWFilter = startGW !== null && endGW !== null;
-      const rangeKey = hasGWFilter ? `${startGW}-${endGW}` : null;
-      if (rangeKey && savePointsGWRangeCache.has(rangeKey)) {
-        return res.json(savePointsGWRangeCache.get(rangeKey));
+      const cacheKey = hasGWFilter ? `${startGW}-${endGW}` : "all";
+      if (savePointsGWRangeCache.has(cacheKey)) {
+        return res.json(savePointsGWRangeCache.get(cacheKey));
       }
       console.log("📊 Serving player save points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerSavePoints();
@@ -19225,7 +19225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (refreshedData.length > 0) {
             console.log("✅ Successfully populated save points cache");
             const result = transformSavePoints(refreshedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
-            if (rangeKey) savePointsGWRangeCache.set(rangeKey, result);
+            savePointsGWRangeCache.set(cacheKey, result);
             res.json(result);
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
@@ -19237,7 +19237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         const result = transformSavePoints(cachedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null);
-        if (rangeKey) savePointsGWRangeCache.set(rangeKey, result);
+        savePointsGWRangeCache.set(cacheKey, result);
         res.json(result);
       }
     } catch (error) {
