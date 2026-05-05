@@ -1,11 +1,17 @@
 import { PlayerTotalPointsAggregator } from "./player-total-points-aggregator";
 import { internalFetch } from "./config";
 import { totalPointsCache } from "./total-points-cache";
+import { pool } from "./db";
+import { CURRENT_SEASON } from "@shared/schema";
 
 export class FPLScoringCacheService {
   private static updateLock = false;
   static lastRunAt: Date | null = null;
   private static refreshCallbacks: Array<() => void> = [];
+
+  private static cbitCache: Record<string, any> = {};
+  private static minutesCache: Record<string, any> = {};
+  private static savePointsCache: any[] = [];
 
   static onRefresh(cb: () => void): void {
     FPLScoringCacheService.refreshCallbacks.push(cb);
@@ -73,6 +79,172 @@ export class FPLScoringCacheService {
     }
   }
 
+  private async fetchPlayerInfoMap(): Promise<Map<number, { playerName: string; teamName: string; position: string }>> {
+    const map = new Map<number, { playerName: string; teamName: string; position: string }>();
+    try {
+      const bootstrapResp = await internalFetch("api/bootstrap-static");
+      if (bootstrapResp.ok) {
+        const bootstrapData = await bootstrapResp.json();
+        const teamsMap = new Map<number, string>(bootstrapData.teams.map((t: any) => [t.id, t.short_name]));
+        const posMap = new Map<number, string>(bootstrapData.element_types.map((et: any) => [et.id, et.singular_name_short]));
+        for (const el of bootstrapData.elements) {
+          map.set(el.id, {
+            playerName: el.web_name,
+            teamName: teamsMap.get(el.team) || '',
+            position: posMap.get(el.element_type) || '',
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Could not fetch bootstrap data for player info map:", e);
+    }
+    return map;
+  }
+
+  async cachePlayerCbitPoints(): Promise<void> {
+    console.log("🔄 Populating CBIT points cache from gameweek_player_data...");
+    try {
+      const [queryResult, playerInfoMap] = await Promise.all([
+        pool.query(
+          `SELECT player_id, gameweek,
+             CASE WHEN defensive_contribution >= 10 THEN 2 ELSE 0 END AS cbit_points
+           FROM gameweek_player_data
+           WHERE season = $1
+           ORDER BY player_id, gameweek`,
+          [CURRENT_SEASON]
+        ),
+        this.fetchPlayerInfoMap(),
+      ]);
+
+      const cbitData: Record<string, any> = {};
+      for (const row of queryResult.rows) {
+        const id = row.player_id.toString();
+        if (!cbitData[id]) {
+          const info = playerInfoMap.get(row.player_id) || { playerName: '', teamName: '', position: '' };
+          cbitData[id] = {
+            playerId: row.player_id,
+            playerName: info.playerName,
+            teamName: info.teamName,
+            position: info.position,
+            gameweeks: [],
+            seasonTotal: 0,
+          };
+        }
+        const pts = row.cbit_points || 0;
+        cbitData[id].gameweeks.push({ gameweek: row.gameweek, cbitPoints: pts });
+        cbitData[id].seasonTotal += pts;
+      }
+
+      FPLScoringCacheService.cbitCache = cbitData;
+      console.log(`✅ CBIT cache populated: ${Object.keys(cbitData).length} players`);
+    } catch (error) {
+      console.error("❌ Failed to populate CBIT cache:", error);
+      throw error;
+    }
+  }
+
+  getCachedPlayerCbitPoints(): Record<string, any> {
+    return FPLScoringCacheService.cbitCache;
+  }
+
+  async cachePlayerMinutesPoints(): Promise<void> {
+    console.log("🔄 Populating minutes points cache from gameweek_player_data...");
+    try {
+      const [queryResult, playerInfoMap] = await Promise.all([
+        pool.query(
+          `SELECT player_id, gameweek,
+             CASE WHEN minutes >= 60 THEN 2 WHEN minutes > 0 THEN 1 ELSE 0 END AS minutes_points
+           FROM gameweek_player_data
+           WHERE season = $1
+           ORDER BY player_id, gameweek`,
+          [CURRENT_SEASON]
+        ),
+        this.fetchPlayerInfoMap(),
+      ]);
+
+      const minutesData: Record<string, any> = {};
+      for (const row of queryResult.rows) {
+        const id = row.player_id.toString();
+        if (!minutesData[id]) {
+          const info = playerInfoMap.get(row.player_id) || { playerName: '', teamName: '', position: '' };
+          minutesData[id] = {
+            playerId: row.player_id,
+            playerName: info.playerName,
+            teamName: info.teamName,
+            position: info.position,
+            gameweeks: [],
+            seasonTotal: 0,
+          };
+        }
+        const pts = row.minutes_points || 0;
+        minutesData[id].gameweeks.push({ gameweek: row.gameweek, minutesPoints: pts });
+        minutesData[id].seasonTotal += pts;
+      }
+
+      FPLScoringCacheService.minutesCache = minutesData;
+      console.log(`✅ Minutes points cache populated: ${Object.keys(minutesData).length} players`);
+    } catch (error) {
+      console.error("❌ Failed to populate minutes points cache:", error);
+      throw error;
+    }
+  }
+
+  getCachedPlayerMinutesPoints(): Record<string, any> {
+    return FPLScoringCacheService.minutesCache;
+  }
+
+  async cachePlayerSavePoints(): Promise<void> {
+    console.log("🔄 Populating save points cache from gameweek_player_data...");
+    try {
+      const queryResult = await pool.query(
+        `SELECT player_id, gameweek, saves,
+           COALESCE(penalties_saved, 0) AS penalties_saved,
+           CASE WHEN saves >= 3 THEN (saves / 3) ELSE 0 END AS save_points
+         FROM gameweek_player_data
+         WHERE season = $1
+         ORDER BY player_id, gameweek`,
+        [CURRENT_SEASON]
+      );
+
+      const playerMap: Record<number, {
+        playerId: number;
+        savePoints: Record<string, number>;
+        saves: Record<string, number>;
+        penaltySaves: Record<string, number>;
+        totalSavePoints: number;
+      }> = {};
+
+      for (const row of queryResult.rows) {
+        const id = row.player_id;
+        if (!playerMap[id]) {
+          playerMap[id] = {
+            playerId: id,
+            savePoints: {},
+            saves: {},
+            penaltySaves: {},
+            totalSavePoints: 0,
+          };
+        }
+        const gwKey = String(row.gameweek);
+        const pts = row.save_points || 0;
+        playerMap[id].savePoints[gwKey] = pts;
+        playerMap[id].saves[gwKey] = row.saves || 0;
+        playerMap[id].penaltySaves[gwKey] = row.penalties_saved || 0;
+        playerMap[id].totalSavePoints += pts;
+      }
+
+      FPLScoringCacheService.savePointsCache = Object.values(playerMap);
+      console.log(`✅ Save points cache populated: ${FPLScoringCacheService.savePointsCache.length} players`);
+    } catch (error) {
+      console.error("❌ Failed to populate save points cache:", error);
+      throw error;
+    }
+  }
+
+  getCachedPlayerSavePoints(): any[] {
+    return FPLScoringCacheService.savePointsCache;
+  }
+
   getCachedPlayerSaves(): any[] {
     console.log("⚠️ getCachedPlayerSaves: Cache tables removed, returning empty array");
     return [];
@@ -95,21 +267,6 @@ export class FPLScoringCacheService {
 
   getCachedPlayerBonusPoints(): any[] {
     console.log("⚠️ getCachedPlayerBonusPoints: Cache tables removed, returning empty array");
-    return [];
-  }
-
-  getCachedPlayerSavePoints(): any[] {
-    console.log("⚠️ getCachedPlayerSavePoints: Cache tables removed, returning empty array");
-    return [];
-  }
-
-  getCachedPlayerCbitPoints(): any[] {
-    console.log("⚠️ getCachedPlayerCbitPoints: Cache tables removed, returning empty array");
-    return [];
-  }
-
-  getCachedPlayerMinutesPoints(): any[] {
-    console.log("⚠️ getCachedPlayerMinutesPoints: Cache tables removed, returning empty array");
     return [];
   }
 }
