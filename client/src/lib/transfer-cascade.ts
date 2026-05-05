@@ -160,6 +160,40 @@ export function buildChainBreakPayload(
 }
 
 /**
+ * Payload passed to onShowDialog by executeUndoAllCheck.
+ * The caller uses gwId to label the dialog and transferCount to display
+ * the number of transfers that will be undone.
+ */
+export interface UndoAllPayload {
+  gwId: number;
+  transferCount: number;
+}
+
+/**
+ * Executes the branch decision for "undo all transfers for a gameweek".
+ *
+ * - When completed is non-empty: calls onShowDialog with the payload so the
+ *   caller can open a confirmation dialog.
+ * - When completed is empty: calls onDirectUndo immediately (no-op in practice
+ *   since the button is hidden, but keeps the guard explicit and testable).
+ *
+ * Accepts injectable callbacks so the branch behavior is directly testable
+ * without mounting the React component.
+ */
+export function executeUndoAllCheck(
+  completed: CompletedTransfer[],
+  gwId: number,
+  onShowDialog: (payload: UndoAllPayload) => void,
+  onDirectUndo: () => void
+): void {
+  if (completed.length === 0) {
+    onDirectUndo();
+    return;
+  }
+  onShowDialog({ gwId, transferCount: completed.length });
+}
+
+/**
  * Executes the full branch decision for "undo single transfer with chain check".
  * Builds the payload via buildChainBreakPayload and then:
  *   - calls onChainDetected(payload) if dependents exist (opens the dialog), or

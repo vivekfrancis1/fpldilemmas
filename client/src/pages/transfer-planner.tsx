@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
 import { extractManagerId } from "@/lib/manager-id-utils";
-import { computeCascadeIndicesToRemove, executeUndoChainCheck, filterBrokenTransfersAfterCascade, findCrossGWDependents } from "@/lib/transfer-cascade";
+import { computeCascadeIndicesToRemove, executeUndoAllCheck, executeUndoChainCheck, filterBrokenTransfersAfterCascade, findCrossGWDependents, type UndoAllPayload } from "@/lib/transfer-cascade";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
@@ -1095,6 +1095,9 @@ export default function TransferPlanner() {
   const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[]; dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[]; crossGwDependents: Array<{ gwId: number; transferIndex: number }> } | null>(null);
   const [brokenTransfers, setBrokenTransfers] = useState<{ gwId: number; outPlayerId: number; inPlayerId: number }[]>([]);
   
+  // Undo-all-transfers confirmation dialog
+  const [undoAllConfirmation, setUndoAllConfirmation] = useState<UndoAllPayload | null>(null);
+
   // Delete all drafts confirmation dialog
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   
@@ -7518,7 +7521,15 @@ export default function TransferPlanner() {
                         </div>
                         {!isGwFinished && hasCompletedTransfers && (
                           <button
-                            onClick={() => handleResetTransfersForGW(gw.id)}
+                            onClick={() => {
+                              const completed = gwTransfers.completed;
+                              executeUndoAllCheck(
+                                completed,
+                                gw.id,
+                                (payload) => setUndoAllConfirmation(payload),
+                                () => handleResetTransfersForGW(gw.id)
+                              );
+                            }}
                             className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-600 dark:text-red-400 font-medium transition-colors leading-tight"
                             aria-label={`Undo all transfers for GW${gw.id}`}
                             data-testid={`evolution-gw${gw.id}-undo-all`}
@@ -8174,6 +8185,33 @@ export default function TransferPlanner() {
             <AlertDialogCancel onClick={() => setEditBuyPriceDialog(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={saveBuyPriceFromDialog} data-testid="button-save-buy-price">
               Save Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Undo All Transfers Confirmation Dialog */}
+      <AlertDialog open={!!undoAllConfirmation} onOpenChange={() => setUndoAllConfirmation(null)}>
+        <AlertDialogContent className="z-[100]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Undo All Transfers for GW{undoAllConfirmation?.gwId}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove all {undoAllConfirmation?.transferCount} transfer{undoAllConfirmation && undoAllConfirmation.transferCount !== 1 ? 's' : ''} planned for GW{undoAllConfirmation?.gwId} and restore your squad to its pre-gameweek state. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="undo-all-dialog-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (undoAllConfirmation) {
+                  handleResetTransfersForGW(undoAllConfirmation.gwId);
+                  setUndoAllConfirmation(null);
+                }
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="undo-all-dialog-confirm"
+            >
+              Undo All {undoAllConfirmation?.transferCount} Transfer{undoAllConfirmation && undoAllConfirmation.transferCount !== 1 ? 's' : ''}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
