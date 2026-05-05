@@ -68,6 +68,24 @@ export class FPLScoringCacheService {
       await aggregator.aggregatePlayerTotalPoints(resolvedStart, resolvedEnd);
       // Clear memory cache so the next request reads the freshly aggregated DB data
       totalPointsCache.clear();
+
+      // Pre-warm CBIT, minutes, and save-points caches so first requests never hit an empty cache
+      const prewarmLabels = ["CBIT", "minutes-points", "save-points"];
+      const prewarmResults = await Promise.allSettled([
+        this.cachePlayerCbitPoints(),
+        this.cachePlayerMinutesPoints(),
+        this.cachePlayerSavePoints(),
+      ]);
+      let prewarmSucceeded = 0;
+      prewarmResults.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          prewarmSucceeded++;
+        } else {
+          console.warn(`⚠️ ${prewarmLabels[i]} cache pre-warm failed (non-fatal):`, result.reason);
+        }
+      });
+      console.log(`🔥 Scoring sub-caches pre-warm: ${prewarmSucceeded}/${prewarmLabels.length} succeeded (CBIT, minutes-points, save-points)`);
+
       FPLScoringCacheService.lastRunAt = new Date();
       FPLScoringCacheService.fireRefreshCallbacks();
       console.log("✅ FPL scoring component cache update completed successfully — memory cache cleared");
