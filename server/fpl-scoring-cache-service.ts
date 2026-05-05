@@ -5,7 +5,20 @@ import { totalPointsCache } from "./total-points-cache";
 export class FPLScoringCacheService {
   private static updateLock = false;
   static lastRunAt: Date | null = null;
-  
+  private static refreshCallbacks: Array<() => void> = [];
+
+  static onRefresh(cb: () => void): void {
+    FPLScoringCacheService.refreshCallbacks.push(cb);
+  }
+
+  private static fireRefreshCallbacks(): void {
+    for (const cb of FPLScoringCacheService.refreshCallbacks) {
+      try { cb(); } catch (err) {
+        console.warn("⚠️ GW-range cache invalidation callback failed:", err);
+      }
+    }
+  }
+
   async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
     if (FPLScoringCacheService.updateLock) {
       console.log("⏳ Cache update already in progress, skipping duplicate request");
@@ -50,6 +63,7 @@ export class FPLScoringCacheService {
       // Clear memory cache so the next request reads the freshly aggregated DB data
       totalPointsCache.clear();
       FPLScoringCacheService.lastRunAt = new Date();
+      FPLScoringCacheService.fireRefreshCallbacks();
       console.log("✅ FPL scoring component cache update completed successfully — memory cache cleared");
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);
