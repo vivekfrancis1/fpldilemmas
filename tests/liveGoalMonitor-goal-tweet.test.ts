@@ -612,3 +612,155 @@ describe('LiveGoalMonitor — overturned goal also removes assist credit', () =>
     expect(updatedState.playerAssists.get(UNRELATED_ASSISTER_ID)).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Goal tweet deduplication guard
+// ---------------------------------------------------------------------------
+
+describe('LiveGoalMonitor — goal tweet deduplication', () => {
+  const FIXTURE_ID = 1;
+  const HOME_TEAM_ID = 10;
+  const AWAY_TEAM_ID = 20;
+  const SCORER_ID = 101;
+
+  const scorer = {
+    id: SCORER_ID,
+    web_name: 'DedupScorer',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '20.0',
+    element_type: 4,
+  };
+
+  const homeTeam = { id: HOME_TEAM_ID, name: 'Arsenal', short_name: 'ARS' };
+  const awayTeam = { id: AWAY_TEAM_ID, name: 'Chelsea', short_name: 'CHE' };
+
+  let monitor: LiveGoalMonitor;
+  const postTweetMock = twitterService.postTweet as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    postTweetMock.mockClear();
+    monitor = buildMonitor([scorer], [homeTeam, awayTeam]);
+    seedPrevState(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID);
+  });
+
+  it('does NOT double-tweet a goal when the same state is polled a second time before state advances', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    // Simulate a second identical poll before state advances: restore playerGoals
+    // in prevState so findNewEntries detects the same "new" goal again, while
+    // tweetedEvents retains the key from the first poll.
+    const state = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    state.playerGoals = new Map();
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tweets a second time when a genuinely new goal is scored after the first', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+
+    const liveData1 = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, liveData1);
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+
+    const liveData2 = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 2 }]),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, liveData2);
+    expect(postTweetMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Red card deduplication guard
+// ---------------------------------------------------------------------------
+
+describe('LiveGoalMonitor — red card tweet deduplication', () => {
+  const FIXTURE_ID = 1;
+  const HOME_TEAM_ID = 10;
+  const AWAY_TEAM_ID = 20;
+  const PLAYER_ID = 201;
+
+  const player = {
+    id: PLAYER_ID,
+    web_name: 'RedCardPlayer',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '12.5',
+    element_type: 2,
+  };
+
+  const homeTeam = { id: HOME_TEAM_ID, name: 'Arsenal', short_name: 'ARS' };
+  const awayTeam = { id: AWAY_TEAM_ID, name: 'Chelsea', short_name: 'CHE' };
+
+  let monitor: LiveGoalMonitor;
+  const postTweetMock = twitterService.postTweet as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    postTweetMock.mockClear();
+    monitor = buildMonitor([player], [homeTeam, awayTeam]);
+    seedPrevState(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID);
+  });
+
+  it('tweets once when a red card is first detected', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(PLAYER_ID, FIXTURE_ID, [{ identifier: 'red_cards', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT double-tweet a red card when the same state is polled a second time', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(PLAYER_ID, FIXTURE_ID, [{ identifier: 'red_cards', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    // Simulate a second identical poll before state advances: restore playerRedCards
+    // in prevState so findNewEntries detects the same "new" card again, while
+    // tweetedEvents retains the key from the first poll.
+    const state = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    state.playerRedCards = new Map();
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tweet text includes the player name when a red card is detected', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(PLAYER_ID, FIXTURE_ID, [{ identifier: 'red_cards', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('RedCardPlayer');
+  });
+
+  it('does NOT tweet a red card on the very first poll (no prevState diff)', async () => {
+    const freshMonitor = buildMonitor([player], [homeTeam, awayTeam]);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(PLAYER_ID, FIXTURE_ID, [{ identifier: 'red_cards', value: 1 }]),
+    ]);
+
+    await (freshMonitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).not.toHaveBeenCalled();
+  });
+});

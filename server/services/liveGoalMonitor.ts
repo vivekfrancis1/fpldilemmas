@@ -507,9 +507,21 @@ export class LiveGoalMonitor {
     if (newGoalScorers.length > 0) {
       const safeAssistAttribution = newGoalScorers.length === 1 && newAssistProviders.length === 1;
 
+      // Track how many goals we have processed for each scorer in this poll batch
+      // so the event key is stable across duplicate polls (same key → skipped by tweetedEvents).
+      const goalBatchOccurrences = new Map<number, number>();
+
       for (const scorerId of newGoalScorers) {
         const scorer = this.bootstrapPlayers.get(scorerId);
         if (!scorer) continue;
+
+        const batchOccurrence = (goalBatchOccurrences.get(scorerId) || 0) + 1;
+        goalBatchOccurrences.set(scorerId, batchOccurrence);
+
+        const prevGoalCount = prevState.playerGoals.get(scorerId) || 0;
+        const eventKey = `goal_${scorerId}_${prevGoalCount + batchOccurrence}`;
+        if (prevState.tweetedEvents.has(eventKey)) continue;
+        prevState.tweetedEvents.add(eventKey);
 
         // Increment the live score for this goal before building the tweet context
         if (scorer.team === fixture.team_h) {
@@ -546,6 +558,12 @@ export class LiveGoalMonitor {
     for (const playerId of newRedCards) {
       const player = this.bootstrapPlayers.get(playerId);
       if (!player) continue;
+
+      const currentCount = currentPlayerRedCards.get(playerId) || 0;
+      const eventKey = `redcard_${playerId}_${currentCount}`;
+      if (prevState.tweetedEvents.has(eventKey)) continue;
+      prevState.tweetedEvents.add(eventKey);
+
       const ownership = parseFloat(player.selected_by_percent);
       const redCardCtx: MatchContext = {
         homeTeamName,
