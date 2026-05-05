@@ -534,13 +534,13 @@ export default function PlayerStatsTable({
       case 'value_form':
         return <span className="text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</span>;
       case 'influence':
-        return <span className="text-gray-900">{formatValue(player.influence || 0, 'decimal')}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.influence || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
       case 'creativity':
-        return <span className="text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.creativity || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
       case 'threat':
-        return <span className="text-gray-900">{formatValue(player.threat || 0, 'decimal')}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.threat || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
       case 'ict_index':
-        return <span className="text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</span>;
+        return <span className="text-fpl-purple">{calculateStat(player, parseFloat(player.ict_index || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
       case 'dreamteam_count':
         return <span className="text-yellow-600">{player.dreamteam_count || 0}</span>;
       case 'penalties_saved':
