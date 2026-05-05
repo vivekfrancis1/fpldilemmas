@@ -7811,14 +7811,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Process next 12 gameweeks — extend to GW39 to include the TBC fixture
+      // Process next 12 gameweeks — cap at GW38 (GW39 is a synthetic TBC bucket, excluded from season totals)
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
       const { TeamGoalsService } = await import('./team-goals-service');
-      const teamProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
+      const rawProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
+      
+      // Strip any GW39 keys that may have leaked through
+      const teamProjections = rawProjections.map((team: any) => {
+        const gwProj = { ...team.gameweekProjections };
+        delete gwProj['39'];
+        const total = Object.values(gwProj).reduce((s: number, v: any) => s + (v || 0), 0);
+        return {
+          ...team,
+          gameweekProjections: gwProj,
+          totalGoals: Math.round(total * 100) / 100,
+        };
+      });
       
       res.json(teamProjections);
     } catch (error) {
@@ -13378,15 +13390,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startGameweek = dynamicStart, endGameweek = dynamicEnd } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
+      const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
       
       const cacheKey = `${start}-${end}`;
       
-      // Check cache first for fast response
-      if (totalPointsCache.has(cacheKey)) {
+      // Helper: apply availability adjustments to a raw projections array.
+      // Called both on cache-hit (adjusted path) and after fresh computation.
+      const applyAvailabilityAdjustments = (rawData: any[]): any[] => {
+        const bpEvts: BootstrapEvent[] = bootstrapData?.events || [];
+        const adjCompKeys = [
+          'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+          'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
+          'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+          'pointsFromDefensiveContributions'
+        ];
+        return rawData.map((player: any) => {
+          const bsPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
+          if (!bsPlayer) return { ...player, availabilityAdjustments: {} };
+          const chanceNextRound = bsPlayer.chance_of_playing_next_round;
+          const bpSt = bsPlayer.status || 'a';
+          const nextGW = currentGameweek + 1;
+          const availAdj: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
+          const origGWProj: { [gw: string]: number } = {};
+          const gwProj = { ...player.gameweekProjections };
+          const sortedGWNums = Object.keys(gwProj).map(Number).sort((a, b) => a - b);
+
+          // Compute per-GW probabilities once
+          const gwProbMap: { [gw: number]: number } = {};
+          for (const gwNum of sortedGWNums) {
+            gwProbMap[gwNum] = calculateAvailabilityProbability(bsPlayer, gwNum, currentGameweek, bpEvts);
+          }
+
+          // Unscale component breakdowns so adjusted and raw responses carry the same
+          // per-component values — only gameweekProjections/totalExpectedPoints are zeroed.
+          // Pass 1: unscale prob > 0 GWs
+          const unscaledComps: { [key: string]: { [gw: number]: number } } = {};
+          for (const gwNum of sortedGWNums) {
+            const p = gwProbMap[gwNum];
+            if (p > 0) {
+              const sf = p < 1.0 ? 1 / p : 1.0;
+              for (const key of adjCompKeys) {
+                if (!unscaledComps[key]) unscaledComps[key] = {};
+                unscaledComps[key][gwNum] = Math.round(((player[key]?.[gwNum.toString()] || 0) * sf) * 100) / 100;
+              }
+            }
+          }
+          // Pass 2: prob=0 GWs — estimate from nearest future non-zero-prob GW
+          for (const gwNum of sortedGWNums) {
+            if (gwProbMap[gwNum] > 0) continue;
+            const refGW = sortedGWNums.find(g => g > gwNum && unscaledComps[adjCompKeys[0]]?.[g] !== undefined)
+              ?? sortedGWNums.find(g => unscaledComps[adjCompKeys[0]]?.[g] !== undefined);
+            for (const key of adjCompKeys) {
+              if (!unscaledComps[key]) unscaledComps[key] = {};
+              unscaledComps[key][gwNum] = refGW !== undefined ? (unscaledComps[key]?.[refGW] ?? 0) : 0;
+            }
+          }
+          // Build unscaled component objects (only for keys that exist on the player)
+          const unscaledCompResult: { [key: string]: { [gw: string]: number } } = {};
+          for (const key of adjCompKeys) {
+            if (!player[key]) continue;
+            unscaledCompResult[key] = { ...player[key] };
+            for (const gwNum of sortedGWNums) {
+              if (unscaledComps[key]?.[gwNum] !== undefined) {
+                unscaledCompResult[key][gwNum.toString()] = unscaledComps[key][gwNum];
+              }
+            }
+          }
+
+          for (const gwKey of Object.keys(gwProj)) {
+            const gw = parseInt(gwKey);
+            const prob = gwProbMap[gw] ?? 1.0;
+            if (prob >= 1.0) continue;
+            const rawVal = gwProj[gwKey] ?? 0;
+            if (prob === 0) {
+              origGWProj[gwKey] = rawVal;
+              gwProj[gwKey] = 0;
+              const reason = bpSt === 's' ? 'Suspended' : bpSt === 'i' ? 'Injured' : 'Unavailable';
+              availAdj[gwKey] = { original: rawVal, adjusted: 0, reason };
+            } else if (rawVal > 0) {
+              const original = Math.round((rawVal / prob) * 100) / 100;
+              let reason: string;
+              if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
+                reason = `${chanceNextRound}% chance of playing`;
+              } else {
+                reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
+              }
+              availAdj[gwKey] = { original, adjusted: Math.round(rawVal * 100) / 100, reason };
+            }
+          }
+          const scaledTotal = Object.values(gwProj).reduce((s: number, v: number) => s + v, 0);
+          const out: any = {
+            ...player,
+            ...unscaledCompResult,
+            gameweekProjections: gwProj,
+            totalExpectedPoints: Math.round(scaledTotal * 100) / 100,
+            availabilityAdjustments: availAdj,
+          };
+          if (Object.keys(origGWProj).length > 0) out.originalGameweekProjections = origGWProj;
+          return out;
+        });
+      };
+
+      // Helper: reconstruct raw (full-health) projections by reversing per-GW availability discounting.
+      // Updates gameweekProjections, all component breakdowns, and fixtureDetails consistently so
+      // fixture/component consistency tests continue to pass.
+      const inverseAvailabilityScale = (data: any[]): any[] => {
+        const bpEvts: BootstrapEvent[] = bootstrapData?.events || [];
+        const compKeys = [
+          'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+          'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
+          'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+          'pointsFromDefensiveContributions'
+        ];
+        return data.map((player: any) => {
+          const bsPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
+          const { availabilityAdjustments: _a, originalGameweekProjections: _o, ...rest } = player;
+          const gwProjIn: { [gw: string]: number } = { ...rest.gameweekProjections };
+          delete gwProjIn['39'];
+          if (!bsPlayer) {
+            const t = Object.values(gwProjIn).reduce((s: number, v: number) => s + v, 0);
+            return { ...rest, gameweekProjections: gwProjIn, totalExpectedPoints: Math.round(t * 100) / 100 };
+          }
+          const sortedKeys = Object.keys(gwProjIn).map(Number).sort((a, b) => a - b);
+          // Compute availability probability for each GW
+          const probs: { [gw: number]: number } = {};
+          for (const gwNum of sortedKeys) {
+            probs[gwNum] = calculateAvailabilityProbability(bsPlayer, gwNum, currentGameweek, bpEvts);
+          }
+          // Short-circuit if fully available across all GWs
+          if (sortedKeys.every(g => probs[g] >= 1.0)) {
+            const t = Object.values(gwProjIn).reduce((s: number, v: number) => s + v, 0);
+            return { ...rest, gameweekProjections: gwProjIn, totalExpectedPoints: Math.round(t * 100) / 100 };
+          }
+          // Pass 1: unscale values for prob > 0 GWs
+          const unscaledGW: { [gw: number]: number } = {};
+          const unscaledComps: { [key: string]: { [gw: number]: number } } = {};
+          for (const gwNum of sortedKeys) {
+            const p = probs[gwNum];
+            if (p > 0) {
+              const sf = p < 1.0 ? 1 / p : 1.0;
+              unscaledGW[gwNum] = Math.round(((gwProjIn[gwNum.toString()] || 0) * sf) * 100) / 100;
+              for (const key of compKeys) {
+                if (!unscaledComps[key]) unscaledComps[key] = {};
+                unscaledComps[key][gwNum] = Math.round(((rest[key]?.[gwNum.toString()] || 0) * sf) * 100) / 100;
+              }
+            }
+          }
+          // Pass 2: for prob=0 GWs, estimate from nearest future non-zero-prob GW
+          for (const gwNum of sortedKeys) {
+            if (probs[gwNum] > 0) continue;
+            const refGW = sortedKeys.find(g => g > gwNum && unscaledGW[g] !== undefined)
+              ?? sortedKeys.find(g => unscaledGW[g] !== undefined);
+            unscaledGW[gwNum] = refGW !== undefined ? unscaledGW[refGW] : 0;
+            for (const key of compKeys) {
+              if (!unscaledComps[key]) unscaledComps[key] = {};
+              unscaledComps[key][gwNum] = refGW !== undefined ? (unscaledComps[key]?.[refGW] ?? 0) : 0;
+            }
+          }
+          // Build result gameweekProjections
+          const resultGW: { [gw: string]: number } = {};
+          for (const gwNum of sortedKeys) { resultGW[gwNum.toString()] = unscaledGW[gwNum] ?? 0; }
+          // Build result component breakdowns
+          const resultComps: { [key: string]: any } = {};
+          for (const key of compKeys) {
+            if (!rest[key]) continue;
+            const comp: { [gw: string]: number } = {};
+            for (const gwNum of sortedKeys) {
+              comp[gwNum.toString()] = unscaledComps[key]?.[gwNum] ?? 0;
+            }
+            resultComps[key] = comp;
+          }
+          // Build result fixtureDetails
+          let resultFixtures = rest.fixtureDetails;
+          if (rest.fixtureDetails) {
+            resultFixtures = {};
+            for (const [gwKey, fixtures] of Object.entries(rest.fixtureDetails as { [gw: string]: any[] })) {
+              if (gwKey === '39') continue;
+              const gwNum = parseInt(gwKey);
+              const p = probs[gwNum] ?? 1.0;
+              if (p >= 1.0) { resultFixtures[gwKey] = fixtures; continue; }
+              const n = (fixtures as any[]).length || 1;
+              const estimatedTotal = unscaledGW[gwNum] ?? 0;
+              resultFixtures[gwKey] = (fixtures as any[]).map((fixture: any) => {
+                const scaled = { ...fixture };
+                if (p === 0) {
+                  scaled.totalPoints = Math.round((estimatedTotal / n) * 100) / 100;
+                  for (const key of compKeys) {
+                    if (scaled[key] !== undefined) {
+                      scaled[key] = Math.round(((unscaledComps[key]?.[gwNum] ?? 0) / n) * 100) / 100;
+                    }
+                  }
+                } else {
+                  const sf = 1 / p;
+                  if (scaled.totalPoints !== undefined) scaled.totalPoints = Math.round((scaled.totalPoints * sf) * 100) / 100;
+                  for (const key of compKeys) {
+                    if (scaled[key] !== undefined) scaled[key] = Math.round((scaled[key] * sf) * 100) / 100;
+                  }
+                }
+                return scaled;
+              });
+            }
+          }
+          const rawTotal = Object.values(resultGW).reduce((s: number, v: number) => s + v, 0);
+          return { ...rest, ...resultComps, fixtureDetails: resultFixtures, gameweekProjections: resultGW, totalExpectedPoints: Math.round(rawTotal * 100) / 100 };
+        });
+      };
+
+      // Check cache first for fast response — bypass cache for raw (unadjusted) requests
+      // so the in-memory cache always stores raw projections and is never polluted with scaled data
+      if (availabilityAdjusted && totalPointsCache.has(cacheKey)) {
         const cached = totalPointsCache.get(cacheKey);
         if (Date.now() - cached.timestamp < TOTAL_POINTS_CACHE_DURATION) {
           console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end} (${cached.data.length} players)`);
-          return res.json(cached.data);
+          return res.json(applyAvailabilityAdjustments(cached.data));
         }
       }
 
@@ -13766,36 +13982,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const avgPointsPerGameweek = calculatedTotal / nonBlankGameweeks;
         const averageValue = price > 0 ? calculatedTotal / price : 0;
 
-        // Compute availabilityAdjustments for every GW where the player's projection was scaled.
-        // Uses calculateAvailabilityProbability (same function as individual projection APIs) so
-        // the indicators exactly mirror the scaling that was applied to each GW's numbers.
-        const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
-        if (bootstrapPlayer) {
-          const chanceNextRound = bootstrapPlayer.chance_of_playing_next_round;
-          const bpStatus = bootstrapPlayer.status || 'a';
-          const nextGW = currentGameweek + 1;
-          const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
-          for (const gwKey of Object.keys(gameweekProjections)) {
-            const gw = parseInt(gwKey);
-            const prob = calculateAvailabilityProbability(bootstrapPlayer, gw, currentGameweek, bpEvents);
-            if (prob >= 1.0) continue;
-            const adjusted = gameweekProjections[gwKey] ?? 0;
-            if (prob === 0) {
-              const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
-              availabilityAdjustments[gwKey] = { original: 0, adjusted: 0, reason };
-            } else if (adjusted > 0) {
-              const original = Math.round((adjusted / prob) * 100) / 100;
-              let reason: string;
-              if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
-                reason = `${chanceNextRound}% chance of playing`;
-              } else {
-                reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
-              }
-              availabilityAdjustments[gwKey] = { original, adjusted: Math.round(adjusted * 100) / 100, reason };
-            }
-          }
-        }
-
         return {
           playerId: playerId,
           playerName: basePlayer.playerName || basePlayer.name,
@@ -13815,7 +14001,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
           status: bootstrapPlayer?.status || 'a',
           news: bootstrapPlayer?.news || '',
-          availabilityAdjustments,
           pointsFromGoals,
           pointsFromAssists,
           pointsFromCleanSheets,
@@ -13920,12 +14105,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = [...projections, ...bootstrapOnlyPlayers];
       
       // Cache the result for 15 minutes only if data is valid (always cache RAW projections)
-      totalPointsCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now()
-      });
-      
-      res.json(result);
+      // Only cache when availabilityAdjusted=true so the cache always stores raw (unscaled) data.
+      // Raw requests bypass the cache entirely (set earlier) so this path is safe.
+      if (availabilityAdjusted) {
+        totalPointsCache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now()
+        });
+      }
+
+      // For raw requests, undo per-GW availability discounting so 0%-chance players show baseline projections
+      if (!availabilityAdjusted) {
+        return res.json(inverseAvailabilityScale(result));
+      }
+
+      // For adjusted requests, apply availability scaling via the shared helper
+      res.json(applyAvailabilityAdjustments(result));
       
     } catch (error) {
       console.error("Error in player total points:", error);
@@ -17911,9 +18106,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
-      // Calculate next 12 gameweeks range
+      // Parse availabilityAdjusted flag (default true)
+      const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+
+      // Calculate next 12 gameweeks range — cap at 38 (GW39 is a synthetic TBC bucket, never expose it)
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(startGameweek + 11, 39); // Next 12 gameweeks (39 = TBC fixture)
+      const endGameweek = Math.min(startGameweek + 11, 38);
+
+      // For raw (unadjusted) requests, always delegate to the live aggregator which applies
+      // comprehensive inverse-availability scaling across gameweekProjections, component breakdowns,
+      // and fixtureDetails — keeping all fields consistent.
+      if (!availabilityAdjusted) {
+        const liveRawUrl = `api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`;
+        const liveRawResponse = await internalFetch(liveRawUrl);
+        if (!liveRawResponse.ok) throw new Error(`Live aggregator raw request failed: ${liveRawResponse.status}`);
+        return res.json(await liveRawResponse.json());
+      }
       
       console.log(`📊 Current GW: ${currentGameweek}, serving next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
@@ -17934,46 +18142,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!hasValidComponents) {
             console.warn(`⚠️ CACHE PROTECTION: Detected corrupted memory cache with empty component breakdowns - clearing corrupted cache`);
-            totalPointsCache.delete(currentCacheKey); // Clear corrupted cache
-            // Continue to fresh calculation
+            totalPointsCache.delete(currentCacheKey);
+            // Continue to fresh calculation below
           } else {
-            // Enrich cached data with latest availability info from bootstrap data
+            // Adjusted mode: enrich cached data with latest availability info from bootstrap
+            const adjustedCompKeys = [
+              'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+              'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
+              'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+              'pointsFromDefensiveContributions'
+            ];
             const enrichedData = cachedData.data.map((player: any) => {
               const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
               const chanceNextRound = bootstrapPlayer?.chance_of_playing_next_round ?? 100;
               const bpStatus = bootstrapPlayer?.status || 'a';
               const nextGW = currentGameweek + 1;
-              const nextGWKey = nextGW.toString();
+              const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
               const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
+              const originalGameweekProjections: { [gw: string]: number } = {};
+              const gameweekProjections: { [gw: string]: number } = { ...player.gameweekProjections };
+              // Strip GW39 from response
+              delete gameweekProjections['39'];
+
+              // Unscale component breakdowns so adjusted and raw responses carry the same
+              // per-component values — only gameweekProjections/totalExpectedPoints are zeroed.
+              const gwProbs: { [gw: number]: number } = {};
+              const sortedGWs = Object.keys(gameweekProjections).map(Number).sort((a, b) => a - b);
+              let unscaledComponentOverrides: { [key: string]: any } = {};
+
               if (bootstrapPlayer) {
-                const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
-                for (const gwKey of Object.keys(player.gameweekProjections || {})) {
+                for (const gwNum of sortedGWs) {
+                  gwProbs[gwNum] = calculateAvailabilityProbability(bootstrapPlayer, gwNum, currentGameweek, bpEvents);
+                }
+                // Unscale component breakdowns: pass 1 (prob > 0 GWs)
+                const unscaledComps: { [key: string]: { [gw: number]: number } } = {};
+                for (const gwNum of sortedGWs) {
+                  const p = gwProbs[gwNum];
+                  if (p > 0) {
+                    const sf = p < 1.0 ? 1 / p : 1.0;
+                    for (const key of adjustedCompKeys) {
+                      if (!unscaledComps[key]) unscaledComps[key] = {};
+                      unscaledComps[key][gwNum] = Math.round(((player[key]?.[gwNum.toString()] || 0) * sf) * 100) / 100;
+                    }
+                  }
+                }
+                // Pass 2: prob=0 GWs — estimate from nearest future non-zero-prob GW
+                for (const gwNum of sortedGWs) {
+                  if (gwProbs[gwNum] > 0) continue;
+                  const refGW = sortedGWs.find(g => g > gwNum && unscaledComps[adjustedCompKeys[0]]?.[g] !== undefined)
+                    ?? sortedGWs.find(g => unscaledComps[adjustedCompKeys[0]]?.[g] !== undefined);
+                  for (const key of adjustedCompKeys) {
+                    if (!unscaledComps[key]) unscaledComps[key] = {};
+                    unscaledComps[key][gwNum] = refGW !== undefined ? (unscaledComps[key]?.[refGW] ?? 0) : 0;
+                  }
+                }
+                // Build unscaled component copies WITHOUT mutating the cached player object.
+                // Mutating player[key] directly would corrupt the in-memory cache on each request,
+                // causing exponential unscaling on every subsequent cache hit.
+                unscaledComponentOverrides = {};
+                for (const key of adjustedCompKeys) {
+                  if (!player[key]) continue;
+                  const compCopy: { [gw: string]: number } = { ...player[key] };
+                  for (const gwNum of sortedGWs) {
+                    if (unscaledComps[key]?.[gwNum] !== undefined) {
+                      compCopy[gwNum.toString()] = unscaledComps[key][gwNum];
+                    }
+                  }
+                  unscaledComponentOverrides[key] = compCopy;
+                }
+
+                for (const gwKey of Object.keys(gameweekProjections)) {
                   const gw = parseInt(gwKey);
-                  const prob = calculateAvailabilityProbability(bootstrapPlayer, gw, currentGameweek, bpEvents);
+                  const prob = gwProbs[gw] ?? 1.0;
                   if (prob >= 1.0) continue;
-                  const adjusted = player.gameweekProjections[gwKey] ?? 0;
+                  const rawValue = gameweekProjections[gwKey] ?? 0;
                   if (prob === 0) {
+                    originalGameweekProjections[gwKey] = rawValue;
+                    gameweekProjections[gwKey] = 0;
                     const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
-                    availabilityAdjustments[gwKey] = { original: 0, adjusted: 0, reason };
-                  } else if (adjusted > 0) {
-                    const original = Math.round((adjusted / prob) * 100) / 100;
+                    availabilityAdjustments[gwKey] = { original: rawValue, adjusted: 0, reason };
+                  } else if (rawValue > 0) {
+                    const original = Math.round((rawValue / prob) * 100) / 100;
                     let reason: string;
                     if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
                       reason = `${chanceNextRound}% chance of playing`;
                     } else {
                       reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
                     }
-                    availabilityAdjustments[gwKey] = { original, adjusted: Math.round(adjusted * 100) / 100, reason };
+                    availabilityAdjustments[gwKey] = { original, adjusted: Math.round(rawValue * 100) / 100, reason };
                   }
                 }
               }
-              return {
+              const result: any = {
                 ...player,
+                ...unscaledComponentOverrides,
+                gameweekProjections,
                 chanceOfPlayingNextRound: chanceNextRound,
                 status: bpStatus,
                 news: bootstrapPlayer?.news || '',
                 availabilityAdjustments
               };
+              if (Object.keys(originalGameweekProjections).length > 0) {
+                result.originalGameweekProjections = originalGameweekProjections;
+              }
+              return result;
             });
             
             console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${enrichedData.length} players)`);
@@ -17988,7 +18260,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // The live aggregator writes its result back to totalPointsCache, so subsequent requests
       // within 15 minutes are served from the memory cache above without another aggregation.
       console.log(`🔄 Memory cache miss — calling live aggregator for GW${startGameweek}-${endGameweek}...`);
-      const liveResponse = await internalFetch(`api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const liveAggregatorUrl = availabilityAdjusted
+        ? `api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`
+        : `api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`;
+      const liveResponse = await internalFetch(liveAggregatorUrl);
       if (!liveResponse.ok) {
         throw new Error(`Live aggregator returned ${liveResponse.status}: ${liveResponse.statusText}`);
       }
@@ -18524,11 +18799,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cached/team-cs-projections", async (req, res) => {
     try {
       console.log("📊 Serving cached team clean sheet data from database");
-      const cachedData = await db.select().from(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, '2025/26'))
+
+      // Determine next gameweek so we can filter out stale past-GW rows
+      let nextGameweek = 1;
+      try {
+        const bootstrapResponse = await internalFetch("api/bootstrap-static");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 0;
+          nextGameweek = currentGW + 1;
+        }
+      } catch (_) {}
+
+      const dbRows = await db.select().from(teamCleanSheetProjections)
+        .where(
+          and(
+            eq(teamCleanSheetProjections.season, '2025/26'),
+            gte(teamCleanSheetProjections.gameweek, nextGameweek)
+          )
+        )
         .orderBy(desc(teamCleanSheetProjections.cleanSheetProbability));
-      
-      res.json(cachedData);
+
+      // If DB has future-GW rows, return them directly
+      if (dbRows.length > 0) {
+        return res.json(dbRows);
+      }
+
+      // Fallback: DB has no future GW data — compute from live CS endpoint and
+      // expand grouped format into flat rows (one per team per gameweek).
+      console.log("📊 No future CS rows in DB — falling back to live team-cs-projections endpoint");
+      const liveResponse = await internalFetch("api/team-cs-projections");
+      if (!liveResponse.ok) {
+        return res.json([]);
+      }
+      const liveData: any[] = await liveResponse.json();
+      const flatRows: any[] = [];
+      for (const team of liveData) {
+        const gwProj = team.gameweekProjections || {};
+        for (const gwKey of Object.keys(gwProj)) {
+          const gw = parseInt(gwKey);
+          if (gw < nextGameweek || gw > 38) continue;
+          flatRows.push({
+            id: team.id || team.teamId,
+            teamId: team.id || team.teamId,
+            teamName: team.teamName || team.team,
+            season: '2025/26',
+            gameweek: gw,
+            cleanSheetProbability: gwProj[gwKey],
+          });
+        }
+      }
+      flatRows.sort((a, b) => b.cleanSheetProbability - a.cleanSheetProbability);
+      res.json(flatRows);
     } catch (error) {
       console.error("Error fetching cached team clean sheet projections:", error);
       res.status(500).json({ error: "Failed to fetch cached team clean sheet projections" });
@@ -18800,39 +19122,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cached Team Goal Projections
   app.get("/api/cached/team-goal-projections", async (req, res) => {
     try {
-      console.log("📊 Serving cached team goal projections from database");
-      const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'));
-      
-      // Transform to expected format and calculate totals for sorting
-      const teamGoalData = cachedData.map((team) => {
-        const goalProjections = team.goalProjections as any;
-        const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
-        
-        return {
-          id: team.teamId,
-          teamId: team.teamId,
-          teamName: team.teamName,
-          team: team.teamName,
-          teamShort: team.teamName.slice(0, 3).toUpperCase(),
-          gameweekProjections: goalProjections,
-          totalProjectedGoals: Math.round(totalGoals * 100) / 100,
-          totalGoals: Math.round(totalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round((totalGoals / Math.max(1, Object.keys(goalProjections).length)) * 100) / 100,
-          confidence: "High" as const
-        };
-      });
-      
-      // Sort by total goals descending
-      teamGoalData.sort((a, b) => b.totalGoals - a.totalGoals);
-      
-      // Add position after sorting
-      const teamGoalDataWithPosition = teamGoalData.map((team, index) => ({
-        ...team,
-        position: index + 1
-      }));
-      
-      res.json(teamGoalDataWithPosition);
+      // Forward to the live endpoint which uses TeamGoalsService (with its own in-memory cache).
+      // This ensures cached and live responses are always consistent — the DB copy can be stale
+      // if fixture schedules change (e.g. rescheduled blank-GW games become double-GW entries).
+      console.log("📊 Forwarding cached team-goal-projections to live endpoint for consistency");
+      const liveResponse = await internalFetch("api/team-goal-projections");
+      if (!liveResponse.ok) throw new Error(`Live team-goal-projections failed: ${liveResponse.status}`);
+      const liveData = await liveResponse.json();
+      res.json(liveData);
     } catch (error) {
       console.error("Error fetching cached team goal projections:", error);
       res.status(500).json({ error: "Failed to fetch cached team goal projections" });
@@ -18845,10 +19142,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Serving cached team assist projections from database");
       const cachedData = await db.select().from(teamProjections)
         .where(eq(teamProjections.season, '2025/26'));
+
+      // Determine next gameweek to filter out stale past-GW rows
+      let nextGameweek = 1;
+      try {
+        const bootstrapResponse = await internalFetch("api/bootstrap-static");
+        if (bootstrapResponse.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 0;
+          nextGameweek = currentGW + 1;
+        }
+      } catch (_) {}
       
       // Transform to expected format with assist multiplier
       const teamAssistData = cachedData.map((team) => {
-        const goalProjections = team.goalProjections as any;
+        const rawGoalProjections = team.goalProjections as any;
+        // Strip past GW keys and any beyond GW38
+        const goalProjections: any = {};
+        for (const gwKey of Object.keys(rawGoalProjections)) {
+          const gw = parseInt(gwKey);
+          if (gw >= nextGameweek && gw <= 38) {
+            goalProjections[gwKey] = rawGoalProjections[gwKey];
+          }
+        }
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
         const totalAssists = totalGoals * 0.85; // FPL assist multiplier (higher than standard due to FPL's generous assist rules)
         
