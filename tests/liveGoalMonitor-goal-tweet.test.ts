@@ -1,0 +1,232 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../server/services/twitterService', () => ({
+  twitterService: {
+    postTweet: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('../server/config', () => ({
+  internalFetch: vi.fn().mockResolvedValue({ ok: false }),
+}));
+
+import { twitterService } from '../server/services/twitterService';
+import { LiveGoalMonitor } from '../server/services/liveGoalMonitor';
+
+// ---------------------------------------------------------------------------
+// Helpers to build the minimal fixture / liveData structures that
+// processLiveFixture() expects.
+// ---------------------------------------------------------------------------
+
+function makeFixture(overrides: Partial<{
+  id: number;
+  team_h: number;
+  team_a: number;
+  team_h_score: number;
+  team_a_score: number;
+  minutes: number;
+}> = {}): any {
+  return {
+    id: 1,
+    team_h: 10,
+    team_a: 20,
+    team_h_score: 0,
+    team_a_score: 0,
+    minutes: 45,
+    ...overrides,
+  };
+}
+
+function makeLiveData(elements: any[]): any {
+  return { elements };
+}
+
+function makeLiveElement(playerId: number, fixtureId: number, stats: { identifier: string; value: number }[]): any {
+  return {
+    id: playerId,
+    explain: [{ fixture: fixtureId, stats }],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Directly populate the private maps on a LiveGoalMonitor instance using
+// type-casting, so we can unit-test processLiveFixture() in isolation.
+// ---------------------------------------------------------------------------
+
+function buildMonitor(players: Array<{
+  id: number;
+  web_name: string;
+  team: number;
+  selected_by_percent: string;
+  element_type: number;
+}>, teams: Array<{ id: number; name: string; short_name: string }>): LiveGoalMonitor {
+  const monitor = new LiveGoalMonitor() as any;
+
+  for (const p of players) {
+    monitor.bootstrapPlayers.set(p.id, p);
+  }
+  for (const t of teams) {
+    monitor.bootstrapTeams.set(t.id, t);
+  }
+
+  return monitor as LiveGoalMonitor;
+}
+
+function seedPrevState(monitor: LiveGoalMonitor, fixtureId: number, teamH: number, teamA: number): void {
+  (monitor as any).fixtureStates.set(fixtureId, {
+    fixtureId,
+    homeTeamId: teamH,
+    awayTeamId: teamA,
+    homeScore: 0,
+    awayScore: 0,
+    playerGoals: new Map<number, number>(),
+    playerAssists: new Map<number, number>(),
+    playerRedCards: new Map<number, number>(),
+    playerDC: new Map<number, number>(),
+    tweetedEvents: new Set<string>(),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('LiveGoalMonitor — goal tweets are always posted regardless of ownership', () => {
+  const FIXTURE_ID = 1;
+  const HOME_TEAM_ID = 10;
+  const AWAY_TEAM_ID = 20;
+  const SCORER_ID = 101;
+  const ASSISTER_ID = 102;
+
+  const scorer = {
+    id: SCORER_ID,
+    web_name: 'LowOwnedScorer',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '0.0',
+    element_type: 4,
+  };
+
+  const assister = {
+    id: ASSISTER_ID,
+    web_name: 'LowOwnedAssister',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '0.0',
+    element_type: 3,
+  };
+
+  const homeTeam = { id: HOME_TEAM_ID, name: 'Arsenal', short_name: 'ARS' };
+  const awayTeam = { id: AWAY_TEAM_ID, name: 'Chelsea', short_name: 'CHE' };
+
+  let monitor: LiveGoalMonitor;
+  const postTweetMock = twitterService.postTweet as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    postTweetMock.mockClear();
+    monitor = buildMonitor([scorer, assister], [homeTeam, awayTeam]);
+    seedPrevState(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID);
+  });
+
+  it('calls postTweet for a goal by a 0%-owned scorer (no assister)', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tweet text includes the scorer ownership percentage for a 0%-owned scorer', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('LowOwnedScorer');
+    expect(tweetArg).toContain('0.0%');
+  });
+
+  it('calls postTweet when both scorer and assister are 0%-owned', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('tweet text includes ownership percentages for both 0%-owned scorer and assister', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('LowOwnedScorer');
+    expect(tweetArg).toContain('LowOwnedAssister');
+    const ownershipMatches = tweetArg.match(/0\.0%/g);
+    expect(ownershipMatches).not.toBeNull();
+    expect(ownershipMatches!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('calls postTweet exactly once per goal even when the scorer is well below the OWNERSHIP_THRESHOLD', async () => {
+    const veryLowOwnershipScorer = {
+      id: 201,
+      web_name: 'TinyOwned',
+      team: AWAY_TEAM_ID,
+      selected_by_percent: '0.1',
+      element_type: 4,
+    };
+    (monitor as any).bootstrapPlayers.set(201, veryLowOwnershipScorer);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(201, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT call postTweet on the first-seen poll (no prevState diff yet)', async () => {
+    const freshMonitor = buildMonitor([scorer], [homeTeam, awayTeam]);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (freshMonitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).not.toHaveBeenCalled();
+  });
+
+  it('calls postTweet on the second poll when a new goal appears (simulating real detection)', async () => {
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+
+    const emptyLiveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, []),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, emptyLiveData);
+
+    const goalLiveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+    await (monitor as any).processLiveFixture(fixture, goalLiveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('0.0%');
+  });
+});
