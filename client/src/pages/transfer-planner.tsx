@@ -1091,7 +1091,7 @@ export default function TransferPlanner() {
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
-  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[]; dependentPlayerPairs: { outPlayerId: number; inPlayerId: number }[] } | null>(null);
+  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; gwId: number; transferName: string; dependentTransfers: string[]; dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[]; crossGwDependents: Array<{ gwId: number; transferIndex: number }> } | null>(null);
   const [brokenTransfers, setBrokenTransfers] = useState<{ gwId: number; outPlayerId: number; inPlayerId: number }[]>([]);
   
   // Delete all drafts confirmation dialog
@@ -4247,6 +4247,28 @@ export default function TransferPlanner() {
     }
   };
 
+  // BFS across future GWs to find transfers that chain off players brought in by the cascade
+  const findCrossGWDependents = (
+    sourceGwId: number,
+    cascadeIndices: Set<number>,
+    sourceCompleted: Array<{ outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }>
+  ): Array<{ gwId: number; transferIndex: number; outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }> => {
+    const trackedPlayerIds = new Set([...cascadeIndices].map(i => sourceCompleted[i].inPlayerId));
+    const result: Array<{ gwId: number; transferIndex: number; outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }> = [];
+    const futureGWIds = Object.keys(gameweekTransfers).map(Number).filter(gw => gw > sourceGwId).sort((a, b) => a - b);
+    for (const futureGwId of futureGWIds) {
+      const futureCompleted = (gameweekTransfers[futureGwId] || { completed: [] }).completed;
+      for (let i = 0; i < futureCompleted.length; i++) {
+        const t = futureCompleted[i];
+        if (trackedPlayerIds.has(t.outPlayerId)) {
+          result.push({ gwId: futureGwId, transferIndex: i, outPlayerId: t.outPlayerId, inPlayerId: t.inPlayerId, outPlayerName: t.outPlayerName, inPlayerName: t.inPlayerName });
+          trackedPlayerIds.add(t.inPlayerId);
+        }
+      }
+    }
+    return result;
+  };
+
   // Check for chain breaks before undoing a single transfer; show confirmation if needed
   const handleUndoSingleTransferWithCheck = (transferIndex: number) => {
     const gwId = selectedGameweek!;
@@ -4254,17 +4276,22 @@ export default function TransferPlanner() {
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
-    // Use shared BFS utility so the dialog lists ALL downstream dependents (not just direct ones)
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
     const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
-    const dependentTransfers = dependentIndices.map(i => {
-      const t = currentCompleted[i];
-      return `${t.outPlayerName} → ${t.inPlayerName}`;
-    });
-    const dependentPlayerPairs = dependentIndices.map(i => ({
+    const dependentTransfers: string[] = dependentIndices.map(i => `${currentCompleted[i].outPlayerName} → ${currentCompleted[i].inPlayerName}`);
+    const dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[] = dependentIndices.map(i => ({
       outPlayerId: currentCompleted[i].outPlayerId,
       inPlayerId: currentCompleted[i].inPlayerId,
+      depGwId: gwId,
     }));
+
+    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
+    const crossGwDependents: Array<{ gwId: number; transferIndex: number }> = [];
+    for (const dep of crossGwDeps) {
+      dependentTransfers.push(`GW${dep.gwId}: ${dep.outPlayerName} → ${dep.inPlayerName}`);
+      dependentPlayerPairs.push({ outPlayerId: dep.outPlayerId, inPlayerId: dep.inPlayerId, depGwId: dep.gwId });
+      crossGwDependents.push({ gwId: dep.gwId, transferIndex: dep.transferIndex });
+    }
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -4273,6 +4300,7 @@ export default function TransferPlanner() {
         transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
         dependentTransfers,
         dependentPlayerPairs,
+        crossGwDependents,
       });
     } else {
       handleUndoSingleTransfer(transferIndex);
@@ -4495,23 +4523,165 @@ export default function TransferPlanner() {
     }
   };
 
+  // Undo target transfer + all within-GW cascade + all cross-GW dependents atomically
+  const handleUndoWithAllDependents = async (
+    transferIndex: number,
+    gwId: number,
+    crossGwDependents: Array<{ gwId: number; transferIndex: number }>
+  ) => {
+    if (!teamData?.picks) return;
+
+    const gwEvent = bootstrapData?.events.find(e => e.id === gwId);
+    if (gwEvent?.finished) return;
+
+    const currentGwData = gameweekTransfers[gwId] || { transferredOut: [], completed: [] };
+    const currentCompleted = currentGwData.completed;
+    if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
+
+    // --- Source GW: same cascade logic as handleUndoWithDependentsForGW ---
+    const indicesToRemove = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
+    const removedTransfer = currentCompleted[transferIndex];
+
+    const baseline = getBaselineLineup(gwId);
+    let simLineup = [...baseline];
+    const slotMap: number[] = currentCompleted.map(transfer => {
+      const pick = simLineup.find(p => p.element === transfer.outPlayerId);
+      const slot = pick?.position ?? -1;
+      if (slot !== -1) {
+        simLineup = simLineup.map(p => {
+          if (p.element === transfer.outPlayerId) {
+            const inPlayer = getPlayerById(transfer.inPlayerId);
+            if (inPlayer) {
+              const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+              return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+            }
+          }
+          return p;
+        });
+      }
+      return slot;
+    });
+
+    const remainingCompleted = currentCompleted.filter((_, i) => !indicesToRemove.has(i));
+    const remainingSlots = slotMap.filter((_, i) => !indicesToRemove.has(i));
+
+    let newLineup = [...baseline];
+    remainingCompleted.forEach((transfer, i) => {
+      const slot = remainingSlots[i];
+      if (slot === -1) return;
+      const inPlayer = getPlayerById(transfer.inPlayerId);
+      if (!inPlayer) return;
+      const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+      newLineup = newLineup.map(p => {
+        if (p.position === slot) {
+          return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+        }
+        return p;
+      });
+    });
+
+    const removedInPlayerIds = new Set(currentCompleted.filter((_, i) => indicesToRemove.has(i)).map(t => t.inPlayerId));
+    const newTransferredOut = currentGwData.transferredOut.filter(t => !removedInPlayerIds.has(t.playerId));
+    const pendingOutIds = new Set(newTransferredOut.map(t => t.playerId));
+    newLineup = newLineup.map(pick => pendingOutIds.has(pick.element) ? { ...pick, is_transferred_out: true } : pick);
+
+    if (gwId === selectedGameweek) {
+      setManualLineup(newLineup);
+      setCompletedTransfers(remainingCompleted);
+      setTransferredOutPlayers(newTransferredOut);
+    }
+
+    // Clear optimized lineups for all affected GWs in one call
+    const gwsToClear = new Set([gwId, ...crossGwDependents.map(d => d.gwId)]);
+    for (const clearGwId of gwsToClear) {
+      delete isLineupOptimizedRef.current[getOptimizationKey(activeDraft, clearGwId)];
+    }
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      for (const clearGwId of gwsToClear) delete updated[clearGwId];
+      return updated;
+    });
+
+    // Build updated transfers starting from source GW
+    let updatedGameweekTransfers: typeof gameweekTransfers = {
+      ...gameweekTransfers,
+      [gwId]: { transferredOut: newTransferredOut, completed: remainingCompleted },
+    };
+
+    // --- Cross-GW removals: group by GW, remove atomically per GW ---
+    const crossGwByGW = new Map<number, number[]>();
+    for (const dep of crossGwDependents) {
+      if (!crossGwByGW.has(dep.gwId)) crossGwByGW.set(dep.gwId, []);
+      crossGwByGW.get(dep.gwId)!.push(dep.transferIndex);
+    }
+    for (const [depGwId, depIndices] of crossGwByGW) {
+      const depGwData = updatedGameweekTransfers[depGwId] || { transferredOut: [], completed: [] };
+      const depCompleted = depGwData.completed;
+      const depRemoveSet = new Set(depIndices);
+      const depRemovedInPlayerIds = new Set(depCompleted.filter((_, i) => depRemoveSet.has(i)).map(t => t.inPlayerId));
+      const newDepCompleted = depCompleted.filter((_, i) => !depRemoveSet.has(i));
+      const newDepTransferredOut = depGwData.transferredOut.filter(t => !depRemovedInPlayerIds.has(t.playerId));
+      updatedGameweekTransfers = {
+        ...updatedGameweekTransfers,
+        [depGwId]: { transferredOut: newDepTransferredOut, completed: newDepCompleted },
+      };
+      if (depGwId === selectedGameweek) {
+        setCompletedTransfers(newDepCompleted);
+        setTransferredOutPlayers(newDepTransferredOut);
+      }
+    }
+
+    // Clear broken transfer warnings for all removed transfers (source GW + cross-GW)
+    setBrokenTransfers(prev => {
+      let result = filterBrokenTransfersAfterCascade(prev, gwId, indicesToRemove, currentCompleted);
+      for (const [depGwId, depIndices] of crossGwByGW) {
+        const depCompleted = gameweekTransfers[depGwId]?.completed || [];
+        const depRemoveSet = new Set(depIndices);
+        result = result.filter(b => {
+          if (b.gwId !== depGwId) return true;
+          return !depCompleted.some((t, i) => depRemoveSet.has(i) && b.outPlayerId === t.outPlayerId && b.inPlayerId === t.inPlayerId);
+        });
+      }
+      return result;
+    });
+
+    setGameweekTransfers(updatedGameweekTransfers);
+
+    const totalRemoved = indicesToRemove.size + crossGwDependents.length;
+    toast({
+      title: "Transfers Undone",
+      description: totalRemoved === 1
+        ? `${removedTransfer.outPlayerName} → ${removedTransfer.inPlayerName} has been reversed.`
+        : `${removedTransfer.outPlayerName} → ${removedTransfer.inPlayerName} and ${totalRemoved - 1} dependent transfer${totalRemoved - 1 > 1 ? 's' : ''} have been reversed.`,
+    });
+
+    if (activeDraft !== "Base") {
+      await saveCurrentDraft(updatedGameweekTransfers, activeDraft);
+    }
+  };
+
   // GW-aware chain-break check before undoing a single transfer
   const handleUndoSingleTransferWithCheckForGW = (transferIndex: number, gwId: number) => {
     const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
-    // Use shared BFS utility so the dialog lists ALL downstream dependents (not just direct ones)
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
     const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
-    const dependentTransfers = dependentIndices.map(i => {
-      const t = currentCompleted[i];
-      return `${t.outPlayerName} → ${t.inPlayerName}`;
-    });
-    const dependentPlayerPairs = dependentIndices.map(i => ({
+    const dependentTransfers: string[] = dependentIndices.map(i => `${currentCompleted[i].outPlayerName} → ${currentCompleted[i].inPlayerName}`);
+    const dependentPlayerPairs: { outPlayerId: number; inPlayerId: number; depGwId: number }[] = dependentIndices.map(i => ({
       outPlayerId: currentCompleted[i].outPlayerId,
       inPlayerId: currentCompleted[i].inPlayerId,
+      depGwId: gwId,
     }));
+
+    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
+    const crossGwDependents: Array<{ gwId: number; transferIndex: number }> = [];
+    for (const dep of crossGwDeps) {
+      dependentTransfers.push(`GW${dep.gwId}: ${dep.outPlayerName} → ${dep.inPlayerName}`);
+      dependentPlayerPairs.push({ outPlayerId: dep.outPlayerId, inPlayerId: dep.inPlayerId, depGwId: dep.gwId });
+      crossGwDependents.push({ gwId: dep.gwId, transferIndex: dep.transferIndex });
+    }
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -4520,6 +4690,7 @@ export default function TransferPlanner() {
         transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
         dependentTransfers,
         dependentPlayerPairs,
+        crossGwDependents,
       });
     } else {
       handleUndoSingleTransferForGW(transferIndex, gwId);
@@ -7845,7 +8016,7 @@ export default function TransferPlanner() {
             <AlertDialogAction
               onClick={() => {
                 if (chainBreakConfirmation) {
-                  handleUndoWithDependentsForGW(chainBreakConfirmation.transferIndex, chainBreakConfirmation.gwId);
+                  handleUndoWithAllDependents(chainBreakConfirmation.transferIndex, chainBreakConfirmation.gwId, chainBreakConfirmation.crossGwDependents);
                   setChainBreakConfirmation(null);
                 }
               }}
@@ -7858,7 +8029,7 @@ export default function TransferPlanner() {
                 if (chainBreakConfirmation) {
                   const { transferIndex, gwId, dependentTransfers, dependentPlayerPairs } = chainBreakConfirmation;
                   handleUndoSingleTransferForGW(transferIndex, gwId);
-                  const newBroken = dependentPlayerPairs.map(pair => ({ gwId, outPlayerId: pair.outPlayerId, inPlayerId: pair.inPlayerId }));
+                  const newBroken = dependentPlayerPairs.map(pair => ({ gwId: pair.depGwId, outPlayerId: pair.outPlayerId, inPlayerId: pair.inPlayerId }));
                   setBrokenTransfers(prev => [...prev, ...newBroken]);
                   toast({
                     title: "Warning: Squad May Be Broken",
