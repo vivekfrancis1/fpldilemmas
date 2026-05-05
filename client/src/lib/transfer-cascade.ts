@@ -20,6 +20,49 @@ export interface CrossGWDepEntry {
   inPlayerName: string;
 }
 
+export type GameweekTransfersMap = Record<number, { completed: CompletedTransfer[] }>;
+
+/**
+ * BFS across future GWs to find transfers that chain off players brought in
+ * by the cascade (identified by cascadeIndices within sourceCompleted).
+ *
+ * @param sourceGwId     - The GW being undone from.
+ * @param cascadeIndices - Set of transfer indices being removed in sourceGwId.
+ * @param sourceCompleted - The completed transfers for sourceGwId.
+ * @param gameweekTransfers - Map of all GW transfer data (keyed by GW number).
+ */
+export function findCrossGWDependents(
+  sourceGwId: number,
+  cascadeIndices: Set<number>,
+  sourceCompleted: CompletedTransfer[],
+  gameweekTransfers: GameweekTransfersMap
+): CrossGWDepEntry[] {
+  const trackedPlayerIds = new Set([...cascadeIndices].map(i => sourceCompleted[i].inPlayerId));
+  const result: CrossGWDepEntry[] = [];
+  const futureGWIds = Object.keys(gameweekTransfers)
+    .map(Number)
+    .filter(gw => gw > sourceGwId)
+    .sort((a, b) => a - b);
+  for (const futureGwId of futureGWIds) {
+    const futureCompleted = (gameweekTransfers[futureGwId] || { completed: [] }).completed;
+    for (let i = 0; i < futureCompleted.length; i++) {
+      const t = futureCompleted[i];
+      if (trackedPlayerIds.has(t.outPlayerId)) {
+        result.push({
+          gwId: futureGwId,
+          transferIndex: i,
+          outPlayerId: t.outPlayerId,
+          inPlayerId: t.inPlayerId,
+          outPlayerName: t.outPlayerName,
+          inPlayerName: t.inPlayerName,
+        });
+        trackedPlayerIds.add(t.inPlayerId);
+      }
+    }
+  }
+  return result;
+}
+
 export interface ChainBreakPayload {
   transferIndex: number;
   gwId: number;

@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
 import { extractManagerId } from "@/lib/manager-id-utils";
-import { computeCascadeIndicesToRemove, executeUndoChainCheck, filterBrokenTransfersAfterCascade } from "@/lib/transfer-cascade";
+import { computeCascadeIndicesToRemove, executeUndoChainCheck, filterBrokenTransfersAfterCascade, findCrossGWDependents } from "@/lib/transfer-cascade";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
@@ -4308,28 +4308,6 @@ export default function TransferPlanner() {
     }
   };
 
-  // BFS across future GWs to find transfers that chain off players brought in by the cascade
-  const findCrossGWDependents = (
-    sourceGwId: number,
-    cascadeIndices: Set<number>,
-    sourceCompleted: Array<{ outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }>
-  ): Array<{ gwId: number; transferIndex: number; outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }> => {
-    const trackedPlayerIds = new Set([...cascadeIndices].map(i => sourceCompleted[i].inPlayerId));
-    const result: Array<{ gwId: number; transferIndex: number; outPlayerId: number; inPlayerId: number; outPlayerName: string; inPlayerName: string }> = [];
-    const futureGWIds = Object.keys(gameweekTransfers).map(Number).filter(gw => gw > sourceGwId).sort((a, b) => a - b);
-    for (const futureGwId of futureGWIds) {
-      const futureCompleted = (gameweekTransfers[futureGwId] || { completed: [] }).completed;
-      for (let i = 0; i < futureCompleted.length; i++) {
-        const t = futureCompleted[i];
-        if (trackedPlayerIds.has(t.outPlayerId)) {
-          result.push({ gwId: futureGwId, transferIndex: i, outPlayerId: t.outPlayerId, inPlayerId: t.inPlayerId, outPlayerName: t.outPlayerName, inPlayerName: t.inPlayerName });
-          trackedPlayerIds.add(t.inPlayerId);
-        }
-      }
-    }
-    return result;
-  };
-
   // Check for chain breaks before undoing a single transfer; show confirmation if needed
   const handleUndoSingleTransferWithCheck = (transferIndex: number) => {
     const gwId = selectedGameweek!;
@@ -4337,7 +4315,7 @@ export default function TransferPlanner() {
     if (!currentCompleted[transferIndex]) return;
 
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
-    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
+    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted, gameweekTransfers);
     executeUndoChainCheck(
       currentCompleted, transferIndex, gwId, crossGwDeps,
       (payload) => setChainBreakConfirmation(payload),
@@ -4704,7 +4682,7 @@ export default function TransferPlanner() {
     if (!currentCompleted[transferIndex]) return;
 
     const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
-    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted);
+    const crossGwDeps = findCrossGWDependents(gwId, cascadeIndices, currentCompleted, gameweekTransfers);
     executeUndoChainCheck(
       currentCompleted, transferIndex, gwId, crossGwDeps,
       (payload) => setChainBreakConfirmation(payload),

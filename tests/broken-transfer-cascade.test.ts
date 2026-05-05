@@ -4,10 +4,12 @@ import {
   computeCascadeIndicesToRemove,
   executeUndoChainCheck,
   filterBrokenTransfersAfterCascade,
+  findCrossGWDependents,
   type ChainBreakPayload,
   type CompletedTransfer,
   type BrokenTransferEntry,
   type CrossGWDepEntry,
+  type GameweekTransfersMap,
 } from '../client/src/lib/transfer-cascade';
 
 const t = (out: number, inp: number): CompletedTransfer => ({
@@ -672,5 +674,196 @@ describe('executeUndoChainCheck — calls onDirectUndo when no dependents', () =
 
     expect(onDirectUndo).toHaveBeenCalledOnce();
     expect(onChainDetected).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findCrossGWDependents — extracted from transfer-planner.tsx.
+// Performs a BFS across future GWs to find transfers that depend on players
+// brought in by the cascade being undone in sourceGwId.
+// ---------------------------------------------------------------------------
+
+describe('findCrossGWDependents — no future GWs', () => {
+  it('returns empty array when gameweekTransfers has no entries beyond sourceGwId', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = { 10: { completed: sourceCompleted } };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when gameweekTransfers is empty', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, {});
+    expect(result).toEqual([]);
+  });
+
+  it('ignores GWs that are earlier than or equal to sourceGwId', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      8: { completed: [t(2, 3)] },
+      10: { completed: sourceCompleted },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
+  });
+});
+
+describe('findCrossGWDependents — single future GW', () => {
+  it('returns the matching transfer when the future GW uses a cascaded inPlayer as outPlayer', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(2, 3)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      gwId: 11,
+      transferIndex: 0,
+      outPlayerId: 2,
+      inPlayerId: 3,
+      outPlayerName: 'Player2',
+      inPlayerName: 'Player3',
+    });
+  });
+
+  it('returns empty array when no future transfer uses the cascaded inPlayer', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(5, 6)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
+  });
+
+  it('returns only the matching transfer and ignores unrelated transfers in the same future GW', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(5, 6), t(2, 3), t(7, 8)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ gwId: 11, transferIndex: 1, outPlayerId: 2, inPlayerId: 3 });
+  });
+
+  it('records the correct transferIndex when the matching transfer is not at index 0', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(10, 11), t(12, 13), t(2, 99)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(1);
+    expect(result[0].transferIndex).toBe(2);
+  });
+});
+
+describe('findCrossGWDependents — multi-hop chain across multiple GWs', () => {
+  it('chains across two future GWs when inPlayer of GW11 becomes outPlayer in GW12', () => {
+    // sourceGw (10): player 1 → player 2  (cascade brings in player 2)
+    // GW11: player 2 → player 3           (depends on player 2, adds player 3 to tracked set)
+    // GW12: player 3 → player 4           (depends on player 3)
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(2, 3)] },
+      12: { completed: [t(3, 4)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ gwId: 11, transferIndex: 0, outPlayerId: 2, inPlayerId: 3 });
+    expect(result[1]).toMatchObject({ gwId: 12, transferIndex: 0, outPlayerId: 3, inPlayerId: 4 });
+  });
+
+  it('handles a gap GW with no match and still picks up the chain in the next GW', () => {
+    // sourceGw (10): 1 → 2
+    // GW11: unrelated (5 → 6) — no match
+    // GW12: 2 → 3               — matches player 2
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(5, 6)] },
+      12: { completed: [t(2, 3)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ gwId: 12, outPlayerId: 2, inPlayerId: 3 });
+  });
+
+  it('picks up multiple dependents within a single future GW when cascade brings in several players', () => {
+    // cascade at GW10 removes both index 0 (1→2) and index 1 (2→3), tracking players 2 and 3
+    const sourceCompleted = [t(1, 2), t(2, 3)];
+    const cascadeIndices = new Set([0, 1]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(2, 10), t(3, 11)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(2);
+    expect(result.map(r => r.outPlayerId)).toContain(2);
+    expect(result.map(r => r.outPlayerId)).toContain(3);
+  });
+
+  it('processes future GWs in ascending order regardless of key insertion order', () => {
+    // Keys inserted in reverse order; GW11 should still be processed before GW12
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      12: { completed: [t(3, 4)] },
+      11: { completed: [t(2, 3)] },
+      10: { completed: sourceCompleted },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toHaveLength(2);
+    expect(result[0].gwId).toBe(11);
+    expect(result[1].gwId).toBe(12);
+  });
+});
+
+describe('findCrossGWDependents — no match in a future GW', () => {
+  it('returns empty when future GW transfers all use unrelated players', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(5, 6), t(7, 8)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
+  });
+
+  it('does not match a transfer where the cascaded player appears as inPlayer (not outPlayer)', () => {
+    // Player 2 is the cascaded inPlayer. GW11 brings player 2 IN (not out); should not match.
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [t(5, 2)] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty when there are future GWs but their completed arrays are empty', () => {
+    const sourceCompleted = [t(1, 2)];
+    const cascadeIndices = new Set([0]);
+    const gwMap: GameweekTransfersMap = {
+      10: { completed: sourceCompleted },
+      11: { completed: [] },
+      12: { completed: [] },
+    };
+    const result = findCrossGWDependents(10, cascadeIndices, sourceCompleted, gwMap);
+    expect(result).toEqual([]);
   });
 });
