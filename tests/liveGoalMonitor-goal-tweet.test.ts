@@ -110,6 +110,30 @@ function seedPrevStateWithGoals(
   });
 }
 
+function seedPrevStateWithGoalsAndAssists(
+  monitor: LiveGoalMonitor,
+  fixtureId: number,
+  teamH: number,
+  teamA: number,
+  homeScore: number,
+  awayScore: number,
+  goalsMap: Map<number, number>,
+  assistsMap: Map<number, number>,
+): void {
+  (monitor as any).fixtureStates.set(fixtureId, {
+    fixtureId,
+    homeTeamId: teamH,
+    awayTeamId: teamA,
+    homeScore,
+    awayScore,
+    playerGoals: goalsMap,
+    playerAssists: assistsMap,
+    playerRedCards: new Map<number, number>(),
+    playerDC: new Map<number, number>(),
+    tweetedEvents: new Set<string>(),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -381,5 +405,153 @@ describe('LiveGoalMonitor — goal-overturned (VAR) tweet path', () => {
     expect(postTweetMock).toHaveBeenCalledTimes(1);
     const tweetArg: string = postTweetMock.mock.calls[0][0];
     expect(tweetArg).toContain('OVERTURNED');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Overturned assist credit
+// ---------------------------------------------------------------------------
+
+describe('LiveGoalMonitor — overturned goal also removes assist credit', () => {
+  const FIXTURE_ID = 1;
+  const HOME_TEAM_ID = 10;
+  const AWAY_TEAM_ID = 20;
+  const SCORER_ID = 101;
+  const ASSISTER_ID = 102;
+
+  const scorer = {
+    id: SCORER_ID,
+    web_name: 'HomeScorer',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '12.0',
+    element_type: 4,
+  };
+
+  const assister = {
+    id: ASSISTER_ID,
+    web_name: 'HomeAssister',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '9.5',
+    element_type: 3,
+  };
+
+  const homeTeam = { id: HOME_TEAM_ID, name: 'Arsenal', short_name: 'ARS' };
+  const awayTeam = { id: AWAY_TEAM_ID, name: 'Chelsea', short_name: 'CHE' };
+
+  let monitor: LiveGoalMonitor;
+  const postTweetMock = twitterService.postTweet as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    postTweetMock.mockClear();
+    monitor = buildMonitor([scorer, assister], [homeTeam, awayTeam]);
+  });
+
+  it('removes the assist from tracked state after the associated goal is overturned', async () => {
+    const goalsMap = new Map([[SCORER_ID, 1]]);
+    const assistsMap = new Map([[ASSISTER_ID, 1]]);
+    seedPrevStateWithGoalsAndAssists(
+      monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap, assistsMap,
+    );
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const updatedState = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    expect(updatedState.playerAssists.get(ASSISTER_ID) ?? 0).toBe(0);
+  });
+
+  it('does not tweet a new assist when the associated goal is overturned alongside the assist', async () => {
+    const goalsMap = new Map([[SCORER_ID, 1]]);
+    const assistsMap = new Map([[ASSISTER_ID, 1]]);
+    seedPrevStateWithGoalsAndAssists(
+      monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap, assistsMap,
+    );
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetCalls: string[] = postTweetMock.mock.calls.map((c: any[]) => c[0] as string);
+    const hasAssistTweet = tweetCalls.some(t => t.includes('HomeAssister') && !t.includes('OVERTURNED'));
+    expect(hasAssistTweet).toBe(false);
+  });
+
+  it('only posts the OVERTURNED tweet — not a spurious assist tweet — when goal and assist are both removed', async () => {
+    const goalsMap = new Map([[SCORER_ID, 1]]);
+    const assistsMap = new Map([[ASSISTER_ID, 1]]);
+    seedPrevStateWithGoalsAndAssists(
+      monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap, assistsMap,
+    );
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('OVERTURNED');
+  });
+
+  it('does not tweet a new assist when the goal is overturned but assist count stays at zero in liveData', async () => {
+    const goalsMap = new Map([[SCORER_ID, 1]]);
+    const assistsMap = new Map<number, number>();
+    seedPrevStateWithGoalsAndAssists(
+      monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap, assistsMap,
+    );
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetCalls: string[] = postTweetMock.mock.calls.map((c: any[]) => c[0] as string);
+    const hasAssistTweet = tweetCalls.some(t => !t.includes('OVERTURNED') && t.includes('assist'));
+    expect(hasAssistTweet).toBe(false);
+  });
+
+  it('removes assist from state but does NOT affect an unrelated assist from a concurrent event', async () => {
+    const UNRELATED_ASSISTER_ID = 103;
+    const unrelatedAssister = {
+      id: UNRELATED_ASSISTER_ID,
+      web_name: 'UnrelatedAssister',
+      team: HOME_TEAM_ID,
+      selected_by_percent: '5.0',
+      element_type: 3,
+    };
+    (monitor as any).bootstrapPlayers.set(UNRELATED_ASSISTER_ID, unrelatedAssister);
+
+    const goalsMap = new Map([[SCORER_ID, 1]]);
+    const assistsMap = new Map([[ASSISTER_ID, 1]]);
+    seedPrevStateWithGoalsAndAssists(
+      monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap, assistsMap,
+    );
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+      makeLiveElement(ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 0 }]),
+      makeLiveElement(UNRELATED_ASSISTER_ID, FIXTURE_ID, [{ identifier: 'assists', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const updatedState = (monitor as any).fixtureStates.get(FIXTURE_ID);
+    expect(updatedState.playerAssists.get(ASSISTER_ID) ?? 0).toBe(0);
+    expect(updatedState.playerAssists.get(UNRELATED_ASSISTER_ID)).toBe(1);
   });
 });
