@@ -7751,15 +7751,16 @@ export default function TransferPlanner() {
             <AlertDialogDescription className="space-y-2">
               <p>
                 Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain.
-                The following downstream transfer{chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} depend on it:
+                The following {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers will be removed:
               </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                <li><span className="font-medium">{chainBreakConfirmation?.transferName}</span> <span className="text-xs">(this transfer)</span></li>
                 {chainBreakConfirmation?.dependentTransfers.map((name, i) => (
                   <li key={i}>{name}</li>
                 ))}
               </ul>
               <p className="text-sm text-muted-foreground">
-                <strong>Undo This &amp; Dependents</strong> will remove this transfer and all {chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? `${chainBreakConfirmation.dependentTransfers.length} downstream transfers` : 'the dependent transfer'} listed above.
+                <strong>Undo This &amp; Dependents</strong> will remove all {chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0} transfers listed above.
                 <br />
                 <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} will remain but may produce unexpected results.
               </p>
@@ -7776,7 +7777,7 @@ export default function TransferPlanner() {
               }}
               className="bg-orange-600 hover:bg-orange-700 text-white"
             >
-              Undo This & Dependents
+              Undo This & Dependents ({chainBreakConfirmation ? chainBreakConfirmation.dependentTransfers.length + 1 : 0})
             </AlertDialogAction>
             <AlertDialogAction
               onClick={() => {
