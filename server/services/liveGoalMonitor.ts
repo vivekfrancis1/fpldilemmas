@@ -104,6 +104,20 @@ export class LiveGoalMonitor {
   private bonusBatchTimer: NodeJS.Timeout | null = null;
   private bonusUpdateBatchTimer: NodeJS.Timeout | null = null;
 
+  /**
+   * Returns true and registers the event key when this is the first time we have
+   * seen this event, so the caller should post the tweet.  Returns false when the
+   * key is already known, meaning the tweet was already sent and must be skipped.
+   *
+   * Centralising the check-and-add here means every future event type automatically
+   * gets dedup protection without each callsite having to remember the pattern.
+   */
+  private guardedTweet(eventKey: string, tweetedEvents: Set<string>): boolean {
+    if (tweetedEvents.has(eventKey)) return false;
+    tweetedEvents.add(eventKey);
+    return true;
+  }
+
   start() {
     console.log('⚽ Live match monitor starting...');
     console.log(`📋 Will tweet all goals and red cards regardless of ownership`);
@@ -478,8 +492,7 @@ export class LiveGoalMonitor {
       // while future distinct overturns for the same scorer get a higher committed count → new key.
       const committedCount = (prevState.overturnCounts?.get(scorerId)) || 0;
       const eventKey = `overturn_${scorerId}_${committedCount + batchOccurrence}`;
-      if (prevState.tweetedEvents.has(eventKey)) continue;
-      prevState.tweetedEvents.add(eventKey);
+      if (!this.guardedTweet(eventKey, prevState.tweetedEvents)) continue;
       newOverturnCounts.set(scorerId, committedCount + batchOccurrence);
 
       if (scorer.team === fixture.team_h) {
@@ -520,8 +533,7 @@ export class LiveGoalMonitor {
 
         const prevGoalCount = prevState.playerGoals.get(scorerId) || 0;
         const eventKey = `goal_${scorerId}_${prevGoalCount + batchOccurrence}`;
-        if (prevState.tweetedEvents.has(eventKey)) continue;
-        prevState.tweetedEvents.add(eventKey);
+        if (!this.guardedTweet(eventKey, prevState.tweetedEvents)) continue;
 
         // Increment the live score for this goal before building the tweet context
         if (scorer.team === fixture.team_h) {
@@ -561,8 +573,7 @@ export class LiveGoalMonitor {
 
       const currentCount = currentPlayerRedCards.get(playerId) || 0;
       const eventKey = `redcard_${playerId}_${currentCount}`;
-      if (prevState.tweetedEvents.has(eventKey)) continue;
-      prevState.tweetedEvents.add(eventKey);
+      if (!this.guardedTweet(eventKey, prevState.tweetedEvents)) continue;
 
       const ownership = parseFloat(player.selected_by_percent);
       const redCardCtx: MatchContext = {
