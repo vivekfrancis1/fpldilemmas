@@ -1053,6 +1053,7 @@ export default function TransferPlanner() {
   const activeDraftRef = useRef<string>("A");
   const searchedIdRef = useRef<string | null>(null);
   const gameweekTransfersRef = useRef<GameweekTransfers>({});
+  const staleValidatedForRef = useRef<string>('');
   const plannedChipsRef = useRef<PlannedChips>({});
   const optimizedLineupsRef = useRef<{ [gameweek: number]: TeamPick[] }>({});
   const manualLineupRef = useRef<TeamPick[]>([]);
@@ -1298,6 +1299,66 @@ export default function TransferPlanner() {
     }
   }, [isOwnTeam, teamData]);
 
+
+  // Auto-detect and remove stale transfers where the outgoing player is no longer in the squad.
+  // Catches orphaned cross-GW transfers left behind by undos that happened before cascade detection.
+  // Uses gameweekTransfersRef (kept in sync above) to read transfers without causing a dep-loop.
+  useEffect(() => {
+    if (!teamData?.picks || !searchedId || !bootstrapData || isLoadingDraftRef.current) return;
+
+    const validationKey = `${searchedId}-${activeDraft}`;
+    if (staleValidatedForRef.current === validationKey) return;
+    staleValidatedForRef.current = validationKey;
+
+    const gwTransfers = gameweekTransfersRef.current;
+    if (Object.keys(gwTransfers).length === 0) return;
+
+    const nextGWs = [...bootstrapData.events]
+      .filter(e => !e.finished)
+      .sort((a, b) => a.id - b.id);
+    if (nextGWs.length === 0) return;
+
+    let squad = [...teamData.picks];
+    let staleCount = 0;
+    let changed = false;
+    const updatedTransfers = { ...gwTransfers };
+
+    for (const gw of nextGWs) {
+      const gwData = updatedTransfers[gw.id];
+      if (!gwData?.completed?.length) continue;
+
+      const valid = gwData.completed.filter((t: any) =>
+        squad.some((p: any) => p.element === t.outPlayerId)
+      );
+      if (valid.length < gwData.completed.length) {
+        staleCount += gwData.completed.length - valid.length;
+        updatedTransfers[gw.id] = { ...gwData, completed: valid };
+        changed = true;
+      }
+
+      valid.forEach((t: any) => {
+        squad = squad.map((p: any) =>
+          p.element === t.outPlayerId ? { ...p, element: t.inPlayerId } : p
+        );
+      });
+    }
+
+    if (changed) {
+      setGameweekTransfers(updatedTransfers);
+      setBrokenTransfers(prev =>
+        prev.filter(b =>
+          updatedTransfers[b.gwId]?.completed.some(
+            (t: any) => t.outPlayerId === b.outPlayerId && t.inPlayerId === b.inPlayerId
+          )
+        )
+      );
+      toast({
+        title: `${staleCount} invalid transfer${staleCount > 1 ? 's' : ''} removed`,
+        description: `Transfer${staleCount > 1 ? 's' : ''} referencing players not in your squad ${staleCount > 1 ? 'have' : 'has'} been automatically removed.`,
+        variant: "destructive",
+      });
+    }
+  }, [teamData?.picks, searchedId, activeDraft, bootstrapData]);
 
   // Fetch manager history to get used chips
   const { data: historyData } = useQuery<ManagerHistory>({
