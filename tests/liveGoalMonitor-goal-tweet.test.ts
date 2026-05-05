@@ -87,6 +87,29 @@ function seedPrevState(monitor: LiveGoalMonitor, fixtureId: number, teamH: numbe
   });
 }
 
+function seedPrevStateWithGoals(
+  monitor: LiveGoalMonitor,
+  fixtureId: number,
+  teamH: number,
+  teamA: number,
+  homeScore: number,
+  awayScore: number,
+  goalsMap: Map<number, number>,
+): void {
+  (monitor as any).fixtureStates.set(fixtureId, {
+    fixtureId,
+    homeTeamId: teamH,
+    awayTeamId: teamA,
+    homeScore,
+    awayScore,
+    playerGoals: goalsMap,
+    playerAssists: new Map<number, number>(),
+    playerRedCards: new Map<number, number>(),
+    playerDC: new Map<number, number>(),
+    tweetedEvents: new Set<string>(),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -228,5 +251,135 @@ describe('LiveGoalMonitor — goal tweets are always posted regardless of owners
     expect(postTweetMock).toHaveBeenCalledTimes(1);
     const tweetArg: string = postTweetMock.mock.calls[0][0];
     expect(tweetArg).toContain('0.0%');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VAR / goal-overturned path
+// ---------------------------------------------------------------------------
+
+describe('LiveGoalMonitor — goal-overturned (VAR) tweet path', () => {
+  const FIXTURE_ID = 1;
+  const HOME_TEAM_ID = 10;
+  const AWAY_TEAM_ID = 20;
+  const HOME_SCORER_ID = 101;
+  const AWAY_SCORER_ID = 102;
+
+  const homeScorer = {
+    id: HOME_SCORER_ID,
+    web_name: 'HomeGoalScorer',
+    team: HOME_TEAM_ID,
+    selected_by_percent: '15.5',
+    element_type: 4,
+  };
+
+  const awayScorer = {
+    id: AWAY_SCORER_ID,
+    web_name: 'AwayGoalScorer',
+    team: AWAY_TEAM_ID,
+    selected_by_percent: '8.2',
+    element_type: 4,
+  };
+
+  const homeTeam = { id: HOME_TEAM_ID, name: 'Arsenal', short_name: 'ARS' };
+  const awayTeam = { id: AWAY_TEAM_ID, name: 'Chelsea', short_name: 'CHE' };
+
+  let monitor: LiveGoalMonitor;
+  const postTweetMock = twitterService.postTweet as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    postTweetMock.mockClear();
+    monitor = buildMonitor([homeScorer, awayScorer], [homeTeam, awayTeam]);
+  });
+
+  it('calls postTweet with text containing "OVERTURNED" when a previously tracked goal is removed', async () => {
+    const goalsMap = new Map([[HOME_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID, team_h_score: 1, team_a_score: 0 });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('OVERTURNED');
+  });
+
+  it('tweet text includes the scorer name and ownership when goal is overturned', async () => {
+    const goalsMap = new Map([[HOME_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('HomeGoalScorer');
+    expect(tweetArg).toContain('15.5%');
+  });
+
+  it('decrements the home score correctly in the overturned-goal tweet', async () => {
+    const goalsMap = new Map([[HOME_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 1, 0, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('0-0');
+  });
+
+  it('decrements the away score correctly in the overturned-goal tweet', async () => {
+    const goalsMap = new Map([[AWAY_SCORER_ID, 1]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 0, 1, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(AWAY_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('0-0');
+  });
+
+  it('does NOT call postTweet for an overturned goal when there is no prevState', async () => {
+    const freshMonitor = buildMonitor([homeScorer], [homeTeam, awayTeam]);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 0 }]),
+    ]);
+
+    await (freshMonitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).not.toHaveBeenCalled();
+  });
+
+  it('handles a partial overturn — only removed goals trigger overturn tweets', async () => {
+    const goalsMap = new Map([[HOME_SCORER_ID, 2]]);
+    seedPrevStateWithGoals(monitor, FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, 2, 0, goalsMap);
+
+    const fixture = makeFixture({ id: FIXTURE_ID, team_h: HOME_TEAM_ID, team_a: AWAY_TEAM_ID });
+    const liveData = makeLiveData([
+      makeLiveElement(HOME_SCORER_ID, FIXTURE_ID, [{ identifier: 'goals_scored', value: 1 }]),
+    ]);
+
+    await (monitor as any).processLiveFixture(fixture, liveData);
+
+    expect(postTweetMock).toHaveBeenCalledTimes(1);
+    const tweetArg: string = postTweetMock.mock.calls[0][0];
+    expect(tweetArg).toContain('OVERTURNED');
   });
 });
