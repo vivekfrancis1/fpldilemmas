@@ -133,25 +133,21 @@ export default function PlayerSaves() {
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
       
       if (homeTeam && awayTeam && fixture.event) {
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
+        const homeKey = `${homeTeam.short_name}-${fixture.event}`;
+        const awayKey = `${awayTeam.short_name}-${fixture.event}`;
+        if (!map.has(homeKey)) map.set(homeKey, []);
+        map.get(homeKey)!.push({ opponent: awayTeam.short_name, opponentId: fixture.team_a, isHome: true });
+        if (!map.has(awayKey)) map.set(awayKey, []);
+        map.get(awayKey)!.push({ opponent: homeTeam.short_name, opponentId: fixture.team_h, isHome: false });
       }
     });
     
@@ -885,9 +881,13 @@ export default function PlayerSaves() {
                                     <span>{rawValue ? formatValue(rawValue) : '-'}</span>
                                   )}
                                   {showOpponent && (
-                                    opponentInfo ? (
-                                      <span className={`text-[9px] md:text-[10px] mt-0.5 ${opponentInfo.isHome ? 'text-green-400' : 'text-blue-400'}`}>
-                                        {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                    opponentInfo && opponentInfo.length > 0 ? (
+                                      <span className="text-[9px] md:text-[10px] mt-0.5">
+                                        {opponentInfo.map((o, i) => (
+                                          <span key={i} className={o.isHome ? 'text-green-400' : 'text-blue-400'}>
+                                            {i > 0 && ' / '}{o.opponent} ({o.isHome ? 'H' : 'A'})
+                                          </span>
+                                        ))}
                                       </span>
                                     ) : <span className="text-[9px] md:text-[10px] mt-0.5">&nbsp;</span>
                                   )}

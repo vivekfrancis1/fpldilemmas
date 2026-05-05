@@ -147,27 +147,21 @@ export default function PlayerGoalsScoredProjections() {
 
   // Create a mapping of teamShort + gameweek -> opponent info
   const opponentMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
       
       if (homeTeam && awayTeam && fixture.event) {
-        // Home team's opponent is away team
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
-        // Away team's opponent is home team
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
+        const homeKey = `${homeTeam.short_name}-${fixture.event}`;
+        const awayKey = `${awayTeam.short_name}-${fixture.event}`;
+        if (!map.has(homeKey)) map.set(homeKey, []);
+        map.get(homeKey)!.push({ opponent: awayTeam.short_name, opponentId: fixture.team_a, isHome: true });
+        if (!map.has(awayKey)) map.set(awayKey, []);
+        map.get(awayKey)!.push({ opponent: homeTeam.short_name, opponentId: fixture.team_h, isHome: false });
       }
     });
     
@@ -415,7 +409,7 @@ export default function PlayerGoalsScoredProjections() {
       const existingGoals = Number(player.gameweekProjections[key]) || 0;
       const newProjections = { ...player.gameweekProjections, [key]: existingGoals + gw39Goals, '39': 0 };
       const existingDetails: FixtureDetail[] = (player as any).fixtureDetails?.[key] || [];
-      const baseDetails = existingDetails.length > 0 ? existingDetails : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.opponent || '?', isHome: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.isHome ?? true, goals: existingGoals }] : []);
+      const baseDetails = existingDetails.length > 0 ? existingDetails : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.[0]?.opponent || '?', isHome: opponentMap.get(`${player.teamShort}-${assignedGW}`)?.[0]?.isHome ?? true, goals: existingGoals }] : []);
       const newFixtureDetails = { ...((player as any).fixtureDetails || {}), [key]: [...baseDetails, { opponent: tbcInfo.opponent, isHome: tbcInfo.isHome, goals: gw39Goals }] };
       return { ...player, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
     });
@@ -1012,8 +1006,6 @@ export default function PlayerGoalsScoredProjections() {
                           const displayGoals = goals * multiplier;
                           const hasGwAdjustment = applyAvailability && multiplier !== 1;
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
-                          const opponent = opponentInfo?.opponent || 'TBD';
-                          const isHome = opponentInfo?.isHome ?? true;
                           
                           return (
                             <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
@@ -1058,10 +1050,14 @@ export default function PlayerGoalsScoredProjections() {
                                     {goals > 0 ? formatGoals(goals) : "-"}
                                   </div>
                                 )}
-                                {showOpponent && !isDGW && (
-                                  opponentInfo ? (
-                                    <div className={`text-[9px] md:text-[10px] ${isHome ? 'text-green-400' : 'text-blue-400'}`}>
-                                      {opponent} ({isHome ? 'H' : 'A'})
+                                {showOpponent && (
+                                  opponentInfo && opponentInfo.length > 0 ? (
+                                    <div className="text-[9px] md:text-[10px]">
+                                      {opponentInfo.map((o, i) => (
+                                        <span key={i} className={o.isHome ? 'text-green-400' : 'text-blue-400'}>
+                                          {i > 0 && ' / '}{o.opponent} ({o.isHome ? 'H' : 'A'})
+                                        </span>
+                                      ))}
                                     </div>
                                   ) : <div className="text-[9px] md:text-[10px]">&nbsp;</div>
                                 )}
