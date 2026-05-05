@@ -2113,6 +2113,24 @@ export default function PlayerTotalPoints() {
                 </div>
               </div>
 
+              {viewMode === "past" && (
+                <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+                  <span className="text-xs text-gray-500">Quick:</span>
+                  {[6, 8, 12].map(n => {
+                    const start = Math.max(1, lastFinishedGW - n + 1);
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => { setStartGameweek(start); setEndGameweek(lastFinishedGW); }}
+                        className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                      >
+                        Last {n} GWs
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Search */}
               <div className="relative mb-3">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />

@@ -805,6 +805,25 @@ export default function PlayerGoalsScoredProjections() {
               </div>
             </div>
 
+            {(viewMode === "past" || viewMode === "pastXg") && (
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
+                <span className="text-xs text-gray-500">Quick:</span>
+                {[6, 8, 12].map(n => {
+                  const last = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
+                  const start = Math.max(1, last - n + 1);
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => { setStartGameweek(start); setEndGameweek(last); }}
+                      className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                    >
+                      Last {n} GWs
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <Tabs defaultValue="gws" className="w-full">
               <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
                 <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
