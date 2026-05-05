@@ -269,6 +269,8 @@ export default function PlayerStats() {
               setSort={setSort}
               isLoading={isLoading}
               season={selectedSeason}
+              startGameweek={selectedSeason === "current" ? startGameweek : undefined}
+              endGameweek={selectedSeason === "current" ? endGameweek : undefined}
               onPlayerDetailsClick={selectedSeason === "current" ? handlePlayerDetailsClick : undefined}
               onPlayerCompareClick={selectedSeason === "current" ? handlePlayerCompareClick : undefined}
               compareList={compareList}

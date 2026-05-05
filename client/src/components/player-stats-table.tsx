@@ -99,6 +99,8 @@ interface PlayerStatsTableProps {
   setSort: (sort: SortState) => void;
   isLoading: boolean;
   season?: string;
+  startGameweek?: number;
+  endGameweek?: number | null;
   onPlayerDetailsClick?: (player: any) => void;
   onPlayerCompareClick?: (player: any) => void;
   compareList?: any[];
@@ -152,6 +154,8 @@ export default function PlayerStatsTable({
   setSort, 
   isLoading,
   season,
+  startGameweek,
+  endGameweek,
   onPlayerDetailsClick,
   onPlayerCompareClick,
   compareList = [],
@@ -338,28 +342,47 @@ export default function PlayerStatsTable({
     return visibleColumns.has(columnId);
   };
   
+  // Determine if a specific GW range is active (filteredPlayers is being used)
+  const hasGWFilter = !!filteredPlayers && startGameweek != null && endGameweek != null;
+  const gwFilterSuffix = hasGWFilter ? `?startGW=${startGameweek}&endGW=${endGameweek}` : '';
+
   // Fetch CBIT points data from the API
   const { data: cbitPointsData, isLoading: isCbitPointsLoading, isError: isCbitPointsError } = useQuery<CbitPointsData>({
-    queryKey: ['/api/player-cbit-points'],
-    enabled: !isHistoricalSeason, // Only fetch for current season
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+    queryKey: ['/api/player-cbit-points', startGameweek, endGameweek, hasGWFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-cbit-points${gwFilterSuffix}`);
+      if (!response.ok) throw new Error('Failed to fetch CBIT points');
+      return response.json();
+    },
+    enabled: !isHistoricalSeason,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Fetch Save points data from the API
   const { data: savePointsData, isLoading: isSavePointsLoading, isError: isSavePointsError } = useQuery<SavePointsData>({
-    queryKey: ['/api/player-save-points'],
-    enabled: !isHistoricalSeason, // Only fetch for current season
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+    queryKey: ['/api/player-save-points', startGameweek, endGameweek, hasGWFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-save-points${gwFilterSuffix}`);
+      if (!response.ok) throw new Error('Failed to fetch save points');
+      return response.json();
+    },
+    enabled: !isHistoricalSeason,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Fetch Minutes points data from the API
   const { data: minutesPointsData, isLoading: isMinutesPointsLoading, isError: isMinutesPointsError } = useQuery<MinutesPointsData>({
-    queryKey: ['/api/player-minutes-points'],
-    enabled: !isHistoricalSeason, // Only fetch for current season
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
+    queryKey: ['/api/player-minutes-points', startGameweek, endGameweek, hasGWFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-minutes-points${gwFilterSuffix}`);
+      if (!response.ok) throw new Error('Failed to fetch minutes points');
+      return response.json();
+    },
+    enabled: !isHistoricalSeason,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Fetch venue-specific stats when venue filter is active
@@ -436,6 +459,9 @@ export default function PlayerStatsTable({
       case 'now_cost':
         return <span className="text-gray-900">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>;
       case 'games_played':
+        if (player.games_played != null) {
+          return <span className="text-gray-900">{player.games_played}</span>;
+        }
         const pointsPerGame = parseFloat(player.points_per_game) || 0;
         return <span className="text-gray-900">{pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0}</span>;
       case 'total_points':
@@ -639,6 +665,7 @@ export default function PlayerStatsTable({
           case "total_points": return player.total_points;
           case "minutes": return player.minutes;
           case "games_played": {
+            if (player.games_played != null) return player.games_played;
             const pointsPerGame = parseFloat(player.points_per_game) || 0;
             return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
           }

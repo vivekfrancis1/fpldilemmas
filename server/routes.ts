@@ -1831,7 +1831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             defensive_contribution: p.defensive_contribution || 0,
             tackles: p.tackles || 0,
             recoveries: p.recoveries || 0,
-            clearances_blocks_interceptions: p.clearances_blocks_interceptions || 0
+            clearances_blocks_interceptions: p.clearances_blocks_interceptions || 0,
+            transfers_in: p.transfers_in || 0,
+            transfers_out: p.transfers_out || 0
           }
         });
       });
@@ -1860,7 +1862,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tackles: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.tackles}), 0)`.as('tackles'),
           recoveries: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.recoveries}), 0)`.as('recoveries'),
           clearancesBlocksInterceptions: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clearances_blocks_interceptions}), 0)`.as('cbi'),
-          gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played')
+          gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played'),
+          expectedGoals: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goals}::numeric), 0)`.as('expected_goals'),
+          expectedAssists: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_assists}::numeric), 0)`.as('expected_assists'),
+          expectedGoalInvolvements: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goal_involvements}::numeric), 0)`.as('expected_goal_involvements'),
+          expectedGoalsConceded: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goals_conceded}::numeric), 0)`.as('expected_goals_conceded'),
+          influence: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.influence}::numeric), 0)`.as('influence'),
+          creativity: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.creativity}::numeric), 0)`.as('creativity'),
+          threat: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.threat}::numeric), 0)`.as('threat'),
+          ictIndex: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.ict_index}::numeric), 0)`.as('ict_index'),
+          transfersIn: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.transfers_in}), 0)`.as('transfers_in'),
+          transfersOut: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.transfers_out}), 0)`.as('transfers_out'),
         })
         .from(gameweekPlayerDataTable)
         .where(
@@ -1896,7 +1908,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tackles: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.tackles}), 0)`.as('tackles_tot'),
             recoveries: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.recoveries}), 0)`.as('recoveries_tot'),
             clearancesBlocksInterceptions: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clearances_blocks_interceptions}), 0)`.as('cbi_tot'),
-            gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played')
+            gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played'),
+            expectedGoals: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goals}::numeric), 0)`.as('expected_goals_tot'),
+            expectedAssists: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_assists}::numeric), 0)`.as('expected_assists_tot'),
+            expectedGoalInvolvements: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goal_involvements}::numeric), 0)`.as('expected_gi_tot'),
+            expectedGoalsConceded: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.expected_goals_conceded}::numeric), 0)`.as('expected_gc_tot'),
+            influence: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.influence}::numeric), 0)`.as('influence_tot'),
+            creativity: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.creativity}::numeric), 0)`.as('creativity_tot'),
+            threat: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.threat}::numeric), 0)`.as('threat_tot'),
+            ictIndex: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.ict_index}::numeric), 0)`.as('ict_index_tot'),
+            transfersIn: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.transfers_in}), 0)`.as('transfers_in_tot'),
+            transfersOut: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.transfers_out}), 0)`.as('transfers_out_tot'),
           })
           .from(gameweekPlayerDataTable)
           .where(lte(gameweekPlayerDataTable.gameweek, maxCachedGW))
@@ -1940,7 +1962,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tackles: 0,
           recoveries: 0,
           clearancesBlocksInterceptions: 0,
-          gamesPlayed: 0
+          gamesPlayed: 0,
+          expectedGoals: 0,
+          expectedAssists: 0,
+          expectedGoalInvolvements: 0,
+          expectedGoalsConceded: 0,
+          influence: 0,
+          creativity: 0,
+          threat: 0,
+          ictIndex: 0,
+          transfersIn: 0,
+          transfersOut: 0,
         };
 
         // Add cached gameweek stats
@@ -1965,6 +1997,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           finalStats.recoveries += Number(stats.recoveries) || 0;
           finalStats.clearancesBlocksInterceptions += Number(stats.clearancesBlocksInterceptions) || 0;
           finalStats.gamesPlayed += Number(stats.gamesPlayed) || 0;
+          finalStats.expectedGoals += Number(stats.expectedGoals) || 0;
+          finalStats.expectedAssists += Number(stats.expectedAssists) || 0;
+          finalStats.expectedGoalInvolvements += Number(stats.expectedGoalInvolvements) || 0;
+          finalStats.expectedGoalsConceded += Number(stats.expectedGoalsConceded) || 0;
+          finalStats.influence += Number(stats.influence) || 0;
+          finalStats.creativity += Number(stats.creativity) || 0;
+          finalStats.threat += Number(stats.threat) || 0;
+          finalStats.ictIndex += Number(stats.ictIndex) || 0;
+          finalStats.transfersIn += Number(stats.transfersIn) || 0;
+          finalStats.transfersOut += Number(stats.transfersOut) || 0;
         }
 
         // Derive current GW stats if needed (cumulative - cached totals)
@@ -1991,6 +2033,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentGWTackles = cumulative.tackles - (cachedTotals?.tackles || 0);
           const currentGWRecoveries = cumulative.recoveries - (cachedTotals?.recoveries || 0);
           const currentGWCBI = cumulative.clearances_blocks_interceptions - (cachedTotals?.clearancesBlocksInterceptions || 0);
+          // xStats, ICT, transfers for current GW come from bootstrap cumulative - cached totals
+          const currentGWxG = parseFloat(player.expected_goals || '0') - (Number(cachedTotals?.expectedGoals) || 0);
+          const currentGWxA = parseFloat(player.expected_assists || '0') - (Number(cachedTotals?.expectedAssists) || 0);
+          const currentGWxGI = parseFloat(player.expected_goal_involvements || '0') - (Number(cachedTotals?.expectedGoalInvolvements) || 0);
+          const currentGWxGC = parseFloat(player.expected_goals_conceded || '0') - (Number(cachedTotals?.expectedGoalsConceded) || 0);
+          const currentGWInfluence = parseFloat(player.influence || '0') - (Number(cachedTotals?.influence) || 0);
+          const currentGWCreativity = parseFloat(player.creativity || '0') - (Number(cachedTotals?.creativity) || 0);
+          const currentGWThreat = parseFloat(player.threat || '0') - (Number(cachedTotals?.threat) || 0);
+          const currentGWIct = parseFloat(player.ict_index || '0') - (Number(cachedTotals?.ictIndex) || 0);
           
           // Only add positive derived values (negative would indicate data inconsistency)
           if (currentGWPoints >= 0) finalStats.totalPoints += currentGWPoints;
@@ -2013,6 +2064,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (currentGWRecoveries >= 0) finalStats.recoveries += currentGWRecoveries;
           if (currentGWCBI >= 0) finalStats.clearancesBlocksInterceptions += currentGWCBI;
           if (currentGWMinutes > 0) finalStats.gamesPlayed += 1;
+          if (currentGWxG >= 0) finalStats.expectedGoals += currentGWxG;
+          if (currentGWxA >= 0) finalStats.expectedAssists += currentGWxA;
+          if (currentGWxGI >= 0) finalStats.expectedGoalInvolvements += currentGWxGI;
+          if (currentGWxGC >= 0) finalStats.expectedGoalsConceded += currentGWxGC;
+          if (currentGWInfluence >= 0) finalStats.influence += currentGWInfluence;
+          if (currentGWCreativity >= 0) finalStats.creativity += currentGWCreativity;
+          if (currentGWThreat >= 0) finalStats.threat += currentGWThreat;
+          if (currentGWIct >= 0) finalStats.ictIndex += currentGWIct;
+          // Derive transfers for current GW
+          const currentGWTransfersIn = cumulative.transfers_in - (Number(cachedTotals?.transfersIn) || 0);
+          const currentGWTransfersOut = cumulative.transfers_out - (Number(cachedTotals?.transfersOut) || 0);
+          if (currentGWTransfersIn >= 0) finalStats.transfersIn += currentGWTransfersIn;
+          if (currentGWTransfersOut >= 0) finalStats.transfersOut += currentGWTransfersOut;
         }
 
         // Only include players with some activity
@@ -2027,14 +2091,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             now_cost: player.now_cost,
             selected_by_percent: player.selected_by_percent,
             form: player.form,
-            expected_goals: player.expected_goals,
-            expected_assists: player.expected_assists,
-            expected_goal_involvements: player.expected_goal_involvements,
-            expected_goals_conceded: player.expected_goals_conceded,
-            influence: player.influence,
-            creativity: player.creativity,
-            threat: player.threat,
-            ict_index: player.ict_index,
+            expected_goals: finalStats.expectedGoals.toFixed(2),
+            expected_assists: finalStats.expectedAssists.toFixed(2),
+            expected_goal_involvements: finalStats.expectedGoalInvolvements.toFixed(2),
+            expected_goals_conceded: finalStats.expectedGoalsConceded.toFixed(2),
+            influence: finalStats.influence.toFixed(1),
+            creativity: finalStats.creativity.toFixed(1),
+            threat: finalStats.threat.toFixed(1),
+            ict_index: finalStats.ictIndex.toFixed(1),
+            transfers_in: finalStats.transfersIn,
+            transfers_out: finalStats.transfersOut,
             chance_of_playing_next_round: player.chance_of_playing_next_round,
             news: player.news,
             status: player.status,
@@ -18983,6 +19049,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/player-cbit-points", async (req, res) => {
     try {
+      const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
+      const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
+      if (startGW !== null && endGW !== null) {
+        if (isNaN(startGW) || isNaN(endGW) || startGW < 1 || endGW > 38 || startGW > endGW) {
+          return res.status(400).json({ error: "Invalid gameweek range" });
+        }
+      }
+      const hasGWFilter = startGW !== null && endGW !== null;
       console.log("📊 Serving player CBIT points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerCbitPoints();
       
@@ -18995,18 +19069,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (Object.keys(refreshedData).length > 0) {
             console.log("✅ Successfully populated CBIT cache");
-            res.json(refreshedData);
+            const result = hasGWFilter ? filterCbitByGW(refreshedData, startGW!, endGW!) : refreshedData;
+            res.json(result);
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
             res.json({});
           }
         } catch (populationError) {
           console.error("❌ Failed to populate CBIT cache:", populationError);
-          // Return empty object rather than failing completely
           res.json({});
         }
       } else {
-        res.json(cachedData);
+        const result = hasGWFilter ? filterCbitByGW(cachedData, startGW!, endGW!) : cachedData;
+        res.json(result);
       }
     } catch (error) {
       console.error("Error fetching player CBIT points:", error);
@@ -19014,8 +19089,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  function filterCbitByGW(data: any, startGW: number, endGW: number): any {
+    const result: any = {};
+    for (const [playerId, playerData] of Object.entries(data as Record<string, any>)) {
+      const filteredGWs = (playerData.gameweeks || []).filter((gw: any) => gw.gameweek >= startGW && gw.gameweek <= endGW);
+      const rangeTotal = filteredGWs.reduce((sum: number, gw: any) => sum + (gw.cbitPoints || 0), 0);
+      result[playerId] = { ...playerData, gameweeks: filteredGWs, seasonTotal: rangeTotal };
+    }
+    return result;
+  }
+
   app.get("/api/player-minutes-points", async (req, res) => {
     try {
+      const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
+      const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
+      if (startGW !== null && endGW !== null) {
+        if (isNaN(startGW) || isNaN(endGW) || startGW < 1 || endGW > 38 || startGW > endGW) {
+          return res.status(400).json({ error: "Invalid gameweek range" });
+        }
+      }
+      const hasGWFilter = startGW !== null && endGW !== null;
       console.log("📊 Serving player minutes points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerMinutesPoints();
       
@@ -19028,18 +19121,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (Object.keys(refreshedData).length > 0) {
             console.log("✅ Successfully populated minutes points cache");
-            res.json(refreshedData);
+            const result = hasGWFilter ? filterMinutesByGW(refreshedData, startGW!, endGW!) : refreshedData;
+            res.json(result);
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
             res.json({});
           }
         } catch (populationError) {
           console.error("❌ Failed to populate minutes points cache:", populationError);
-          // Return empty object rather than failing completely
           res.json({});
         }
       } else {
-        res.json(cachedData);
+        const result = hasGWFilter ? filterMinutesByGW(cachedData, startGW!, endGW!) : cachedData;
+        res.json(result);
       }
     } catch (error) {
       console.error("Error fetching player minutes points:", error);
@@ -19047,10 +19141,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  function filterMinutesByGW(data: any, startGW: number, endGW: number): any {
+    const result: any = {};
+    for (const [playerId, playerData] of Object.entries(data as Record<string, any>)) {
+      const filteredGWs = (playerData.gameweeks || []).filter((gw: any) => gw.gameweek >= startGW && gw.gameweek <= endGW);
+      const rangeTotal = filteredGWs.reduce((sum: number, gw: any) => sum + (gw.minutesPoints || 0), 0);
+      result[playerId] = { ...playerData, gameweeks: filteredGWs, seasonTotal: rangeTotal };
+    }
+    return result;
+  }
+
   app.get("/api/player-save-points", async (req, res) => {
     try {
+      const startGW = req.query.startGW ? parseInt(req.query.startGW as string) : null;
+      const endGW = req.query.endGW ? parseInt(req.query.endGW as string) : null;
+      if (startGW !== null && endGW !== null) {
+        if (isNaN(startGW) || isNaN(endGW) || startGW < 1 || endGW > 38 || startGW > endGW) {
+          return res.status(400).json({ error: "Invalid gameweek range" });
+        }
+      }
+      const hasGWFilter = startGW !== null && endGW !== null;
       console.log("📊 Serving player save points data");
       const cachedData = await fplScoringCacheService.getCachedPlayerSavePoints();
+
+      const transformSavePoints = (rawData: any[], sgw: number | null, egw: number | null) => {
+        const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
+        rawData.forEach(player => {
+          const allGWs = Object.entries(player.savePoints).map(([gw, points]) => ({
+            gameweek: parseInt(gw),
+            saves: player.saves[gw] || 0,
+            savePoints: points as number,
+            penaltySaves: player.penaltySaves[gw] || 0
+          }));
+          const filteredGWs = (sgw !== null && egw !== null)
+            ? allGWs.filter(gw => gw.gameweek >= sgw && gw.gameweek <= egw)
+            : allGWs;
+          const total = (sgw !== null && egw !== null)
+            ? filteredGWs.reduce((sum, gw) => sum + (gw.savePoints || 0), 0)
+            : player.totalSavePoints;
+          transformedData[player.playerId] = { gameweeks: filteredGWs, seasonTotal: total };
+        });
+        return transformedData;
+      };
       
       // If cache is empty, try to populate it immediately
       if (cachedData.length === 0) {
@@ -19061,49 +19193,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (refreshedData.length > 0) {
             console.log("✅ Successfully populated save points cache");
-            
-            // Transform to required format: {[playerId]: {gameweeks: [...], seasonTotal: number}}
-            const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
-            
-            refreshedData.forEach(player => {
-              transformedData[player.playerId] = {
-                gameweeks: Object.entries(player.savePoints).map(([gw, points]) => ({
-                  gameweek: parseInt(gw),
-                  saves: player.saves[gw] || 0,
-                  savePoints: points,
-                  penaltySaves: player.penaltySaves[gw] || 0
-                })),
-                seasonTotal: player.totalSavePoints
-              };
-            });
-            
-            res.json(transformedData);
+            res.json(transformSavePoints(refreshedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null));
           } else {
             console.warn("⚠️ Cache population failed - returning empty data");
             res.json({});
           }
         } catch (populationError) {
           console.error("❌ Failed to populate save points cache:", populationError);
-          // Return empty object rather than failing completely
           res.json({});
         }
       } else {
-        // Transform cached data to required format
-        const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
-        
-        cachedData.forEach(player => {
-          transformedData[player.playerId] = {
-            gameweeks: Object.entries(player.savePoints).map(([gw, points]) => ({
-              gameweek: parseInt(gw),
-              saves: player.saves[gw] || 0,
-              savePoints: points,
-              penaltySaves: player.penaltySaves[gw] || 0
-            })),
-            seasonTotal: player.totalSavePoints
-          };
-        });
-        
-        res.json(transformedData);
+        res.json(transformSavePoints(cachedData, hasGWFilter ? startGW : null, hasGWFilter ? endGW : null));
       }
     } catch (error) {
       console.error("Error fetching player save points:", error);
