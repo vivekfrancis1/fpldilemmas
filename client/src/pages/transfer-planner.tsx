@@ -4254,21 +4254,9 @@ export default function TransferPlanner() {
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
-    // Use full BFS so the dialog lists ALL downstream dependents (not just direct ones)
-    const dependentIndices: number[] = [];
-    let queue: Array<[number, number]> = [[transfer.inPlayerId, transferIndex]];
-    while (queue.length > 0) {
-      const nextQueue: Array<[number, number]> = [];
-      for (const [playerId, fromIndex] of queue) {
-        currentCompleted.forEach((t, i) => {
-          if (i > fromIndex && !dependentIndices.includes(i) && t.outPlayerId === playerId) {
-            dependentIndices.push(i);
-            nextQueue.push([t.inPlayerId, i]);
-          }
-        });
-      }
-      queue = nextQueue;
-    }
+    // Use shared BFS utility so the dialog lists ALL downstream dependents (not just direct ones)
+    const cascadeIndices = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
+    const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
     const dependentTransfers = dependentIndices.map(i => {
       const t = currentCompleted[i];
       return `${t.outPlayerName} → ${t.inPlayerName}`;
