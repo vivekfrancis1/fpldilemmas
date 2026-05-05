@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { computeCascadeIndicesToRemove, filterBrokenTransfersAfterCascade } from "@/lib/transfer-cascade";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
@@ -4402,26 +4403,12 @@ export default function TransferPlanner() {
 
     if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
 
-    // Collect all indices to remove via BFS along the chain.
+    // Collect all indices to remove via BFS along the chain using shared utility.
     // Each queue entry is [playerId, fromIndex] where fromIndex is the index of the transfer
     // that introduced this player. We only look for dependents AFTER fromIndex, preventing
     // unrelated transfers (e.g. an independent X→Y that happens to use a player referenced
     // later in the chain) from being incorrectly flagged.
-    const indicesToRemove = new Set<number>();
-    indicesToRemove.add(transferIndex);
-    let queue: Array<[number, number]> = [[currentCompleted[transferIndex].inPlayerId, transferIndex]];
-    while (queue.length > 0) {
-      const nextQueue: Array<[number, number]> = [];
-      for (const [playerId, fromIndex] of queue) {
-        currentCompleted.forEach((t, i) => {
-          if (i > fromIndex && !indicesToRemove.has(i) && t.outPlayerId === playerId) {
-            indicesToRemove.add(i);
-            nextQueue.push([t.inPlayerId, i]);
-          }
-        });
-      }
-      queue = nextQueue;
-    }
+    const indicesToRemove = computeCascadeIndicesToRemove(currentCompleted, transferIndex);
 
     const removedTransfer = currentCompleted[transferIndex];
 
@@ -4493,13 +4480,8 @@ export default function TransferPlanner() {
       setTransferredOutPlayers(newTransferredOut);
     }
 
-    const removedTransferKeys = new Set(
-      currentCompleted
-        .filter((_, i) => indicesToRemove.has(i))
-        .map(t => `${t.outPlayerId}:${t.inPlayerId}`)
-    );
     setBrokenTransfers(prev =>
-      prev.filter(b => !(b.gwId === gwId && removedTransferKeys.has(`${b.outPlayerId}:${b.inPlayerId}`)))
+      filterBrokenTransfersAfterCascade(prev, gwId, indicesToRemove, currentCompleted)
     );
 
     const updatedGameweekTransfers = {
