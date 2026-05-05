@@ -533,14 +533,17 @@ export default function PlayerStatsTable({
         return <span className="text-red-600">{(player.transfers_out || 0).toLocaleString()}</span>;
       case 'value_form':
         return <span className="text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</span>;
+      // Decimal precision policy:
+      // - Integer stats (goals, assists, CS, cards, etc.): 0dp in totals, 1dp in per-match/per-90
+      // - Continuous decimal stats (xG, xA, xGI, xGC, ICT family, points-rate stats): 1dp in ALL modes
       case 'influence':
-        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.influence || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.influence || 0)).toFixed(1)}</span>;
       case 'creativity':
-        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.creativity || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.creativity || 0)).toFixed(1)}</span>;
       case 'threat':
-        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.threat || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.threat || 0)).toFixed(1)}</span>;
       case 'ict_index':
-        return <span className="text-fpl-purple">{calculateStat(player, parseFloat(player.ict_index || 0)).toFixed(displayMode === 'totals' ? 1 : 2)}</span>;
+        return <span className="text-fpl-purple">{calculateStat(player, parseFloat(player.ict_index || 0)).toFixed(1)}</span>;
       case 'dreamteam_count':
         return <span className="text-yellow-600">{player.dreamteam_count || 0}</span>;
       case 'penalties_saved':
