@@ -4061,48 +4061,61 @@ export default function TransferPlanner() {
     if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
 
     const removedTransfer = currentCompleted[transferIndex];
-    const candidateCompleted = currentCompleted.filter((_, i) => i !== transferIndex);
 
-    // Re-derive lineup: start from baseline (prior GW transfers applied), then replay remaining transfers.
-    // Only keep transfers that actually apply (outPlayerId found in current lineup at replay time),
-    // so chained transfers whose predecessor was removed are automatically discarded.
-    let newLineup = getBaselineLineup(selectedGameweek);
-    const appliedCompleted: CompletedTransfer[] = [];
-
-    candidateCompleted.forEach(transfer => {
-      const found = newLineup.some(pick => pick.element === transfer.outPlayerId);
-      if (!found) return; // chain is broken — skip and discard this transfer
-
-      newLineup = newLineup.map(pick => {
-        if (pick.element === transfer.outPlayerId) {
-          const inPlayer = getPlayerById(transfer.inPlayerId);
-          if (inPlayer) {
-            const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
-            return {
-              ...pick,
-              element: transfer.inPlayerId,
-              selling_price: inPlayer.now_cost,
-              purchase_price: overridePrice || inPlayer.now_cost,
-              is_transferred_out: false,
-            };
+    // --- Slot-based replay ---
+    // Step 1: Walk the original completed list against the baseline to record which lineup
+    // position-slot each transfer targets. This lets us replay remaining transfers by slot
+    // rather than by outPlayerId, so chained transfers are preserved even when their
+    // predecessor is removed.
+    const baseline = getBaselineLineup(selectedGameweek);
+    let simLineup = [...baseline];
+    const slotMap: number[] = currentCompleted.map(transfer => {
+      const pick = simLineup.find(p => p.element === transfer.outPlayerId);
+      const slot = pick?.position ?? -1;
+      if (slot !== -1) {
+        simLineup = simLineup.map(p => {
+          if (p.element === transfer.outPlayerId) {
+            const inPlayer = getPlayerById(transfer.inPlayerId);
+            if (inPlayer) {
+              const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+              return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+            }
           }
-        }
-        return pick;
-      });
-      appliedCompleted.push(transfer);
+          return p;
+        });
+      }
+      return slot;
     });
 
-    // Remove any pending transfer-out slot whose player was brought in by the removed transfer
-    // or by any transfer that was also discarded due to chain breakage
-    const discardedInPlayerIds = new Set(
-      candidateCompleted
-        .filter(t => !appliedCompleted.includes(t))
-        .map(t => t.inPlayerId)
-    );
-    discardedInPlayerIds.add(removedTransfer.inPlayerId);
+    // Step 2: Remove the target transfer from both lists
+    const remainingCompleted = currentCompleted.filter((_, i) => i !== transferIndex);
+    const remainingSlots = slotMap.filter((_, i) => i !== transferIndex);
 
+    // Step 3: Replay remaining transfers onto baseline using slot positions
+    // This preserves every remaining transfer record regardless of whether its original
+    // outPlayerId is still in the squad (e.g. chained A→B, B→C — undo A→B keeps B→C by
+    // targeting the same position slot rather than matching player IDs).
+    let newLineup = [...baseline];
+    remainingCompleted.forEach((transfer, i) => {
+      const slot = remainingSlots[i];
+      if (slot === -1) return;
+      const inPlayer = getPlayerById(transfer.inPlayerId);
+      if (!inPlayer) return;
+      const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+      newLineup = newLineup.map(p => {
+        if (p.position === slot) {
+          return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+        }
+        return p;
+      });
+    });
+
+    // Step 4: Keep all remaining completed transfers (no cascade-discard)
+    const appliedCompleted = remainingCompleted;
+
+    // Only remove the pending transfer-out for the player brought IN by the removed transfer
     const newTransferredOut = currentGwData.transferredOut.filter(
-      t => !discardedInPlayerIds.has(t.playerId)
+      t => t.playerId !== removedTransfer.inPlayerId
     );
 
     // Re-apply is_transferred_out flag for any remaining pending (partial) transfer-outs
