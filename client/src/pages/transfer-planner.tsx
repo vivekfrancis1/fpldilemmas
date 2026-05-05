@@ -4166,10 +4166,25 @@ export default function TransferPlanner() {
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
-    const dependentTransfers = currentCompleted
-      .slice(transferIndex + 1)
-      .filter(t => t.outPlayerId === transfer.inPlayerId)
-      .map(t => `${t.outPlayerName} → ${t.inPlayerName}`);
+    // Use full BFS so the dialog lists ALL downstream dependents (not just direct ones)
+    const dependentIndices: number[] = [];
+    let queue: Array<[number, number]> = [[transfer.inPlayerId, transferIndex]];
+    while (queue.length > 0) {
+      const nextQueue: Array<[number, number]> = [];
+      for (const [playerId, fromIndex] of queue) {
+        currentCompleted.forEach((t, i) => {
+          if (i > fromIndex && !dependentIndices.includes(i) && t.outPlayerId === playerId) {
+            dependentIndices.push(i);
+            nextQueue.push([t.inPlayerId, i]);
+          }
+        });
+      }
+      queue = nextQueue;
+    }
+    const dependentTransfers = dependentIndices.map(i => {
+      const t = currentCompleted[i];
+      return `${t.outPlayerName} → ${t.inPlayerName}`;
+    });
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -4279,16 +4294,157 @@ export default function TransferPlanner() {
     }
   };
 
+  // GW-aware cascade undo — removes the target transfer and all downstream dependents
+  const handleUndoWithDependentsForGW = async (transferIndex: number, gwId: number) => {
+    if (!teamData?.picks) return;
+
+    const gwEvent = bootstrapData?.events.find(e => e.id === gwId);
+    if (gwEvent?.finished) return;
+
+    const currentGwData = gameweekTransfers[gwId] || { transferredOut: [], completed: [] };
+    const currentCompleted = currentGwData.completed;
+
+    if (transferIndex < 0 || transferIndex >= currentCompleted.length) return;
+
+    // Collect all indices to remove via BFS along the chain.
+    // Each queue entry is [playerId, fromIndex] where fromIndex is the index of the transfer
+    // that introduced this player. We only look for dependents AFTER fromIndex, preventing
+    // unrelated transfers (e.g. an independent X→Y that happens to use a player referenced
+    // later in the chain) from being incorrectly flagged.
+    const indicesToRemove = new Set<number>();
+    indicesToRemove.add(transferIndex);
+    let queue: Array<[number, number]> = [[currentCompleted[transferIndex].inPlayerId, transferIndex]];
+    while (queue.length > 0) {
+      const nextQueue: Array<[number, number]> = [];
+      for (const [playerId, fromIndex] of queue) {
+        currentCompleted.forEach((t, i) => {
+          if (i > fromIndex && !indicesToRemove.has(i) && t.outPlayerId === playerId) {
+            indicesToRemove.add(i);
+            nextQueue.push([t.inPlayerId, i]);
+          }
+        });
+      }
+      queue = nextQueue;
+    }
+
+    const removedTransfer = currentCompleted[transferIndex];
+
+    // Build slotMap over entire original list
+    const baseline = getBaselineLineup(gwId);
+    let simLineup = [...baseline];
+    const slotMap: number[] = currentCompleted.map(transfer => {
+      const pick = simLineup.find(p => p.element === transfer.outPlayerId);
+      const slot = pick?.position ?? -1;
+      if (slot !== -1) {
+        simLineup = simLineup.map(p => {
+          if (p.element === transfer.outPlayerId) {
+            const inPlayer = getPlayerById(transfer.inPlayerId);
+            if (inPlayer) {
+              const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+              return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+            }
+          }
+          return p;
+        });
+      }
+      return slot;
+    });
+
+    // Remove all cascade-targeted transfers
+    const remainingCompleted = currentCompleted.filter((_, i) => !indicesToRemove.has(i));
+    const remainingSlots = slotMap.filter((_, i) => !indicesToRemove.has(i));
+
+    // Replay remaining transfers onto baseline using slot positions
+    let newLineup = [...baseline];
+    remainingCompleted.forEach((transfer, i) => {
+      const slot = remainingSlots[i];
+      if (slot === -1) return;
+      const inPlayer = getPlayerById(transfer.inPlayerId);
+      if (!inPlayer) return;
+      const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
+      newLineup = newLineup.map(p => {
+        if (p.position === slot) {
+          return { ...p, element: transfer.inPlayerId, selling_price: inPlayer.now_cost, purchase_price: overridePrice || inPlayer.now_cost, is_transferred_out: false };
+        }
+        return p;
+      });
+    });
+
+    // Remove pending transfer-outs for all removed transfers' inPlayers
+    const removedInPlayerIds = new Set(
+      currentCompleted.filter((_, i) => indicesToRemove.has(i)).map(t => t.inPlayerId)
+    );
+    const newTransferredOut = currentGwData.transferredOut.filter(
+      t => !removedInPlayerIds.has(t.playerId)
+    );
+
+    const pendingOutIds = new Set(newTransferredOut.map(t => t.playerId));
+    newLineup = newLineup.map(pick =>
+      pendingOutIds.has(pick.element) ? { ...pick, is_transferred_out: true } : pick
+    );
+
+    const optimizationKey = getOptimizationKey(activeDraft, gwId);
+    delete isLineupOptimizedRef.current[optimizationKey];
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[gwId];
+      return updated;
+    });
+
+    if (gwId === selectedGameweek) {
+      setManualLineup(newLineup);
+      setCompletedTransfers(remainingCompleted);
+      setTransferredOutPlayers(newTransferredOut);
+    }
+
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
+      [gwId]: {
+        transferredOut: newTransferredOut,
+        completed: remainingCompleted,
+      },
+    };
+    setGameweekTransfers(updatedGameweekTransfers);
+
+    const removedCount = indicesToRemove.size;
+    toast({
+      title: "Transfers Undone",
+      description: removedCount === 1
+        ? `${removedTransfer.outPlayerName} → ${removedTransfer.inPlayerName} has been reversed.`
+        : `${removedTransfer.outPlayerName} → ${removedTransfer.inPlayerName} and ${removedCount - 1} dependent transfer${removedCount - 1 > 1 ? 's' : ''} have been reversed.`,
+    });
+
+    if (activeDraft !== "Base") {
+      const draftToSave = activeDraft;
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
+    }
+  };
+
   // GW-aware chain-break check before undoing a single transfer
   const handleUndoSingleTransferWithCheckForGW = (transferIndex: number, gwId: number) => {
     const currentCompleted = (gameweekTransfers[gwId] || { completed: [] }).completed;
     const transfer = currentCompleted[transferIndex];
     if (!transfer) return;
 
-    const dependentTransfers = currentCompleted
-      .slice(transferIndex + 1)
-      .filter(t => t.outPlayerId === transfer.inPlayerId)
-      .map(t => `${t.outPlayerName} → ${t.inPlayerName}`);
+    // Use full BFS so the dialog lists ALL downstream dependents (not just direct ones)
+    const dependentIndices: number[] = [];
+    let queue: Array<[number, number]> = [[transfer.inPlayerId, transferIndex]];
+    while (queue.length > 0) {
+      const nextQueue: Array<[number, number]> = [];
+      for (const [playerId, fromIndex] of queue) {
+        currentCompleted.forEach((t, i) => {
+          if (i > fromIndex && !dependentIndices.includes(i) && t.outPlayerId === playerId) {
+            dependentIndices.push(i);
+            nextQueue.push([t.inPlayerId, i]);
+          }
+        });
+      }
+      queue = nextQueue;
+    }
+    const dependentTransfers = dependentIndices.map(i => {
+      const t = currentCompleted[i];
+      return `${t.outPlayerName} → ${t.inPlayerName}`;
+    });
 
     if (dependentTransfers.length > 0) {
       setChainBreakConfirmation({
@@ -7534,8 +7690,8 @@ export default function TransferPlanner() {
             <AlertDialogTitle>Dependent Transfer Detected</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain
-                because the player brought in is later transferred out:
+                Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain.
+                The following downstream transfer{chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} depend on it:
               </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 {chainBreakConfirmation?.dependentTransfers.map((name, i) => (
@@ -7543,13 +7699,25 @@ export default function TransferPlanner() {
                 ))}
               </ul>
               <p className="text-sm text-muted-foreground">
-                The dependent transfer(s) above will still remain but may produce unexpected results.
-                Do you want to proceed anyway?
+                <strong>Undo This &amp; Dependents</strong> will remove this transfer and all {chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? `${chainBreakConfirmation.dependentTransfers.length} downstream transfers` : 'the dependent transfer'} listed above.
+                <br />
+                <strong>Undo Anyway</strong> will remove only this transfer; the dependent transfer{chainBreakConfirmation && chainBreakConfirmation.dependentTransfers.length > 1 ? 's' : ''} will remain but may produce unexpected results.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (chainBreakConfirmation) {
+                  handleUndoWithDependentsForGW(chainBreakConfirmation.transferIndex, chainBreakConfirmation.gwId);
+                  setChainBreakConfirmation(null);
+                }
+              }}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Undo This & Dependents
+            </AlertDialogAction>
             <AlertDialogAction
               onClick={() => {
                 if (chainBreakConfirmation) {
