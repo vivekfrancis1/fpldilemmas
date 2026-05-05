@@ -4105,6 +4105,13 @@ export default function TransferPlanner() {
       t => !discardedInPlayerIds.has(t.playerId)
     );
 
+    // Re-apply is_transferred_out flag for any remaining pending (partial) transfer-outs
+    // so that handleTransferIn and bank calculations stay consistent
+    const pendingOutIds = new Set(newTransferredOut.map(t => t.playerId));
+    newLineup = newLineup.map(pick =>
+      pendingOutIds.has(pick.element) ? { ...pick, is_transferred_out: true } : pick
+    );
+
     // Clear any optimized lineup for this gameweek so the undo takes effect immediately
     const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
     delete isLineupOptimizedRef.current[optimizationKey];
