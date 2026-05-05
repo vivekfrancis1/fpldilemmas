@@ -138,7 +138,7 @@ export default function TeamGoalsAgainstProjections() {
   const opponentMap = useMemo(() => {
     if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
     
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
@@ -146,17 +146,13 @@ export default function TeamGoalsAgainstProjections() {
       
       if (homeTeam && awayTeam && fixture.event) {
         // Home team's opponent is away team
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
+        const homeKey = `${homeTeam.short_name}-${fixture.event}`;
+        if (!map.has(homeKey)) map.set(homeKey, []);
+        map.get(homeKey)!.push({ opponent: awayTeam.short_name, opponentId: fixture.team_a, isHome: true });
         // Away team's opponent is home team
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
+        const awayKey = `${awayTeam.short_name}-${fixture.event}`;
+        if (!map.has(awayKey)) map.set(awayKey, []);
+        map.get(awayKey)!.push({ opponent: homeTeam.short_name, opponentId: fixture.team_h, isHome: false });
       }
     });
     
@@ -707,14 +703,14 @@ export default function TeamGoalsAgainstProjections() {
                           // Past mode: read directly from gameweekProjections (fixtureDetails not available)
                           if (viewMode === "past") {
                             const value = team.gameweekProjections[gwNumber] ?? 0;
-                            const pastOpponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
+                            const pastOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                             return (
                               <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(value)}`}>
                                 <div className="flex flex-col items-center">
                                   <span>{value}</span>
                                   {showOpponent && (
                                     <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
-                                      {pastOpponentInfo ? `${pastOpponentInfo.opponent}(${pastOpponentInfo.isHome ? 'H' : 'A'})` : '\u00A0'}
+                                      {pastOpponentInfos.length > 0 ? pastOpponentInfos.map(o => `${o.opponent}(${o.isHome ? 'H' : 'A'})`).join(' / ') : '\u00A0'}
                                     </span>
                                   )}
                                 </div>

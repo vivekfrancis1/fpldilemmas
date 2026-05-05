@@ -197,32 +197,6 @@ export default function TeamCSProjections() {
     return map;
   }, [bootstrapData?.teams]);
 
-  const opponentMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
-    
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
-    
-    fixturesData.forEach((fixture: any) => {
-      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
-      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
-      
-      if (homeTeam && awayTeam && fixture.event) {
-        map.set(`${homeTeam.short_name}-${fixture.event}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
-        map.set(`${awayTeam.short_name}-${fixture.event}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
-      }
-    });
-    
-    return map;
-  }, [bootstrapData?.teams, fixturesData]);
-
   // Absorb TBC into assigned GW when fixtureMode is custom/expert
   const resolvedProjections = useMemo(() => {
     if (fixtureMode === 'base' || !tbcGoalData?.length || !projectionsData) return projectionsData || [];

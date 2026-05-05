@@ -272,7 +272,7 @@ export default function TeamGoalProjections() {
   const opponentMap = useMemo(() => {
     if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
     
-    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
@@ -281,17 +281,13 @@ export default function TeamGoalProjections() {
       const gwNumber = fixture.event ?? 39;
       if (homeTeam && awayTeam) {
         // Home team's opponent is away team
-        map.set(`${homeTeam.short_name}-${gwNumber}`, {
-          opponent: awayTeam.short_name,
-          opponentId: fixture.team_a,
-          isHome: true
-        });
+        const homeKey = `${homeTeam.short_name}-${gwNumber}`;
+        if (!map.has(homeKey)) map.set(homeKey, []);
+        map.get(homeKey)!.push({ opponent: awayTeam.short_name, opponentId: fixture.team_a, isHome: true });
         // Away team's opponent is home team
-        map.set(`${awayTeam.short_name}-${gwNumber}`, {
-          opponent: homeTeam.short_name,
-          opponentId: fixture.team_h,
-          isHome: false
-        });
+        const awayKey = `${awayTeam.short_name}-${gwNumber}`;
+        if (!map.has(awayKey)) map.set(awayKey, []);
+        map.get(awayKey)!.push({ opponent: homeTeam.short_name, opponentId: fixture.team_h, isHome: false });
       }
     });
     
@@ -386,7 +382,7 @@ export default function TeamGoalProjections() {
       const newFixtureDetails: { [gameweek: string]: FixtureDetail[] } = { ...(teamData.fixtureDetails || {}) };
       const existingFixtures: FixtureDetail[] = newFixtureDetails[key]
         ? [...newFixtureDetails[key]]
-        : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.opponent || '?', isHome: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.isHome ?? true, goals: existingGoals }] : []);
+        : (existingGoals > 0 ? [{ opponent: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.[0]?.opponent || '?', isHome: opponentMap.get(`${team.teamShort}-${assignedGW}`)?.[0]?.isHome ?? true, goals: existingGoals }] : []);
       newFixtureDetails[key] = [...existingFixtures, { opponent: tbcOpponent, isHome, goals: tbcGoals }];
       return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
     });
@@ -816,7 +812,7 @@ export default function TeamGoalProjections() {
                           const teamWithDetails = team as TeamGoalProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const isDGW = fixtures.length > 1;
-                          const teamOpponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
+                          const teamOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                           
                           const cellContent = (
                             <div className="flex flex-col items-center">
@@ -825,8 +821,8 @@ export default function TeamGoalProjections() {
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                   {fixtures.length > 0
                                     ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')
-                                    : teamOpponentInfo
-                                      ? `${teamOpponentInfo.opponent}(${teamOpponentInfo.isHome ? 'H' : 'A'})`
+                                    : teamOpponentInfos.length > 0
+                                      ? teamOpponentInfos.map(o => `${o.opponent}(${o.isHome ? 'H' : 'A'})`).join(' / ')
                                       : '\u00A0'}
                                 </span>
                               )}
