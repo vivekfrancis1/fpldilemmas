@@ -1147,6 +1147,44 @@ export default function TransferPlanner() {
   useEffect(() => {
     plannedChipsRef.current = plannedChips;
   }, [plannedChips]);
+
+  // Helpers for broken-transfer localStorage lifecycle management
+  const btKey = (managerId: string, draft: string) => `fpl-broken-transfers-${managerId}-${draft}`;
+
+  const loadBrokenTransfersForDraft = (managerId: string, draft: string): { gwId: number; outPlayerId: number; inPlayerId: number }[] => {
+    if (!managerId || draft === "Base") return [];
+    try {
+      const stored = localStorage.getItem(btKey(managerId, draft));
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const clearBrokenTransfersForDraft = (managerId: string, draft: string) => {
+    if (!managerId || draft === "Base") return;
+    try {
+      localStorage.removeItem(btKey(managerId, draft));
+    } catch (e) { /* ignore */ }
+  };
+
+  // Persist brokenTransfers to localStorage so they survive draft switches and page reloads.
+  // Uses searchedIdRef (not searchedId) in deps to avoid cross-manager writes: the effect
+  // must not fire on manager-ID changes — only on brokenTransfers/activeDraft changes.
+  useEffect(() => {
+    const mid = searchedIdRef.current;
+    if (!mid || activeDraft === "Base") return;
+    try {
+      if (brokenTransfers.length > 0) {
+        localStorage.setItem(btKey(mid, activeDraft), JSON.stringify(brokenTransfers));
+      } else {
+        localStorage.removeItem(btKey(mid, activeDraft));
+      }
+    } catch (e) {
+      console.warn("Failed to persist brokenTransfers to localStorage:", e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokenTransfers, activeDraft]);
   
   useEffect(() => {
     optimizedLineupsRef.current = optimizedLineups;
@@ -4541,6 +4579,8 @@ export default function TransferPlanner() {
     setCompletedTransfers([]);
     setGameweekTransfers({});
     setBrokenTransfers([]);
+    // Clear persisted broken-transfer warnings for the current draft
+    clearBrokenTransfersForDraft(searchedId, activeDraft);
     
     // Clear all optimized lineups
     setOptimizedLineups({});
@@ -5193,7 +5233,8 @@ export default function TransferPlanner() {
         // Set active draft - this will trigger useEffect to rebuild lineup
         setActiveDraft(draftLetter);
         setHasUnsavedChanges(false);
-        setBrokenTransfers([]);
+        // Restore persisted broken-transfer warnings for this draft
+        setBrokenTransfers(loadBrokenTransfersForDraft(searchedId, draftLetter));
         
         // Reset transferred out players and completed transfers
         setTransferredOutPlayers([]);
@@ -5360,6 +5401,10 @@ export default function TransferPlanner() {
           setHasUnsavedChanges(false);
           setTransferredOutPlayers([]);
           setCompletedTransfers([]);
+          // Clear persisted broken-transfer warnings for the deleted draft
+          clearBrokenTransfersForDraft(searchedId, draftToDelete);
+          // Restore persisted broken-transfer warnings for Draft A
+          setBrokenTransfers(loadBrokenTransfersForDraft(searchedId, "A"));
           
           // Rebuild the lineup based on Draft A's cumulative transfers
           const updatedSquad = selectedGameweek ? getSquadAtGameweek(draft.gameweekTransfers || {}, selectedGameweek) : [];
@@ -5417,6 +5462,9 @@ export default function TransferPlanner() {
       });
 
       if (response.ok) {
+        // Clear broken-transfer warnings for this draft before reloading it
+        // (transfers are now empty so old warnings would be stale)
+        clearBrokenTransfersForDraft(searchedId, activeDraft);
         await loadDrafts();
         switchToDraft(activeDraft);
         toast({ title: `Draft ${activeDraft} Reset`, description: `Draft ${activeDraft} has been reset to match the Base Draft` });
@@ -5471,6 +5519,8 @@ export default function TransferPlanner() {
       });
 
       if (resetResponse.ok) {
+        // Clear broken-transfer warnings for all drafts (they've all been reset/deleted)
+        savedDrafts.forEach(d => clearBrokenTransfersForDraft(searchedId, d.draftLetter));
         switchToDraft("Base");
         await loadDrafts();
         toast({ 
@@ -5514,6 +5564,11 @@ export default function TransferPlanner() {
 
       const results = await Promise.all(deletePromises);
       const successCount = results.filter(r => r.ok).length;
+
+      // Clear broken-transfer warnings for all successfully deleted drafts
+      duplicateDrafts.forEach((draftLetter, i) => {
+        if (results[i]?.ok) clearBrokenTransfersForDraft(searchedId, draftLetter);
+      });
 
       // If the active draft was deleted, switch to Base
       if (duplicateDrafts.includes(activeDraft)) {
