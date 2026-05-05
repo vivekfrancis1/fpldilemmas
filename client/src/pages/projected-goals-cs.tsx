@@ -90,8 +90,8 @@ export default function ProjectedGoalsCS() {
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
   // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
   const { data: tbcFixtures } = useQuery<any[]>({

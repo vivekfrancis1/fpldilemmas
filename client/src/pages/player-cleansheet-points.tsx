@@ -44,8 +44,8 @@ export default function PlayerCleanSheetPoints() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
   // Fixture mode toggle
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [showOpponent, setShowOpponent] = useState(false);

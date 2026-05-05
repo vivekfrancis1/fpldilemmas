@@ -75,8 +75,8 @@ export default function TeamCSProjections() {
     }
   };
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }

@@ -56,8 +56,8 @@ export default function PlayerBonusPoints() {
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
   // Fixture mode toggle
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 

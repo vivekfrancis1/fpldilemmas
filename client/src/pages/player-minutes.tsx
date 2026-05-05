@@ -34,8 +34,8 @@ export default function PlayerMinutes() {
   const [sortField, setSortField] = useState<SortField>('expectedMinutes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
 
   // Fetch player minutes projections data

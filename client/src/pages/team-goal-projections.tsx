@@ -143,8 +143,8 @@ export default function TeamGoalProjections() {
       setSortDir('desc');
     }
   };
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
   // Fetch past team xG history (after startGameweek/endGameweek defined)
   const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<TeamXgHistory>({

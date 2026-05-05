@@ -30,8 +30,8 @@ export default function GoalShare() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [gameweekFilter, setGameweekFilter] = useState<string>("full");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],

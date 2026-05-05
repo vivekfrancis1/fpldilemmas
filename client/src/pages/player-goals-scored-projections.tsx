@@ -80,8 +80,8 @@ export default function PlayerGoalsScoredProjections() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - expanded on desktop, collapsed on mobile
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
 
   // Fixture mode for TBC display
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
