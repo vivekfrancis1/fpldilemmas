@@ -1,7 +1,7 @@
 import { pool } from "./db";
 import { internalFetch } from "./config";
 
-const CURRENT_SEASON = "2024/25";
+const CURRENT_SEASON = "2025/26";
 
 export interface BackfillResult {
   season: string;

@@ -14015,7 +14015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // match scores) that were absent in earlier gameweek cache runs.
   app.post("/api/admin/season-archive/backfill-fixtures", requireAdmin, async (req, res) => {
     try {
-      const season = (req.query.season as string) || "2024/25";
+      const season = (req.query.season as string) || "2025/26";
       const { seasonArchiveService } = await import('./season-archive-service');
       console.log(`[Admin] Starting season fixture history backfill for ${season}…`);
       const result = await seasonArchiveService.backfillFixtureHistory(season);
@@ -14030,7 +14030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Call this at/near season end before next-season element IDs change.
   app.post("/api/admin/season-archive/snapshot-players", requireAdmin, async (req, res) => {
     try {
-      const season = (req.query.season as string) || "2024/25";
+      const season = (req.query.season as string) || "2025/26";
       const { seasonArchiveService } = await import('./season-archive-service');
       console.log(`[Admin] Snapshotting season player data for ${season}…`);
       const result = await seasonArchiveService.snapshotSeasonPlayers(season);
