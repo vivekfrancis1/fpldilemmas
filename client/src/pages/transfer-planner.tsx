@@ -4184,6 +4184,10 @@ export default function TransferPlanner() {
     setCompletedTransfers(appliedCompleted);
     setTransferredOutPlayers(newTransferredOut);
 
+    setBrokenTransfers(prev =>
+      prev.filter(b => !(b.gwId === selectedGameweek && b.outPlayerId === removedTransfer.outPlayerId && b.inPlayerId === removedTransfer.inPlayerId))
+    );
+
     const updatedGameweekTransfers = {
       ...gameweekTransfers,
       [selectedGameweek]: {
@@ -4324,6 +4328,10 @@ export default function TransferPlanner() {
       setTransferredOutPlayers(newTransferredOut);
     }
 
+    setBrokenTransfers(prev =>
+      prev.filter(b => !(b.gwId === gwId && b.outPlayerId === removedTransfer.outPlayerId && b.inPlayerId === removedTransfer.inPlayerId))
+    );
+
     const updatedGameweekTransfers = {
       ...gameweekTransfers,
       [gwId]: {
@@ -4446,6 +4454,15 @@ export default function TransferPlanner() {
       setCompletedTransfers(remainingCompleted);
       setTransferredOutPlayers(newTransferredOut);
     }
+
+    const removedTransferKeys = new Set(
+      currentCompleted
+        .filter((_, i) => indicesToRemove.has(i))
+        .map(t => `${t.outPlayerId}:${t.inPlayerId}`)
+    );
+    setBrokenTransfers(prev =>
+      prev.filter(b => !(b.gwId === gwId && removedTransferKeys.has(`${b.outPlayerId}:${b.inPlayerId}`)))
+    );
 
     const updatedGameweekTransfers = {
       ...gameweekTransfers,
