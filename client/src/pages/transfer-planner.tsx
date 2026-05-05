@@ -1090,6 +1090,7 @@ export default function TransferPlanner() {
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
+  const [chainBreakConfirmation, setChainBreakConfirmation] = useState<{ transferIndex: number; transferName: string; dependentTransfers: string[] } | null>(null);
   
   // Delete all drafts confirmation dialog
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -4158,6 +4159,28 @@ export default function TransferPlanner() {
     }
   };
 
+  // Check for chain breaks before undoing a single transfer; show confirmation if needed
+  const handleUndoSingleTransferWithCheck = (transferIndex: number) => {
+    const currentCompleted = (gameweekTransfers[selectedGameweek!] || { completed: [] }).completed;
+    const transfer = currentCompleted[transferIndex];
+    if (!transfer) return;
+
+    const dependentTransfers = currentCompleted
+      .slice(transferIndex + 1)
+      .filter(t => t.outPlayerId === transfer.inPlayerId)
+      .map(t => `${t.outPlayerName} → ${t.inPlayerName}`);
+
+    if (dependentTransfers.length > 0) {
+      setChainBreakConfirmation({
+        transferIndex,
+        transferName: `${transfer.outPlayerName} → ${transfer.inPlayerName}`,
+        dependentTransfers,
+      });
+    } else {
+      handleUndoSingleTransfer(transferIndex);
+    }
+  };
+
   // Reset all transfers across all gameweeks
   const handleResetAllTransfers = async () => {
     if (!teamData?.picks || !selectedGameweek) return;
@@ -5964,7 +5987,7 @@ export default function TransferPlanner() {
                             </div>
                             {!isGWFinished && (
                               <button
-                                onClick={() => handleUndoSingleTransfer(idx)}
+                                onClick={() => handleUndoSingleTransferWithCheck(idx)}
                                 className="shrink-0 h-6 w-6 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 flex items-center justify-center text-red-600 dark:text-red-400 transition-colors"
                                 aria-label={`Undo transfer: ${transfer.outPlayerName} → ${transfer.inPlayerName}`}
                                 data-testid={`button-undo-transfer-${idx}`}
@@ -7347,6 +7370,44 @@ export default function TransferPlanner() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => viceCaptainConfirmation && confirmSetViceCaptain(viceCaptainConfirmation.playerId)}>
               Confirm Vice Captain
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Chain-Break Warning Dialog */}
+      <AlertDialog open={!!chainBreakConfirmation} onOpenChange={() => setChainBreakConfirmation(null)}>
+        <AlertDialogContent className="z-[100]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dependent Transfer Detected</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Undoing <strong>{chainBreakConfirmation?.transferName}</strong> will break a transfer chain
+                because the player brought in is later transferred out:
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                {chainBreakConfirmation?.dependentTransfers.map((name, i) => (
+                  <li key={i}>{name}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted-foreground">
+                The dependent transfer(s) above will still remain but may produce unexpected results.
+                Do you want to proceed anyway?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (chainBreakConfirmation) {
+                  handleUndoSingleTransfer(chainBreakConfirmation.transferIndex);
+                  setChainBreakConfirmation(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Undo Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
