@@ -105,7 +105,7 @@ export class LiveGoalMonitor {
 
   start() {
     console.log('⚽ Live match monitor starting...');
-    console.log(`📋 Will tweet events when player has >${this.OWNERSHIP_THRESHOLD}% ownership`);
+    console.log(`📋 Will tweet all goals regardless of ownership (ownership threshold of ${this.OWNERSHIP_THRESHOLD}% applies to red cards only)`);
     console.log(`📋 Tracking: goals, assists, red cards, DC, bonus points`);
     console.log(`📋 Bonus points monitored for ${this.BONUS_MONITOR_HOURS} hours after match ends`);
 
@@ -459,6 +459,31 @@ export class LiveGoalMonitor {
     const homeTeamName = this.bootstrapTeams.get(fixture.team_h)?.name || 'Home';
     const awayTeamName = this.bootstrapTeams.get(fixture.team_a)?.name || 'Away';
 
+    // Process overturned goals first so the score is correct before any new-goal tweets
+    const overturnedGoalScorers = this.findRemovedEntries(prevState.playerGoals, currentPlayerGoals);
+    for (const scorerId of overturnedGoalScorers) {
+      const scorer = this.bootstrapPlayers.get(scorerId);
+      if (!scorer) continue;
+
+      if (scorer.team === fixture.team_h) {
+        liveHomeScore = Math.max(0, liveHomeScore - 1);
+      } else {
+        liveAwayScore = Math.max(0, liveAwayScore - 1);
+      }
+
+      const scorerOwnership = parseFloat(scorer.selected_by_percent);
+      const overturnCtx: MatchContext = {
+        homeTeamName,
+        awayTeamName,
+        homeScore: liveHomeScore,
+        awayScore: liveAwayScore,
+        minute: fixture.minutes ?? '?',
+        fixtureId,
+      };
+      console.log(`🚫 Goal overturned: ${scorer.web_name} — posting tweet`);
+      await this.postEventTweet(this.formatGoalOverturnTweet(scorer.web_name, scorerOwnership, overturnCtx));
+    }
+
     const newGoalScorers = this.findNewEntries(prevState.playerGoals, currentPlayerGoals);
     const newAssistProviders = this.findNewEntries(prevState.playerAssists, currentPlayerAssists);
 
@@ -484,8 +509,7 @@ export class LiveGoalMonitor {
         const scorerOwnership = parseFloat(scorer.selected_by_percent);
         const assistOwnership = assistProvider ? parseFloat(assistProvider.selected_by_percent) : 0;
 
-        if (scorerOwnership > this.OWNERSHIP_THRESHOLD || assistOwnership > this.OWNERSHIP_THRESHOLD) {
-          const goalCtx: MatchContext = {
+        const goalCtx: MatchContext = {
             homeTeamName,
             awayTeamName,
             homeScore: liveHomeScore,
@@ -498,9 +522,6 @@ export class LiveGoalMonitor {
             assistProvider?.web_name, assistProvider ? assistOwnership : undefined,
             goalCtx
           ));
-        } else {
-          console.log(`⚽ Goal by ${scorer.web_name} (${scorerOwnership}%) skipped - below threshold`);
-        }
       }
     }
 
@@ -545,6 +566,19 @@ export class LiveGoalMonitor {
     return results;
   }
 
+  private findRemovedEntries(prev: Map<number, number>, current: Map<number, number>): number[] {
+    const results: number[] = [];
+    for (const [playerId, prevValue] of prev.entries()) {
+      const currentValue = current.get(playerId) || 0;
+      if (currentValue < prevValue) {
+        for (let i = 0; i < prevValue - currentValue; i++) {
+          results.push(playerId);
+        }
+      }
+    }
+    return results;
+  }
+
   private getTeamAbbr(teamName: string): string {
     return TEAM_ABBREVIATIONS[teamName] || teamName.substring(0, 3).toUpperCase();
   }
@@ -569,6 +603,13 @@ export class LiveGoalMonitor {
         tweet += ` [${assistOwnership.toFixed(1)}% owned]`;
       }
     }
+    tweet += `\n\n${this.matchLine(ctx)}`;
+    tweet += this.footer(ctx);
+    return tweet;
+  }
+
+  private formatGoalOverturnTweet(scorerName: string, scorerOwnership: number, ctx: MatchContext): string {
+    let tweet = `🚫 GOAL OVERTURNED! ${scorerName}'s goal has been disallowed [${scorerOwnership.toFixed(1)}% owned]`;
     tweet += `\n\n${this.matchLine(ctx)}`;
     tweet += this.footer(ctx);
     return tweet;
