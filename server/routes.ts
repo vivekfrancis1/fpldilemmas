@@ -18208,10 +18208,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Build unscaled component copies WITHOUT mutating the cached player object.
                 // Mutating player[key] directly would corrupt the in-memory cache on each request,
                 // causing exponential unscaling on every subsequent cache hit.
+                // structuredClone on each component map makes the isolation intent explicit at
+                // each mutation site, independent of the outer structuredClone guard above.
                 unscaledComponentOverrides = {};
                 for (const key of adjustedCompKeys) {
                   if (!player[key]) continue;
-                  const compCopy: { [gw: string]: number } = { ...player[key] };
+                  const compCopy: { [gw: string]: number } = structuredClone(player[key]);
                   for (const gwNum of sortedGWs) {
                     if (unscaledComps[key]?.[gwNum] !== undefined) {
                       compCopy[gwNum.toString()] = unscaledComps[key][gwNum];
