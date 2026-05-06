@@ -631,7 +631,7 @@ async function processBackgroundJob(jobId: string): Promise<void> {
       }).filter(player => player !== null); // Remove null entries
       
       console.log(`💾 OPTIMIZED CACHING: GW${gw} stored ${gameweekSpecificData.length} gameweek-specific player entries (vs ${finalProjectionData.length} full entries)`);
-      totalPointsCache.set(individualKey, gameweekSpecificData);
+      totalPointsCache.set(individualKey, structuredClone(gameweekSpecificData));
     }
     
     console.log(`💾 ENHANCED CACHING: Stored range key '${cacheKey}' + ${endGameweek - startGameweek + 1} individual GW keys`);
