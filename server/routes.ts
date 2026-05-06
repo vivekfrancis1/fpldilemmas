@@ -13602,7 +13602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cached = totalPointsCache.get(cacheKey);
         if (Date.now() - cached.timestamp < TOTAL_POINTS_CACHE_DURATION) {
           console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end} (${cached.data.length} players)`);
-          return res.json(applyAvailabilityAdjustments(cached.data));
+          // Deep-clone before any transformation so the stored cache entry is never mutated.
+          // Shallow spreading ({ ...player }) shares nested object references (e.g. fixtureDetails),
+          // which would corrupt the cache on every hit if those refs are modified downstream.
+          return res.json(applyAvailabilityAdjustments(structuredClone(cached.data)));
         }
       }
 
@@ -14107,9 +14110,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cache the result for 15 minutes only if data is valid (always cache RAW projections)
       // Only cache when availabilityAdjusted=true so the cache always stores raw (unscaled) data.
       // Raw requests bypass the cache entirely (set earlier) so this path is safe.
+      // Store a deep clone so that any post-store mutation of `result` cannot corrupt the cache.
       if (availabilityAdjusted) {
         totalPointsCache.set(cacheKey, {
-          data: result,
+          data: structuredClone(result),
           timestamp: Date.now()
         });
       }
@@ -18145,14 +18149,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPointsCache.delete(currentCacheKey);
             // Continue to fresh calculation below
           } else {
-            // Adjusted mode: enrich cached data with latest availability info from bootstrap
+            // Adjusted mode: enrich cached data with latest availability info from bootstrap.
+            // Deep-clone the cached array before any transformation so that nested objects
+            // (e.g. fixtureDetails sub-arrays) are not shared between the cache and the output.
+            // Without this, a shallow { ...player } spread leaves nested refs intact, and any
+            // mutation downstream would silently corrupt the stored cache entry.
             const adjustedCompKeys = [
               'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
               'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
               'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
               'pointsFromDefensiveContributions'
             ];
-            const enrichedData = cachedData.data.map((player: any) => {
+            const enrichedData = (structuredClone(cachedData.data) as any[]).map((player: any) => {
               const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
               const chanceNextRound = bootstrapPlayer?.chance_of_playing_next_round ?? 100;
               const bpStatus = bootstrapPlayer?.status || 'a';
@@ -18275,6 +18283,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in cached player total points:", error);
       res.status(500).json({ error: "Failed to get cached player total points" });
     }
+  });
+
+  // CACHE INTEGRITY SNAPSHOT — test/dev only
+  // Returns a JSON snapshot of the raw totalPointsCache entry for a given key so tests can
+  // assert the stored data is identical before and after serving a cache-hit request.
+  // Returns 404 when the key is absent or expired so tests can distinguish a miss.
+  // Handles two storage formats:
+  //   • { data: [...], timestamp: number }  — written by the live aggregator
+  //   • [...] (raw array)                   — written by the background job
+  app.get("/api/admin/cache-snapshot", async (req, res) => {
+    const key = typeof req.query.key === 'string' ? req.query.key : null;
+    if (!key) return res.status(400).json({ error: 'key query param required' });
+    const entry = totalPointsCache.get(key);
+    if (!entry) return res.status(404).json({ error: 'Cache miss or expired', key });
+    // Normalise: handle both {data: [...], timestamp: ...} and raw array
+    const players: any[] = Array.isArray(entry) ? entry
+      : (Array.isArray(entry?.data) ? entry.data : []);
+    const storedTimestamp: number | null = typeof entry?.timestamp === 'number' ? entry.timestamp : null;
+    // Return a summary (first 5 players, key fields) to keep the payload small
+    const snapshot = players.slice(0, 5).map((p: any) => ({
+      playerId: p.playerId,
+      totalExpectedPoints: p.totalExpectedPoints,
+      gwProjectionKeys: Object.keys(p.gameweekProjections || {}),
+      sampleGWValues: Object.entries(p.gameweekProjections || {}).slice(0, 4),
+      pointsFromGoalsKeys: Object.keys(p.pointsFromGoals || {}),
+      sampleGoalValues: Object.entries(p.pointsFromGoals || {}).slice(0, 4),
+      sampleAssistValues: Object.entries(p.pointsFromAssists || {}).slice(0, 4),
+      sampleCSValues: Object.entries(p.pointsFromCleanSheets || {}).slice(0, 4),
+    }));
+    res.json({ key, playerCount: players.length, snapshot, storedTimestamp });
   });
 
   // FPL SCORING CACHE ORCHESTRATION - Rebuild all scoring caches with aggregation
