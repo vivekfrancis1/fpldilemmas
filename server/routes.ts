@@ -13457,6 +13457,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           }
+          // Recalculate rolled-up totalPoints* fields to match the unscaled per-GW
+          // breakdowns.  Without this the totalPoints* fields stay at their original
+          // (probability-weighted) values while the per-GW entries are unscaled,
+          // causing sum(pointsFromGoals[gw]) ≠ totalPointsFromGoals for
+          // availability-adjusted players.
+          const unscaledTotals: { [key: string]: number } = {};
+          for (const key of Object.keys(unscaledCompResult)) {
+            const totalKey = 'total' + key.charAt(0).toUpperCase() + key.slice(1);
+            unscaledTotals[totalKey] = Math.round(
+              Object.values(unscaledCompResult[key] as Record<string, number>)
+                .reduce((sum: number, v: number) => sum + (v ?? 0), 0) * 100
+            ) / 100;
+          }
 
           for (const gwKey of Object.keys(gwProj)) {
             const gw = parseInt(gwKey);
@@ -13483,6 +13496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const out: any = {
             ...player,
             ...unscaledCompResult,
+            ...unscaledTotals,
             gameweekProjections: gwProj,
             totalExpectedPoints: Math.round(scaledTotal * 100) / 100,
             availabilityAdjustments: availAdj,
@@ -18178,6 +18192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const gwProbs: { [gw: number]: number } = {};
               const sortedGWs = Object.keys(gameweekProjections).map(Number).sort((a, b) => a - b);
               let unscaledComponentOverrides: { [key: string]: any } = {};
+              let unscaledTotalOverrides: { [key: string]: number } = {};
 
               if (bootstrapPlayer) {
                 for (const gwNum of sortedGWs) {
@@ -18221,6 +18236,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                   unscaledComponentOverrides[key] = compCopy;
                 }
+                // Recalculate rolled-up totalPoints* fields to match the unscaled per-GW
+                // breakdowns.  Without this the totalPoints* fields stay at their original
+                // (probability-weighted) values while the per-GW entries are unscaled,
+                // causing sum(pointsFromGoals[gw]) ≠ totalPointsFromGoals for
+                // availability-adjusted players.
+                for (const key of Object.keys(unscaledComponentOverrides)) {
+                  const totalKey = 'total' + key.charAt(0).toUpperCase() + key.slice(1);
+                  unscaledTotalOverrides[totalKey] = Math.round(
+                    Object.values(unscaledComponentOverrides[key] as Record<string, number>)
+                      .reduce((sum: number, v: number) => sum + (v ?? 0), 0) * 100
+                  ) / 100;
+                }
 
                 for (const gwKey of Object.keys(gameweekProjections)) {
                   const gw = parseInt(gwKey);
@@ -18247,6 +18274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const result: any = {
                 ...player,
                 ...unscaledComponentOverrides,
+                ...unscaledTotalOverrides,
                 gameweekProjections,
                 chanceOfPlayingNextRound: chanceNextRound,
                 status: bpStatus,

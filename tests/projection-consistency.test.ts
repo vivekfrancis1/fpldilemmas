@@ -449,42 +449,42 @@ describe('Server-Side Availability Adjustments', () => {
     expect(failures.length).toBe(0);
   });
 
-  it('component totals are NOT adjusted (only totalExpectedPoints is adjusted)', () => {
-    const injuredPlayers = bootstrapData.elements.filter(
-      (el: any) => el.chance_of_playing_next_round === 0
-    );
+  it('component totalPoints* fields match the sum of their per-GW breakdown values in the adjusted response', () => {
+    // After the totalPoints* sync fix, the adjusted response recomputes each totalPoints* field
+    // as the sum of the corresponding per-GW breakdown values (which are unscaled to reflect
+    // what the player would score if fully fit).  This means totalPoints* CAN legitimately
+    // differ between raw and adjusted for injured/doubtful players — that is the correct
+    // behaviour.  What we assert here is internal consistency: for every player in the
+    // adjusted response, sum(pointsFromGoals[gw]) === totalPointsFromGoals (within 0.01).
+    const PAIRS: Array<{ perGW: string; total: string }> = [
+      { perGW: 'pointsFromGoals',         total: 'totalPointsFromGoals' },
+      { perGW: 'pointsFromAssists',       total: 'totalPointsFromAssists' },
+      { perGW: 'pointsFromCleanSheets',   total: 'totalPointsFromCleanSheets' },
+      { perGW: 'pointsFromMinutes',       total: 'totalPointsFromMinutes' },
+      { perGW: 'pointsFromBonus',         total: 'totalPointsFromBonus' },
+      { perGW: 'pointsFromSaves',         total: 'totalPointsFromSaves' },
+      { perGW: 'pointsFromGoalsConceded', total: 'totalPointsFromGoalsConceded' },
+    ];
 
     const failures: string[] = [];
 
-    for (const injured of injuredPlayers.slice(0, 10)) {
-      const adjustedPlayer = cachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
-      const rawPlayer = rawCachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
-
-      if (!adjustedPlayer || !rawPlayer) continue;
-
-      const totalKeys = [
-        'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
-        'totalPointsFromMinutes', 'totalPointsFromBonus', 'totalPointsFromSaves',
-        'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards',
-        'totalPointsFromDefensiveContributions'
-      ];
-
-      for (const totalKey of totalKeys) {
-        const rawTotal = rawPlayer[totalKey];
-        const adjTotal = adjustedPlayer[totalKey];
-
-        if (rawTotal === undefined || rawTotal === 0) continue;
-
-        if (Math.abs((adjTotal || 0) - rawTotal) > 0.01) {
+    for (const player of cachedPlayerTotalPoints.slice(0, 50)) {
+      for (const { perGW, total } of PAIRS) {
+        const breakdown = player[perGW];
+        const rolledUp: number = player[total] ?? 0;
+        if (!breakdown || typeof breakdown !== 'object') continue;
+        const gwSum = Object.values(breakdown as Record<string, number>)
+          .reduce((acc: number, v: number) => acc + (v ?? 0), 0);
+        if (Math.abs(gwSum - rolledUp) > 0.01) {
           failures.push(
-            `${injured.web_name} ${totalKey}: raw=${rawTotal?.toFixed(2)}, adjusted=${adjTotal?.toFixed(2)} (should be identical)`
+            `${player.playerName || player.playerId} ${total}: sum=${gwSum.toFixed(4)}, rolled-up=${rolledUp.toFixed(4)}`
           );
         }
       }
     }
 
     if (failures.length > 0) {
-      console.log('Component total adjustment detected:', failures);
+      console.log('totalPoints* vs per-GW sum mismatches:', failures.slice(0, 10));
     }
     expect(failures.length).toBe(0);
   });

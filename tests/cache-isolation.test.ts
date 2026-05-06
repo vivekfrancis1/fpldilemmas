@@ -113,7 +113,7 @@ describe('Component breakdown stability: per-component values identical across r
     'pointsFromDefensiveContributions',
   ] as const;
 
-  it('component values are identical across three sequential cache-hit requests for availability-adjusted players', async () => {
+  it('component values are identical across three sequential cache-hit requests for availability-adjusted players (single GW)', async () => {
     const gwUrl = `/api/player-total-points?startGameweek=${startGW}&endGameweek=${startGW}`;
 
     // Warm the cache so all three requests below are cache-hits and exercise the
@@ -161,4 +161,85 @@ describe('Component breakdown stability: per-component values identical across r
       }
     }
   }, 90_000);
+});
+
+describe('Component totals match per-GW sums: rolled-up totalPoints* equals sum of per-GW breakdown', () => {
+  /**
+   * Each player object carries both:
+   *   - A rolled-up total field, e.g. totalPointsFromGoals
+   *   - A per-GW breakdown object, e.g. pointsFromGoals[gw]
+   *
+   * This describe block asserts that for every player the sum of the per-GW
+   * breakdown values equals the rolled-up total within a tolerance of 0.01.
+   *
+   * Two scenarios are covered:
+   *   1. Single-GW request  – exercises the per-GW code path
+   *   2. 12-GW range request – exercises the multi-GW aggregation path
+   *
+   * A mismatch reveals that the unscaling or availability-adjustment pass
+   * is transforming the two fields inconsistently.
+   */
+
+  const COMPONENT_TOTAL_PAIRS: Array<{ perGW: string; total: string }> = [
+    { perGW: 'pointsFromGoals',                    total: 'totalPointsFromGoals' },
+    { perGW: 'pointsFromAssists',                  total: 'totalPointsFromAssists' },
+    { perGW: 'pointsFromCleanSheets',              total: 'totalPointsFromCleanSheets' },
+    { perGW: 'pointsFromMinutes',                  total: 'totalPointsFromMinutes' },
+    { perGW: 'pointsFromBonus',                    total: 'totalPointsFromBonus' },
+    { perGW: 'pointsFromSaves',                    total: 'totalPointsFromSaves' },
+    { perGW: 'pointsFromGoalsConceded',            total: 'totalPointsFromGoalsConceded' },
+    { perGW: 'pointsFromYellowCards',              total: 'totalPointsFromYellowCards' },
+    { perGW: 'pointsFromRedCards',                 total: 'totalPointsFromRedCards' },
+    { perGW: 'pointsFromDefensiveContributions',   total: 'totalPointsFromDefensiveContributions' },
+  ];
+
+  function assertComponentTotalsMatchPerGWSums(players: any[], label: string) {
+    const failures: string[] = [];
+
+    for (const player of players) {
+      for (const { perGW, total } of COMPONENT_TOTAL_PAIRS) {
+        const breakdown = player[perGW];
+        const rolledUp: number = player[total] ?? 0;
+
+        if (!breakdown || typeof breakdown !== 'object') continue;
+
+        const gwSum = Object.values(breakdown as Record<string, number>)
+          .reduce((acc: number, v: number) => acc + (v ?? 0), 0);
+
+        if (Math.abs(gwSum - rolledUp) > 0.01) {
+          failures.push(
+            `[${label}] playerId=${player.playerId} ${total}: ` +
+            `per-GW sum=${gwSum.toFixed(4)}, rolled-up=${rolledUp.toFixed(4)}`
+          );
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log('Component total vs per-GW sum mismatches (first 10):', failures.slice(0, 10));
+    }
+
+    expect(failures.length).toBe(0);
+  }
+
+  it('single-GW request: per-GW component sums equal totalPoints* fields for all players', async () => {
+    const gwUrl = `/api/player-total-points?startGameweek=${startGW}&endGameweek=${startGW}`;
+    const players: any[] = await get(gwUrl);
+
+    expect(Array.isArray(players)).toBe(true);
+    expect(players.length).toBeGreaterThan(0);
+
+    assertComponentTotalsMatchPerGWSums(players, `GW${startGW}-${startGW}`);
+  }, 60_000);
+
+  it('12-GW range request: per-GW component sums equal totalPoints* fields for all players', async () => {
+    const endGW = Math.min(startGW + 11, 38);
+    const gwUrl = `/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`;
+    const players: any[] = await get(gwUrl);
+
+    expect(Array.isArray(players)).toBe(true);
+    expect(players.length).toBeGreaterThan(0);
+
+    assertComponentTotalsMatchPerGWSums(players, `GW${startGW}-${endGW}`);
+  }, 60_000);
 });
