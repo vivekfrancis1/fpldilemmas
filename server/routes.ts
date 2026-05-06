@@ -593,7 +593,8 @@ async function processBackgroundJob(jobId: string): Promise<void> {
     const cacheKey = `${startGameweek}-${endGameweek}`;
     
     // Store the complete result in the main cache (range key) - SIMPLIFIED API
-    totalPointsCache.set(cacheKey, finalProjectionData);
+    // structuredClone isolates the stored entry from any later mutations (e.g. GW-slice loop below)
+    totalPointsCache.set(cacheKey, structuredClone(finalProjectionData));
     
     // CRITICAL FIX: Store individual gameweek keys with TRUE per-GW data slicing
     updateJobProgress(jobId, 5, 6, 'Creating optimized individual gameweek cache entries...');
