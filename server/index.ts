@@ -6,8 +6,9 @@ import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
 import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
-import { twitterScheduler } from "./twitter-scheduler";
-import { deadlineTweetScheduler } from "./deadline-tweet-scheduler";
+// TWEETS PAUSED — re-enable when X Developer API plan is active
+// import { twitterScheduler } from "./twitter-scheduler";
+// import { deadlineTweetScheduler } from "./deadline-tweet-scheduler";
 import { projectionAccuracyScheduler } from "./projection-accuracy-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
@@ -144,21 +145,19 @@ app.use((req, res, next) => {
       }, 25 * 60 * 1000);
       console.log("✓ FPL scoring cache scheduler queued (starts in 25 minutes)");
       
-      // Start Twitter scheduler (posts price changes at 7 AM IST daily)
-      twitterScheduler.start();
-      console.log("✓ Twitter scheduler started");
+      // TWEETS PAUSED — re-enable when X Developer API plan is active
+      // twitterScheduler.start();
+      // console.log("✓ Twitter scheduler started");
 
-      // Start deadline tweet scheduler (posts Top 5 by position 2h before each GW deadline)
-      deadlineTweetScheduler.start();
-      console.log("✓ Deadline tweet scheduler started");
-      
-      // Start live goal monitor (tweets goal updates during live matches)
-      import('./services/liveGoalMonitor').then(({ liveGoalMonitor }) => {
-        liveGoalMonitor.start();
-        console.log("✓ Live goal monitor started");
-      }).catch((error) => {
-        console.error("Failed to start live goal monitor:", error);
-      });
+      // deadlineTweetScheduler.start();
+      // console.log("✓ Deadline tweet scheduler started");
+
+      // import('./services/liveGoalMonitor').then(({ liveGoalMonitor }) => {
+      //   liveGoalMonitor.start();
+      //   console.log("✓ Live goal monitor started");
+      // }).catch((error) => {
+      //   console.error("Failed to start live goal monitor:", error);
+      // });
       
       // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
       import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
