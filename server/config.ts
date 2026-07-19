@@ -9,16 +9,11 @@ export const getApiBaseUrl = (): string => {
   const nodeEnv = process.env.NODE_ENV || 'development';
   const isProduction = nodeEnv === 'production';
   
-  // In production, use the internal service URL or current host
+  // In production, always use localhost for internal calls.
+  // Using the public hostname (e.g. via API_BASE_URL) adds ~5s per hop, causes 90–125s chain
+  // timeouts in the aggregator, and creates a circular dependency during startup (the server
+  // calls itself via the public domain before the domain is reachable).
   if (isProduction) {
-    // Try to get from environment variable first
-    const productionUrl = process.env.API_BASE_URL;
-    if (productionUrl) {
-      return productionUrl;
-    }
-    
-    // Use localhost so internal calls stay within the process and never go out to the public internet.
-    // Going via the public hostname adds ~5s per hop and causes 90–125s chain timeouts in the aggregator.
     return `http://localhost:${process.env.PORT || 5000}`;
   }
   
