@@ -22,6 +22,8 @@ import { computeCascadeIndicesToRemove, executeUndoAllCheck, executeUndoChainChe
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
+import { isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -158,6 +160,7 @@ interface BootstrapData {
     is_current: boolean;
     is_next: boolean;
     finished: boolean;
+    deadline_time: string;
   }>;
 }
 
@@ -6033,9 +6036,26 @@ export default function TransferPlanner() {
     );
   };
 
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="w-full py-2 sm:py-3 md:py-4 space-y-3 md:space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+            <Target className="h-4 w-4 md:h-5 md:w-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
+            <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
+          </div>
+        </div>
+        <SeasonEndedNotice />
+      </div>
+    );
+  }
+
   return (
     <>
-      
+
       <div className="w-full py-2 sm:py-3 md:py-4 space-y-3 md:space-y-4">
       {/* Header - Compact */}
       <div className="flex items-center gap-2 mb-1">

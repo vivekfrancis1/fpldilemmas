@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect, type CSSProperties, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
-import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -940,7 +942,7 @@ export default function PlayerTotalPoints() {
 
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const { assignments: tbcAssignments, setAssignments: setTbcAssignments } = useTbcAssignments();
-  const [viewMode, setViewMode] = useState<"past" | "future">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"past" | "future">("view", "future", ["future", "past"]);
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -1057,20 +1059,21 @@ export default function PlayerTotalPoints() {
     return gws;
   }, [bootstrapData?.events, viewMode, lastFinishedGW, fixtureMode, tbcTeamShortNames]);
 
-  // One-time initialization when bootstrap data loads
+  // One-time initialization when bootstrap data loads. Marks the page ready regardless of
+  // whether the future range is valid (it isn't, between seasons) — the viewMode-aware reset
+  // effect below sets the actual start/end for whichever mode is active.
   useEffect(() => {
     if (!bootstrapData || initialized) return;
-    
-    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
+
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
-    
-    // Validate range
+
     if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
-      setInitialized(true);
     }
+    setInitialized(true);
   }, [bootstrapData, initialized]);
 
   // Reset gameweek range when viewMode changes
@@ -1452,11 +1455,12 @@ export default function PlayerTotalPoints() {
     return false;
   }, [viewMode, historyLoading, fullRangeLoading, fullRangeData, fullRangeError]);
 
-  // Error handling — live full-range source
+  // Error handling — live full-range source (only relevant in "future" mode; the
+  // "past" tab has its own history query and shouldn't be blocked by this)
   const error = useMemo(() => {
-    if (fullRangeError && !fullRangeData) return fullRangeError;
+    if (viewMode === "future" && fullRangeError && !fullRangeData) return fullRangeError;
     return null;
-  }, [fullRangeError, fullRangeData]);
+  }, [viewMode, fullRangeError, fullRangeData]);
 
   const handleRefreshData = async () => {
     console.log('🔄 Total Points refresh button clicked!');
@@ -1949,6 +1953,48 @@ export default function PlayerTotalPoints() {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
+  const pageHeaderAndTabs = (
+    <>
+      {/* Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Player Points</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            FPL points across all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
+          </p>
+        </div>
+      </div>
+
+      {/* View Mode Tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "past" | "future")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Points Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Points History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-wrapper">
+        <div className="fpl-container fpl-content-area fpl-section-spacing">
+          {pageHeaderAndTabs}
+          <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Points History" />
+        </div>
+      </div>
+    );
+  }
+
   // Show loading only when actually needed
   if (!initialized || !bootstrapData || isLoading) {
     const isPastMode = viewMode === "past";
@@ -2004,32 +2050,7 @@ export default function PlayerTotalPoints() {
       )}
       
       <div className="fpl-container fpl-content-area fpl-section-spacing">
-          {/* Page Header */}
-          <div className="fpl-page-header">
-            <div className="fpl-page-header-content">
-              <div className="fpl-page-title">
-                <Target className="h-8 w-8" />
-                <h1>Player Points</h1>
-              </div>
-              <p className="fpl-page-subtitle">
-                FPL points across all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
-              </p>
-            </div>
-          </div>
-
-          {/* View Mode Tabs */}
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "past" | "future")} className="mb-6">
-            <TabsList className="w-full">
-              <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-                <Calendar className="h-4 w-4" />
-                Points Projections
-              </TabsTrigger>
-              <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-                <History className="h-4 w-4" />
-                Points History
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {pageHeaderAndTabs}
 
           {/* Filters and Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">

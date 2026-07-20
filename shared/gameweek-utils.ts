@@ -164,6 +164,15 @@ export function getDefaultGameweekRange(events: GameweekEvent[], count: number =
 }
 
 /**
+ * True when the season has finished and the next one hasn't started yet
+ * (i.e. there's no upcoming gameweek to project) — the FPL close season.
+ */
+export function isSeasonEnded(events: GameweekEvent[]): boolean {
+  if (!events || events.length === 0) return false;
+  return computeNextRange(events).isSeasonEnd;
+}
+
+/**
  * Validates if a gameweek range is valid for the current season
  */
 export function isValidGameweekRange(start: number, end: number, events: GameweekEvent[]): boolean {

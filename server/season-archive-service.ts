@@ -20,6 +20,32 @@ export interface SnapshotResult {
   durationMs: number;
 }
 
+export interface FixtureArchiveResult {
+  season: string;
+  fixturesArchived: number;
+  errors: string[];
+  durationMs: number;
+}
+
+export interface HistoricalStatsArchiveResult {
+  season: string;
+  playersArchived: number;
+  errors: string[];
+  durationMs: number;
+}
+
+const ELEMENT_TYPE_POSITION: Record<number, string> = {
+  1: "Goalkeeper",
+  2: "Defender",
+  3: "Midfielder",
+  4: "Forward",
+};
+
+function calculatePer90(value: number, minutes: number): number {
+  if (!minutes) return 0;
+  return Math.round((value * 90 / minutes) * 100) / 100;
+}
+
 export class SeasonArchiveService {
   /**
    * Backfill gameweek_player_data from player_history_cache for the current season.
@@ -302,6 +328,194 @@ export class SeasonArchiveService {
   }
 
   /**
+   * Snapshot all finished fixture results from the live /api/fixtures + /api/bootstrap-static
+   * into season_fixtures_archive. Must be called while the season is still "current" as far as
+   * FPL's live API is concerned — once FPL resets bootstrap-static/fixtures for the next season,
+   * this season's match results are no longer retrievable from the live API at all.
+   */
+  async archiveFixtures(season: string = CURRENT_SEASON): Promise<FixtureArchiveResult> {
+    const start = Date.now();
+    const result: FixtureArchiveResult = { season, fixturesArchived: 0, errors: [], durationMs: 0 };
+
+    try {
+      const [bsRes, fixturesRes] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures"),
+      ]);
+      if (!bsRes.ok) throw new Error(`bootstrap-static returned ${bsRes.status}`);
+      if (!fixturesRes.ok) throw new Error(`fixtures returned ${fixturesRes.status}`);
+
+      const bootstrap = await bsRes.json();
+      const fixtures: any[] = await fixturesRes.json();
+      const teamShortNames = new Map<number, string>(bootstrap.teams.map((t: any) => [t.id, t.short_name]));
+      const teamNames = new Map<number, string>(bootstrap.teams.map((t: any) => [t.id, t.name]));
+
+      const finished = fixtures.filter((f) => f.finished && f.team_h_score != null && f.team_a_score != null);
+      console.log(`[SeasonArchive] Archiving ${finished.length} finished fixtures for ${season}…`);
+
+      const CHUNK = 100;
+      for (let i = 0; i < finished.length; i += CHUNK) {
+        const chunk = finished.slice(i, i + CHUNK);
+        const params: any[] = [];
+        const placeholders = chunk.map((f, ri) => {
+          const base = ri * 12;
+          params.push(
+            season, f.id, f.event,
+            f.team_h, teamShortNames.get(f.team_h) ?? null, teamNames.get(f.team_h) ?? null,
+            f.team_a, teamShortNames.get(f.team_a) ?? null, teamNames.get(f.team_a) ?? null,
+            f.team_h_score, f.team_a_score,
+            f.kickoff_time ? new Date(f.kickoff_time) : null,
+          );
+          const ph = Array.from({ length: 12 }, (_, ci) => `$${base + ci + 1}`).join(',');
+          return `(${ph},true)`;
+        }).join(',');
+
+        try {
+          const res = await pool.query(`
+            INSERT INTO season_fixtures_archive (
+              season, fixture_id, gameweek, team_h, team_h_short, team_h_name,
+              team_a, team_a_short, team_a_name,
+              team_h_score, team_a_score, kickoff_time, finished
+            ) VALUES ${placeholders}
+            ON CONFLICT (season, fixture_id) DO UPDATE SET
+              gameweek=EXCLUDED.gameweek,
+              team_h=EXCLUDED.team_h, team_h_short=EXCLUDED.team_h_short, team_h_name=EXCLUDED.team_h_name,
+              team_a=EXCLUDED.team_a, team_a_short=EXCLUDED.team_a_short, team_a_name=EXCLUDED.team_a_name,
+              team_h_score=EXCLUDED.team_h_score, team_a_score=EXCLUDED.team_a_score,
+              kickoff_time=EXCLUDED.kickoff_time, finished=true
+          `, params);
+          result.fixturesArchived += res.rowCount ?? 0;
+        } catch (e) {
+          result.errors.push(`Chunk ${i}–${i + chunk.length}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+    } catch (e) {
+      result.errors.push(`Fatal: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    result.durationMs = Date.now() - start;
+    console.log(`[SeasonArchive] Fixture archive done: ${result.fixturesArchived} fixtures for ${season}, ${result.errors.length} errors in ${result.durationMs}ms`);
+    return result;
+  }
+
+  /**
+   * Roll a just-finished season's already-cached gameweek_player_data into historical_player_stats
+   * (the same table that holds 2016/17–2024/25), so season-over-season comparisons and blending
+   * cover this season too. Aggregates locally-stored data — no FPL API calls for player stats.
+   */
+  async archiveToHistoricalPlayerStats(season: string = CURRENT_SEASON): Promise<HistoricalStatsArchiveResult> {
+    const start = Date.now();
+    const result: HistoricalStatsArchiveResult = { season, playersArchived: 0, errors: [], durationMs: 0 };
+
+    try {
+      const bsRes = await internalFetch("api/bootstrap-static");
+      if (!bsRes.ok) throw new Error(`bootstrap-static returned ${bsRes.status}`);
+      const bootstrap = await bsRes.json();
+      const teamNames = new Map<number, string>(bootstrap.teams.map((t: any) => [t.id, t.name]));
+
+      const agg = await pool.query(`
+        SELECT
+          g.player_id AS "playerId",
+          sps.web_name AS "webName",
+          sps.team_id AS "teamId",
+          sps.element_type AS "elementType",
+          SUM(g.minutes) AS minutes,
+          SUM(g.goals_scored) AS "goalsScored",
+          SUM(g.assists) AS assists,
+          SUM(g.clean_sheets) AS "cleanSheets",
+          SUM(g.goals_conceded) AS "goalsConceded",
+          SUM(g.saves) AS saves,
+          SUM(g.penalties_saved) AS "penaltiesSaved",
+          SUM(g.yellow_cards) AS "yellowCards",
+          SUM(g.red_cards) AS "redCards",
+          SUM(g.starts) AS starts,
+          SUM(g.total_points) AS "totalPoints",
+          SUM(g.bonus) AS bonus,
+          SUM(g.bps) AS bps,
+          SUM(g.tackles) AS tackles,
+          SUM(g.recoveries) AS recoveries,
+          SUM(g.clearances_blocks_interceptions) AS cbi,
+          SUM(g.defensive_contribution) AS "defensiveContribution",
+          SUM(g.expected_goals) AS "expectedGoals",
+          SUM(g.expected_assists) AS "expectedAssists",
+          SUM(g.expected_goals_conceded) AS "expectedGoalsConceded",
+          SUM(g.influence) AS influence,
+          SUM(g.creativity) AS creativity,
+          SUM(g.threat) AS threat,
+          SUM(g.ict_index) AS "ictIndex"
+        FROM gameweek_player_data g
+        JOIN season_player_snapshot sps ON sps.player_id = g.player_id AND sps.season = g.season
+        WHERE g.season = $1
+        GROUP BY g.player_id, sps.web_name, sps.team_id, sps.element_type
+      `, [season]);
+
+      console.log(`[SeasonArchive] Aggregated ${agg.rows.length} players for historical_player_stats ${season}…`);
+
+      // Idempotent: this table has no unique constraint on (player_id, season) — clear our own
+      // season's rows first rather than risk duplicating on repeat runs.
+      await pool.query(`DELETE FROM historical_player_stats WHERE season = $1`, [season]);
+
+      const CHUNK = 100;
+      const COLS = 38;
+      for (let i = 0; i < agg.rows.length; i += CHUNK) {
+        const chunk = agg.rows.slice(i, i + CHUNK);
+        const params: any[] = [];
+        const placeholders = chunk.map((r: any, ri: number) => {
+          const minutes = parseInt(r.minutes) || 0;
+          const tackles = parseInt(r.tackles) || 0;
+          const recoveries = parseInt(r.recoveries) || 0;
+          const cbi = parseInt(r.cbi) || 0;
+          const defensiveContribution = parseInt(r.defensiveContribution) || 0;
+          const goalsScored = parseInt(r.goalsScored) || 0;
+          const assists = parseInt(r.assists) || 0;
+          const cleanSheets = parseInt(r.cleanSheets) || 0;
+
+          const base = ri * COLS;
+          params.push(
+            r.playerId, r.webName ?? `Player ${r.playerId}`, season,
+            r.teamId, teamNames.get(r.teamId) ?? "Unknown",
+            ELEMENT_TYPE_POSITION[r.elementType] ?? "Unknown", r.elementType,
+            goalsScored, assists, cbi, tackles, recoveries, defensiveContribution,
+            cleanSheets, parseInt(r.goalsConceded) || 0, parseInt(r.saves) || 0, parseInt(r.penaltiesSaved) || 0,
+            parseInt(r.yellowCards) || 0, parseInt(r.redCards) || 0, minutes, parseInt(r.starts) || 0,
+            parseInt(r.totalPoints) || 0, parseInt(r.bonus) || 0, parseInt(r.bps) || 0,
+            parseFloat(r.expectedGoals) || null, parseFloat(r.expectedAssists) || null, parseFloat(r.expectedGoalsConceded) || null,
+            parseFloat(r.influence) || null, parseFloat(r.creativity) || null, parseFloat(r.threat) || null, parseFloat(r.ictIndex) || null,
+            calculatePer90(goalsScored, minutes), calculatePer90(assists, minutes), calculatePer90(defensiveContribution, minutes),
+            calculatePer90(tackles, minutes), calculatePer90(recoveries, minutes), calculatePer90(cbi, minutes), calculatePer90(cleanSheets, minutes),
+          );
+          const ph = Array.from({ length: COLS }, (_, ci) => `$${base + ci + 1}`).join(',');
+          return `(${ph})`;
+        }).join(',');
+
+        try {
+          const res = await pool.query(`
+            INSERT INTO historical_player_stats (
+              player_id, player_name, season, team_id, team_name, position, element_type,
+              goals_scored, assists, clearances_blocks_interceptions, tackles, recoveries,
+              defensive_contribution, clean_sheets, goals_conceded, saves, penalties_saved,
+              yellow_cards, red_cards, minutes, starts, total_points, bonus, bps,
+              expected_goals, expected_assists, expected_goals_conceded,
+              influence, creativity, threat, ict_index,
+              goals_per_90, assists_per_90, defensive_contribution_per_90,
+              tackles_per_90, recoveries_per_90, cbi_per_90, clean_sheets_per_90
+            ) VALUES ${placeholders}
+          `, params);
+          result.playersArchived += res.rowCount ?? 0;
+        } catch (e) {
+          result.errors.push(`Chunk ${i}–${i + chunk.length}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+    } catch (e) {
+      result.errors.push(`Fatal: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    result.durationMs = Date.now() - start;
+    console.log(`[SeasonArchive] Historical stats archive done: ${result.playersArchived} players for ${season}, ${result.errors.length} errors in ${result.durationMs}ms`);
+    return result;
+  }
+
+  /**
    * Return row counts for monitoring.
    */
   async getArchiveStatus(): Promise<{
@@ -309,12 +523,18 @@ export class SeasonArchiveService {
     fixtureRowsBySeason: Record<string, number>;
     snapshotRows: number;
     snapshotRowsBySeason: Record<string, number>;
+    fixtureArchiveRows: number;
+    fixtureArchiveRowsBySeason: Record<string, number>;
+    historicalStatsRowsBySeason: Record<string, number>;
   }> {
-    const [fixtureTotal, fixtureBySeason, snapshotTotal, snapshotBySeason] = await Promise.all([
+    const [fixtureTotal, fixtureBySeason, snapshotTotal, snapshotBySeason, archiveTotal, archiveBySeason, historicalBySeason] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM gameweek_player_data`),
       pool.query(`SELECT season, COUNT(*) as cnt FROM gameweek_player_data GROUP BY season ORDER BY season`),
       pool.query(`SELECT COUNT(*) FROM season_player_snapshot`).catch(() => ({ rows: [{ count: '0' }] })),
       pool.query(`SELECT season, COUNT(*) as cnt FROM season_player_snapshot GROUP BY season ORDER BY season`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT COUNT(*) FROM season_fixtures_archive`).catch(() => ({ rows: [{ count: '0' }] })),
+      pool.query(`SELECT season, COUNT(*) as cnt FROM season_fixtures_archive GROUP BY season ORDER BY season`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT season, COUNT(*) as cnt FROM historical_player_stats GROUP BY season ORDER BY season`).catch(() => ({ rows: [] })),
     ]);
 
     return {
@@ -322,6 +542,9 @@ export class SeasonArchiveService {
       fixtureRowsBySeason: Object.fromEntries(fixtureBySeason.rows.map((r: any) => [r.season, parseInt(r.cnt)])),
       snapshotRows: parseInt(snapshotTotal.rows[0].count),
       snapshotRowsBySeason: Object.fromEntries(snapshotBySeason.rows.map((r: any) => [r.season, parseInt(r.cnt)])),
+      fixtureArchiveRows: parseInt(archiveTotal.rows[0].count),
+      fixtureArchiveRowsBySeason: Object.fromEntries(archiveBySeason.rows.map((r: any) => [r.season, parseInt(r.cnt)])),
+      historicalStatsRowsBySeason: Object.fromEntries(historicalBySeason.rows.map((r: any) => [r.season, parseInt(r.cnt)])),
     };
   }
 }

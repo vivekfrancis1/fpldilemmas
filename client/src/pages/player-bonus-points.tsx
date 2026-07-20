@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -95,20 +96,20 @@ export default function PlayerBonusPoints() {
     return gws;
   }, [bootstrapData?.events, fixtureMode, tbcTeamInfoMap]);
 
-  // Initialize gameweek range once bootstrap data is loaded
+  // Initialize gameweek range once bootstrap data is loaded. Marks the page ready regardless of
+  // whether the future range is valid (it isn't, between seasons).
   useEffect(() => {
     if (!bootstrapData || initialized) return;
-    
-    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
+
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
-    
-    // Validate range
+
     if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
-      setInitialized(true);
     }
+    setInitialized(true);
   }, [bootstrapData, initialized]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
@@ -358,6 +359,25 @@ export default function PlayerBonusPoints() {
       setSortDirection('desc');
     }
   };
+
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Star className="h-8 w-8" />
+              <h1>Player Bonus Points</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Bonus Point System (BPS) projections and additional FPL rewards for top performers
+            </p>
+          </div>
+        </div>
+        <SeasonEndedNotice />
+      </div>
+    );
+  }
 
   // Show loading state while data is loading OR while initializing gameweeks OR when data is empty
   if (isLoadingBootstrap || isLoadingProjections || !initialized || !bonusPointsProjections || bonusPointsProjections.length === 0) {

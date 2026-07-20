@@ -107,7 +107,8 @@ app.use((req, res, next) => {
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      // SO_REUSEPORT isn't supported on macOS — only pass it on Linux (prod/Replit).
+      ...(process.platform !== "darwin" && { reusePort: true }),
     }, async () => {
       log(`serving on port ${port}`);
       

@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Search, ArrowUpDown, Users, X, Filter, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,7 +74,7 @@ export default function PlayerSaves() {
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
   // View mode: "future" for projections, "past" for historical data
-  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past">("view", "future", ["future", "past"]);
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
@@ -154,20 +156,21 @@ export default function PlayerSaves() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
-  // Initialize gameweek range once bootstrap data is loaded
+  // Initialize gameweek range once bootstrap data is loaded. Marks the page ready regardless of
+  // whether the future range is valid (it isn't, between seasons) — the viewMode-aware reset
+  // effect below sets the actual start/end for whichever mode is active.
   useEffect(() => {
     if (!bootstrapData || initialized) return;
-    
-    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
+
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
-    
-    // Validate range
+
     if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
-      setInitialized(true);
     }
+    setInitialized(true);
   }, [bootstrapData, initialized]);
 
   // Reset gameweek range when viewMode changes
@@ -515,6 +518,45 @@ export default function PlayerSaves() {
     (viewMode === "future" && (isLoadingProjections || !displayData || displayData.length === 0)) ||
     (viewMode === "past" && historyLoading);
 
+  const pageHeaderAndTabs = (
+    <>
+      {/* Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Goalkeeper Saves</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Save predictions and FPL points analysis across upcoming and past gameweeks
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Saves Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Saves History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Saves History" />
+      </div>
+    );
+  }
+
   // Show loading state while data is loading
   if (isDataLoading) {
     return (
@@ -561,31 +603,7 @@ export default function PlayerSaves() {
 
   return (
     <div className="fpl-page-container">
-      {/* Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Shield className="h-8 w-8" />
-            <h1>Goalkeeper Saves</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            Save predictions and FPL points analysis across upcoming and past gameweeks
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Saves Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            Saves History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {pageHeaderAndTabs}
 
       <div className="fpl-section-spacing">
         {/* Filters */}

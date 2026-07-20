@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
+import { isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -1312,6 +1314,25 @@ export default function BestFreehitTeam() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="w-full py-4 sm:py-8 space-y-6">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>Best Freehit Team</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Optimal 15-player squad for maximum points with captain selection
+            </p>
+          </div>
+        </div>
+        <SeasonEndedNotice />
       </div>
     );
   }

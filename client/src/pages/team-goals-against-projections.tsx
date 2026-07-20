@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +68,7 @@ export default function TeamGoalsAgainstProjections() {
   });
 
   // View mode: "future" for projections, "past" for historical data
-  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past">("view", "future", ["future", "past"]);
 
   // Fetch past team goals against history
   const { data: historyData, isLoading: historyLoading } = useQuery<TeamGoalsAgainstHistory>({
@@ -415,6 +417,45 @@ export default function TeamGoalsAgainstProjections() {
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
 
+  const pageHeaderAndTabs = (
+    <>
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Shield className="h-8 w-8" />
+            <h1>Team Goals Conceded</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Projected and actual goals conceded by each team across selected gameweeks
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Goals Conceded History" />
+      </div>
+    );
+  }
+
   if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
@@ -469,31 +510,7 @@ export default function TeamGoalsAgainstProjections() {
 
   return (
     <div className="fpl-page-container">
-      {/* Unified Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Shield className="h-8 w-8" />
-            <h1>Team Goals Conceded</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            Projected and actual goals conceded by each team across selected gameweeks
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {pageHeaderAndTabs}
 
       {viewMode === "future" && tbcGAMap.size > 0 && (
         <div className="flex justify-center mb-5">
@@ -647,7 +664,9 @@ export default function TeamGoalsAgainstProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                {`Team Goals Conceded Projections: GW${startGameweek}-GW${endGameweek}`}
+                {viewMode === "future"
+                  ? `Team Goals Conceded Projections: GW${startGameweek}-GW${endGameweek}`
+                  : `Team Goals Conceded History: GW${startGameweek}-GW${endGameweek}`}
                 {selectedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
                     {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected

@@ -1174,6 +1174,32 @@ export const seasonPlayerSnapshot = pgTable("season_player_snapshot", {
 export type SeasonPlayerSnapshot = typeof seasonPlayerSnapshot.$inferSelect;
 export type InsertSeasonPlayerSnapshot = typeof seasonPlayerSnapshot.$inferInsert;
 
+// Durable archive of match results per season, reconstructed from gameweek_player_data
+// before FPL's live bootstrap-static/fixtures endpoints reset for the next season.
+export const seasonFixturesArchive = pgTable("season_fixtures_archive", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  fixtureId: integer("fixture_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  teamH: integer("team_h").notNull(),
+  teamHShort: varchar("team_h_short", { length: 10 }),
+  teamHName: varchar("team_h_name", { length: 50 }),
+  teamA: integer("team_a").notNull(),
+  teamAShort: varchar("team_a_short", { length: 10 }),
+  teamAName: varchar("team_a_name", { length: 50 }),
+  teamHScore: integer("team_h_score"),
+  teamAScore: integer("team_a_score"),
+  kickoffTime: timestamp("kickoff_time"),
+  finished: boolean("finished").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("season_fixtures_archive_season_fixture_unique").on(table.season, table.fixtureId),
+  index("idx_season_fixtures_archive_season_gw").on(table.season, table.gameweek),
+]);
+
+export type SeasonFixturesArchive = typeof seasonFixturesArchive.$inferSelect;
+export type InsertSeasonFixturesArchive = typeof seasonFixturesArchive.$inferInsert;
+
 export const gameweekUpdateLogTable = pgTable("gameweek_update_log", {
   id: serial("id").primaryKey(),
   gameweek: integer("gameweek").notNull(),

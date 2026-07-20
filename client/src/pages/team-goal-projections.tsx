@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Target, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +83,7 @@ export default function TeamGoalProjections() {
   });
 
   // View mode: "future" for projections, "past" for historical data, "pastXg" for xG history
-  const [viewMode, setViewMode] = useState<"future" | "past" | "pastXg">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past" | "pastXg">("view", "future", ["future", "past", "pastXg"]);
 
   // Fixture mode for TBC display (base=TBC column, custom=user's assignments, expert=all TBC→GW36)
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
@@ -481,6 +483,49 @@ export default function TeamGoalProjections() {
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXg" && xgHistoryLoading);
 
+  const pageHeaderAndTabs = (
+    <>
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Team Goals</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Projected and historical goals for each team across selected gameweeks
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Goals Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Goals History
+          </TabsTrigger>
+          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
+            <TrendingUp className="h-4 w-4" />
+            xG History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Goals Scored History" />
+      </div>
+    );
+  }
+
   if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
@@ -539,35 +584,7 @@ export default function TeamGoalProjections() {
 
   return (
     <div className="fpl-page-container">
-      {/* Unified Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Target className="h-8 w-8" />
-            <h1>Team Goals</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            Projected and historical goals for each team across selected gameweeks
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Goals Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            Goals History
-          </TabsTrigger>
-          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
-            <TrendingUp className="h-4 w-4" />
-            xG History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {pageHeaderAndTabs}
 
       {viewMode === "future" && tbcGoalData && tbcGoalData.length > 0 && (
         <div className="flex justify-center mb-5">

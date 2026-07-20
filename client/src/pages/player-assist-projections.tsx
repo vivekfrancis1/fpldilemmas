@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 
-import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
@@ -86,7 +88,7 @@ export default function PlayerAssistProjections() {
   });
 
   // View mode: "future" for projections, "past" for historical data, "pastXa" for xA history
-  const [viewMode, setViewMode] = useState<"future" | "past" | "pastXa">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past" | "pastXa">("view", "future", ["future", "past", "pastXa"]);
 
   // Fetch past player assists history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerAssistsHistory>({
@@ -192,20 +194,21 @@ export default function PlayerAssistProjections() {
     return gws;
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap]);
 
-  // Initialize gameweeks when bootstrap data loads
+  // Initialize gameweeks when bootstrap data loads. Marks the page ready regardless of whether
+  // the future range is valid (it isn't, between seasons) — the viewMode-aware reset effect
+  // below sets the actual start/end for whichever mode is active.
   useEffect(() => {
     if (!bootstrapData || initialized) return;
-    
-    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
+
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
-    
-    // Validate range
+
     if (start > 0 && end > 0 && start <= end && end <= 39) {
       setStartGameweek(start);
       setEndGameweek(end);
-      setInitialized(true);
     }
+    setInitialized(true);
   }, [bootstrapData, initialized]);
 
   // Reset gameweek range when viewMode changes
@@ -591,7 +594,50 @@ export default function PlayerAssistProjections() {
 
   // ALL CONDITIONAL LOGIC AND EARLY RETURNS MUST COME AFTER ALL HOOKS
 
-  if (error) {
+  const pageHeaderAndTabs = (
+    <>
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Zap className="h-8 w-8" />
+            <h1>Player Assists</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Projected assists and historical data by player across selected gameweeks
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Assists Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Assists History
+          </TabsTrigger>
+          <TabsTrigger value="pastXa" className="flex items-center gap-1.5 flex-1">
+            <TrendingUp className="h-4 w-4" />
+            xA History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Assists History" />
+      </div>
+    );
+  }
+
+  if (viewMode === "future" && error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
         <div className="w-full py-4 sm:py-8">
@@ -635,35 +681,7 @@ export default function PlayerAssistProjections() {
 
   return (
     <div className="fpl-page-container">
-      {/* Unified Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Zap className="h-8 w-8" />
-            <h1>Player Assists</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            Projected assists and historical data by player across selected gameweeks
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-6">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Assists Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            Assists History
-          </TabsTrigger>
-          <TabsTrigger value="pastXa" className="flex items-center gap-1.5 flex-1">
-            <TrendingUp className="h-4 w-4" />
-            xA History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {pageHeaderAndTabs}
 
       {viewMode === "future" && tbcTeamInfoMap.size > 0 && (
         <div className="flex justify-center mb-5">

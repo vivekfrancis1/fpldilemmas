@@ -2,12 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface MatchProjection {
@@ -43,7 +45,7 @@ export default function ProjectedGoalsCS() {
   });
 
   // View mode: "future" for projections, "past" for historical results
-  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past">("view", "future", ["future", "past"]);
 
   // Fixture mode: which GW to assign TBC fixtures to
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
@@ -393,6 +395,46 @@ export default function ProjectedGoalsCS() {
     return `${dateDisplay} • ${formattedTime}`;
   };
 
+  const pageHeaderAndTabs = (
+    <>
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            {viewMode === "future"
+              ? "Projected goals and clean sheet odds for upcoming matches"
+              : "Actual results and scores from past matches"}
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Match Predictions
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Match Results
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Match Results" />
+      </div>
+    );
+  }
+
   if (isLoading || goalsLoading || csLoading || fixturesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
@@ -415,41 +457,7 @@ export default function ProjectedGoalsCS() {
 
   return (
     <div className="fpl-page-container">
-      {/* Unified Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Target className="h-8 w-8" />
-            <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            {viewMode === "future" 
-              ? "Projected goals and clean sheet odds for upcoming matches"
-              : "Actual results and scores from past matches"}
-          </p>
-          {/* Past/Future Toggle */}
-          <div className="flex gap-2 mt-3">
-            <Button
-              variant={viewMode === "past" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("past")}
-              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <History className="h-4 w-4" />
-              Past GW Results
-            </Button>
-            <Button
-              variant={viewMode === "future" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("future")}
-              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-            >
-              <Calendar className="h-4 w-4" />
-              Future GW Predictions
-            </Button>
-          </div>
-        </div>
-      </div>
+      {pageHeaderAndTabs}
 
       <div className="fpl-section-spacing">
 
@@ -556,7 +564,7 @@ export default function ProjectedGoalsCS() {
             <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="h-4 w-4" />
-                Goals and Clean Sheet Projections
+                {viewMode === "future" ? "Goals and Clean Sheet Projections" : "Goals and Clean Sheet Results"}
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
                   {filteredProjections.length} {filteredProjections.length === 1 ? 'match' : 'matches'}
                 </Badge>

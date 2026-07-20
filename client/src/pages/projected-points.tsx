@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -152,6 +154,7 @@ interface BootstrapData {
     is_current: boolean;
     is_next: boolean;
     finished: boolean;
+    deadline_time: string;
   }>;
 }
 
@@ -631,6 +634,20 @@ export default function ProjectedPoints() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+        <div className="w-full space-y-4 sm:space-y-6">
+          <div className="text-center py-2">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">My Team Projected Points</h1>
+            <p className="text-xs text-gray-600 hidden sm:block">View projected points for your current FPL team</p>
+          </div>
+          <SeasonEndedNotice />
         </div>
       </div>
     );

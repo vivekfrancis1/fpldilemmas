@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +52,7 @@ interface PlayerGoalsHistory {
 
 export default function PlayerGoalsScoredProjections() {
   const { defaultWeeks } = useProjectionSettings();
-  const [viewMode, setViewMode] = useState<"past" | "pastXg" | "future">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"past" | "pastXg" | "future">("view", "future", ["future", "past", "pastXg"]);
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -629,6 +631,50 @@ export default function PlayerGoalsScoredProjections() {
     return "Loading actual goals scored by players in past gameweeks...";
   };
   
+  const pageHeaderAndTabs = (
+    <>
+      {/* Unified Page Header */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Player Goals</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Projected and historical goals scored by players across all gameweeks
+          </p>
+        </div>
+      </div>
+
+      {/* View Mode Tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Goals Projections
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Goals History
+          </TabsTrigger>
+          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            xG History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Goals History" />
+      </div>
+    );
+  }
+
   if (!initialized || !bootstrapData || isDataLoading) {
     return (
       <LoadingExperience
@@ -644,7 +690,7 @@ export default function PlayerGoalsScoredProjections() {
     );
   }
 
-  if (error) {
+  if (viewMode === "future" && error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50/30">
         <div className="w-full py-4 sm:py-8">
@@ -698,36 +744,7 @@ export default function PlayerGoalsScoredProjections() {
         </div>
       )}
       
-      {/* Unified Page Header */}
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Target className="h-8 w-8" />
-            <h1>Player Goals</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            Projected and historical goals scored by players across all gameweeks
-          </p>
-        </div>
-      </div>
-
-      {/* View Mode Tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-6">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Goals Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            Goals History
-          </TabsTrigger>
-          <TabsTrigger value="pastXg" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            xG History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {pageHeaderAndTabs}
 
       {viewMode === "future" && tbcTeamInfoMap.size > 0 && (
         <div className="flex justify-center mb-5">
@@ -912,7 +929,11 @@ export default function PlayerGoalsScoredProjections() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="fpl-card-title flex items-center gap-2">
                     <Target className="h-5 w-5" />
-                    Player Goal Projections: GW{startGameweek}-GW{endGameweek}
+                    {viewMode === "future"
+                      ? `Player Goal Projections: GW${startGameweek}-GW${endGameweek}`
+                      : viewMode === "pastXg"
+                        ? `Player xG History: GW${startGameweek}-GW${endGameweek}`
+                        : `Player Goals History: GW${startGameweek}-GW${endGameweek}`}
                     {gwFilter.size > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
                         {gwFilter.size} GW{gwFilter.size === 1 ? '' : 's'} selected

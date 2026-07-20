@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, TrendingUp, Target, Users, RefreshCw, Calendar, History } from "lucide-react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { Trophy, Target, Users, RefreshCw, Calendar, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -36,7 +40,7 @@ interface TBCGoalProjection {
 
 export default function ProjectedStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<"current" | "projected">("projected");
+  const [viewMode, setViewMode] = useViewModeParam<"current" | "projected">("view", "projected", ["projected", "current"]);
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const queryClient = useQueryClient();
 
@@ -207,6 +211,48 @@ export default function ProjectedStandings() {
     return 'bg-gray-500 text-white';
   };
 
+  const pageHeaderAndTabs = (
+    <>
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Trophy className="h-8 w-8" />
+            <h1>{viewMode === "projected" ? "Projected Standings" : "Current Standings"}</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            {viewMode === "projected"
+              ? "Premier League table based on actual results and projected outcomes"
+              : "Premier League table based on actual results up to the last finished gameweek"}
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "current" | "projected")} className="mb-6">
+        <TabsList className="w-full">
+          <TabsTrigger value="projected" className="flex items-center gap-1.5 flex-1">
+            <Calendar className="h-4 w-4" />
+            Predicted Standings
+          </TabsTrigger>
+          <TabsTrigger value="current" className="flex items-center gap-1.5 flex-1">
+            <History className="h-4 w-4" />
+            Current Standings
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </>
+  );
+
+  if (viewMode === "projected" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <div className="fpl-section-spacing">
+          <SeasonEndedNotice onViewPast={() => setViewMode("current")} pastLabel="Current Standings" />
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || standingsLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -219,19 +265,7 @@ export default function ProjectedStandings() {
 
   return (
     <div className="fpl-page-container">
-      <div className="fpl-page-header">
-        <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
-            <Trophy className="h-8 w-8" />
-            <h1>{viewMode === "projected" ? "Projected Standings" : "Current Standings"}</h1>
-          </div>
-          <p className="fpl-page-subtitle">
-            {viewMode === "projected" 
-              ? "Premier League table based on actual results and projected outcomes"
-              : "Premier League table based on actual results up to the last finished gameweek"}
-          </p>
-        </div>
-      </div>
+      {pageHeaderAndTabs}
 
       {tbcTeamImpactMap.size > 0 && viewMode === "projected" && (
         <div className="flex justify-center mb-5">
@@ -248,27 +282,6 @@ export default function ProjectedStandings() {
         <Card className="mb-6 shadow-md border-0">
           <CardContent className="p-4 md:p-6">
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={viewMode === "current" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("current")}
-                  className={`flex items-center gap-1.5 ${viewMode === "current" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-                >
-                  <History className="h-4 w-4" />
-                  Current
-                </Button>
-                <Button
-                  variant={viewMode === "projected" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("projected")}
-                  className={`flex items-center gap-1.5 ${viewMode === "projected" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Projected
-                </Button>
-              </div>
-
               <div className="flex flex-wrap gap-4 items-center justify-between">
                 <div className="flex flex-wrap gap-4 items-center">
                   <div className="flex items-center gap-2">

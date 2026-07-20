@@ -18,7 +18,7 @@ export const getApiBaseUrl = (): string => {
   }
   
   // Development environment - use localhost
-  return 'http://localhost:5000';
+  return `http://localhost:${process.env.PORT || 5000}`;
 };
 
 /**

@@ -45,6 +45,11 @@ let teamGoalsAgainstCache: { data: any[]; timestamp: number } | null = null;
 let teamCSCache: { data: any[]; timestamp: number } | null = null;
 const TEAM_PROJECTION_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
 
+// Season whose match results team-history endpoints should prefer from season_fixtures_archive
+// over the live bootstrap-static/fixtures API. Update this once a season is archived and the
+// next one begins (see server/season-archive-service.ts).
+const ARCHIVED_TEAM_HISTORY_SEASON = "2025/26";
+
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -7859,26 +7864,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/team-goals-history", async (req, res) => {
     try {
       console.log(`DEBUG: Team Goals History API called - fetching actual past gameweek data`);
-      
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        internalFetch("api/bootstrap-static"),
-        internalFetch("api/fixtures")
-      ]);
-      
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data");
+
+      // Prefer the durable archive (survives FPL resetting bootstrap-static/fixtures for the
+      // next season) over the live API. Falls back to live if a season hasn't been archived yet.
+      const archived = await pool.query(
+        `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
+         FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
+        [ARCHIVED_TEAM_HISTORY_SEASON]
+      );
+
+      let teams: any[];
+      let fixturesData: any[];
+      let lastFinishedGW: number;
+
+      if (archived.rows.length > 0) {
+        const teamMap = new Map<number, { id: number; name: string; short_name: string }>();
+        for (const r of archived.rows) {
+          if (!teamMap.has(r.team_h)) teamMap.set(r.team_h, { id: r.team_h, name: r.team_h_name ?? r.team_h_short, short_name: r.team_h_short });
+          if (!teamMap.has(r.team_a)) teamMap.set(r.team_a, { id: r.team_a, name: r.team_a_name ?? r.team_a_short, short_name: r.team_a_short });
+        }
+        teams = Array.from(teamMap.values());
+        fixturesData = archived.rows.map((r) => ({
+          finished: true,
+          event: r.gameweek,
+          team_h: r.team_h,
+          team_a: r.team_a,
+          team_h_score: r.team_h_score,
+          team_a_score: r.team_a_score,
+        }));
+        lastFinishedGW = Math.max(...archived.rows.map((r) => r.gameweek));
+      } else {
+        const [bootstrapResponse, fixturesResponse] = await Promise.all([
+          internalFetch("api/bootstrap-static"),
+          internalFetch("api/fixtures")
+        ]);
+
+        if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const bootstrapData = await bootstrapResponse.json();
+        fixturesData = await fixturesResponse.json();
+        teams = bootstrapData.teams;
+
+        const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+        lastFinishedGW = finishedEvents.length > 0
+          ? Math.max(...finishedEvents.map((e: any) => e.id))
+          : 0;
       }
-      
-      const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
-      const teams = bootstrapData.teams;
-      
-      // Find the last fully finished gameweek
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
-      
+
       console.log(`DEBUG: Last finished gameweek: ${lastFinishedGW}`);
       
       // Initialize team goals data structure
@@ -8057,25 +8091,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/team-goals-against-history", async (req, res) => {
     try {
       console.log(`DEBUG: Team Goals Against History API called - fetching actual past gameweek data`);
-      
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        internalFetch("api/bootstrap-static"),
-        internalFetch("api/fixtures")
-      ]);
-      
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data");
+
+      // Prefer the durable archive (survives FPL resetting bootstrap-static/fixtures for the
+      // next season) over the live API. Falls back to live if a season hasn't been archived yet.
+      const archived = await pool.query(
+        `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
+         FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
+        [ARCHIVED_TEAM_HISTORY_SEASON]
+      );
+
+      let teams: any[];
+      let fixturesData: any[];
+      let lastFinishedGW: number;
+
+      if (archived.rows.length > 0) {
+        const teamMap = new Map<number, { id: number; name: string; short_name: string }>();
+        for (const r of archived.rows) {
+          if (!teamMap.has(r.team_h)) teamMap.set(r.team_h, { id: r.team_h, name: r.team_h_name ?? r.team_h_short, short_name: r.team_h_short });
+          if (!teamMap.has(r.team_a)) teamMap.set(r.team_a, { id: r.team_a, name: r.team_a_name ?? r.team_a_short, short_name: r.team_a_short });
+        }
+        teams = Array.from(teamMap.values());
+        fixturesData = archived.rows.map((r) => ({
+          finished: true,
+          event: r.gameweek,
+          team_h: r.team_h,
+          team_a: r.team_a,
+          team_h_score: r.team_h_score,
+          team_a_score: r.team_a_score,
+        }));
+        lastFinishedGW = Math.max(...archived.rows.map((r) => r.gameweek));
+      } else {
+        const [bootstrapResponse, fixturesResponse] = await Promise.all([
+          internalFetch("api/bootstrap-static"),
+          internalFetch("api/fixtures")
+        ]);
+
+        if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const bootstrapData = await bootstrapResponse.json();
+        fixturesData = await fixturesResponse.json();
+        teams = bootstrapData.teams;
+
+        const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+        lastFinishedGW = finishedEvents.length > 0
+          ? Math.max(...finishedEvents.map((e: any) => e.id))
+          : 0;
       }
-      
-      const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
-      const teams = bootstrapData.teams;
-      
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
-      
+
       const teamGoalsAgainstMap = new Map();
       teams.forEach((team: any) => {
         const gameweekGoals: { [key: number]: number } = {};
@@ -14323,6 +14387,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, ...result });
     } catch (error) {
       console.error("Error in season player snapshot:", error);
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Archive all finished fixture results for a season into season_fixtures_archive.
+  // Must be run while the season is still "current" per FPL's live API — once FPL resets
+  // bootstrap-static/fixtures for the next season, this season's results become unreachable.
+  app.post("/api/admin/season-archive/archive-fixtures", requireAdmin, async (req, res) => {
+    try {
+      const season = (req.query.season as string) || "2025/26";
+      const { seasonArchiveService } = await import('./season-archive-service');
+      console.log(`[Admin] Archiving fixture results for ${season}…`);
+      const result = await seasonArchiveService.archiveFixtures(season);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error in fixture archive:", error);
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Roll a finished season's cached gameweek_player_data into historical_player_stats
+  // (the same table holding 2016/17–2024/25), so it's available for season-over-season blending.
+  app.post("/api/admin/season-archive/archive-historical-stats", requireAdmin, async (req, res) => {
+    try {
+      const season = (req.query.season as string) || "2025/26";
+      const { seasonArchiveService } = await import('./season-archive-service');
+      console.log(`[Admin] Archiving historical player stats for ${season}…`);
+      const result = await seasonArchiveService.archiveToHistoricalPlayerStats(season);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error in historical stats archive:", error);
       res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });

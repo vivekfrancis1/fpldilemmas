@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +17,7 @@ import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 
 interface BootstrapData {
-  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+  events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
   elements: Array<{ id: number; first_name: string; second_name: string; web_name: string; team: number; element_type: number; form: number; minutes: number; clearances_blocks_interceptions: number; tackles: number; recoveries: number }>;
   teams: Array<{ id: number; name: string; short_name: string; code: number }>;
   element_types: Array<{ id: number; singular_name: string; singular_name_short: string }>;
@@ -64,7 +67,7 @@ interface PlayerDefensiveHistory {
 
 export default function PlayerDefensiveContributions() {
   // View mode: "future" for projections, "past" for historical data
-  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past">("view", "future", ["future", "past"]);
 
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -588,30 +591,8 @@ export default function PlayerDefensiveContributions() {
   };
 
 
-  if (isLoading || displayData.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
-        <Card className="w-full max-w-sm shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              Loading Defensive Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 text-sm">
-              {viewMode === "future" 
-                ? "Calculating defensive contribution projections for all players across the next 12 gameweeks..."
-                : "Loading historical defensive contribution data..."}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fpl-page-container">
+  const pageHeaderAndTabs = (
+    <>
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
@@ -637,6 +618,43 @@ export default function PlayerDefensiveContributions() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+    </>
+  );
+
+  if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Defensive Contributions History" />
+      </div>
+    );
+  }
+
+  if (isLoading || displayData.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
+        <Card className="w-full max-w-sm shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Defensive Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 text-sm">
+              {viewMode === "future" 
+                ? "Calculating defensive contribution projections for all players across the next 12 gameweeks..."
+                : "Loading historical defensive contribution data..."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fpl-page-container">
+      {pageHeaderAndTabs}
 
       <div className="fpl-section-spacing">
         {/* Quick Stats Overview */}
@@ -893,7 +911,9 @@ export default function PlayerDefensiveContributions() {
       <div className="fpl-card">
         <div className="fpl-card-header">
           <h2 className="fpl-card-title flex items-center gap-2">
-            Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
+            {viewMode === "future"
+              ? `Player Defensive Contributions Projections: GW${startGameweek}-GW${endGameweek}`
+              : `Player Defensive Contributions History: GW${startGameweek}-GW${endGameweek}`}
             {selectedGameweeks.size > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">
                 {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected

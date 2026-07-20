@@ -55,9 +55,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "My FPL",
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
+        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
-        { path: "/transfer-recommendations", label: "AI Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
+        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
         { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
       ]
     },
@@ -88,11 +88,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Statistics",
       items: [
-        { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
-        { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
         { path: "/results-and-fixtures", label: "Match Results", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
-        { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
-        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
+        { path: "/player-statistics", label: "Player Stats", icon: BarChart3, description: "Comprehensive player data", popular: false },
+        { path: "/current-standings", label: "Team Stats", icon: Trophy, description: "Enhanced table with clean sheets, cards, xG and venue splits", popular: false },
       ]
     },
     {
@@ -100,14 +98,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
-        { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
+        { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false },
+        { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
+        { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
       ]
     },
     {
       section: "Top Managers",
       items: [
         { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
-        { path: "/content-creators", label: "Top Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
+        { path: "/content-creators", label: "Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
     },
     ];

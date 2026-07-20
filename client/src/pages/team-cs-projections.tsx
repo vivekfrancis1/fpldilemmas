@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -288,6 +289,25 @@ export default function TeamCSProjections() {
     return 'bg-red-50 text-red-800';
   };
 
+
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="fpl-page-container">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Shield className="h-8 w-8" />
+              <h1>Team Clean Sheet Projections</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Clean sheet probabilities for each team across all upcoming gameweeks
+            </p>
+          </div>
+        </div>
+        <SeasonEndedNotice />
+      </div>
+    );
+  }
 
   if (isLoading || projectionsLoading) {
     return (

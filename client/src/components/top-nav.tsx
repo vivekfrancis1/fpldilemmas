@@ -49,9 +49,9 @@ const navSections: NavSection[] = [
     section: "My FPL",
     items: [
       { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
-      { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, adminOnly: true },
+      { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
-      { path: "/transfer-recommendations", label: "AI Recommended Transfers", icon: ArrowRightLeft },
+      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
       { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
     ],
   },
@@ -79,11 +79,9 @@ const navSections: NavSection[] = [
   {
     section: "Statistics",
     items: [
-      { path: "/player-statistics", label: "Player Statistics", icon: BarChart3 },
-      { path: "/current-standings", label: "Team Statistics", icon: Trophy },
       { path: "/results-and-fixtures", label: "Match Results", icon: Trophy },
-      { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw },
-      { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3 },
+      { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
+      { path: "/current-standings", label: "Team Stats", icon: Trophy },
     ],
   },
   {
@@ -92,13 +90,15 @@ const navSections: NavSection[] = [
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
       { path: "/best-freehit-team", label: "Freehit Team", icon: Users },
       { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star },
+      { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw },
+      { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3 },
     ],
   },
   {
     section: "Top Managers",
     items: [
       { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown },
-      { path: "/content-creators", label: "Top Content Creators", icon: Users },
+      { path: "/content-creators", label: "Content Creators", icon: Users },
     ],
   },
 ];
