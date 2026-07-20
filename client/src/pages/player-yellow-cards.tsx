@@ -89,7 +89,7 @@ export default function PlayerYellowCards() {
     : [];
   
   // In custom/expert mode, GW39 is absorbed into assigned GW — no separate column
-  const showGW39Column = fixtureMode === 'base' && includeTBC;
+  const showGW39Column = fixtureMode === 'base' && includeTBC && tbcTeamInfoMap.size > 0;
   const gameweeks = showGW39Column ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
 
   // Effective start/end for display (clamped to available gameweeks)

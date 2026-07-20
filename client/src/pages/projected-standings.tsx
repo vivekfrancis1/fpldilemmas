@@ -54,14 +54,25 @@ export default function ProjectedStandings() {
     const finishedEvents = bootstrapData.events.filter(e => e.finished);
     return finishedEvents.length > 0 ? Math.max(...finishedEvents.map(e => e.id)) : currentGameweek - 1;
   }, [bootstrapData?.events, currentGameweek]);
-  
-  const maxEndGameweek = Math.min(currentGameweek + 12, 39);
+
+  const { data: tbcData } = useQuery<TBCGoalProjection[]>({
+    queryKey: ["/api/tbc-goal-projections"],
+    staleTime: 30 * 60 * 1000,
+  });
+  const hasTBCFixture = (tbcData?.length ?? 0) > 0;
+
+  // TBC assignments from localStorage
+  const tbcAssignments = useMemo<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
+  }, [fixtureMode]);
+
+  const maxEndGameweek = Math.min(currentGameweek + 12, hasTBCFixture ? 39 : 38);
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
-  
+
   useEffect(() => {
     if (bootstrapData && selectedEndGameweek === null) {
       if (viewMode === "projected") {
-        setSelectedEndGameweek(39);
+        setSelectedEndGameweek(maxEndGameweek);
       } else {
         setSelectedEndGameweek(lastFinishedGameweek);
       }
@@ -70,7 +81,7 @@ export default function ProjectedStandings() {
 
   useEffect(() => {
     if (viewMode === "projected") {
-      setSelectedEndGameweek(39);
+      setSelectedEndGameweek(maxEndGameweek);
     } else {
       setSelectedEndGameweek(lastFinishedGameweek);
     }
@@ -109,11 +120,6 @@ export default function ProjectedStandings() {
     enabled: viewMode === "current" && !!bootstrapData,
   });
 
-  const { data: tbcData } = useQuery<TBCGoalProjection[]>({
-    queryKey: ["/api/tbc-goal-projections"],
-    staleTime: 30 * 60 * 1000,
-  });
-
   // TBC impact map: teamShort → { points, goalsFor, goalsAgainst, result, opponent, isHome }
   const tbcTeamImpactMap = useMemo(() => {
     const map = new Map<string, { pts: number; gf: number; ga: number; result: 'W' | 'D' | 'L'; opponent: string; isHome: boolean }>();
@@ -130,11 +136,6 @@ export default function ProjectedStandings() {
     });
     return map;
   }, [tbcData]);
-
-  // TBC assignments from localStorage
-  const tbcAssignments = useMemo<Record<number, number>>(() => {
-    try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
-  }, [fixtureMode]);
 
   const standingsData = viewMode === "projected" ? projectedStandingsData : currentStandingsData;
   const standingsLoading = viewMode === "projected" ? projectedLoading : currentLoading;
@@ -309,14 +310,14 @@ export default function ProjectedStandings() {
                       <SelectContent>
                         {bootstrapData && Array.from({ length: 12 }, (_, i) => {
                           const gw = currentGameweek + 1 + i;
-                          if (gw > 39) return null;
+                          if (gw > 38 && !(gw === 39 && hasTBCFixture)) return null;
                           return (
                             <SelectItem key={gw} value={gw.toString()}>
                               {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                             </SelectItem>
                           );
                         }).filter(Boolean)}
-                        {(currentGameweek + 12) < 39 && (
+                        {hasTBCFixture && (currentGameweek + 12) < 39 && (
                           <SelectItem key={39} value="39">GW39 (TBC)</SelectItem>
                         )}
                       </SelectContent>

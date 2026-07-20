@@ -71,7 +71,7 @@ export default function PlayerGoalsConceded() {
   const nextGameweek = currentGameweek + 1;
   const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
   // In custom/expert mode, GW39 is absorbed into the assigned GW — no separate column
-  const showGW39Column = fixtureMode === 'base' && includeTBC;
+  const showGW39Column = fixtureMode === 'base' && includeTBC && tbcTeamInfoMap.size > 0;
   const gameweeks = showGW39Column ? [...baseGameweeks, 39] : baseGameweeks;
   // API needs GW39 data for merging in custom/expert mode
   const apiEndGameweek = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0) ? 39 : baseGameweeks[baseGameweeks.length - 1];
