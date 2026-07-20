@@ -100,7 +100,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={PlayerTotalPoints} />
+        <Route path="/" component={MyDashboard} />
         <Route path="/live-rank" component={LiveRank} />
         <Route path="/my-dashboard" component={MyDashboard} />
         <Route path="/projected-points" component={ProjectedPoints} />
