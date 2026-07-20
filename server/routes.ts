@@ -5623,7 +5623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("🚀 Fetching fresh Content Creators data (will cache for 30 mins)...");
       
       // Get all content creators from database
-      const creators = await storage.getAllContentCreators();
+      const creators = await storage.getContentCreators();
       
       if (!creators || creators.length === 0) {
         return res.json({ 
