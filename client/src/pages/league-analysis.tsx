@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, History, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange, getChipLabel } from "@/lib/manager-standings-columns";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 interface LiveLeagueEntry {
   id: number;
@@ -193,7 +194,7 @@ export default function LeagueAnalysisPage() {
     queryKey: ['/api/bootstrap-static'],
   });
 
-  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 24;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const upcomingGameweek = bootstrapData?.events?.find((e: any) => e.is_next)?.id || currentGameweek + 1;
 
   const { data: leagueData, isLoading, error } = useQuery({

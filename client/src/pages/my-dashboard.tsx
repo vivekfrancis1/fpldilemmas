@@ -56,6 +56,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { calculateFreeTransfers } from "@/lib/free-transfers";
 import { useAuth } from "@/hooks/useAuth";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 
@@ -435,7 +436,7 @@ export default function MyDashboard() {
   // Fetch next gameweek's team data
   // Check if user is viewing their own team
   const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
-  const nextGameweek = bootstrapData?.events.find(e => e.is_current)?.id ? Math.min((bootstrapData.events.find(e => e.is_current)?.id || 1) + 1, 38) : 2;
+  const nextGameweek = Math.min(computeCurrentGameweek((bootstrapData?.events || []) as any) + 1, 38);
   
   // Use authenticated my-team endpoint for own team (shows current working team before confirmation)
   // Otherwise use public picks endpoint (only works after confirmation)
@@ -533,7 +534,7 @@ export default function MyDashboard() {
   // If Free Hit was used in GW13, we need GW12 team as the baseline
   const getPreChipGameweek = (): number | null => {
     if (!historyData?.chips) return null;
-    const currentGW = bootstrapData?.events.find(e => e.is_current)?.id || 1;
+    const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
     
     // Find if a Free Hit or Wildcard was used in the current/most recent GW
     const recentChip = historyData.chips.find(
@@ -575,7 +576,7 @@ export default function MyDashboard() {
   });
 
   // Live gameweek data for player points breakdown
-  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const { data: liveGameweekData } = useQuery<{ elements: Array<{ id: number; stats: any; explain: any[] }> }>({
     queryKey: [`/api/event/${currentGameweek}/live`],
     enabled: !!bootstrapData,

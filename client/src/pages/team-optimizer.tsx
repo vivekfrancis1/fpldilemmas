@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 
 // Player Availability Badge Component
@@ -625,8 +626,7 @@ export default function TeamOptimizer() {
     const usedChips = teamData.chips || [];
     
     // Get current gameweek
-    const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+    const currentGameweek = computeCurrentGameweek((bootstrapData.events || []) as any);
     
     // Split gameweeks: first half (≤19) and second half (≥20)
     const firstHalfGWs = nextGWs.filter(gw => gw.id <= 19);
@@ -1139,8 +1139,7 @@ export default function TeamOptimizer() {
 
         {/* Session expiry notification for logged-in users */}
         {useFallbackEndpoint && isOwnTeam && (() => {
-          const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+          const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
           const upcomingGW = currentGW + 1;
           
           return (
@@ -1159,8 +1158,7 @@ export default function TeamOptimizer() {
 
         {/* Notification for non-logged-in users */}
         {!user && searchedId && (() => {
-          const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+          const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
           const upcomingGW = currentGW + 1;
           
           return (

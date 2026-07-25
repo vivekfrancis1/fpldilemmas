@@ -289,7 +289,7 @@ export default function PlayerGoalsScoredProjections() {
   });
 
   // Get current gameweek from bootstrap data (for display purposes)
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
 
   // Toggle gameweek selection
   const toggleGameweekSelection = (gw: number) => {

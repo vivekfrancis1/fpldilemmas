@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { calculateFreeTransfers } from "@/lib/free-transfers";
 
 type TeamPick = {
@@ -253,7 +254,7 @@ export default function ManagerTeam() {
   const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
 
   // Live gameweek data for player points breakdown
-  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const { data: liveGameweekData } = useQuery<{ elements: Array<{ id: number; stats: any; explain: any[] }> }>({
     queryKey: [`/api/event/${currentGameweek}/live`],
     enabled: !!bootstrapData,
@@ -1113,7 +1114,7 @@ export default function ManagerTeam() {
                 
                 const totalTransfers = filteredTransfers.length;
                 
-                const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+                const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
                 
                 const freeTransfersRemaining = calculateFreeTransfers(
                   managerHistory?.current,

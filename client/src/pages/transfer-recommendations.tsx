@@ -16,6 +16,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 interface TeamPick {
   element: number;
@@ -114,7 +115,7 @@ export default function TransferRecommendations() {
 
   // Fetch full-range player projections once — filter to selectedGameweek client-side
   // Stable query key (not dependent on selectedGameweek) so no refetch on GW change
-  const recCurrentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 27;
+  const recCurrentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const recNextGW = recCurrentGW + 1;
   const recMaxGW = Math.min(38, recNextGW + 11);
   const { data: playerProjections } = useQuery<any[]>({
@@ -764,8 +765,7 @@ export default function TransferRecommendations() {
 
         {/* Session expiry notification for logged-in users */}
         {useFallbackEndpoint && isOwnTeam && (() => {
-          const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+          const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
           const upcomingGW = currentGW + 1;
           
           return (
@@ -784,8 +784,7 @@ export default function TransferRecommendations() {
 
         {/* Notification for non-logged-in users */}
         {!user && searchedId && (() => {
-          const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+          const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
           const upcomingGW = currentGW + 1;
           
           return (

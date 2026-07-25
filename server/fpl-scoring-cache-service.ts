@@ -3,6 +3,7 @@ import { internalFetch } from "./config";
 import { totalPointsCache } from "./total-points-cache";
 import { pool } from "./db";
 import { CURRENT_SEASON } from "@shared/schema";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 export class FPLScoringCacheService {
   private static updateLock = false;
@@ -55,7 +56,7 @@ export class FPLScoringCacheService {
           const bootstrapResp = await internalFetch("api/bootstrap-static");
           if (bootstrapResp.ok) {
             const bootstrapData = await bootstrapResp.json();
-            const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+            const currentGW = computeCurrentGameweek(bootstrapData.events);
             resolvedStart = currentGW + 1;
             resolvedEnd = Math.min(currentGW + 12, 39);
           }

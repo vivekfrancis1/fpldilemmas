@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 type TeamPick = {
   element: number;
@@ -270,7 +271,7 @@ export default function Top25ManagerTeam() {
     queryKey: ['/api/fixtures'],
   });
 
-  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const { data: liveGameweekData } = useQuery<{ elements: Array<{ id: number; stats: any; explain: any[] }> }>({
     queryKey: [`/api/event/${currentGameweek}/live`],
     enabled: !!bootstrapData,

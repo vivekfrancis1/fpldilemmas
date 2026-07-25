@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Trophy, Target, Users, RefreshCw, Calendar, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -48,7 +48,7 @@ export default function ProjectedStandings() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const lastFinishedGameweek = useMemo(() => {
     if (!bootstrapData?.events) return currentGameweek - 1;
     const finishedEvents = bootstrapData.events.filter(e => e.finished);

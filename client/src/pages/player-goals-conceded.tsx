@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 interface BootstrapData {
   elements: any[];
@@ -67,7 +68,7 @@ export default function PlayerGoalsConceded() {
   }, [fixtureMode]);
 
   // Get current gameweek and calculate next 6 gameweeks
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const nextGameweek = currentGameweek + 1;
   const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
   // In custom/expert mode, GW39 is absorbed into the assigned GW — no separate column

@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 interface PlayerSnapshot {
@@ -94,7 +94,7 @@ export default function BestFreehitTeam() {
   }, [bootstrapData]);
 
   // Calculate dynamic gameweek range (next 12 gameweeks)
-  const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const startGameweek = currentGameweek + 1;
   const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
 

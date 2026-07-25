@@ -26,6 +26,7 @@ import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -1776,7 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       
       // Determine current gameweek from bootstrap
-      const currentGW = bootstrapData.events?.find((e: any) => e.is_current)?.id || 19;
+      const currentGW = computeCurrentGameweek(bootstrapData.events);
       
       // Get max gameweek available in the database
       const maxGWResult = await db
@@ -5369,7 +5370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Fetch manager's current team
       const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
@@ -5726,7 +5727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (bootstrapResponse.ok) {
         const bootstrapData = await bootstrapResponse.json();
-        currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+        currentGameweek = computeCurrentGameweek(bootstrapData.events);
       }
       
       // Check cache first
@@ -5840,7 +5841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (bootstrapResponse.ok) {
         const bootstrapData = await bootstrapResponse.json();
-        currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+        currentGameweek = computeCurrentGameweek(bootstrapData.events);
       }
       
       // Check cache first
@@ -6834,7 +6835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Generate predictions for upcoming fixtures (future gameweeks only)
       const upcomingFixtures = fixturesData
@@ -8792,7 +8793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Process next 12 gameweeks (extend to 39 to include TBC fixtures)
       const startGameweek = currentGameweek + 1;
@@ -8881,7 +8882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
       const startGWforCS = currentGameweek + 1;
       
@@ -9110,7 +9111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allGoalShareData: any[] = [];
       
       // Dynamic range: start from next unfinished gameweek (6 gameweeks total)
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const startGameweek = currentGameweek + 1; // Start from next gameweek
       const endGameweek = startGameweek + 5; // 6 gameweeks total
       
@@ -9921,7 +9922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           
           const goalsEvents: BootstrapEvent[] = bootstrapData.events || [];
-          const currentGW = goalsEvents.find((e: any) => e.is_current)?.id || goalsEvents.filter((e: any) => e.finished).length;
+          const currentGW = computeCurrentGameweek(goalsEvents as any);
           
           const fplPlayerMap = new Map<number, any>();
           (bootstrapData.elements || []).forEach((el: any) => {
@@ -10197,7 +10198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bootstrapData = await bootstrapResponse.json();
           
           const assistsEvents: BootstrapEvent[] = bootstrapData.events || [];
-          const currentGW = assistsEvents.find((e: any) => e.is_current)?.id || assistsEvents.filter((e: any) => e.finished).length;
+          const currentGW = computeCurrentGameweek(assistsEvents as any);
           
           const fplPlayerMap = new Map<number, any>();
           (bootstrapData.elements || []).forEach((el: any) => {
@@ -11103,7 +11104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const fixturesData = await fixturesResponse.json();
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // tbcGameweek: the gameweek TBC fixtures should count toward (expert/base modes only).
       // Expert mode passes tbcGameweek=36 (expert prediction); base mode omits it (defaults to 39).
@@ -11773,7 +11774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const positions = bootstrapData.element_types;
         
         // Get current gameweek and count finished gameweeks for appearance rate
-        const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+        const currentGameweek = computeCurrentGameweek(bootstrapData.events);
         const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
         console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}, finished GWs: ${finishedGWCount}`);
         
@@ -12028,7 +12029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const positions = bootstrapData.element_types;
       
       // Get current gameweek from bootstrap data
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Dynamic gameweek range - start from current+1 (next gameweek) for 12 weeks
       const startGameweek = reqStart ?? (currentGameweek + 1);
@@ -12201,7 +12202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const nextStartGameweek = currentGameweek + 1;
       const nextEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
 
@@ -12323,7 +12324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       
       const teams = bootstrapData.teams;
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Initialize goals against with zeros for all teams - LIMIT TO NEXT 12 GAMEWEEKS
       const teamsGoalsAgainst = new Map();
@@ -12535,7 +12536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
       ]);
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
       // Generate comprehensive match projections using Team Goal/CS data for ALL gameweeks
       const matchOdds = [];
@@ -13086,7 +13087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const elements = bootstrapData.elements;
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
-      const currentGW = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      const currentGW = computeCurrentGameweek(bootstrapData.events);
       
       const projections = [];
       
@@ -16415,7 +16416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         const fplData = await fplResponse.json();
         const fixturesData = await fixturesResponse.json();
-        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const currentGameweek = computeCurrentGameweek(fplData.events);
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
         // Use dynamic gameweek calculation for next 12 gameweeks
@@ -16712,7 +16713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
       const fplData = await fplResponse.json();
       const fixturesData = await fixturesResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+      const currentGameweek = computeCurrentGameweek(fplData.events);
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
@@ -16970,7 +16971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           internalFetch("api/fixtures")
         ]);
         const fplData = await fplResponse.json();
-        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const currentGameweek = computeCurrentGameweek(fplData.events);
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
         // Get team goals AGAINST (conceded) projections and player minutes data
@@ -17140,7 +17141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get FPL bootstrap data from cached endpoint for better performance
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
-        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const currentGameweek = computeCurrentGameweek(fplData.events);
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
@@ -17287,7 +17288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get FPL bootstrap data from cached endpoint for better performance
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
-        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const currentGameweek = computeCurrentGameweek(fplData.events);
         
         // Use dynamic gameweek calculation for next 6 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
@@ -17738,7 +17739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bonusPerFixture = (player.bonus || 0) / Math.max(1, player.starts || 1);
           
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
-          const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
+          const currentGW = computeCurrentGameweek(fplData.events);
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
             // Per-GW availability probability
@@ -18215,7 +18216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapResponse = await internalFetch("api/bootstrap-static");
         if (bootstrapResponse.ok) {
           bootstrapData = await bootstrapResponse.json();
-          currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+          currentGameweek = computeCurrentGameweek(bootstrapData.events);
         }
       } catch (error) {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
@@ -18451,7 +18452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
+          currentGameweek = computeCurrentGameweek(bootstrapData.events);
         }
       } catch (error) {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
@@ -18971,7 +18972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapResponse = await internalFetch("api/bootstrap-static");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 0;
+          const currentGW = computeCurrentGameweek(bootstrapData.events);
           nextGameweek = currentGW + 1;
         }
       } catch (_) {}
@@ -19039,7 +19040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const nextGameweek = currentGameweek + 1;
       
       // Set defaults: next 12 gameweeks if no parameters provided
@@ -19169,7 +19170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const nextGameweek = currentGameweek + 1;
       
       // Set defaults: next 12 gameweeks if no parameters provided
@@ -19314,7 +19315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapResponse = await internalFetch("api/bootstrap-static");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 0;
+          const currentGW = computeCurrentGameweek(bootstrapData.events);
           nextGameweek = currentGW + 1;
         }
       } catch (_) {}
@@ -21731,7 +21732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!bootstrapRes.ok) throw new Error("Failed to fetch bootstrap data");
       const bootstrap = await bootstrapRes.json() as any;
 
-      const currentGW = bootstrap.events.find((e: any) => e.is_current)?.id || 1;
+      const currentGW = computeCurrentGameweek(bootstrap.events);
       const finishedGWs = bootstrap.events.filter((e: any) => e.finished).map((e: any) => e.id);
       const lastFinishedGW = finishedGWs.length > 0 ? Math.max(...finishedGWs) : 0;
 

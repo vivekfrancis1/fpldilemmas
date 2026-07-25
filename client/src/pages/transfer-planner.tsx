@@ -22,7 +22,7 @@ import { computeCascadeIndicesToRemove, executeUndoAllCheck, executeUndoChainChe
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
@@ -1487,7 +1487,7 @@ export default function TransferPlanner() {
   }, [teamData, searchedId]); // Removed buyPricesData and buyPriceOverridesData to prevent resetting optimized lineups
 
   // Compute stable GW range from bootstrap data for the projection query
-  const plannerCurrentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 27;
+  const plannerCurrentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const plannerNextGW = plannerCurrentGW + 1;
   const plannerMaxGW = Math.min(38, plannerNextGW + 11);
 
@@ -6104,8 +6104,7 @@ export default function TransferPlanner() {
 
       {/* Session expiry notification for logged-in users */}
       {useFallbackEndpoint && isOwnTeam && (() => {
-        const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                         bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+        const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
         const upcomingGW = currentGW + 1;
         
         return (
@@ -6124,8 +6123,7 @@ export default function TransferPlanner() {
 
       {/* Notification for non-logged-in users */}
       {!user && searchedId && (() => {
-        const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                         bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+        const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
         const upcomingGW = currentGW + 1;
         
         return (

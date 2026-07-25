@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 class GameweekProjectionService {
   /**
@@ -17,7 +18,7 @@ class GameweekProjectionService {
       const bootstrapData = await bootstrapResponse.json();
       
       // Determine gameweek status
-      const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 0;
+      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const isCompleted = gameweek < currentGameweek;
       const isCurrent = gameweek === currentGameweek;
       

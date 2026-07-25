@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingExperience } from "@/components/loading-experience";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 interface PlayerSnapshot {
@@ -109,7 +109,7 @@ export default function BestWildcardTeam() {
   const [gameweekHorizon, setGameweekHorizon] = useState<number>(12);
   
   // Calculate dynamic gameweek range based on selected horizon
-  const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const startGameweek = currentGameweek + 1;
   const endGameweek = Math.min(startGameweek + gameweekHorizon - 1, 38); // Based on selected horizon, max GW38
 

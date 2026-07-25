@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 
 // Player Availability Badge Component
@@ -752,8 +752,7 @@ export default function ProjectedPoints() {
 
               {/* Session expiry notification for logged-in users */}
               {useFallbackEndpoint && isOwnTeam && (() => {
-                const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                                 bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+                const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
                 const upcomingGW = currentGW + 1;
                 
                 return (
@@ -772,8 +771,7 @@ export default function ProjectedPoints() {
 
               {/* Notification for non-logged-in users */}
               {!user && searchedId && (() => {
-                const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
-                                 bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+                const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
                 const upcomingGW = currentGW + 1;
                 
                 return (
