@@ -146,13 +146,69 @@ export class TeamGoalsService {
     console.log(`🎯 Calculating team goals for GW${calculatedStartGameweek}-${calculatedEndGameweek}, current GW: ${currentGameweek}`);
     
     const teamProjections: TeamGoalProjection[] = await Promise.all(teams.map(async (team: any) => {
+      try {
+        return await TeamGoalsService.calculateSingleTeamProjection(
+          team, teams, fixturesData, bootstrapData, bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS,
+          calculatedStartGameweek, calculatedEndGameweek
+        );
+      } catch (error) {
+        // Same isolation principle as the per-fixture try/catch below: one team failing entirely
+        // (e.g. a data-source outage mid-calculation) must not reject this Promise.all and take
+        // down every other team's projection with it.
+        console.error(`⚠️ SKIPPING TEAM: ${team.name} (${team.id}) - ${error}`);
+        const emptyGameweekProjections: { [gameweek: number]: number } = {};
+        const emptyFixtureDetails: { [gameweek: number]: FixtureDetail[] } = {};
+        for (let gw = calculatedStartGameweek; gw <= calculatedEndGameweek; gw++) {
+          emptyGameweekProjections[gw] = 0;
+          emptyFixtureDetails[gw] = [];
+        }
+        return {
+          teamId: team.id,
+          teamName: team.name,
+          teamShort: team.short_name,
+          gameweekProjections: emptyGameweekProjections,
+          fixtureDetails: emptyFixtureDetails,
+          totalGoals: 0,
+          averageGoalsPerGame: 0,
+          confidence: 'Low' as const
+        };
+      }
+    }));
+
+    // Cache the results
+    teamGoalsCache = {
+      key: cacheKey,
+      data: teamProjections,
+      timestamp: Date.now()
+    };
+
+    console.log(`✅ Calculated team goals for ${teamProjections.length} teams`);
+    return teamProjections;
+  }
+
+  /**
+   * Compute a single team's projection across the gameweek range. Split out from
+   * calculateTeamGoals so the outer Promise.all can wrap each team's whole computation
+   * in its own try/catch without a giant inline callback.
+   */
+  private static async calculateSingleTeamProjection(
+    team: any,
+    teams: readonly any[],
+    fixturesData: any[],
+    bootstrapData: any,
+    bettingData: any,
+    adminGoalSettings: any,
+    MASTER_TEAM_DEFAULTS: any,
+    calculatedStartGameweek: number,
+    calculatedEndGameweek: number
+  ): Promise<TeamGoalProjection> {
       // Get fixtures for this team across the specified gameweek range (includes GW39 = TBC)
       const allFixtures = fixturesData
-        .filter((f: any) => 
-          (f.team_h === team.id || f.team_a === team.id) && 
+        .filter((f: any) =>
+          (f.team_h === team.id || f.team_a === team.id) &&
           f.event >= calculatedStartGameweek && f.event <= calculatedEndGameweek
         );
-      
+
       // Debug logging for teams with missing fixtures
       if (team.id <= 3) { // Log for first 3 teams only
         console.log(`🔍 FIXTURES DEBUG: Team ${team.name} (${team.id}) has ${allFixtures.length} fixtures:`);
@@ -160,41 +216,50 @@ export class TeamGoalsService {
           console.log(`  - GW${f.event}: ${f.team_h === team.id ? 'HOME' : 'AWAY'} vs ${f.team_h === team.id ? f.team_a : f.team_h}`);
         });
       }
-      
-      const projections = await Promise.all(allFixtures.map(async (fixture: any) => {
+
+      // Each fixture's calculation is isolated in its own try/catch: one team/fixture missing
+      // data (e.g. 0 games played yet this season) must not reject this Promise.all, because a
+      // sibling promise rejecting *after* Promise.all has already settled on an earlier rejection
+      // becomes an unhandled rejection that crashes the whole process. Failed fixtures are
+      // skipped (filtered out below) rather than crashing or silently inventing a number.
+      const rawProjections = await Promise.all(allFixtures.map(async (fixture: any) => {
         const isHome = fixture.team_h === team.id;
         const opponentId = isHome ? fixture.team_a : fixture.team_h;
         const opponent = teams.find((t: any) => t.id === opponentId);
-        
+
         if (!opponent) {
           console.warn(`⚠️ OPPONENT NOT FOUND: Team ${team.name} vs opponent ID ${opponentId} in GW${fixture.event}`);
           return null;
         }
-        
-        // Apply the hybrid team goal calculation logic with real xGF/xGA data
-        const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
-          team, opponent, fixture, isHome, bootstrapData, fixturesData, 
-          bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
-        );
-        
-        // Note: calculateFixtureGoals now guarantees a valid number, no need to filter
-        
-        const projection = {
-          gameweek: fixture.event,
-          opponent: opponent.short_name,
-          isHome,
-          expectedGoals: Math.round(expectedGoals * 100) / 100,
-          isActual: false
-        };
-        
-        // Debug logging for projection objects
-        if (team.id <= 3 && (!projection || !projection.expectedGoals)) {
-          console.warn(`⚠️ PROJECTION ISSUE: Team ${team.name} GW${fixture.event} - projection:`, projection);
+
+        try {
+          // Apply the hybrid team goal calculation logic with real xGF/xGA data
+          const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
+            team, opponent, fixture, isHome, bootstrapData, fixturesData,
+            bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+          );
+
+          const projection = {
+            gameweek: fixture.event,
+            opponent: opponent.short_name,
+            isHome,
+            expectedGoals: Math.round(expectedGoals * 100) / 100,
+            isActual: false
+          };
+
+          // Debug logging for projection objects
+          if (team.id <= 3 && (!projection || !projection.expectedGoals)) {
+            console.warn(`⚠️ PROJECTION ISSUE: Team ${team.name} GW${fixture.event} - projection:`, projection);
+          }
+
+          return projection;
+        } catch (error) {
+          console.warn(`⚠️ SKIPPING FIXTURE: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}`);
+          return null;
         }
-        
-        return projection;
-      })); // No longer need .filter(Boolean) since calculateFixtureGoals guarantees valid numbers
-      
+      }));
+      const projections = rawProjections.filter((p): p is NonNullable<typeof p> => p !== null);
+
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
       
       // Convert projections array to gameweekProjections object
@@ -241,19 +306,8 @@ export class TeamGoalsService {
         averageGoalsPerGame,
         confidence
       };
-    }));
-    
-    // Cache the results
-    teamGoalsCache = {
-      key: cacheKey,
-      data: teamProjections,
-      timestamp: Date.now()
-    };
-    
-    console.log(`✅ Calculated team goals for ${teamProjections.length} teams`);
-    return teamProjections;
   }
-  
+
   /**
    * Calculate expected goals for a single fixture using season data only
    * Formula: GF×0.36 + xGF×0.24 + GC×0.24 + xGC×0.16 (then × venue multiplier)
