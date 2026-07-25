@@ -7815,13 +7815,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      
-      // Process next 12 gameweeks — cap at GW38 (GW39 is a synthetic TBC bucket, excluded from season totals)
-      const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
+      // computeNextRange correctly returns GW1 as the start in pre-season (no event has
+      // is_current yet — it falls back to is_next/deadline_time), unlike a plain
+      // `events.find(is_current)?.id || 2` which hits its hardcoded fallback every time
+      // pre-season, not just as a rare edge case (that was skipping straight to GW3).
+      const { computeNextRange } = await import("../shared/gameweek-utils");
+      const { start: startGameweek, end: endGameweek, currentGameweek } = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
-      
+
       // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
       const { TeamGoalsService } = await import('./team-goals-service');
       const rawProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);

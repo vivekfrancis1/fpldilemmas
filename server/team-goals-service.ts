@@ -153,7 +153,13 @@ export class TeamGoalsService {
     
     // Use hardcoded teams for better performance
     const teams = PREMIER_LEAGUE_TEAMS;
-    const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
+    // computeCurrentGameweek correctly returns 0 in pre-season (no event has is_current yet —
+    // it falls back to is_next/deadline_time), so calculatedStartGameweek below becomes GW1
+    // instead of skipping ahead. A plain `events.find(is_current)?.id || <hardcoded number>`
+    // is wrong here specifically because that hardcoded number is what gets used every time
+    // pre-season, not just as a rare edge case.
+    const { computeCurrentGameweek } = await import("@shared/gameweek-utils");
+    const currentGameweek = computeCurrentGameweek(bootstrapData.events);
     
     // Determine gameweek range — extend upper bound to 39 to include the TBC fixture (GW39)
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);

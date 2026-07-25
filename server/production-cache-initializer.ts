@@ -179,7 +179,12 @@ export class ProductionCacheInitializer {
         console.log("🔥 Pre-warming TeamGoalsService...");
         const bootstrapResp = await internalFetch("api/bootstrap-static");
         const bootstrapData = await bootstrapResp.json();
-        const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+        // Match the same current-gameweek logic /api/team-goal-projections uses (see routes.ts),
+        // so this warms the exact cache entry that route will actually request. A plain
+        // `find(is_current)?.id || 1` diverges from it in pre-season (no is_current event yet)
+        // and ends up pre-warming a range nobody asks for.
+        const { computeCurrentGameweek } = await import("@shared/gameweek-utils");
+        const currentGW = computeCurrentGameweek(bootstrapData.events);
         const { TeamGoalsService } = await import('./team-goals-service');
         await TeamGoalsService.getTeamGoalProjections(currentGW + 1, Math.min(currentGW + 12, 39));
         console.log("✅ TeamGoalsService pre-warmed successfully");
