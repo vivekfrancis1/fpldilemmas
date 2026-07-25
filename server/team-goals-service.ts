@@ -3,6 +3,29 @@
  * Single source of truth for team goal totals used by both team-goal-projections and goal-share endpoints
  */
 
+import { pool } from "./db";
+
+// Season archived in season_fixtures_archive that GF/GC blending uses as "last season".
+const LAST_SEASON = "2025/26";
+
+// 2025/26 EFL Championship season totals for the three clubs promoted into the Premier
+// League for 2026/27 (Coventry City, Ipswich Town, Hull City). FPL's current-standings API
+// only covers Premier League teams, so these clubs have no top-flight "last season" data to
+// read from season_fixtures_archive — these Championship totals stand in for that side of
+// the GF/GC blend (see getLastSeasonTeamGoals) until real 2026/27 PL games accumulate.
+// Provided directly (not sourced from an API) — Championship season is 46 games.
+const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsAgainst: number; played: number }> = {
+  "Coventry City": { goalsFor: 36, goalsAgainst: 64, played: 46 },
+  "Ipswich Town": { goalsFor: 29, goalsAgainst: 67, played: 46 },
+  "Hull City": { goalsFor: 25, goalsAgainst: 85, played: 46 },
+};
+
+// Cache for archived last-season team goals, keyed by team name (team IDs are reassigned
+// each season by the FPL API, so name is the only stable join key across a season boundary).
+// Never expires within a process lifetime — the archive is immutable once written.
+let lastSeasonGoalsCache: Map<string, { goalsFor: number; goalsAgainst: number; played: number }> | null = null;
+let lastSeasonGoalsInFlight: Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> | null = null;
+
 interface FixtureDetail {
   opponent: string;
   isHome: boolean;
@@ -396,37 +419,122 @@ export class TeamGoalsService {
   }
 
   /**
-   * Get team's actual average goals scored per game from current standings data
+   * Fetch each team's last-season (2025/26) actual goals for/against from the durable
+   * archive, keyed by team name (not ID — the FPL API reassigns team IDs each season, so
+   * name is the only join key that survives a season boundary). Teams with no PL history
+   * last season (promoted clubs) come from PROMOTED_TEAM_LAST_SEASON_GOALS instead.
+   */
+  private static async fetchLastSeasonTeamGoals(): Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> {
+    if (lastSeasonGoalsCache) {
+      return lastSeasonGoalsCache;
+    }
+    if (lastSeasonGoalsInFlight) {
+      return lastSeasonGoalsInFlight;
+    }
+    lastSeasonGoalsInFlight = (async () => {
+      const map = new Map<string, { goalsFor: number; goalsAgainst: number; played: number }>();
+      for (const [name, stats] of Object.entries(PROMOTED_TEAM_LAST_SEASON_GOALS)) {
+        map.set(name, { ...stats });
+      }
+      try {
+        const result = await pool.query(
+          `SELECT team_h_name, team_a_name, team_h_score, team_a_score
+           FROM season_fixtures_archive
+           WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
+          [LAST_SEASON]
+        );
+        const agg = new Map<string, { gf: number; ga: number; played: number }>();
+        for (const row of result.rows) {
+          const h = agg.get(row.team_h_name) || { gf: 0, ga: 0, played: 0 };
+          h.gf += row.team_h_score; h.ga += row.team_a_score; h.played += 1;
+          agg.set(row.team_h_name, h);
+
+          const a = agg.get(row.team_a_name) || { gf: 0, ga: 0, played: 0 };
+          a.gf += row.team_a_score; a.ga += row.team_h_score; a.played += 1;
+          agg.set(row.team_a_name, a);
+        }
+        agg.forEach((stats, name) => {
+          map.set(name, { goalsFor: stats.gf, goalsAgainst: stats.ga, played: stats.played });
+        });
+      } catch (error) {
+        // Not fatal — promoted-team entries above are still available, and getTeamAverageGoals
+        // falls back to this-season-only data when a team has no last-season entry at all.
+        console.error('Failed to fetch archived last-season team goals:', error);
+      }
+      lastSeasonGoalsCache = map;
+      return map;
+    })();
+    try {
+      return await lastSeasonGoalsInFlight;
+    } finally {
+      lastSeasonGoalsInFlight = null;
+    }
+  }
+
+  /**
+   * Get team's average goals scored per game: 50% this season (2026/27) + 50% last season
+   * (2025/26), falling back to whichever side is actually available. Both sides missing
+   * (shouldn't happen — every team has either an archive entry or a promoted-team entry)
+   * still throws, same as before, so the caller's existing per-fixture error isolation applies.
    */
   private static async getTeamAverageGoals(teamId: number): Promise<number> {
     try {
+      const { TEAMS_BY_ID } = await import("@shared/schema");
+      const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
+
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      
-      if (teamData && teamData.played > 0) {
-        return teamData.goalsFor / teamData.played;
+      const thisSeasonAvg = teamData && teamData.played > 0 ? teamData.goalsFor / teamData.played : undefined;
+
+      const lastSeasonMap = await TeamGoalsService.fetchLastSeasonTeamGoals();
+      const lastSeasonEntry = teamName ? lastSeasonMap.get(teamName) : undefined;
+      const lastSeasonAvg = lastSeasonEntry && lastSeasonEntry.played > 0 ? lastSeasonEntry.goalsFor / lastSeasonEntry.played : undefined;
+
+      if (thisSeasonAvg !== undefined && lastSeasonAvg !== undefined) {
+        return thisSeasonAvg * 0.5 + lastSeasonAvg * 0.5;
       }
-      
-      throw new Error(`No team data found for team ${teamId} in current standings`);
+      if (lastSeasonAvg !== undefined) {
+        return lastSeasonAvg;
+      }
+      if (thisSeasonAvg !== undefined) {
+        return thisSeasonAvg;
+      }
+
+      throw new Error(`No team data found for team ${teamId} in current standings or last-season archive`);
     } catch (error) {
       console.error(`Failed to fetch team average goals for team ${teamId}:`, error);
       throw error;
     }
   }
-  
+
   /**
-   * Get team's actual average goals conceded per game from current standings data
+   * Get team's average goals conceded per game: same 50/50 this-season/last-season blend
+   * as getTeamAverageGoals, using goalsAgainst instead of goalsFor.
    */
   private static async getTeamAverageGoalsConceded(teamId: number): Promise<number> {
     try {
+      const { TEAMS_BY_ID } = await import("@shared/schema");
+      const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
+
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      
-      if (teamData && teamData.played > 0) {
-        return teamData.goalsAgainst / teamData.played;
+      const thisSeasonAvg = teamData && teamData.played > 0 ? teamData.goalsAgainst / teamData.played : undefined;
+
+      const lastSeasonMap = await TeamGoalsService.fetchLastSeasonTeamGoals();
+      const lastSeasonEntry = teamName ? lastSeasonMap.get(teamName) : undefined;
+      const lastSeasonAvg = lastSeasonEntry && lastSeasonEntry.played > 0 ? lastSeasonEntry.goalsAgainst / lastSeasonEntry.played : undefined;
+
+      if (thisSeasonAvg !== undefined && lastSeasonAvg !== undefined) {
+        return thisSeasonAvg * 0.5 + lastSeasonAvg * 0.5;
       }
-      
-      throw new Error(`No team data found for team ${teamId} in current standings`);
+      if (lastSeasonAvg !== undefined) {
+        return lastSeasonAvg;
+      }
+      if (thisSeasonAvg !== undefined) {
+        return thisSeasonAvg;
+      }
+
+      throw new Error(`No team data found for team ${teamId} in current standings or last-season archive`);
     } catch (error) {
       console.error(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
       throw error;
