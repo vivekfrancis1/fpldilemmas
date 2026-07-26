@@ -16,6 +16,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -85,6 +86,8 @@ const VALID_FORMATIONS = [
 ];
 
 export default function BestWildcardTeam() {
+  const { toast } = useToast();
+
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery({
     queryKey: ['/api/bootstrap-static'],
@@ -231,54 +234,83 @@ export default function BestWildcardTeam() {
     let totalCost = 0;
     let totalPoints = 0;
 
-    // Allocate 80% of total budget to starting XI, 20% for bench
-    const maxXIBudget = budget ? budget * 0.8 : undefined;
-    
-    if (maxXIBudget) {
-      console.log(`Building starting XI with max budget: £${maxXIBudget.toFixed(1)}m (80% of £${budget}m)`);
+    // Cheapest available player at each position — used to reserve enough budget for
+    // positions not yet filled, so a greedy points-first pick on an early position doesn't
+    // strand the budget and leave a later position unaffordable (the root cause of budget
+    // optimization failing on realistic budgets even though a legal squad is always
+    // buildable from ~£64m of minimum-priced players).
+    const minPriceByPosition: Record<string, number> = {
+      Goalkeeper: Math.min(...playersByPosition.Goalkeeper.map(p => p.price)),
+      Defender: Math.min(...playersByPosition.Defender.map(p => p.price)),
+      Midfielder: Math.min(...playersByPosition.Midfielder.map(p => p.price)),
+      Forward: Math.min(...playersByPosition.Forward.map(p => p.price)),
+    };
+    const slotsRemaining: Record<string, number> = {
+      Goalkeeper: 1, Defender: formation.def, Midfielder: formation.mid, Forward: formation.fwd
+    };
+
+    // Prefer spending 82% of the budget on the XI (bench players are typically minimum-priced
+    // fodder in a real squad, so the XI should get the large majority) — but never so much that
+    // the bench's own minimum requirement for THIS formation becomes mathematically unaffordable
+    // with what's left. A flat £18m reserve (4 bench spots at worst £4.5m each) covers every
+    // formation's worst-case bench mix (max £17.5m, for 5-3-2/5-4-1) with a small margin left
+    // over — a per-formation-exact minimum isn't safe here because the single cheapest player
+    // at a position can end up used by the XI itself, leaving the bench needing the next-
+    // cheapest (pricier) option instead.
+    const BENCH_RESERVE = 18;
+    const maxXIBudget: number | undefined = budget ? Math.min(budget * 0.82, budget - BENCH_RESERVE) : undefined;
+    if (maxXIBudget !== undefined) {
+      console.log(`Building starting XI with max budget: £${maxXIBudget.toFixed(1)}m (82% of £${budget}m, capped to leave £${BENCH_RESERVE}m for bench)`);
     }
 
     // Helper to check if player can be added
-    const canAddPlayer = (player: PlayerSnapshot) => {
+    const canAddPlayer = (player: PlayerSnapshot, position: keyof typeof slotsRemaining) => {
       const teamName = player.teamName || '';
       const teamCount = teamCounts[teamName] || 0;
       if (teamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
-      if (maxXIBudget && totalCost + player.price > maxXIBudget) return false;
+      if (maxXIBudget) {
+        const otherPositionsReserve = (Object.keys(slotsRemaining) as Array<keyof typeof slotsRemaining>)
+          .filter(pos => pos !== position)
+          .reduce((sum, pos) => sum + slotsRemaining[pos] * minPriceByPosition[pos], 0);
+        const remainingInThisPosition = (slotsRemaining[position] - 1) * minPriceByPosition[position];
+        if (totalCost + player.price + otherPositionsReserve + remainingInThisPosition > maxXIBudget) return false;
+      }
       return true;
     };
 
     // Helper to add player
-    const addPlayer = (player: PlayerSnapshot) => {
+    const addPlayer = (player: PlayerSnapshot, position: keyof typeof slotsRemaining) => {
       startingXI.push(player);
       const teamName = player.teamName || '';
       teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
       totalCost += player.price;
       totalPoints += player.totalProjectedPoints; // Use total projected points for wildcard
+      slotsRemaining[position]--;
     };
 
     // 1. Add 1 goalkeeper
-    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
+    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p, 'Goalkeeper'));
     if (includedGK.length > 0) {
-      addPlayer(includedGK[0]);
+      addPlayer(includedGK[0], 'Goalkeeper');
     } else {
-      const bestGK = playersByPosition.Goalkeeper.find(canAddPlayer);
+      const bestGK = playersByPosition.Goalkeeper.find(p => canAddPlayer(p, 'Goalkeeper'));
       if (!bestGK) return null;
-      addPlayer(bestGK);
+      addPlayer(bestGK, 'Goalkeeper');
     }
 
     // 2. Add required defenders
     let addedDef = 0;
     for (const player of playersByPosition.Defender) {
       if (addedDef >= formation.def) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Defender')) {
+        addPlayer(player, 'Defender');
         addedDef++;
       }
     }
     for (const player of playersByPosition.Defender) {
       if (addedDef >= formation.def) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player, 'Defender')) {
+        addPlayer(player, 'Defender');
         addedDef++;
       }
     }
@@ -288,15 +320,15 @@ export default function BestWildcardTeam() {
     let addedMid = 0;
     for (const player of playersByPosition.Midfielder) {
       if (addedMid >= formation.mid) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Midfielder')) {
+        addPlayer(player, 'Midfielder');
         addedMid++;
       }
     }
     for (const player of playersByPosition.Midfielder) {
       if (addedMid >= formation.mid) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player, 'Midfielder')) {
+        addPlayer(player, 'Midfielder');
         addedMid++;
       }
     }
@@ -306,15 +338,15 @@ export default function BestWildcardTeam() {
     let addedFwd = 0;
     for (const player of playersByPosition.Forward) {
       if (addedFwd >= formation.fwd) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Forward')) {
+        addPlayer(player, 'Forward');
         addedFwd++;
       }
     }
     for (const player of playersByPosition.Forward) {
       if (addedFwd >= formation.fwd) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player, 'Forward')) {
+        addPlayer(player, 'Forward');
         addedFwd++;
       }
     }
@@ -324,7 +356,7 @@ export default function BestWildcardTeam() {
   };
 
   // Build bench with remaining budget
-  // Starting XI uses 80% of budget, bench gets whatever remains
+  // Starting XI targets 82% of budget (capped to preserve min bench cost), bench gets whatever remains
   const buildBenchWithBudget = (
     startingXI: PlayerSnapshot[],
     playersByPosition: Record<string, PlayerSnapshot[]>,
@@ -399,11 +431,35 @@ export default function BestWildcardTeam() {
         }
       }
 
-      // Then fill with best affordable players (sorted by total projected points, re-check constraint before each add)
+      // Bench players should be cheap by design (budget is spent on the XI), so restrict to
+      // the minimum-priced tier for this position and take the highest-projected-points players
+      // within it — guarantees affordability instead of "best points regardless of price, then
+      // fall back to cheapest" (which could pick a mid-priced player first and strand the budget
+      // for a later position).
+      if (addedForPosition < needed) {
+        const eligible = playersByPosition[position].filter(p => !usedPlayerIds.has(p.playerId));
+        if (eligible.length > 0) {
+          const minPrice = Math.min(...eligible.map(p => p.price));
+          const cheapestTier = eligible
+            .filter(p => p.price === minPrice)
+            .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+
+          for (const player of cheapestTier) {
+            if (addedForPosition >= needed) break;
+            if (canAddToBench(player)) {
+              addToBench(player);
+              addedForPosition++;
+            }
+          }
+        }
+      }
+
+      // Rare fallback (e.g. the team-of-3 constraint blocks every minimum-priced option for a
+      // position): widen to best-affordable-by-points, then cheapest-overall as a last resort.
       if (addedForPosition < needed) {
         const sortedByPoints = playersByPosition[position]
           .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
-        
+
         for (const player of sortedByPoints) {
           if (addedForPosition >= needed) break;
           if (canAddToBench(player)) {
@@ -413,11 +469,10 @@ export default function BestWildcardTeam() {
         }
       }
 
-      // If still can't afford, try cheapest players
       if (addedForPosition < needed) {
         const sortedByPrice = playersByPosition[position]
           .sort((a, b) => a.price - b.price);
-        
+
         for (const player of sortedByPrice) {
           if (addedForPosition >= needed) break;
           if (canAddToBench(player)) {
@@ -1039,8 +1094,7 @@ export default function BestWildcardTeam() {
       console.log('Players with points:', playersWithPoints.length);
 
       if (playersWithPoints.length === 0) {
-        console.error('No players with projected points available');
-        return;
+        throw new Error('No players with projected points are available right now. Please try again shortly.');
       }
 
       // Group players by position
@@ -1156,6 +1210,11 @@ export default function BestWildcardTeam() {
 
     } catch (error) {
       console.error('Optimization failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Couldn't build a wildcard team",
+        description: error instanceof Error ? error.message : "Something went wrong while optimizing. Please try again.",
+      });
     } finally {
       setIsOptimizing(false);
     }
@@ -1308,20 +1367,25 @@ export default function BestWildcardTeam() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
-                  {unlimitedBudget ? 'Unlimited Budget (Default)' : 'Budget Optimization Mode'}
+                  Set a Budget Limit
                 </Label>
                 <Switch
                   id="unlimited-budget"
-                  checked={unlimitedBudget}
-                  onCheckedChange={setUnlimitedBudget}
+                  checked={!unlimitedBudget}
+                  onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
                   data-testid="switch-unlimited-budget"
                 />
+                <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                  {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {unlimitedBudget ? 'Select top players by total projected points (no budget limit)' : 'Optimize within budget using unlimited team as reference'}
+                {unlimitedBudget
+                  ? 'Off (default): picks the best players by projected points, regardless of price.'
+                  : 'On: builds the best squad that fits within the budget you set below.'}
               </p>
             </div>
-            
+
             {!unlimitedBudget && (
               <div className="space-y-2">
                 <Label htmlFor="budget" className="text-sm font-medium">
