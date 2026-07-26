@@ -838,29 +838,21 @@ export default function PlayerDefensiveContributions() {
             </div>
           )}
 
-          <Tabs defaultValue="gws" className="w-full mt-3">
-            <TabsList className="w-full grid grid-cols-3 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
-              <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
-              </TabsTrigger>
-              <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
-              </TabsTrigger>
-              <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* GWs tab */}
-            <TabsContent value="gws" className="mt-0">
-              <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                <button onClick={() => setApplyAvailability(!applyAvailability)}
-                  className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                  data-testid="button-toggle-availability">
-                  {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
-                </button>
-                <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
-                <button onClick={() => setSelectedGameweeks(prev => new Set(gameweeks.filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
+          <div className="w-full mt-3 space-y-3">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <span className="text-xs font-semibold text-gray-600">
+                  Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
+                </span>
+                <div className="flex flex-wrap items-center gap-1">
+                  <button onClick={() => setApplyAvailability(!applyAvailability)}
+                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                    data-testid="button-toggle-availability">
+                    {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
+                  </button>
+                  <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                  <button onClick={() => setSelectedGameweeks(prev => new Set(gameweeks.filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 {gameweeks.filter(gw => gw <= 38).map(gwNumber => {
@@ -881,11 +873,13 @@ export default function PlayerDefensiveContributions() {
                   </button>
                 )}
               </div>
-            </TabsContent>
+            </div>
 
-            {/* Pos tab */}
-            <TabsContent value="pos" className="mt-0">
-              <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+            <div>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-xs font-semibold text-gray-600">
+                  Position{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
+                </span>
                 <button onClick={() => setSelectedPositions(new Set())}
                   className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
@@ -903,11 +897,13 @@ export default function PlayerDefensiveContributions() {
                   );
                 })}
               </div>
-            </TabsContent>
+            </div>
 
-            {/* Teams tab */}
-            <TabsContent value="teams" className="mt-0">
-              <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+            <div>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-xs font-semibold text-gray-600">
+                  Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
+                </span>
                 <button onClick={() => setSelectedTeams(new Set())}
                   className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
@@ -927,8 +923,8 @@ export default function PlayerDefensiveContributions() {
                   );
                 })}
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </div>
         </CollapsibleContent>
       </Collapsible>

@@ -721,21 +721,16 @@ export default function TeamGoalProjections() {
                     </div>
                   )}
 
-                  <Tabs defaultValue="gws" className="w-full mt-3">
-                    <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
-                      <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                        <span className="hidden sm:inline">Gameweeks</span><span className="sm:hidden">GWs</span>{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
-                      </TabsTrigger>
-                      <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                        Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
-                      </TabsTrigger>
-                    </TabsList>
-
-                    {/* GWs tab */}
-                    <TabsContent value="gws" className="mt-0">
-                      <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
-                        <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                        <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300">Invert</button>
+                  <div className="w-full mt-3 space-y-3">
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                        <span className="text-xs font-semibold text-gray-600">
+                          Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                          <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300">Invert</button>
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
                         {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).map(gw => {
@@ -748,11 +743,13 @@ export default function TeamGoalProjections() {
                           );
                         })}
                       </div>
-                    </TabsContent>
+                    </div>
 
-                    {/* Teams tab */}
-                    <TabsContent value="teams" className="mt-0">
-                      <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                        <span className="text-xs font-semibold text-gray-600">
+                          Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
+                        </span>
                         {selectedTeams.size > 0 && (
                           <button onClick={() => setSelectedTeams(new Set())} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
                             <X className="h-2.5 w-2.5" />Clear
@@ -772,8 +769,8 @@ export default function TeamGoalProjections() {
                           </button>
                         ))}
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                  </div>
                 </CardContent>
               </CollapsibleContent>
             </Card>
