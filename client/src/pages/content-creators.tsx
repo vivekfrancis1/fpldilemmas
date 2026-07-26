@@ -61,6 +61,9 @@ import {
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
 import { getSharedColumns, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig, getChipLabel } from "@/lib/manager-standings-columns";
+import { CURRENT_SEASON } from "@shared/schema";
+import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface GWHistory {
   event: number;
@@ -337,6 +340,26 @@ export default function ContentCreators() {
   const [selectedSeason, setSelectedSeason] = useState<string>('');
   const [historicalSortField, setHistoricalSortField] = useState<string>('rank');
   const [historicalSortDirection, setHistoricalSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [viewSeason, setViewSeason] = useState<string>(CURRENT_SEASON);
+
+  // Always fetched (not gated on viewSeason): doubles as the 2025/26 Final Standings data
+  // AND as the source of truth for which manager IDs are confirmed-current for 2026/27
+  // (a creator only has an archived row here once their new id has been verified).
+  const { data: seasonStandingsData, isLoading: isSeasonStandingsLoading } = useQuery<{
+    season: string;
+    managers: { id: number; name: string; managerId: number; confirmed: boolean; totalPoints: number | null; fplRank: number | null; rankPercentage: string | null }[];
+  }>({
+    queryKey: ["/api/content-creators/season-standings", PREVIOUS_SEASON],
+    queryFn: async () => {
+      const res = await fetch(`/api/content-creators/season-standings?season=${encodeURIComponent(PREVIOUS_SEASON)}`);
+      if (!res.ok) throw new Error("Failed to fetch season standings");
+      return res.json();
+    },
+  });
+
+  const confirmedManagerIds = useMemo(() => {
+    return new Set((seasonStandingsData?.managers || []).filter(m => m.confirmed).map(m => m.managerId));
+  }, [seasonStandingsData]);
 
   // Cached Content Creators data response type
   interface CachedCreatorsResponse {
@@ -649,6 +672,20 @@ export default function ContentCreators() {
   useEffect(() => {
     if (cachedCreatorsData?.creators && creators) {
       const enrichedCreators = creators.map(creator => {
+        // A creator whose 2026/27 id hasn't been confirmed post-renumbering may resolve
+        // to an unrelated stranger, or silently fall back to stale DB-cached tracking data
+        // below — never show live-derived stats for them until confirmed.
+        if (!confirmedManagerIds.has(creator.managerId)) {
+          return {
+            ...creator,
+            latestTracking: undefined,
+            historyData: undefined,
+            rankChange: undefined,
+            projected_points: undefined,
+            projected_bench_points: undefined,
+            active_chip: undefined,
+          };
+        }
         const cachedCreator = cachedCreatorsData.creators.find(c => c.managerId === creator.managerId);
         const projData = projectedPointsMap.get(creator.managerId);
         if (cachedCreator) {
@@ -686,6 +723,17 @@ export default function ContentCreators() {
     } else if (creators) {
       const enrichedCreators = creators.map(creator => {
         const projData = projectedPointsMap.get(creator.managerId);
+        if (!confirmedManagerIds.has(creator.managerId)) {
+          return {
+            ...creator,
+            latestTracking: undefined,
+            historyData: undefined,
+            rankChange: undefined,
+            projected_points: undefined,
+            projected_bench_points: undefined,
+            active_chip: undefined,
+          };
+        }
         return {
           ...creator,
           projected_points: projData?.projected_points,
@@ -695,7 +743,7 @@ export default function ContentCreators() {
       });
       setCreatorsWithHistory(enrichedCreators);
     }
-  }, [cachedCreatorsData, creators, projectedPointsMap]);
+  }, [cachedCreatorsData, creators, projectedPointsMap, confirmedManagerIds]);
 
   // Force refresh function for Content Creators
   const forceRefreshCreatorsCache = async () => {
@@ -847,11 +895,16 @@ export default function ContentCreators() {
             <div className="fpl-page-title">
               <Users className="h-8 w-8" />
               <h1>FPL Content Creators</h1>
+              <SeasonBadge season={viewSeason} />
             </div>
             <p className="fpl-page-subtitle">
               Track performance of top Fantasy Premier League content creators and influencers
             </p>
           </div>
+        </div>
+
+        <div className="mb-4">
+          <SeasonSelector value={viewSeason} onChange={setViewSeason} />
         </div>
 
         {/* Controls */}
@@ -888,29 +941,81 @@ export default function ContentCreators() {
 
           {/* Content Creators Tab */}
           <TabsContent value="creators">
-            {/* Content Creators Table */}
-            <div className="fpl-table-container">
-              <ResponsiveTable
-                data={sortedCreators || []}
-                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
-                compact={true}
-                mobileCompactTable={true}
-                mobileCardTitle={(creator) => creator.name}
-                loading={isLoading}
-                emptyMessage="No content creators available"
-                onRowClick={(creator) => {
-                  navigate(`/content-creators/${creator.id}/team`);
-                }}
-                onSort={handleSort}
-                sortField={sortBy}
-                sortDirection={sortOrder}
-                className="hover:shadow-sm"
-                stickyHeader={true}
-                enableHorizontalScroll={true}
-                getRowTestId={(creator, index) => `row-creator-${creator.id || index}`}
-                data-testid="content-creators-table"
-              />
-            </div>
+            {viewSeason === CURRENT_SEASON ? (
+              <div className="fpl-table-container">
+                <ResponsiveTable
+                  data={sortedCreators || []}
+                  columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                  compact={true}
+                  mobileCompactTable={true}
+                  mobileCardTitle={(creator) => creator.name}
+                  loading={isLoading}
+                  emptyMessage="No content creators available"
+                  onRowClick={(creator) => {
+                    navigate(`/content-creators/${creator.id}/team`);
+                  }}
+                  onSort={handleSort}
+                  sortField={sortBy}
+                  sortDirection={sortOrder}
+                  className="hover:shadow-sm"
+                  stickyHeader={true}
+                  enableHorizontalScroll={true}
+                  getRowTestId={(creator, index) => `row-creator-${creator.id || index}`}
+                  data-testid="content-creators-table"
+                />
+              </div>
+            ) : (
+              <Card className="border-0 shadow-lg" data-testid="content-creators-final-standings">
+                <CardHeader className="pb-3">
+                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+                    {viewSeason} Final Standings
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Season-end totals for each creator. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {isSeasonStandingsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2Icon className="h-8 w-8 animate-spin text-purple-600" />
+                      <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50/80">
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground">Creator</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Total Pts</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Overall Rank</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Top %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(seasonStandingsData?.managers || []).map((m) => (
+                            <tr key={m.id} className="border-b hover:bg-gray-50/50" data-testid={`row-final-standing-${m.id}`}>
+                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 font-medium">{m.name}</td>
+                              {m.confirmed ? (
+                                <>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.totalPoints?.toLocaleString()}</td>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.fplRank?.toLocaleString()}</td>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.rankPercentage}%</td>
+                                </>
+                              ) : (
+                                <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground italic" colSpan={3}>
+                                  ID not yet confirmed for 2026/27
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Previous Seasons */}
             <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg mt-6">

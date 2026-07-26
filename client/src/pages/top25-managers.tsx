@@ -34,6 +34,9 @@ import Top25TeamAnalysis from "./top25-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
 import { TOP_25_MANAGERS as TOP_25_MANAGERS_BASE } from "@shared/top25-managers";
+import { CURRENT_SEASON } from "@shared/schema";
+import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 type Top25Manager = {
   rank: number;
@@ -167,7 +170,27 @@ export default function Top25Managers() {
   const [selectedSeason, setSelectedSeason] = useState<string>('');
   const [historicalSortField, setHistoricalSortField] = useState<string>('rank');
   const [historicalSortDirection, setHistoricalSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [viewSeason, setViewSeason] = useState<string>(CURRENT_SEASON);
   const [, navigate] = useLocation();
+
+  // Always fetched (not gated on viewSeason): doubles as the 2025/26 Final Standings data
+  // AND as the source of truth for which manager IDs are confirmed-current for 2026/27
+  // (a manager only has an archived row here once their new id has been verified).
+  const { data: seasonStandingsData, isLoading: isSeasonStandingsLoading } = useQuery<{
+    season: string;
+    managers: { rank: number; name: string; managerId: number; confirmed: boolean; totalPoints: number | null; fplRank: number | null; rankPercentage: string | null }[];
+  }>({
+    queryKey: ["/api/top25-managers/season-standings", PREVIOUS_SEASON],
+    queryFn: async () => {
+      const res = await fetch(`/api/top25-managers/season-standings?season=${encodeURIComponent(PREVIOUS_SEASON)}`);
+      if (!res.ok) throw new Error("Failed to fetch season standings");
+      return res.json();
+    },
+  });
+
+  const confirmedManagerIds = useMemo(() => {
+    return new Set((seasonStandingsData?.managers || []).filter(m => m.confirmed).map(m => m.managerId));
+  }, [seasonStandingsData]);
 
   // Fetch bootstrap data for current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -249,10 +272,26 @@ export default function Top25Managers() {
   useEffect(() => {
     if (cachedData?.managers) {
       const transformedManagers = cachedData.managers.map(m => {
+        // A manager whose 2026/27 id hasn't been confirmed post-renumbering may still
+        // return a 200 (from an unrelated stranger who now holds that old id) or a stale
+        // DB-cached fallback — never show live-derived stats for them until confirmed.
+        if (!confirmedManagerIds.has(m.managerId)) {
+          return {
+            rank: m.rank,
+            name: m.name,
+            managerId: m.managerId,
+            latestTracking: undefined,
+            historyData: undefined,
+            rankChange: null,
+            projected_points: undefined,
+            projected_bench_points: undefined,
+            active_chip: undefined,
+          };
+        }
         const chips = m.historyData?.chips || [];
         const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
         const projData = projectedPointsMap.get(m.managerId);
-        
+
         return {
           rank: m.rank,
           name: m.name,
@@ -290,7 +329,7 @@ export default function Top25Managers() {
       });
       setManagersWithData(transformedManagers);
     }
-  }, [cachedData, projectedPointsMap]);
+  }, [cachedData, projectedPointsMap, confirmedManagerIds]);
 
   // Force refresh function (clears cache and refetches)
   const forceRefresh = async () => {
@@ -408,11 +447,16 @@ export default function Top25Managers() {
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
               <h1>Top FPL Managers (All Time)</h1>
+              <SeasonBadge season={viewSeason} />
             </div>
             <p className="fpl-page-subtitle">
               Elite Fantasy Premier League managers and their current standings
             </p>
           </div>
+        </div>
+
+        <div className="mb-4">
+          <SeasonSelector value={viewSeason} onChange={setViewSeason} />
         </div>
 
         <Tabs defaultValue="managers" className="space-y-6">
@@ -428,47 +472,104 @@ export default function Top25Managers() {
           </TabsList>
 
           <TabsContent value="managers">
-            {/* Controls */}
-            <div className="fpl-controls">
-              <div className="fpl-controls-right">
-                <Button
-                  onClick={forceRefresh}
-                  disabled={isRefreshing}
-                  variant="outline"
-                  className="hover:bg-blue-50"
-                  data-testid="button-refresh-data"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-                </Button>
-              </div>
-            </div>
+            {viewSeason === CURRENT_SEASON ? (
+              <>
+                {/* Controls */}
+                <div className="fpl-controls">
+                  <div className="fpl-controls-right">
+                    <Button
+                      onClick={forceRefresh}
+                      disabled={isRefreshing}
+                      variant="outline"
+                      className="hover:bg-blue-50"
+                      data-testid="button-refresh-data"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Managers Table */}
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-0">
-                <ResponsiveTable
-                  data={sortedManagersData}
-                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
-                  compact={true}
-                  mobileCompactTable={true}
-                  mobileCardTitle={(manager) => manager.name}
-                  loading={isRefreshing}
-                  emptyMessage="No manager data available"
-                  onRowClick={(manager) => {
-                    navigate(`/top25-managers/${manager.rank}/team`);
-                  }}
-                  onSort={handleSort}
-                  sortField={sortField}
-                  sortDirection={sortDirection}
-                  className="hover:shadow-sm"
-                  stickyHeader={true}
-                  enableHorizontalScroll={true}
-                  getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
-                  data-testid="top25-managers-table"
-                />
-              </CardContent>
-            </Card>
+                {/* Managers Table */}
+                <Card className="border-0 shadow-lg">
+                  <CardContent className="p-0">
+                    <ResponsiveTable
+                      data={sortedManagersData}
+                      columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                      compact={true}
+                      mobileCompactTable={true}
+                      mobileCardTitle={(manager) => manager.name}
+                      loading={isRefreshing}
+                      emptyMessage="No manager data available"
+                      onRowClick={(manager) => {
+                        navigate(`/top25-managers/${manager.rank}/team`);
+                      }}
+                      onSort={handleSort}
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                      className="hover:shadow-sm"
+                      stickyHeader={true}
+                      enableHorizontalScroll={true}
+                      getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
+                      data-testid="top25-managers-table"
+                    />
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card className="border-0 shadow-lg" data-testid="top25-managers-final-standings">
+                <CardHeader className="pb-3">
+                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+                    {viewSeason} Final Standings
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Season-end totals for each manager. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {isSeasonStandingsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                      <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50/80">
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground">Manager</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Total Pts</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Overall Rank</th>
+                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Top %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(seasonStandingsData?.managers || []).map((m) => (
+                            <tr key={m.managerId} className="border-b hover:bg-gray-50/50" data-testid={`row-final-standing-${m.rank}`}>
+                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground">{m.rank}</td>
+                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 font-medium">{m.name}</td>
+                              {m.confirmed ? (
+                                <>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.totalPoints?.toLocaleString()}</td>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.fplRank?.toLocaleString()}</td>
+                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.rankPercentage}%</td>
+                                </>
+                              ) : (
+                                <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground italic" colSpan={3}>
+                                  ID not yet confirmed for 2026/27
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Previous Seasons */}
             <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">

@@ -27,7 +27,7 @@ import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
-import { CURRENT_SEASON } from "@shared/schema";
+import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
 import { TOP_25_MANAGERS } from "@shared/top25-managers";
 import bcrypt from "bcrypt";
 import session from "express-session";
@@ -5743,6 +5743,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return { managerId, success: false, error: String(error) };
     }
   }
+
+  // Archived season-end standings for the Top 25 Managers list. Only managers whose
+  // 2026/27 manager id has been confirmed (see shared/top25-managers.ts) have a row in
+  // manager_season_standings — everyone else comes back with confirmed:false and null
+  // stats rather than silently wrong or missing data.
+  app.get("/api/top25-managers/season-standings", async (req, res) => {
+    try {
+      const season = typeof req.query.season === "string" ? req.query.season : PREVIOUS_SEASON;
+      const rows = await db.select().from(managerSeasonStandings).where(eq(managerSeasonStandings.season, season));
+      const byManagerId = new Map(rows.map(r => [r.managerId, r]));
+
+      const managers = TOP_25_MANAGERS.map(m => {
+        const archived = byManagerId.get(m.managerId);
+        return {
+          rank: m.rank,
+          name: m.name,
+          managerId: m.managerId,
+          confirmed: !!archived,
+          totalPoints: archived?.totalPoints ?? null,
+          fplRank: archived?.rank ?? null,
+          rankPercentage: archived?.rankPercentage ?? null,
+        };
+      });
+
+      res.json({ season, managers });
+    } catch (error) {
+      console.error("Error fetching Top 25 season standings:", error);
+      res.status(500).json({ error: "Failed to fetch season standings" });
+    }
+  });
+
+  // Same as above, for Content Creators (DB-backed list rather than the static Top 25 array).
+  app.get("/api/content-creators/season-standings", async (req, res) => {
+    try {
+      const season = typeof req.query.season === "string" ? req.query.season : PREVIOUS_SEASON;
+      const [rows, creators] = await Promise.all([
+        db.select().from(managerSeasonStandings).where(eq(managerSeasonStandings.season, season)),
+        storage.getContentCreators(),
+      ]);
+      const byManagerId = new Map(rows.map(r => [r.managerId, r]));
+
+      const managers = creators.map(c => {
+        const archived = byManagerId.get(c.managerId);
+        return {
+          id: c.id,
+          name: c.name,
+          managerId: c.managerId,
+          confirmed: !!archived,
+          totalPoints: archived?.totalPoints ?? null,
+          fplRank: archived?.rank ?? null,
+          rankPercentage: archived?.rankPercentage ?? null,
+        };
+      });
+
+      res.json({ season, managers });
+    } catch (error) {
+      console.error("Error fetching Content Creators season standings:", error);
+      res.status(500).json({ error: "Failed to fetch season standings" });
+    }
+  });
 
   // Cached Top 25 Managers Data Endpoint
   app.get("/api/cached/top25-managers-data", async (req, res) => {
