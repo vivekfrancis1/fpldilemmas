@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoadingExperience } from "@/components/loading-experience";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -1219,7 +1220,7 @@ export default function BestWildcardTeam() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
-            <h1>Best Wildcard Team</h1>
+            <h1>Best Wildcard Team</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Optimize your wildcard team across {gameweekRange} • {snapshots.length} players analyzed

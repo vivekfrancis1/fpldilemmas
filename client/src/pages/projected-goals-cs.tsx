@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface MatchProjection {
   id: number;
@@ -401,7 +402,7 @@ export default function ProjectedGoalsCS() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1>
+            <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             {viewMode === "future"

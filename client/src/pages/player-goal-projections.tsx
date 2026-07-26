@@ -10,6 +10,7 @@ import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, typ
 import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -284,7 +285,7 @@ export default function PlayerGoalProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Player Goal Projections</h1>
+            <h1>Player Goal Projections</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Projected goals based on team scoring potential, fixture difficulty, and individual player share with penalty taker adjustments

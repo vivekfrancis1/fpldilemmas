@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface PredictedScore {
   id: number;
@@ -173,7 +174,7 @@ export default function PredictedScores() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Predicted Scores</h1>
+            <h1>Predicted Scores</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Match predictions with rounded scores and determined outcomes based on expected goals

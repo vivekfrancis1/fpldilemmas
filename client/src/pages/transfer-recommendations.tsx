@@ -17,6 +17,7 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface TeamPick {
   element: number;
@@ -725,7 +726,7 @@ export default function TransferRecommendations() {
           <div className="inline-flex items-center justify-center w-10 h-10 bg-orange-100 rounded-full mb-2">
             <ArrowRightLeft className="h-5 w-5 text-orange-600" />
           </div>
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1><SeasonBadge />
           <p className="text-xs text-gray-600 hidden sm:block">Maximize your projected points for remaining gameweeks</p>
         </div>
 

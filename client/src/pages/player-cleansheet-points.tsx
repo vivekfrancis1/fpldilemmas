@@ -12,6 +12,7 @@ import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { computeNextRange } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface FixtureDetail {
   opponent: string;
@@ -277,7 +278,7 @@ export default function PlayerCleanSheetPoints() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Clean Sheet Points</h1>
+            <h1>Player Clean Sheet Points</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Expected clean sheet points for the next 6 gameweeks: Defenders & Goalkeepers (4 pts), Midfielders (1 pt), Forwards (0 pts)

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { computeNextRange } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface BootstrapData {
   elements: any[];
@@ -228,7 +229,7 @@ export default function OpenFPLProjections() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Brain className="h-8 w-8" />
-              <h1>OpenFPL Projections</h1>
+              <h1>OpenFPL Projections</h1><SeasonBadge />
             </div>
             <p className="fpl-page-subtitle">
               Advanced ML ensemble predictions using XGBoost + Random Forest models for comprehensive player analysis

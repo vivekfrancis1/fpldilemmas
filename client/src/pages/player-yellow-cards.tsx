@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface FixtureDetail {
   opponent: string;
@@ -182,7 +183,7 @@ export default function PlayerYellowCards() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <AlertTriangle className="h-8 w-8" />
-            <h1>Player Yellow Cards</h1>
+            <h1>Player Yellow Cards</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Yellow card probability analysis and FPL point penalties for all positions

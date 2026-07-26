@@ -17,6 +17,7 @@ import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { SeasonBadge } from "@/components/season-badge";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -714,7 +715,7 @@ export default function ProjectedPoints() {
           <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 dark:bg-purple-900 rounded-full mb-2 sm:mb-4">
             <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 dark:text-purple-400" />
           </div>
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2 px-2">My Team Projected Points</h1>
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2 px-2">My Team Projected Points<SeasonBadge /></h1>
           <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 px-2">View your current team's projected performance</p>
         </div>
 

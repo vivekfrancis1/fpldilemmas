@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
@@ -598,7 +599,7 @@ export default function PlayerDefensiveContributions() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Defensive Contributions</h1>
+            <h1>Player Defensive Contributions</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Comprehensive defensive stats and FPL points projections with fixture-aware analysis

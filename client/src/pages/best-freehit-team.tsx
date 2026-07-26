@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { LoadingExperience } from "@/components/loading-experience";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -1363,7 +1364,7 @@ export default function BestFreehitTeam() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Users className="h-5 w-5 sm:h-6 sm:w-6" />
-            <h1>Best Freehit Team</h1>
+            <h1>Best Freehit Team</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Optimal 15-player squad for maximum points with captain selection

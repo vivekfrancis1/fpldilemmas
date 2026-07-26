@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface PlayerMinutesProjection {
   playerId: number;
@@ -203,7 +204,7 @@ export default function PlayerMinutes() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Clock className="h-8 w-8" />
-            <h1>Player Minutes</h1>
+            <h1>Player Minutes</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Expected minutes per game and FPL points from minutes for each player, calculated using rotation patterns and current form

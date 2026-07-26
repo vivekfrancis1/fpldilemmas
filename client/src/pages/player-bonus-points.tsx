@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface FixtureDetail {
   opponent: string;
@@ -407,7 +408,7 @@ export default function PlayerBonusPoints() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Star className="h-8 w-8" />
-            <h1>Player Bonus Points</h1>
+            <h1>Player Bonus Points</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Bonus Point System (BPS) projections and additional FPL rewards for top performers

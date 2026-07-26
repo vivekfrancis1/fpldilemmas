@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Crown } from "lucide-react";
 import CaptainSelector from "@/components/captain-selector";
 import { BootstrapData } from "@shared/schema";
+import { SeasonBadge } from "@/components/season-badge";
 
 export default function Captain() {
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -33,7 +34,7 @@ export default function Captain() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
-              <h1>Captain Selector</h1>
+              <h1>Captain Selector</h1><SeasonBadge />
             </div>
             <p className="fpl-page-subtitle">
               Enhanced with historical captaincy data (2016-2024) and advanced statistical modeling for optimal captain selection

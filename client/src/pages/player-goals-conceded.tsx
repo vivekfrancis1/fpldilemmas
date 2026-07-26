@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface BootstrapData {
   elements: any[];
@@ -201,7 +202,7 @@ export default function PlayerGoalsConceded() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <ShieldAlert className="h-8 w-8" />
-            <h1>Player Goals Conceded</h1>
+            <h1>Player Goals Conceded</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
             Goals conceded projections and FPL point penalties for goalkeepers and defenders
