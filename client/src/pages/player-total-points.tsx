@@ -696,6 +696,18 @@ function createPlayerTotalPointsColumns(
         </div>
       )
     },
+    {
+      key: 'price',
+      header: 'Price',
+      sortable: true,
+      hideSortIcon: true,
+      align: 'center',
+      className: 'bg-gray-50 border-l border-gray-200 px-1',
+      style: { width: '56px', minWidth: '56px' } as CSSProperties,
+      render: (_, player) => (
+        <span className="font-medium text-gray-700 text-xs md:text-sm">£{(player.price || 0).toFixed(1)}m</span>
+      )
+    },
     ...gameweekRange.map(gw => {
       const gwKey = `gw${gw}`;
       const numericGwKey = gw.toString();
