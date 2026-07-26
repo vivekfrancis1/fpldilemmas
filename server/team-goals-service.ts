@@ -41,6 +41,63 @@ const PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS: Record<string, { cleanSheets: numb
 let lastSeasonCleanSheetsCache: Map<string, { cleanSheets: number; played: number }> | null = null;
 let lastSeasonCleanSheetsInFlight: Promise<Map<string, { cleanSheets: number; played: number }>> | null = null;
 
+// 2025/26 Championship goals/assists for the promoted clubs' current-squad players, keyed by
+// team name -> FPL web_name (matched against the live 2026/27 squad, since these are real
+// current players, not a season-boundary ID-reassignment case). Used to override goal/assist
+// SHARE calculation for these three teams: without this, every promoted-team player who never
+// featured in the Premier League shows a genuine 0 in bootstrap-static's goals_scored/assists
+// (FPL never tracked their Championship stats), so the one player on the roster who happens to
+// have ANY leftover stale number from a previous PL season - even an unrelated summer signing
+// at a different club, e.g. a new-to-the-club defender - captures 100% of the team's projected
+// output by default. Only covers players still in the current squad; anyone who departed after
+// promotion (loan returns, sales) is intentionally omitted. Any promoted-team player NOT listed
+// here (including new-to-the-club signings with irrelevant prior-club stats, e.g. Issa Diop at
+// Ipswich) is treated as 0/0, not left on the stale-stat fallback.
+// Source: user-provided final 2025/26 Championship figures (goals confirmed against real team
+// totals: Coventry 97, Ipswich 80, Hull 70). Ranges given as "X-Y" use the upper bound.
+export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { goals: number; assists: number }>> = {
+  "Coventry City": {
+    "Wright": { goals: 17, assists: 2 },
+    "Thomas-Asante": { goals: 13, assists: 4 },
+    "Simms": { goals: 13, assists: 3 },
+    "Mason-Clark": { goals: 10, assists: 6 },
+    "Torp": { goals: 10, assists: 7 },
+    "Rudoni": { goals: 7, assists: 7 },
+    "Sakamoto": { goals: 7, assists: 3 },
+    "Eccles": { goals: 4, assists: 1 },
+    "Thomas": { goals: 3, assists: 4 },
+    "van Ewijk": { goals: 0, assists: 8 },
+    "Grimes": { goals: 2, assists: 2 },
+    "Kitching": { goals: 2, assists: 0 },
+    "Onyeka": { goals: 2, assists: 2 },
+    "Kesler-Hayden": { goals: 2, assists: 2 },
+  },
+  "Ipswich Town": {
+    "Clarke": { goals: 16, assists: 1 },
+    "Philogene": { goals: 12, assists: 2 },
+    "Hirst": { goals: 11, assists: 3 },
+    "Mehmeti": { goals: 10, assists: 7 },
+    "Walle Egeli": { goals: 4, assists: 2 },
+    "Núñez": { goals: 3, assists: 8 },
+    "Kipré": { goals: 3, assists: 2 },
+    "Davis": { goals: 2, assists: 4 },
+    "Taylor": { goals: 2, assists: 2 },
+    "Akpom": { goals: 2, assists: 1 },
+    "Diop": { goals: 0, assists: 0 }, // summer PL signing, not part of the promoted Championship squad
+  },
+  "Hull City": {
+    "McBurnie": { goals: 18, assists: 7 },
+    "Crooks": { goals: 4, assists: 5 },
+    "Millar": { goals: 3, assists: 5 },
+    "Belloumi": { goals: 3, assists: 4 },
+    "Egan": { goals: 3, assists: 0 },
+    "Giles": { goals: 0, assists: 8 },
+    "Slater": { goals: 2, assists: 2 },
+    "Gyabi": { goals: 2, assists: 1 },
+    "Destan": { goals: 2, assists: 0 },
+  },
+};
+
 interface FixtureDetail {
   opponent: string;
   isHome: boolean;

@@ -74,6 +74,46 @@ async function resolveHistorySeason(requestedSeason: string | undefined): Promis
   return PREVIOUS_SEASON;
 }
 
+/**
+ * Override goal-share input data for promoted teams' players with real 2025/26 Championship
+ * figures (see PROMOTED_TEAM_PLAYER_LAST_SEASON in team-goals-service.ts). Without this, every
+ * promoted-team player who never featured in the Premier League shows a genuine 0 in
+ * bootstrap-static (FPL never tracked their Championship stats), so the one player on the
+ * roster with ANY leftover stale PL number - even an unrelated summer signing - captures 100%
+ * of the team's projected output by default. Players not in the table (including such
+ * signings) are explicitly zeroed rather than left on that stale-stat fallback.
+ */
+function applyPromotedTeamGoalOverrides(
+  bootstrapData: any,
+  map: Map<number, { goals: number; xG: number }>,
+  promotedData: Record<string, Record<string, { goals: number; assists: number }>>
+): void {
+  bootstrapData.teams.forEach((team: any) => {
+    const playerTable = promotedData[team.name];
+    if (!playerTable) return;
+    bootstrapData.elements.filter((p: any) => p.team === team.id).forEach((p: any) => {
+      const entry = playerTable[p.web_name];
+      map.set(p.id, { goals: entry?.goals ?? 0, xG: 0 });
+    });
+  });
+}
+
+/** Assist-share counterpart of applyPromotedTeamGoalOverrides — see that function for why. */
+function applyPromotedTeamAssistOverrides(
+  bootstrapData: any,
+  map: Map<number, { assists: number; xA: number }>,
+  promotedData: Record<string, Record<string, { goals: number; assists: number }>>
+): void {
+  bootstrapData.teams.forEach((team: any) => {
+    const playerTable = promotedData[team.name];
+    if (!playerTable) return;
+    bootstrapData.elements.filter((p: any) => p.team === team.id).forEach((p: any) => {
+      const entry = playerTable[p.web_name];
+      map.set(p.id, { assists: entry?.assists ?? 0, xA: 0 });
+    });
+  });
+}
+
 export interface ArchivedPlayerGameweekRow {
   gameweek: number;
   minutes: number;
@@ -9746,6 +9786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Promoted teams (Coventry/Ipswich/Hull) never played in the Premier League, so
+      // bootstrap-static's goals_scored/expected_goals is genuinely 0 for almost their whole
+      // squad — except any player with leftover stale stats from a different PL club, who'd
+      // otherwise wrongly capture ~100% of the team's share. Override with real 2025/26
+      // Championship figures instead.
+      const { PROMOTED_TEAM_PLAYER_LAST_SEASON: promotedGoalData } = await import('./team-goals-service');
+      applyPromotedTeamGoalOverrides(bootstrapData, currentClubGoalsMap, promotedGoalData);
+
       // Build per-player recent goals map (still used for additive pool signal)
       const recentGoalsMap = new Map<number, { goals: number, poolSize: number }>();
       bootstrapData.elements.forEach((player: any) => {
@@ -10718,6 +10766,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       });
+
+      // Same promoted-team override as goal-share-season — see applyPromotedTeamGoalOverrides.
+      const { PROMOTED_TEAM_PLAYER_LAST_SEASON: promotedAssistData } = await import('./team-goals-service');
+      applyPromotedTeamAssistOverrides(bootstrapData, currentClubAssistsMap, promotedAssistData);
 
       // Calculate team totals using current-club-only filtered stats + blend adjustment
       const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
