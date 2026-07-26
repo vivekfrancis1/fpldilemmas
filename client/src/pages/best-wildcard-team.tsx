@@ -324,41 +324,49 @@ export default function BestWildcardTeam() {
       if (squadFilled[pos] < totalNeeds[pos]) return null;
     }
 
-    // (d) Upgrade pass: repeatedly swap the XI's lowest-value player (excluding must-includes,
-    // which are non-negotiable) for the highest-points alternative that still fits the budget.
+    // (d) Upgrade pass: repeatedly swap the squad's lowest-value player (excluding
+    // must-includes, which are non-negotiable) for the highest-points alternative that still
+    // fits the budget — covers the whole 15, not just the XI, so bench depth also gets upgraded
+    // with any leftover budget. Each pass walks every swappable player from weakest to
+    // strongest and takes the first upgrade it finds; giving up after only trying the single
+    // weakest player left budget unused whenever THAT specific player had no viable upgrade
+    // (already-owned or team-of-3-blocked), even though other players still had room to improve.
     let upgraded = true;
     while (upgraded) {
       upgraded = false;
-      const swappable = startingXI
+      const swappable = squad
         .filter(p => !includedPlayerIds.has(p.playerId))
         .sort((a, b) => playerValue(a) - playerValue(b));
-      if (swappable.length === 0) break;
-      const weakest = swappable[0];
-      const pos = normalizePosition(weakest.position);
 
-      const candidates = playersByPosition[pos]
-        .filter(p => !squad.some(s => s.playerId === p.playerId))
-        .filter(p => p.totalProjectedPoints > weakest.totalProjectedPoints)
-        .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+      for (const weakest of swappable) {
+        const pos = normalizePosition(weakest.position);
+        const candidates = playersByPosition[pos]
+          .filter(p => !squad.some(s => s.playerId === p.playerId))
+          .filter(p => p.totalProjectedPoints > weakest.totalProjectedPoints)
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
 
-      for (const candidate of candidates) {
-        const newCost = totalCost - weakest.price + candidate.price;
-        if (newCost > totalBudget) continue;
+        let swappedThisPlayer = false;
+        for (const candidate of candidates) {
+          const newCost = totalCost - weakest.price + candidate.price;
+          if (newCost > totalBudget) continue;
 
-        const weakestTeam = weakest.teamName || '';
-        const candidateTeam = candidate.teamName || '';
-        const newCandidateTeamCount = (teamCounts[candidateTeam] || 0) + (candidateTeam === weakestTeam ? -1 : 0) + 1;
-        if (newCandidateTeamCount > SQUAD_CONSTRAINTS.maxPlayersPerTeam) continue;
+          const weakestTeam = weakest.teamName || '';
+          const candidateTeam = candidate.teamName || '';
+          const newCandidateTeamCount = (teamCounts[candidateTeam] || 0) + (candidateTeam === weakestTeam ? -1 : 0) + 1;
+          if (newCandidateTeamCount > SQUAD_CONSTRAINTS.maxPlayersPerTeam) continue;
 
-        const squadIdx = squad.findIndex(p => p.playerId === weakest.playerId);
-        const xiIdx = startingXI.findIndex(p => p.playerId === weakest.playerId);
-        squad[squadIdx] = candidate;
-        startingXI[xiIdx] = candidate;
-        teamCounts[weakestTeam] = (teamCounts[weakestTeam] || 0) - 1;
-        teamCounts[candidateTeam] = (teamCounts[candidateTeam] || 0) + 1;
-        totalCost = newCost;
-        upgraded = true;
-        break;
+          const squadIdx = squad.findIndex(p => p.playerId === weakest.playerId);
+          const xiIdx = startingXI.findIndex(p => p.playerId === weakest.playerId);
+          squad[squadIdx] = candidate;
+          if (xiIdx !== -1) startingXI[xiIdx] = candidate;
+          teamCounts[weakestTeam] = (teamCounts[weakestTeam] || 0) - 1;
+          teamCounts[candidateTeam] = (teamCounts[candidateTeam] || 0) + 1;
+          totalCost = newCost;
+          upgraded = true;
+          swappedThisPlayer = true;
+          break;
+        }
+        if (swappedThisPlayer) break; // squad/budget changed — restart the pass from scratch
       }
     }
 
