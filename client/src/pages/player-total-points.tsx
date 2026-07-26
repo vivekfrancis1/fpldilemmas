@@ -685,7 +685,7 @@ function createPlayerTotalPointsColumns(
               </span>
             )}
             <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px]">
-              {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
+              {!isPastMode ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name) : (player.playerName || player.name)}
             </span>
             <PlayerAvailabilityBadge player={player} />
           </div>

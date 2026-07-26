@@ -1041,7 +1041,7 @@ export default function PlayerDefensiveContributions() {
                     <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 w-[130px] min-w-[130px]">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-0.5 flex-wrap">
-                          <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
+                          <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{viewMode === "future" ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName) : player.playerName}</span>
                           {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
                             <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
                           )}
