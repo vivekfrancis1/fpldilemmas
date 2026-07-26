@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
-import { SeasonSelector } from "@/components/season-selector";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -624,7 +624,7 @@ export default function PlayerAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>Player Assists</h1><SeasonBadge />
+            <h1>Player Assists</h1><SeasonBadge season={viewMode !== "future" ? (historySeason ?? PREVIOUS_SEASON) : undefined} />
           </div>
           <p className="fpl-page-subtitle">
             Projected assists and historical data by player across selected gameweeks

@@ -14,7 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
-import { SeasonSelector } from "@/components/season-selector";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -512,7 +512,7 @@ export default function TeamGoalProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Team Goals</h1><SeasonBadge />
+            <h1>Team Goals</h1><SeasonBadge season={viewMode === "past" ? (historySeason ?? PREVIOUS_SEASON) : undefined} />
           </div>
           <p className="fpl-page-subtitle">
             Projected and historical goals for each team across selected gameweeks

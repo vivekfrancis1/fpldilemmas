@@ -97,7 +97,7 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
 
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { SeasonBadge } from "@/components/season-badge";
-import { SeasonSelector } from "@/components/season-selector";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 // Fixture detail type for DGW breakdowns
 interface FixtureDetail {
@@ -1974,7 +1974,7 @@ export default function PlayerTotalPoints() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Player Points</h1><SeasonBadge />
+            <h1>Player Points</h1><SeasonBadge season={viewMode === "past" ? (historySeason ?? PREVIOUS_SEASON) : undefined} />
           </div>
           <p className="fpl-page-subtitle">
             FPL points across all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points

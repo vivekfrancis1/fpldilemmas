@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
-import { SeasonSelector } from "@/components/season-selector";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -591,7 +591,7 @@ export default function PlayerSaves() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Shield className="h-8 w-8" />
-              <h1>{viewMode === "future" ? "Goalkeeper Saves Projections" : "Goalkeeper Saves History"}</h1><SeasonBadge />
+              <h1>{viewMode === "future" ? "Goalkeeper Saves Projections" : "Goalkeeper Saves History"}</h1><SeasonBadge season={viewMode === "past" ? (historySeason ?? PREVIOUS_SEASON) : undefined} />
             </div>
             <p className="fpl-page-subtitle">
               {viewMode === "future"
