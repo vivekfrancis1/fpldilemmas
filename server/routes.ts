@@ -27,6 +27,7 @@ import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { CURRENT_SEASON } from "@shared/schema";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -46,10 +47,32 @@ let teamGoalsAgainstCache: { data: any[]; timestamp: number } | null = null;
 let teamCSCache: { data: any[]; timestamp: number } | null = null;
 const TEAM_PROJECTION_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
 
-// Season whose match results team-history endpoints should prefer from season_fixtures_archive
-// over the live bootstrap-static/fixtures API. Update this once a season is archived and the
-// next one begins (see server/season-archive-service.ts).
-const ARCHIVED_TEAM_HISTORY_SEASON = "2025/26";
+// The season immediately before CURRENT_SEASON — the one archived in season_fixtures_archive /
+// historical_player_stats. Update this once a season is archived and the next one begins (see
+// server/season-archive-service.ts). Only one season back is kept as a selectable "history"
+// option for now; extend to a real season list if further-back seasons need to be selectable too.
+const PREVIOUS_SEASON = "2025/26";
+
+/**
+ * Resolve which season a history/"past" view should show. An explicit request always wins;
+ * otherwise default to CURRENT_SEASON if it has any finished gameweeks yet, else fall back to
+ * PREVIOUS_SEASON (the "latest year with data" default) — right now that's PREVIOUS_SEASON,
+ * since the current season hasn't kicked off.
+ */
+async function resolveHistorySeason(requestedSeason: string | undefined): Promise<string> {
+  if (requestedSeason) return requestedSeason;
+  try {
+    const bootstrapResponse = await internalFetch("api/bootstrap-static");
+    if (bootstrapResponse.ok) {
+      const bootstrapData = await bootstrapResponse.json();
+      const hasFinishedGameweek = (bootstrapData.events || []).some((e: any) => e.finished);
+      if (hasFinishedGameweek) return CURRENT_SEASON;
+    }
+  } catch (error) {
+    console.error("Failed to check current-season data for history default:", error);
+  }
+  return PREVIOUS_SEASON;
+}
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -7867,19 +7890,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Team Goals History API called - fetching actual past gameweek data`);
 
-      // Prefer the durable archive (survives FPL resetting bootstrap-static/fixtures for the
-      // next season) over the live API. Falls back to live if a season hasn't been archived yet.
-      const archived = await pool.query(
-        `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
-         FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
-        [ARCHIVED_TEAM_HISTORY_SEASON]
-      );
+      // Resolve which season to show: an explicit ?season= request, or default to whichever
+      // of [current, previous] season actually has finished-game data — right now that's the
+      // previous season, since the current one hasn't kicked off yet.
+      const requestedSeason = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeason = await resolveHistorySeason(requestedSeason);
 
       let teams: any[];
       let fixturesData: any[];
       let lastFinishedGW: number;
 
-      if (archived.rows.length > 0) {
+      if (resolvedSeason !== CURRENT_SEASON) {
+        // Durable archive (survives FPL resetting bootstrap-static/fixtures for the next season)
+        const archived = await pool.query(
+          `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
+           FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
+          [resolvedSeason]
+        );
         const teamMap = new Map<number, { id: number; name: string; short_name: string }>();
         for (const r of archived.rows) {
           if (!teamMap.has(r.team_h)) teamMap.set(r.team_h, { id: r.team_h, name: r.team_h_name ?? r.team_h_short, short_name: r.team_h_short });
@@ -7894,7 +7921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team_h_score: r.team_h_score,
           team_a_score: r.team_a_score,
         }));
-        lastFinishedGW = Math.max(...archived.rows.map((r) => r.gameweek));
+        lastFinishedGW = archived.rows.length > 0 ? Math.max(...archived.rows.map((r) => r.gameweek)) : 0;
       } else {
         const [bootstrapResponse, fixturesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
@@ -7915,7 +7942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 0;
       }
 
-      console.log(`DEBUG: Last finished gameweek: ${lastFinishedGW}`);
+      console.log(`DEBUG: Season ${resolvedSeason}, last finished gameweek: ${lastFinishedGW}`);
       
       // Initialize team goals data structure
       const teamGoalsMap = new Map();
@@ -7962,6 +7989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({
+        season: resolvedSeason,
         lastFinishedGW,
         teams: result
       });
@@ -8094,19 +8122,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Team Goals Against History API called - fetching actual past gameweek data`);
 
-      // Prefer the durable archive (survives FPL resetting bootstrap-static/fixtures for the
-      // next season) over the live API. Falls back to live if a season hasn't been archived yet.
-      const archived = await pool.query(
-        `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
-         FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
-        [ARCHIVED_TEAM_HISTORY_SEASON]
-      );
+      // Resolve which season to show: an explicit ?season= request, or default to whichever
+      // of [current, previous] season actually has finished-game data.
+      const requestedSeasonGA = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonGA = await resolveHistorySeason(requestedSeasonGA);
 
       let teams: any[];
       let fixturesData: any[];
       let lastFinishedGW: number;
 
-      if (archived.rows.length > 0) {
+      if (resolvedSeasonGA !== CURRENT_SEASON) {
+        const archived = await pool.query(
+          `SELECT fixture_id, gameweek, team_h, team_h_short, team_h_name, team_a, team_a_short, team_a_name, team_h_score, team_a_score
+           FROM season_fixtures_archive WHERE season = $1 ORDER BY gameweek`,
+          [resolvedSeasonGA]
+        );
         const teamMap = new Map<number, { id: number; name: string; short_name: string }>();
         for (const r of archived.rows) {
           if (!teamMap.has(r.team_h)) teamMap.set(r.team_h, { id: r.team_h, name: r.team_h_name ?? r.team_h_short, short_name: r.team_h_short });
@@ -8121,7 +8151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team_h_score: r.team_h_score,
           team_a_score: r.team_a_score,
         }));
-        lastFinishedGW = Math.max(...archived.rows.map((r) => r.gameweek));
+        lastFinishedGW = archived.rows.length > 0 ? Math.max(...archived.rows.map((r) => r.gameweek)) : 0;
       } else {
         const [bootstrapResponse, fixturesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
@@ -8185,7 +8215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      res.json({ lastFinishedGW, teams: result });
+      res.json({ season: resolvedSeasonGA, lastFinishedGW, teams: result });
     } catch (error) {
       console.error("Error fetching team goals against history:", error);
       res.status(500).json({ error: "Failed to fetch team goals against history" });

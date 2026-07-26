@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -22,6 +23,7 @@ interface FixtureDetail {
 }
 
 interface TeamGoalsAgainstHistory {
+  season?: string;
   lastFinishedGW: number;
   teams: {
     id: number;
@@ -71,11 +73,29 @@ export default function TeamGoalsAgainstProjections() {
   // View mode: "future" for projections, "past" for historical data
   const [viewMode, setViewMode] = useViewModeParam<"future" | "past">("view", "future", ["future", "past"]);
 
+  // Season for the "past" view. Null until the backend's own default resolves, then synced to
+  // whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // Fetch past team goals against history
   const { data: historyData, isLoading: historyLoading } = useQuery<TeamGoalsAgainstHistory>({
-    queryKey: ["/api/team-goals-against-history"],
+    queryKey: ["/api/team-goals-against-history", historySeason],
+    queryFn: async () => {
+      const url = historySeason
+        ? `/api/team-goals-against-history?season=${encodeURIComponent(historySeason)}`
+        : `/api/team-goals-against-history`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch team goals against history');
+      return response.json();
+    },
     enabled: viewMode === "past",
   });
+
+  useEffect(() => {
+    if (historySeason === null && historyData?.season) {
+      setHistorySeason(historyData.season);
+    }
+  }, [historySeason, historyData?.season]);
 
   // Fetch fixtures for opponent information
   const { data: fixturesData } = useQuery({
@@ -445,6 +465,12 @@ export default function TeamGoalsAgainstProjections() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {viewMode === "past" && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 
