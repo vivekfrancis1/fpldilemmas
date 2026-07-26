@@ -74,6 +74,151 @@ async function resolveHistorySeason(requestedSeason: string | undefined): Promis
   return PREVIOUS_SEASON;
 }
 
+export interface ArchivedPlayerGameweekRow {
+  gameweek: number;
+  minutes: number;
+  goals_scored: number;
+  assists: number;
+  clean_sheets: number;
+  goals_conceded: number;
+  own_goals: number;
+  penalties_saved: number;
+  penalties_missed: number;
+  yellow_cards: number;
+  red_cards: number;
+  saves: number;
+  bonus: number;
+  total_points: number;
+  defensive_contribution: number;
+  tackles: number;
+  recoveries: number;
+  clearances_blocks_interceptions: number;
+  expected_goals: number;
+  expected_assists: number;
+  value: number;
+}
+
+export interface ArchivedPlayerHistory {
+  playerId: number;
+  playerName: string;
+  teamName: string;
+  teamShort: string;
+  position: string; // e.g. "GKP" | "DEF" | "MID" | "FWD"
+  elementType: number;
+  byGameweek: Map<number, ArchivedPlayerGameweekRow>;
+}
+
+const POSITION_SHORT_BY_NAME: Record<string, string> = {
+  Goalkeeper: "GKP", Defender: "DEF", Midfielder: "MID", Forward: "FWD",
+};
+
+// Cache of teamName -> short_name per archived season, sourced from season_fixtures_archive
+// (which stores short names directly, unlike historical_player_stats).
+const teamShortNameCache = new Map<string, Map<string, string>>();
+async function getSeasonTeamShortNames(season: string): Promise<Map<string, string>> {
+  if (teamShortNameCache.has(season)) return teamShortNameCache.get(season)!;
+  const map = new Map<string, string>();
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT team_h_name AS name, team_h_short AS short FROM season_fixtures_archive WHERE season = $1
+       UNION SELECT DISTINCT team_a_name, team_a_short FROM season_fixtures_archive WHERE season = $1`,
+      [season]
+    );
+    for (const row of result.rows) map.set(row.name, row.short);
+  } catch (error) {
+    console.error(`Failed to fetch team short names for season ${season}:`, error);
+  }
+  teamShortNameCache.set(season, map);
+  return map;
+}
+
+/**
+ * Build per-player, per-gameweek history for an archived (non-current) season, from
+ * gameweek_player_data (raw stats) joined with historical_player_stats (player/team/position
+ * metadata AS OF that season — deliberately not current bootstrap-static, since a player's
+ * team/position now may differ from what it was last season).
+ */
+async function getArchivedPlayerGameweekHistory(
+  season: string,
+  startGw: number,
+  endGw: number
+): Promise<{ lastFinishedGW: number; players: Map<number, ArchivedPlayerHistory> }> {
+  const players = new Map<number, ArchivedPlayerHistory>();
+
+  const [metaResult, teamShortNames, statsResult] = await Promise.all([
+    pool.query(
+      `SELECT player_id, player_name, team_name, position, element_type
+       FROM historical_player_stats WHERE season = $1`,
+      [season]
+    ),
+    getSeasonTeamShortNames(season),
+    pool.query(
+      `SELECT player_id, gameweek, minutes, goals_scored, assists, clean_sheets, goals_conceded,
+              own_goals, penalties_saved, penalties_missed, yellow_cards, red_cards,
+              saves, bonus, total_points, defensive_contribution, tackles, recoveries,
+              clearances_blocks_interceptions, expected_goals, expected_assists, value
+       FROM gameweek_player_data
+       WHERE season = $1 AND gameweek >= $2 AND gameweek <= $3
+       ORDER BY gameweek`,
+      [season, startGw, endGw]
+    ),
+  ]);
+
+  const metaById = new Map<number, { playerName: string; teamName: string; position: string; elementType: number }>();
+  for (const row of metaResult.rows) {
+    metaById.set(row.player_id, {
+      playerName: row.player_name,
+      teamName: row.team_name,
+      position: POSITION_SHORT_BY_NAME[row.position] || row.position,
+      elementType: row.element_type,
+    });
+  }
+
+  let lastFinishedGW = 0;
+  for (const row of statsResult.rows) {
+    lastFinishedGW = Math.max(lastFinishedGW, row.gameweek);
+    const meta = metaById.get(row.player_id);
+    if (!meta) continue; // no season-level record for this player (e.g. never actually appeared)
+
+    if (!players.has(row.player_id)) {
+      players.set(row.player_id, {
+        playerId: row.player_id,
+        playerName: meta.playerName,
+        teamName: meta.teamName,
+        teamShort: teamShortNames.get(meta.teamName) || meta.teamName.slice(0, 3).toUpperCase(),
+        position: meta.position,
+        elementType: meta.elementType,
+        byGameweek: new Map(),
+      });
+    }
+    players.get(row.player_id)!.byGameweek.set(row.gameweek, {
+      gameweek: row.gameweek,
+      minutes: row.minutes || 0,
+      goals_scored: row.goals_scored || 0,
+      assists: row.assists || 0,
+      clean_sheets: row.clean_sheets || 0,
+      goals_conceded: row.goals_conceded || 0,
+      own_goals: row.own_goals || 0,
+      penalties_saved: row.penalties_saved || 0,
+      penalties_missed: row.penalties_missed || 0,
+      yellow_cards: row.yellow_cards || 0,
+      red_cards: row.red_cards || 0,
+      saves: row.saves || 0,
+      bonus: row.bonus || 0,
+      total_points: row.total_points || 0,
+      defensive_contribution: row.defensive_contribution || 0,
+      tackles: row.tackles || 0,
+      recoveries: row.recoveries || 0,
+      clearances_blocks_interceptions: row.clearances_blocks_interceptions || 0,
+      expected_goals: parseFloat(row.expected_goals) || 0,
+      expected_assists: parseFloat(row.expected_assists) || 0,
+      value: row.value || 0,
+    });
+  }
+
+  return { lastFinishedGW, players };
+}
+
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -8226,27 +8371,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/player-goals-history", async (req, res) => {
     try {
       console.log(`DEBUG: Player Goals History API called`);
-      
+
+      const requestedSeason = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeason = await resolveHistorySeason(requestedSeason);
+
+      if (resolvedSeason !== CURRENT_SEASON) {
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeason, 1, 38);
+        const players = Array.from(archivedPlayers.values())
+          .map((p) => {
+            const gameweekGoals: Record<number, number> = {};
+            let totalGoals = 0;
+            p.byGameweek.forEach((row, gw) => { gameweekGoals[gw] = row.goals_scored; totalGoals += row.goals_scored; });
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekGoals, totalGoals };
+          })
+          .filter((p) => p.totalGoals > 0);
+        return res.json({ season: resolvedSeason, lastFinishedGW, players });
+      }
+
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
         internalFetch("api/fixtures")
       ]);
-      
+
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       // Fetch live data for each finished gameweek
       const playerGoalsMap = new Map();
-      
+
       for (let gw = 1; gw <= lastFinishedGW; gw++) {
         try {
           const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
@@ -8282,7 +8443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const players = Array.from(playerGoalsMap.values()).filter((p: any) => p.totalGoals > 0);
-      res.json({ lastFinishedGW, players });
+      res.json({ season: resolvedSeason, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player goals history:", error);
       res.status(500).json({ error: "Failed to fetch player goals history" });
@@ -8294,25 +8455,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
       const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
-      
+      const requestedSeasonXg = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonXg = await resolveHistorySeason(requestedSeasonXg);
+
       console.log(`DEBUG: Player xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
-      
+
+      if (resolvedSeasonXg !== CURRENT_SEASON) {
+        const probe = await getArchivedPlayerGameweekHistory(resolvedSeasonXg, 1, 38);
+        const effEndGw = endGw ? Math.min(endGw, probe.lastFinishedGW) : probe.lastFinishedGW;
+        const effStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effEndGw - 5);
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonXg, effStartGw, effEndGw);
+        const players = Array.from(archivedPlayers.values())
+          .map((p) => {
+            const gameweekXg: Record<number, number> = {};
+            let totalXg = 0;
+            p.byGameweek.forEach((row, gw) => { gameweekXg[gw] = row.expected_goals; totalXg += row.expected_goals; });
+            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXg, totalXg };
+          })
+          .filter((p) => p.totalXg > 0);
+        return res.json({ season: resolvedSeasonXg, lastFinishedGW, startGW: effStartGw, endGW: effEndGw, players });
+      }
+
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       // Use provided range or default to last 6 gameweeks
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
       const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
-      
+
       console.log(`DEBUG: Fetching xG history for GW${effectiveStartGw}-${effectiveEndGw}`);
       
       // Build list of gameweeks to fetch
@@ -8377,7 +8556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to only players with xG > 0
       const players = Array.from(playerXgMap.values()).filter((p: any) => p.totalXg > 0);
       console.log(`DEBUG: Player xG History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
-      res.json({ lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
+      res.json({ season: resolvedSeasonXg, lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
       console.error("Error fetching player xG history:", error);
       res.status(500).json({ error: "Failed to fetch player xG history" });
@@ -8388,23 +8567,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/player-assists-history", async (req, res) => {
     try {
       console.log(`DEBUG: Player Assists History API called`);
-      
+
+      const requestedSeasonAssists = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonAssists = await resolveHistorySeason(requestedSeasonAssists);
+
+      if (resolvedSeasonAssists !== CURRENT_SEASON) {
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonAssists, 1, 38);
+        const players = Array.from(archivedPlayers.values())
+          .map((p) => {
+            const gameweekAssists: Record<number, number> = {};
+            let totalAssists = 0;
+            p.byGameweek.forEach((row, gw) => { gameweekAssists[gw] = row.assists; totalAssists += row.assists; });
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekAssists, totalAssists };
+          })
+          .filter((p) => p.totalAssists > 0);
+        return res.json({ season: resolvedSeasonAssists, lastFinishedGW, players });
+      }
+
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
         internalFetch("api/fixtures")
       ]);
-      
+
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       const playerAssistsMap = new Map();
       
       for (let gw = 1; gw <= lastFinishedGW; gw++) {
@@ -8442,7 +8637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const players = Array.from(playerAssistsMap.values()).filter((p: any) => p.totalAssists > 0);
-      res.json({ lastFinishedGW, players });
+      res.json({ season: resolvedSeasonAssists, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player assists history:", error);
       res.status(500).json({ error: "Failed to fetch player assists history" });
@@ -8454,25 +8649,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
       const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
-      
+      const requestedSeasonXa = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonXa = await resolveHistorySeason(requestedSeasonXa);
+
       console.log(`DEBUG: Player xA History API called (GW${startGw || 1}-${endGw || 'last'})`);
-      
+
+      if (resolvedSeasonXa !== CURRENT_SEASON) {
+        const probeXa = await getArchivedPlayerGameweekHistory(resolvedSeasonXa, 1, 38);
+        const effEndGwXa = endGw ? Math.min(endGw, probeXa.lastFinishedGW) : probeXa.lastFinishedGW;
+        const effStartGwXa = startGw ? Math.max(startGw, 1) : Math.max(1, effEndGwXa - 5);
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonXa, effStartGwXa, effEndGwXa);
+        const players = Array.from(archivedPlayers.values())
+          .map((p) => {
+            const gameweekXa: Record<number, number> = {};
+            let totalXa = 0;
+            p.byGameweek.forEach((row, gw) => { gameweekXa[gw] = row.expected_assists; totalXa += row.expected_assists; });
+            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXa, totalXa };
+          })
+          .filter((p) => p.totalXa > 0);
+        return res.json({ season: resolvedSeasonXa, lastFinishedGW, startGW: effStartGwXa, endGW: effEndGwXa, players });
+      }
+
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       // Use provided range or default to last 6 gameweeks
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
       const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
-      
+
       console.log(`DEBUG: Fetching xA history for GW${effectiveStartGw}-${effectiveEndGw}`);
       
       // Build list of gameweeks to fetch
@@ -8537,7 +8750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to only players with xA > 0
       const players = Array.from(playerXaMap.values()).filter((p: any) => p.totalXa > 0);
       console.log(`DEBUG: Player xA History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
-      res.json({ lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
+      res.json({ season: resolvedSeasonXa, lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
       console.error("Error fetching player xA history:", error);
       res.status(500).json({ error: "Failed to fetch player xA history" });
@@ -8548,21 +8761,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/player-saves-history", async (req, res) => {
     try {
       console.log(`DEBUG: Player Saves History API called`);
-      
+
+      const requestedSeasonSaves = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonSaves = await resolveHistorySeason(requestedSeasonSaves);
+
+      if (resolvedSeasonSaves !== CURRENT_SEASON) {
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonSaves, 1, 38);
+        const players = Array.from(archivedPlayers.values())
+          .filter((p) => p.elementType === 1) // Goalkeepers only
+          .map((p) => {
+            const gameweekSaves: Record<number, number> = {};
+            let totalSaves = 0;
+            p.byGameweek.forEach((row, gw) => { gameweekSaves[gw] = row.saves; totalSaves += row.saves; });
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: 'GKP', gameweekSaves, totalSaves };
+          });
+        return res.json({ season: resolvedSeasonSaves, lastFinishedGW, players });
+      }
+
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       const playerSavesMap = new Map();
-      
+
       for (let gw = 1; gw <= lastFinishedGW; gw++) {
         try {
           const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
@@ -8598,7 +8827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const players = Array.from(playerSavesMap.values());
-      res.json({ lastFinishedGW, players });
+      res.json({ season: resolvedSeasonSaves, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player saves history:", error);
       res.status(500).json({ error: "Failed to fetch player saves history" });
@@ -8610,21 +8839,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       res.set("Cache-Control", "no-store");
       console.log(`DEBUG: Player Defensive History API called`);
-      
+
+      const requestedSeasonDef = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonDef = await resolveHistorySeason(requestedSeasonDef);
+
+      if (resolvedSeasonDef !== CURRENT_SEASON) {
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonDef, 1, 38);
+        const players = Array.from(archivedPlayers.values())
+          .filter((p) => p.elementType === 2 || p.elementType === 3 || p.elementType === 4) // DEF/MID/FWD only
+          .map((p) => {
+            const gameweekStats: Record<number, { defensiveContribution: number; cbi: number; tackles: number; recoveries: number; minutes: number }> = {};
+            let totalDefensiveContribution = 0;
+            p.byGameweek.forEach((row, gw) => {
+              if (row.minutes <= 0) return; // only count games the player actually played
+              gameweekStats[gw] = {
+                defensiveContribution: row.defensive_contribution,
+                cbi: row.clearances_blocks_interceptions,
+                tackles: row.tackles,
+                recoveries: row.recoveries,
+                minutes: row.minutes,
+              };
+              totalDefensiveContribution += row.defensive_contribution;
+            });
+            const gamesPlayed = Object.keys(gameweekStats).length;
+            const dcPerGame = gamesPlayed > 0 ? parseFloat((totalDefensiveContribution / gamesPlayed).toFixed(2)) : 0;
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekStats, totalDefensiveContribution, dcPerGame, gamesPlayed };
+          });
+        return res.json({ season: resolvedSeasonDef, lastFinishedGW, players });
+      }
+
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
+
       const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
+      const lastFinishedGW = finishedEvents.length > 0
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
-      
+
       const playerDefenseMap = new Map();
-      
+
       for (let gw = 1; gw <= lastFinishedGW; gw++) {
         try {
           const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
@@ -8685,7 +8942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dcPerGame = gamesPlayed > 0 ? parseFloat((player.totalDefensiveContribution / gamesPlayed).toFixed(2)) : 0;
         return { ...player, dcPerGame, gamesPlayed };
       });
-      res.json({ lastFinishedGW, players });
+      res.json({ season: resolvedSeasonDef, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player defensive history:", error);
       res.status(500).json({ error: "Failed to fetch player defensive history" });
@@ -8697,9 +8954,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
       const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
-      
+      const requestedSeasonPoints = typeof req.query.season === "string" ? req.query.season : undefined;
+      const resolvedSeasonPoints = await resolveHistorySeason(requestedSeasonPoints);
+
       console.log(`DEBUG: Player Total Points History API called (GW${startGw || 1}-${endGw || 'last'})`);
-      
+
+      if (resolvedSeasonPoints !== CURRENT_SEASON) {
+        const probePoints = await getArchivedPlayerGameweekHistory(resolvedSeasonPoints, 1, 38);
+        const effEndGwPts = endGw ? Math.min(endGw, probePoints.lastFinishedGW) : probePoints.lastFinishedGW;
+        const effStartGwPts = startGw ? Math.max(startGw, 1) : Math.max(1, effEndGwPts - 11);
+        const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonPoints, effStartGwPts, effEndGwPts);
+        const players = Array.from(archivedPlayers.values()).map((p) => {
+          const gameweekPoints: Record<number, number> = {};
+          const gameweekMinutes: Record<number, number> = {};
+          const gameweekStats: Record<number, any> = {};
+          let totalPoints = 0;
+          let totalMinutes = 0;
+          let gamesPlayed = 0;
+          let lastKnownValue = 0;
+          p.byGameweek.forEach((row, gw) => {
+            gameweekPoints[gw] = row.total_points;
+            gameweekMinutes[gw] = row.minutes;
+            gameweekStats[gw] = {
+              minutes: row.minutes,
+              goals: row.goals_scored,
+              assists: row.assists,
+              cleanSheets: row.clean_sheets,
+              goalsConceded: row.goals_conceded,
+              ownGoals: row.own_goals,
+              penaltiesSaved: row.penalties_saved,
+              penaltiesMissed: row.penalties_missed,
+              yellowCards: row.yellow_cards,
+              redCards: row.red_cards,
+              saves: row.saves,
+              bonus: row.bonus,
+              totalPoints: row.total_points,
+            };
+            totalPoints += row.total_points;
+            totalMinutes += row.minutes;
+            if (row.minutes > 0) gamesPlayed += 1;
+            if (row.value > 0) lastKnownValue = row.value;
+          });
+          return {
+            id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort,
+            position: p.position, elementType: p.elementType, price: lastKnownValue / 10,
+            gameweekPoints, gameweekMinutes, gameweekStats, totalPoints, totalMinutes, gamesPlayed,
+          };
+        });
+        console.log(`DEBUG: Player Total Points History (${resolvedSeasonPoints}) - returned ${players.length} players for GW${effStartGwPts}-${effEndGwPts}`);
+        return res.json({ season: resolvedSeasonPoints, lastFinishedGW, startGW: effStartGwPts, endGW: effEndGwPts, players });
+      }
+
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
@@ -8805,7 +9110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const players = Array.from(playerPointsMap.values());
       console.log(`DEBUG: Player Total Points History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
-      res.json({ lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
+      res.json({ season: resolvedSeasonPoints, lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
       console.error("Error fetching player total points history:", error);
       res.status(500).json({ error: "Failed to fetch player total points history" });
