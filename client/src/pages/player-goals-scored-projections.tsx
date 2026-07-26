@@ -18,6 +18,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -39,6 +40,7 @@ interface PlayerGoalProjection {
 }
 
 interface PlayerGoalsHistory {
+  season?: string;
   lastFinishedGW: number;
   players: {
     playerId: number;
@@ -111,14 +113,26 @@ export default function PlayerGoalsScoredProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Season for "past"/"pastXg" views. Null until the backend's own default resolves, then
+  // synced to whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // Fetch past player goals history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerGoalsHistory>({
-    queryKey: ["/api/player-goals-history"],
+    queryKey: ["/api/player-goals-history", historySeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (historySeason) params.set('season', historySeason);
+      const response = await fetch(`/api/player-goals-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch player goals history");
+      return response.json();
+    },
     enabled: viewMode === "past",
   });
 
   // Fetch past player xG history
   const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<{
+    season?: string;
     lastFinishedGW: number;
     players: Array<{
       id: number;
@@ -130,17 +144,25 @@ export default function PlayerGoalsScoredProjections() {
       totalXg: number;
     }>;
   }>({
-    queryKey: ["/api/player-xg-history", startGameweek, endGameweek],
+    queryKey: ["/api/player-xg-history", startGameweek, endGameweek, historySeason],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startGameweek) params.set('startGw', startGameweek.toString());
       if (endGameweek) params.set('endGw', endGameweek.toString());
+      if (historySeason) params.set('season', historySeason);
       const response = await fetch(`/api/player-xg-history?${params}`);
       if (!response.ok) throw new Error("Failed to fetch xG history");
       return response.json();
     },
     enabled: viewMode === "pastXg" && startGameweek !== null && endGameweek !== null,
   });
+
+  // Sync the dropdown to whatever season the backend actually defaulted to, once known.
+  useEffect(() => {
+    if (historySeason === null && (historyData?.season || xgHistoryData?.season)) {
+      setHistorySeason(historyData?.season || xgHistoryData?.season || null);
+    }
+  }, [historySeason, historyData?.season, xgHistoryData?.season]);
 
   // Fetch fixtures for opponent information
   const { data: fixturesData } = useQuery({
@@ -664,6 +686,12 @@ export default function PlayerGoalsScoredProjections() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {(viewMode === "past" || viewMode === "pastXg") && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 

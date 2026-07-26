@@ -16,6 +16,7 @@ import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react"
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
@@ -54,6 +55,7 @@ interface PlayerDefensiveData {
 }
 
 interface PlayerDefensiveHistory {
+  season?: string;
   lastFinishedGW: number;
   players: {
     playerId: number;
@@ -76,13 +78,30 @@ export default function PlayerDefensiveContributions() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Season for the "past" view. Null until the backend's own default resolves, then synced to
+  // whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // Fetch past defensive history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerDefensiveHistory>({
-    queryKey: ["/api/player-defensive-history"],
+    queryKey: ["/api/player-defensive-history", historySeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (historySeason) params.set('season', historySeason);
+      const response = await fetch(`/api/player-defensive-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch player defensive history");
+      return response.json();
+    },
     enabled: viewMode === "past",
     staleTime: 0,
     gcTime: 0,
   });
+
+  useEffect(() => {
+    if (historySeason === null && historyData?.season) {
+      setHistorySeason(historyData.season);
+    }
+  }, [historySeason, historyData?.season]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -619,6 +638,12 @@ export default function PlayerDefensiveContributions() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {viewMode === "past" && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 

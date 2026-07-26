@@ -97,6 +97,7 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
 
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 // Fixture detail type for DGW breakdowns
 interface FixtureDetail {
@@ -1297,8 +1298,13 @@ export default function PlayerTotalPoints() {
     enabled: viewMode === "future",
   });
 
+  // Season for the "past" view. Null until the backend's own default resolves, then synced to
+  // whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // History query for past gameweeks
   const { data: historyData, isLoading: historyLoading } = useQuery<{
+    season?: string;
     lastFinishedGW: number;
     players: Array<{
       id: number;
@@ -1330,11 +1336,12 @@ export default function PlayerTotalPoints() {
       gamesPlayed: number;
     }>;
   }>({
-    queryKey: ["/api/player-total-points-history", startGameweek, endGameweek],
+    queryKey: ["/api/player-total-points-history", startGameweek, endGameweek, historySeason],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startGameweek) params.set('startGw', startGameweek.toString());
       if (endGameweek) params.set('endGw', endGameweek.toString());
+      if (historySeason) params.set('season', historySeason);
       const response = await fetch(`/api/player-total-points-history?${params}`);
       if (!response.ok) throw new Error("Failed to fetch history");
       return response.json();
@@ -1342,6 +1349,12 @@ export default function PlayerTotalPoints() {
     staleTime: 60 * 60 * 1000,
     enabled: viewMode === "past" && startGameweek !== null && endGameweek !== null,
   });
+
+  useEffect(() => {
+    if (historySeason === null && historyData?.season) {
+      setHistorySeason(historyData.season);
+    }
+  }, [historySeason, historyData?.season]);
 
   // Apply GW range filter to full-range data client-side — consistent per-GW values regardless of filter
   const totalPointsData = useMemo(() => {
@@ -1982,6 +1995,12 @@ export default function PlayerTotalPoints() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {viewMode === "past" && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 

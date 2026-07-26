@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -45,6 +46,7 @@ interface SavesProjection {
 }
 
 interface PlayerSavesHistory {
+  season?: string;
   lastFinishedGW: number;
   players: {
     playerId: number;
@@ -91,11 +93,28 @@ export default function PlayerSaves() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Season for the "past" view. Null until the backend's own default resolves, then synced to
+  // whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // Fetch past player saves history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerSavesHistory>({
-    queryKey: ["/api/player-saves-history"],
+    queryKey: ["/api/player-saves-history", historySeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (historySeason) params.set('season', historySeason);
+      const response = await fetch(`/api/player-saves-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch player saves history");
+      return response.json();
+    },
     enabled: viewMode === "past",
   });
+
+  useEffect(() => {
+    if (historySeason === null && historyData?.season) {
+      setHistorySeason(historyData.season);
+    }
+  }, [historySeason, historyData?.season]);
 
   // TBC team info map: teamShort → { opponent, isHome, fixtureId } built from fixtures with event=null
   const tbcTeamInfoMap = useMemo(() => {
@@ -546,6 +565,12 @@ export default function PlayerSaves() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {viewMode === "past" && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 

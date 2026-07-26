@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { SeasonSelector } from "@/components/season-selector";
 
 interface FixtureDetail {
   opponent: string;
@@ -40,6 +41,7 @@ interface PlayerAssistProjection {
 }
 
 interface PlayerAssistsHistory {
+  season?: string;
   lastFinishedGW: number;
   players: {
     playerId: number;
@@ -53,6 +55,7 @@ interface PlayerAssistsHistory {
 }
 
 interface PlayerXaHistory {
+  season?: string;
   lastFinishedGW: number;
   startGW: number;
   endGW: number;
@@ -91,9 +94,20 @@ export default function PlayerAssistProjections() {
   // View mode: "future" for projections, "past" for historical data, "pastXa" for xA history
   const [viewMode, setViewMode] = useViewModeParam<"future" | "past" | "pastXa">("view", "future", ["future", "past", "pastXa"]);
 
+  // Season for "past"/"pastXa" views. Null until the backend's own default resolves, then
+  // synced to whatever it picked so the dropdown reflects the real default on first load.
+  const [historySeason, setHistorySeason] = useState<string | null>(null);
+
   // Fetch past player assists history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerAssistsHistory>({
-    queryKey: ["/api/player-assists-history"],
+    queryKey: ["/api/player-assists-history", historySeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (historySeason) params.set('season', historySeason);
+      const response = await fetch(`/api/player-assists-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch player assists history");
+      return response.json();
+    },
     enabled: viewMode === "past",
   });
 
@@ -117,17 +131,25 @@ export default function PlayerAssistProjections() {
 
   // Fetch past player xA (expected assists) history (after startGameweek/endGameweek are defined)
   const { data: xaHistoryData, isLoading: xaHistoryLoading } = useQuery<PlayerXaHistory>({
-    queryKey: ["/api/player-xa-history", startGameweek, endGameweek],
+    queryKey: ["/api/player-xa-history", startGameweek, endGameweek, historySeason],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startGameweek) params.set('startGw', startGameweek.toString());
       if (endGameweek) params.set('endGw', endGameweek.toString());
+      if (historySeason) params.set('season', historySeason);
       const response = await fetch(`/api/player-xa-history?${params}`);
       if (!response.ok) throw new Error("Failed to fetch xA history");
       return response.json();
     },
     enabled: viewMode === "pastXa" && startGameweek > 0 && endGameweek > 0,
   });
+
+  // Sync the dropdown to whatever season the backend actually defaulted to, once known.
+  useEffect(() => {
+    if (historySeason === null && (historyData?.season || xaHistoryData?.season)) {
+      setHistorySeason(historyData?.season || xaHistoryData?.season || null);
+    }
+  }, [historySeason, historyData?.season, xaHistoryData?.season]);
 
   // Toggle gameweek exclusion
   const toggleGameweekSelection = (gw: number) => {
@@ -626,6 +648,12 @@ export default function PlayerAssistProjections() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {(viewMode === "past" || viewMode === "pastXa") && (
+        <div className="mb-4">
+          <SeasonSelector value={historySeason} onChange={setHistorySeason} />
+        </div>
+      )}
     </>
   );
 
