@@ -48,6 +48,7 @@ import {
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { TOP_25_MANAGERS } from "@shared/top25-managers";
 
 type TeamPick = {
   element: number;
@@ -122,34 +123,6 @@ type Transfer = {
   event: number;
   time: string;
 };
-
-const TOP_25_MANAGERS = [
-  { rank: 1, name: "Tom Dollimore", managerId: 497000 },
-  { rank: 2, name: "Ben Crellin", managerId: 6586 },
-  { rank: 3, name: "Fábio Borges", managerId: 4783108 },
-  { rank: 4, name: "John Walsh", managerId: 1277598 },
-  { rank: 5, name: "Abhinav C", managerId: 175376 },
-  { rank: 6, name: "Harry Daniels", managerId: 1320 },
-  { rank: 7, name: "» elevenify.com", managerId: 9325733 },
-  { rank: 8, name: "Cameron Scott", managerId: 43164 },
-  { rank: 9, name: "Huss E", managerId: 10421 },
-  { rank: 10, name: "Khaled Zaki", managerId: 202269 },
-  { rank: 11, name: "Rob Mayes", managerId: 294590 },
-  { rank: 12, name: "Mark Hurst", managerId: 62110 },
-  { rank: 13, name: "Jesper Øiestad", managerId: 4455 },
-  { rank: 14, name: "Even Skärholen", managerId: 227102 },
-  { rank: 15, name: "Tom N", managerId: 386057 },
-  { rank: 16, name: "Anthony Moylette", managerId: 78351 },
-  { rank: 17, name: "Lukasz Woźniak", managerId: 859923 },
-  { rank: 18, name: "Michael Giovanni", managerId: 69716 },
-  { rank: 19, name: "Tommy Shinton", managerId: 155602 },
-  { rank: 20, name: "Sean Connors", managerId: 207939 },
-  { rank: 21, name: "Raphael Crettol", managerId: 1559332 },
-  { rank: 22, name: "Simon MacNair", managerId: 742000 },
-  { rank: 23, name: "Jovan Popović", managerId: 226819 },
-  { rank: 24, name: "William Johansson", managerId: 3676 },
-  { rank: 25, name: "Louis Reddington", managerId: 121680 },
-];
 
 function getPositionName(elementType: number) {
   switch (elementType) {

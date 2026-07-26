@@ -1818,3 +1818,24 @@ export const userTbcAssignments = pgTable("user_tbc_assignments", {
 
 export type UserTbcAssignment = typeof userTbcAssignments.$inferSelect;
 export type InsertUserTbcAssignment = typeof userTbcAssignments.$inferInsert;
+
+// Durable archive of a manager's final season standing, sourced from FPL's permanent
+// entry/{id}/history "past" record. FPL only exposes per-gameweek picks/history for the
+// currently active season — once a season rolls over, only this season-end summary
+// (total points, final rank) remains retrievable, so it's archived here rather than
+// re-fetched live.
+export const managerSeasonStandings = pgTable("manager_season_standings", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  managerId: integer("manager_id").notNull(),
+  managerName: varchar("manager_name", { length: 150 }),
+  totalPoints: integer("total_points"),
+  rank: integer("rank"),
+  rankPercentage: varchar("rank_percentage", { length: 10 }),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("manager_season_standings_season_manager_unique").on(table.season, table.managerId),
+]);
+
+export type ManagerSeasonStanding = typeof managerSeasonStandings.$inferSelect;
+export type InsertManagerSeasonStanding = typeof managerSeasonStandings.$inferInsert;

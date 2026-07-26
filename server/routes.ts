@@ -28,6 +28,7 @@ import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayer
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { CURRENT_SEASON } from "@shared/schema";
+import { TOP_25_MANAGERS } from "@shared/top25-managers";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -5714,35 +5715,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  // Top 25 managers batch endpoint with caching (Updated: Jan 20, 2026 from fplresearch.com)
-  const TOP_25_MANAGERS = [
-    { rank: 1, name: "Cameron Scott", managerId: 43164 },
-    { rank: 2, name: "Tom Dollimore", managerId: 497000 },
-    { rank: 3, name: "- elevenify.com", managerId: 9325733 },
-    { rank: 4, name: "Ben Crellin", managerId: 6586 },
-    { rank: 5, name: "Fábio Borges", managerId: 4783108 },
-    { rank: 6, name: "John Walsh", managerId: 1277598 },
-    { rank: 7, name: "Michael Giovanni", managerId: 69716 },
-    { rank: 8, name: "Abinav C", managerId: 175376 },
-    { rank: 9, name: "Harry Daniels", managerId: 1320 },
-    { rank: 10, name: "Uzair Rizwan", managerId: 642254 },
-    { rank: 11, name: "Huss E", managerId: 10421 },
-    { rank: 12, name: "Simon MacNair", managerId: 742000 },
-    { rank: 13, name: "Sam Hackett", managerId: 143684 },
-    { rank: 14, name: "Mark Hurst", managerId: 62110 },
-    { rank: 15, name: "Dan Wright", managerId: 13498 },
-    { rank: 16, name: "Rob Mayes", managerId: 294590 },
-    { rank: 17, name: "Sam McKenzie", managerId: 256195 },
-    { rank: 18, name: "-Calm -", managerId: 18383 },
-    { rank: 19, name: "Calum Miller", managerId: 10285 },
-    { rank: 20, name: "Ahmed Mohamed", managerId: 481452 },
-    { rank: 21, name: "Tom N", managerId: 386057 },
-    { rank: 22, name: "Elaine Ridgewell", managerId: 182534 },
-    { rank: 23, name: "Jesper Øiestad", managerId: 4455 },
-    { rank: 24, name: "Jonas Fougner", managerId: 12555 },
-    { rank: 25, name: "Jovan Popović", managerId: 226819 },
-  ];
 
   // ========== CACHED MANAGER DATA ENDPOINTS (30-minute cache) ==========
   
