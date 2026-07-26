@@ -8892,7 +8892,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
       const teamGoalProjectionsCS = await TeamGoalsServiceCS.getTeamGoalProjections(startGWforCS, endGameweek);
 
-      // Build actual season CS rate map for 50:50 blend with Poisson formula
+      // Build actual season CS rate map for 50:50 blend with Poisson formula. Each team's rate is
+      // itself 50% this season (2026/27) + 50% last season (2025/26, from the archive/promoted-team
+      // data in TeamGoalsService) — same blend treatment as team goals, rather than falling back to
+      // a single flat league average for every team while this season has few/no games played.
       const standingsResponse = await internalFetch("api/current-standings");
       const standingsData = standingsResponse.ok ? await standingsResponse.json() : [];
       const standingsTeams: any[] = standingsData.standings || standingsData || [];
@@ -8900,9 +8903,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       standingsTeams.forEach((t: any) => { totalCS += t.cleanSheets || 0; totalPlayed += t.played || 0; });
       const leagueAvgCSRate = totalPlayed > 0 ? totalCS / totalPlayed : 0.257;
       const actualCSRateMap = new Map<number, number>();
-      standingsTeams.forEach((t: any) => {
-        actualCSRateMap.set(t.id, (t.played || 0) >= 5 ? (t.cleanSheets || 0) / t.played : leagueAvgCSRate);
-      });
+      await Promise.all(teams.map(async (t: any) => {
+        const standingsEntry = standingsTeams.find((s: any) => s.id === t.id);
+        const thisSeasonRate = standingsEntry && standingsEntry.played > 0
+          ? (standingsEntry.cleanSheets || 0) / standingsEntry.played
+          : undefined;
+        const lastSeasonRate = await TeamGoalsServiceCS.getLastSeasonCleanSheetRate(t.id);
+
+        let rate: number;
+        if (thisSeasonRate !== undefined && lastSeasonRate !== undefined) {
+          rate = thisSeasonRate * 0.5 + lastSeasonRate * 0.5;
+        } else if (lastSeasonRate !== undefined) {
+          rate = lastSeasonRate;
+        } else if (thisSeasonRate !== undefined) {
+          rate = thisSeasonRate;
+        } else {
+          rate = leagueAvgCSRate;
+        }
+        actualCSRateMap.set(t.id, rate);
+      }));
 
       // Build goals-against maps by mirroring: home concedes what away scores and vice versa
       const teamGoalsAgainstMap = new Map();

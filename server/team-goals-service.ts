@@ -8,16 +8,18 @@ import { pool } from "./db";
 // Season archived in season_fixtures_archive that GF/GC blending uses as "last season".
 const LAST_SEASON = "2025/26";
 
-// 2025/26 EFL Championship season totals for the three clubs promoted into the Premier
-// League for 2026/27 (Coventry City, Ipswich Town, Hull City). FPL's current-standings API
-// only covers Premier League teams, so these clubs have no top-flight "last season" data to
-// read from season_fixtures_archive — these Championship totals stand in for that side of
-// the GF/GC blend (see getLastSeasonTeamGoals) until real 2026/27 PL games accumulate.
-// Provided directly (not sourced from an API) — Championship season is 46 games.
+// Last-season equivalent totals for the three clubs promoted into the Premier League for
+// 2026/27 (Coventry City, Ipswich Town, Hull City). FPL's current-standings API only covers
+// Premier League teams, so these clubs have no top-flight "last season" data to read from
+// season_fixtures_archive — these totals stand in for that side of the GF/GC blend (see
+// getLastSeasonTeamGoals) until real 2026/27 PL games accumulate. Provided directly, on the
+// assumption they'd played a full 38-game Premier League season — matches the game count
+// every other (non-promoted) team's last-season data is based on, not their actual
+// (46-game) Championship season.
 const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsAgainst: number; played: number }> = {
-  "Coventry City": { goalsFor: 36, goalsAgainst: 64, played: 46 },
-  "Ipswich Town": { goalsFor: 29, goalsAgainst: 67, played: 46 },
-  "Hull City": { goalsFor: 25, goalsAgainst: 85, played: 46 },
+  "Coventry City": { goalsFor: 36, goalsAgainst: 64, played: 38 },
+  "Ipswich Town": { goalsFor: 29, goalsAgainst: 67, played: 38 },
+  "Hull City": { goalsFor: 25, goalsAgainst: 85, played: 38 },
 };
 
 // Cache for archived last-season team goals, keyed by team name (team IDs are reassigned
@@ -25,6 +27,19 @@ const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsA
 // Never expires within a process lifetime — the archive is immutable once written.
 let lastSeasonGoalsCache: Map<string, { goalsFor: number; goalsAgainst: number; played: number }> | null = null;
 let lastSeasonGoalsInFlight: Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> | null = null;
+
+// 2025/26 clean sheet counts for the three promoted clubs, provided directly on the same
+// assumed-38-game-Premier-League-season basis as PROMOTED_TEAM_LAST_SEASON_GOALS above.
+const PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS: Record<string, { cleanSheets: number; played: number }> = {
+  "Coventry City": { cleanSheets: 6, played: 38 },
+  "Ipswich Town": { cleanSheets: 5, played: 38 },
+  "Hull City": { cleanSheets: 4, played: 38 },
+};
+
+// Cache for archived last-season clean sheet rates, same name-keyed/immutable-archive
+// reasoning as lastSeasonGoalsCache above.
+let lastSeasonCleanSheetsCache: Map<string, { cleanSheets: number; played: number }> | null = null;
+let lastSeasonCleanSheetsInFlight: Promise<Map<string, { cleanSheets: number; played: number }>> | null = null;
 
 interface FixtureDetail {
   opponent: string;
@@ -475,6 +490,72 @@ export class TeamGoalsService {
     } finally {
       lastSeasonGoalsInFlight = null;
     }
+  }
+
+  /**
+   * Fetch each team's last-season (2025/26) clean sheet rate from the durable archive,
+   * keyed by team name — same reasoning and same archive table as fetchLastSeasonTeamGoals,
+   * just counting 0-conceded fixtures instead of goal totals.
+   */
+  private static async fetchLastSeasonCleanSheetRates(): Promise<Map<string, { cleanSheets: number; played: number }>> {
+    if (lastSeasonCleanSheetsCache) {
+      return lastSeasonCleanSheetsCache;
+    }
+    if (lastSeasonCleanSheetsInFlight) {
+      return lastSeasonCleanSheetsInFlight;
+    }
+    lastSeasonCleanSheetsInFlight = (async () => {
+      const map = new Map<string, { cleanSheets: number; played: number }>();
+      for (const [name, stats] of Object.entries(PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS)) {
+        map.set(name, { ...stats });
+      }
+      try {
+        const result = await pool.query(
+          `SELECT team_h_name, team_a_name, team_h_score, team_a_score
+           FROM season_fixtures_archive
+           WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
+          [LAST_SEASON]
+        );
+        const agg = new Map<string, { cs: number; played: number }>();
+        for (const row of result.rows) {
+          const h = agg.get(row.team_h_name) || { cs: 0, played: 0 };
+          h.played += 1; if (row.team_a_score === 0) h.cs += 1;
+          agg.set(row.team_h_name, h);
+
+          const a = agg.get(row.team_a_name) || { cs: 0, played: 0 };
+          a.played += 1; if (row.team_h_score === 0) a.cs += 1;
+          agg.set(row.team_a_name, a);
+        }
+        agg.forEach((stats, name) => {
+          map.set(name, { cleanSheets: stats.cs, played: stats.played });
+        });
+      } catch (error) {
+        // Not fatal — promoted-team entries above are still available, and getLastSeasonCleanSheetRate
+        // returns undefined when a team has no last-season entry at all, letting the caller fall back.
+        console.error('Failed to fetch archived last-season clean sheet rates:', error);
+      }
+      lastSeasonCleanSheetsCache = map;
+      return map;
+    })();
+    try {
+      return await lastSeasonCleanSheetsInFlight;
+    } finally {
+      lastSeasonCleanSheetsInFlight = null;
+    }
+  }
+
+  /**
+   * Get a team's last-season (2025/26) clean sheet rate (0-1), or undefined if no last-season
+   * data exists for them at all. Public — consumed directly by the /api/team-cs-projections
+   * route to blend with this season's rate the same way team goals are blended.
+   */
+  static async getLastSeasonCleanSheetRate(teamId: number): Promise<number | undefined> {
+    const { TEAMS_BY_ID } = await import("@shared/schema");
+    const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
+    if (!teamName) return undefined;
+    const map = await TeamGoalsService.fetchLastSeasonCleanSheetRates();
+    const entry = map.get(teamName);
+    return entry && entry.played > 0 ? entry.cleanSheets / entry.played : undefined;
   }
 
   /**
