@@ -1565,7 +1565,7 @@ export default function MyDashboard() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                         <div className="min-w-0">
                           <p className="text-[10px] sm:text-sm font-medium text-blue-600 leading-tight sm:mb-2">Total Pts</p>
-                          <p className="text-sm sm:text-2xl font-bold text-blue-900 truncate">{managerData.summary_overall_points.toLocaleString()}</p>
+                          <p className="text-sm sm:text-2xl font-bold text-blue-900 truncate">{formatRank(managerData.summary_overall_points)}</p>
                         </div>
                         <div className="hidden sm:flex p-2.5 bg-blue-100 rounded-full flex-shrink-0">
                           <Target className="h-5 w-5 text-blue-600" />

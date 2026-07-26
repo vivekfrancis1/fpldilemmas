@@ -216,7 +216,7 @@ export default function LiveRank() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-emerald-50 rounded-lg">
                     <p className="text-xl sm:text-2xl font-bold text-emerald-600" data-testid="text-total-points">
-                      {manager.summary_overall_points.toLocaleString()}
+                      {manager.summary_overall_points != null ? manager.summary_overall_points.toLocaleString() : 'N/A'}
                     </p>
                     <p className="text-xs sm:text-sm text-gray-600">Total Points</p>
                   </div>
