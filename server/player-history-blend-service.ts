@@ -22,6 +22,8 @@ export interface LastSeasonPlayerRow {
   saves: number;
   bonus: number;
   defensiveContribution: number;
+  yellowCards: number;
+  redCards: number;
 }
 
 function normalizeName(name: string): string {
@@ -46,6 +48,7 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
     try {
       const result = await pool.query(
         `SELECT sps.first_name, sps.second_name, sps.element_type, sps.minutes, sps.starts, sps.saves, sps.bonus,
+                sps.yellow_cards, sps.red_cards,
                 hps.defensive_contribution
          FROM season_player_snapshot sps
          JOIN historical_player_stats hps ON hps.season = sps.season AND hps.player_id = sps.player_id
@@ -61,6 +64,8 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
         saves: r.saves || 0,
         bonus: r.bonus || 0,
         defensiveContribution: r.defensive_contribution || 0,
+        yellowCards: r.yellow_cards || 0,
+        redCards: r.red_cards || 0,
       }));
       lastSeasonPlayersCache = rows;
       return rows;
@@ -119,6 +124,14 @@ export function lastSeasonBonusPerStart(row: LastSeasonPlayerRow): number | unde
   return row.starts >= MIN_STARTS_FOR_RATE ? row.bonus / row.starts : undefined;
 }
 
+export function lastSeasonYellowCardsPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.yellowCards, row.minutes);
+}
+
+export function lastSeasonRedCardsPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.redCards, row.minutes);
+}
+
 let leagueAveragesCache: {
   gkSavesPer90: number;
   defDCPer90: number;
@@ -127,6 +140,8 @@ let leagueAveragesCache: {
   defBonusPerStart: number;
   midBonusPerStart: number;
   fwdBonusPerStart: number;
+  yellowCardsPer90ByPosition: Record<string, number>;
+  redCardsPer90ByPosition: Record<string, number>;
 } | null = null;
 
 /**
@@ -165,6 +180,18 @@ export async function getLeagueAverageRates() {
     defBonusPerStart: avgPerStart(defs),
     midBonusPerStart: avgPerStart(mids),
     fwdBonusPerStart: avgPerStart(fwds),
+    yellowCardsPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.yellowCards),
+      DEF: avgPer90(defs, r => r.yellowCards),
+      MID: avgPer90(mids, r => r.yellowCards),
+      FWD: avgPer90(fwds, r => r.yellowCards),
+    },
+    redCardsPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.redCards),
+      DEF: avgPer90(defs, r => r.redCards),
+      MID: avgPer90(mids, r => r.redCards),
+      FWD: avgPer90(fwds, r => r.redCards),
+    },
   };
   return leagueAveragesCache;
 }

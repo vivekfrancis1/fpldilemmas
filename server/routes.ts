@@ -17501,20 +17501,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
-        
+        console.log("DEBUG: Player Yellow Cards Projections API called - blended formula: 50/50 this-season/last-season YC-per-90 (falls back to position league-average for new-to-league players)");
+
         // Get FPL bootstrap data from cached endpoint for better performance
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
         const currentGameweek = computeCurrentGameweek(fplData.events);
-        
+        const finishedGWCountYC = fplData.events.filter((e: any) => e.finished).length;
+
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
         const requestedEndYC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndYC && requestedEndYC > gameweekRange.end) ? requestedEndYC : gameweekRange.end;
-        
+
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
@@ -17522,13 +17523,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling
         const fdrMultiplierYC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        // Position-level YC baselines (per game)
-        const positionYCBaseline: Record<string, number> = {
-          GKP: 0.020, DEF: 0.070, MID: 0.090, FWD: 0.050
-        };
-        
+        const { getLastSeasonPlayerRow, lastSeasonYellowCardsPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+        const leagueAveragesYC = await getLeagueAverageRates();
+
         // Extract yellow card data for all players using historical data
-        const yellowCardProjections = fplData.elements.map((player: any) => {
+        const yellowCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const yellowCards: { [key: string]: number } = {};
@@ -17536,16 +17535,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; yellowCards: number }> } = {};
           let totalYellowCards = 0;
           let totalPoints = 0;
-          
-          // Calculate expected yellow cards PER GAME using season data
-          const seasonYellowCards = player.yellow_cards || 0;
-          const teamGamesPlayed = currentGameweek; // Average number of games team has played
-          const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
 
-          // Blend player rate with position baseline (60/40) for robustness
-          const posBaseline_YC = positionYCBaseline[position] ?? 0.060;
-          const blendedYCRate = 0.60 * expectedYellowCardsPerGame + 0.40 * posBaseline_YC;
-          
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played
+          // (player.yellow_cards/minutes otherwise still reflect 2025/26's frozen pre-kickoff
+          // carryover) and once minutes clear the small-sample noise floor.
+          const seasonYellowCards = player.yellow_cards || 0;
+          const thisSeasonYCPer90 = finishedGWCountYC > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+            ? (seasonYellowCards / player.minutes) * 90
+            : undefined;
+
+          // Blend with the player's 2025/26 yellow-cards-per-90 (matched by name+position
+          // across the season's id reassignment), falling back to the league-average rate for
+          // the player's position for anyone new to the league.
+          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+          const lastSeasonYCRate = lastSeasonRow ? lastSeasonYellowCardsPer90(lastSeasonRow) : undefined;
+          const positionLeagueAverageYC = leagueAveragesYC.yellowCardsPer90ByPosition[position] ?? leagueAveragesYC.yellowCardsPer90ByPosition.MID;
+          const blendedYCRate = blendRate(thisSeasonYCPer90, lastSeasonYCRate, positionLeagueAverageYC);
+
           const ycEvents: BootstrapEvent[] = fplData.events || [];
           
           // Process each gameweek in the next 12 gameweeks range
@@ -17600,10 +17606,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails,
             totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(expectedYellowCardsPerGame.toFixed(3))
+            averagePerGameweek: parseFloat(blendedYCRate.toFixed(3))
           };
-        });
-        
+        }));
+
         console.log(`✅ LIVE SUCCESS: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
         return yellowCardProjections;
 
@@ -17648,20 +17654,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
-        
+        console.log("DEBUG: Player Red Cards Projections API called - blended formula: 50/50 this-season/last-season RC-per-90 (falls back to position league-average for new-to-league players)");
+
         // Get FPL bootstrap data from cached endpoint for better performance
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
         const currentGameweek = computeCurrentGameweek(fplData.events);
-        
+        const finishedGWCountRC = fplData.events.filter((e: any) => e.finished).length;
+
         // Use dynamic gameweek calculation for next 6 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, 6);
         const startGameweek = gameweekRange.start;
         const requestedEndRC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndRC && requestedEndRC > gameweekRange.end) ? requestedEndRC : gameweekRange.end;
-        
+
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
@@ -17669,13 +17676,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling (red cards)
         const fdrMultiplierRC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        // Position-level RC baselines (per game) — most players have 0 this season so we anchor to position
-        const positionRCBaseline: Record<string, number> = {
-          GKP: 0.005, DEF: 0.012, MID: 0.008, FWD: 0.007
-        };
-        
+        const { getLastSeasonPlayerRow, lastSeasonRedCardsPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+        const leagueAveragesRC = await getLeagueAverageRates();
+
         // Extract red card data for all players using historical data
-        const redCardProjections = fplData.elements.map((player: any) => {
+        const redCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const redCards: { [key: string]: number } = {};
@@ -17683,16 +17688,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; redCards: number }> } = {};
           let totalRedCards = 0;
           let totalPoints = 0;
-          
-          // Calculate expected red cards PER GAME using season data
-          const seasonRedCards = player.red_cards || 0;
-          const teamGamesPlayed = currentGameweek; // Average number of games team has played
-          const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
 
-          // Blend 50/50 with position baseline — personal RC rate is too noisy on its own
-          const posBaseline_RC = positionRCBaseline[position] ?? 0.008;
-          const blendedRCRate = 0.50 * expectedRedCardsPerGame + 0.50 * posBaseline_RC;
-          
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played
+          // and once minutes clear the small-sample noise floor.
+          const seasonRedCards = player.red_cards || 0;
+          const thisSeasonRCPer90 = finishedGWCountRC > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+            ? (seasonRedCards / player.minutes) * 90
+            : undefined;
+
+          // Blend with the player's 2025/26 red-cards-per-90 (matched by name+position across
+          // the season's id reassignment), falling back to the league-average rate for the
+          // player's position for anyone new to the league.
+          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+          const lastSeasonRCRate = lastSeasonRow ? lastSeasonRedCardsPer90(lastSeasonRow) : undefined;
+          const positionLeagueAverageRC = leagueAveragesRC.redCardsPer90ByPosition[position] ?? leagueAveragesRC.redCardsPer90ByPosition.MID;
+          const blendedRCRate = blendRate(thisSeasonRCPer90, lastSeasonRCRate, positionLeagueAverageRC);
+
           const rcEvents: BootstrapEvent[] = fplData.events || [];
           
           // Process each gameweek in the next 6 gameweeks range
@@ -17747,9 +17758,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails,
             totalRedCards: parseFloat(totalRedCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(expectedRedCardsPerGame.toFixed(3))
+            averagePerGameweek: parseFloat(blendedRCRate.toFixed(3))
           };
-        });
+        }));
         
         console.log(`✅ LIVE SUCCESS: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
         return redCardProjections;
