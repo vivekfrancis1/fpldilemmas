@@ -41,6 +41,11 @@ const PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS: Record<string, { cleanSheets: numb
 let lastSeasonCleanSheetsCache: Map<string, { cleanSheets: number; played: number }> | null = null;
 let lastSeasonCleanSheetsInFlight: Promise<Map<string, { cleanSheets: number; played: number }>> | null = null;
 
+// Cache for archived last-season team DCC (defensive contributions conceded) per game,
+// keyed by team name — reconstructed from gameweek_player_data, see fetchLastSeasonTeamDCC.
+let lastSeasonDCCCache: Map<string, number> | null = null;
+let lastSeasonDCCInFlight: Promise<Map<string, number>> | null = null;
+
 // 2025/26 Championship goals/assists for the promoted clubs' current-squad players, keyed by
 // team name -> FPL web_name (matched against the live 2026/27 squad, since these are real
 // current players, not a season-boundary ID-reassignment case). Used to override goal/assist
@@ -621,7 +626,7 @@ export class TeamGoalsService {
    * (shouldn't happen — every team has either an archive entry or a promoted-team entry)
    * still throws, same as before, so the caller's existing per-fixture error isolation applies.
    */
-  private static async getTeamAverageGoals(teamId: number): Promise<number> {
+  static async getTeamAverageGoals(teamId: number): Promise<number> {
     try {
       const { TEAMS_BY_ID } = await import("@shared/schema");
       const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
@@ -655,7 +660,7 @@ export class TeamGoalsService {
    * Get team's average goals conceded per game: same 50/50 this-season/last-season blend
    * as getTeamAverageGoals, using goalsAgainst instead of goalsFor.
    */
-  private static async getTeamAverageGoalsConceded(teamId: number): Promise<number> {
+  static async getTeamAverageGoalsConceded(teamId: number): Promise<number> {
     try {
       const { TEAMS_BY_ID } = await import("@shared/schema");
       const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
@@ -684,7 +689,100 @@ export class TeamGoalsService {
       throw error;
     }
   }
-  
+
+  /**
+   * Reconstruct each 2025/26 team's defensive-contributions-conceded per game — how many DC
+   * points opposing outfield players earned against them, on average, per fixture. There's no
+   * ready-made archive for this (unlike goals, which season_fixtures_archive stores directly),
+   * so it's rebuilt from gameweek_player_data: every non-GK row's own defensive_contribution is
+   * attributed as "conceded" to that row's opponent_team for the gameweek. Games-played per team
+   * is reused from fetchLastSeasonTeamGoals (same season_fixtures_archive count), joined via
+   * team name since gameweek_player_data's team ids are the 2025/26-season namespace.
+   */
+  private static async fetchLastSeasonTeamDCC(): Promise<Map<string, number>> {
+    if (lastSeasonDCCCache) {
+      return lastSeasonDCCCache;
+    }
+    if (lastSeasonDCCInFlight) {
+      return lastSeasonDCCInFlight;
+    }
+    lastSeasonDCCInFlight = (async () => {
+      const map = new Map<string, number>();
+      try {
+        // 2025/26 team id -> name, and which player ids are goalkeepers (excluded from DC)
+        const teamRows = await pool.query(
+          `SELECT DISTINCT team_id, team_name FROM historical_player_stats WHERE season = $1`,
+          [LAST_SEASON]
+        );
+        const teamIdToName = new Map<number, string>();
+        teamRows.rows.forEach((r: any) => teamIdToName.set(r.team_id, r.team_name));
+
+        const gkRows = await pool.query(
+          `SELECT player_id FROM historical_player_stats WHERE season = $1 AND element_type = 1`,
+          [LAST_SEASON]
+        );
+        const goalkeeperIds = new Set<number>(gkRows.rows.map((r: any) => r.player_id));
+
+        const dcRows = await pool.query(
+          `SELECT player_id, opponent_team, defensive_contribution
+           FROM gameweek_player_data
+           WHERE season = $1 AND opponent_team IS NOT NULL AND defensive_contribution > 0`,
+          [LAST_SEASON]
+        );
+        const dcConcededByTeamId = new Map<number, number>();
+        for (const row of dcRows.rows) {
+          if (goalkeeperIds.has(row.player_id)) continue;
+          const current = dcConcededByTeamId.get(row.opponent_team) || 0;
+          dcConcededByTeamId.set(row.opponent_team, current + row.defensive_contribution);
+        }
+
+        const gamesPlayedByName = await TeamGoalsService.fetchLastSeasonTeamGoals();
+        dcConcededByTeamId.forEach((totalDC, teamId) => {
+          const teamName = teamIdToName.get(teamId);
+          if (!teamName) return;
+          const played = gamesPlayedByName.get(teamName)?.played;
+          if (played && played > 0) {
+            map.set(teamName, totalDC / played);
+          }
+        });
+      } catch (error) {
+        // Not fatal — getLastSeasonTeamDCCRate falls back to this-season-only or league average.
+        console.error('Failed to reconstruct archived last-season team DCC:', error);
+      }
+      lastSeasonDCCCache = map;
+      return map;
+    })();
+    try {
+      return await lastSeasonDCCInFlight;
+    } finally {
+      lastSeasonDCCInFlight = null;
+    }
+  }
+
+  /**
+   * A team's last-season (2025/26) defensive-contributions-conceded per game, or undefined if
+   * they have no PL data for that season (promoted teams) — same "undefined means fall back"
+   * contract as getLastSeasonCleanSheetRate.
+   */
+  static async getLastSeasonTeamDCCRate(teamId: number): Promise<number | undefined> {
+    const { TEAMS_BY_ID } = await import("@shared/schema");
+    const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
+    if (!teamName) return undefined;
+    const map = await TeamGoalsService.fetchLastSeasonTeamDCC();
+    return map.get(teamName);
+  }
+
+  /**
+   * League-average 2025/26 DCC per game across every team that has archived data — the fallback
+   * for promoted teams (Coventry/Ipswich/Hull), who have no Premier League DC data to blend.
+   */
+  static async getLeagueAverageDCCRate(): Promise<number> {
+    const map = await TeamGoalsService.fetchLastSeasonTeamDCC();
+    if (map.size === 0) return 0;
+    const total = Array.from(map.values()).reduce((sum, v) => sum + v, 0);
+    return total / map.size;
+  }
+
   /**
    * Get team's average expected goals per game from current standings data
    */

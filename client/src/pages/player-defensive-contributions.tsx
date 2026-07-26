@@ -122,7 +122,7 @@ export default function PlayerDefensiveContributions() {
     return computeCurrentGameweek(bootstrapData.events as any);
   }, [bootstrapData]);
 
-  const nextGameweek = currentGameweek ? Math.min(currentGameweek + 1, 38) : null;
+  const nextGameweek = currentGameweek !== null ? Math.min(currentGameweek + 1, 38) : null;
 
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());

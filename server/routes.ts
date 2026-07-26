@@ -16845,8 +16845,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savesComputePromise: Promise<any[]> = (async () => {
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
-        
+        console.log("DEBUG: Player Saves Projections API called - blended formula: 50/50 this-season/last-season saves-per-90 (falls back to league-average for new-to-league keepers) × blended opponent average-goals-for");
+
         // Get FPL bootstrap data and fixtures from cached endpoints for better performance
         const [fplResponse, fixturesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
@@ -16856,136 +16856,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesData = await fixturesResponse.json();
         const currentGameweek = computeCurrentGameweek(fplData.events);
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
-        
+        const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
+
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const hasTBCSaves = fixturesData.some((f: any) => f.event === null || f.event === undefined);
         const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
         const endGameweek = parseInt(req.query.endGameweek as string) || (hasTBCSaves ? 39 : gameweekRange.end);
-        
-        console.log(`DEBUG: Current gameweek: ${currentGameweek}, saves projections from GW${startGameweek} to GW${endGameweek}`);
-      
-      // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
-      const teamGoalsFor = new Map<number, number>();
-      const teamExpectedGoalsFor = new Map<number, number>();
-      
-      // Initialize all teams with 0 goals for and expected goals for
-      fplData.teams.forEach((team: any) => {
-        teamGoalsFor.set(team.id, 0);
-        teamExpectedGoalsFor.set(team.id, 0);
-      });
-      
-      // Count actual goals for each team from completed fixtures
-      fixturesData.forEach((fixture: any) => {
-        const isCompleted = fixture.finished || fixture.event < currentGameweek;
-        
-        if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
-          // Home team goals for = home team score
-          const homeGF = teamGoalsFor.get(fixture.team_h) || 0;
-          teamGoalsFor.set(fixture.team_h, homeGF + fixture.team_h_score);
-          
-          // Away team goals for = away team score  
-          const awayGF = teamGoalsFor.get(fixture.team_a) || 0;
-          teamGoalsFor.set(fixture.team_a, awayGF + fixture.team_a_score);
-        }
-      });
-      
-      // Get expected goals for from completed gameweeks (same logic as current-standings)
-      const completedGameweeks = new Set<number>();
-      fixturesData.forEach((fixture: any) => {
-        if ((fixture.finished || fixture.event < currentGameweek) && fixture.event) {
-          completedGameweeks.add(fixture.event);
-        }
-      });
-      
-      // Fetch live data for completed gameweeks to get XGF
-      // Batched 3 at a time to prevent OOM from firing all 27+ requests simultaneously
-      const completedGWArray = Array.from(completedGameweeks);
-      const liveDataResults: Array<{ gameweek: number; data: any } | null> = [];
-      const BATCH_SIZE = 3;
-      for (let i = 0; i < completedGWArray.length; i += BATCH_SIZE) {
-        const batch = completedGWArray.slice(i, i + BATCH_SIZE);
-        const batchResults = await Promise.all(batch.map(async (gameweek) => {
-          try {
-            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-            if (liveResponse.ok) {
-              const liveData = await liveResponse.json();
-              return { gameweek, data: liveData };
-            }
-          } catch (error) {
-            console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
-          }
-          return null;
-        }));
-        liveDataResults.push(...batchResults);
-      }
-      
-      // Process live data to calculate XGF for each team
-      const playerToTeamMap = new Map<number, number>();
-      fplData.elements.forEach((player: any) => {
-        playerToTeamMap.set(player.id, player.team);
-      });
-      
-      liveDataResults.forEach((result) => {
-        if (result && result.data && result.data.elements) {
-          Object.entries(result.data.elements).forEach(([playerId, playerData]: [string, any]) => {
-            const teamId = playerToTeamMap.get(parseInt(playerId));
-            if (!teamId) return;
-            
-            const stats = playerData.stats || {};
-            let playerXGF = 0;
-            if (stats.expected_goals) {
-              playerXGF = parseFloat(stats.expected_goals) || 0;
-            } else if (stats.xg) {
-              playerXGF = parseFloat(stats.xg) || 0;
-            }
-            
-            const currentXGF = teamExpectedGoalsFor.get(teamId) || 0;
-            teamExpectedGoalsFor.set(teamId, currentXGF + playerXGF);
-          });
-        }
-      });
 
-      const getOpponentAGR = (teamId: number): number => {
-        const goalsFor = teamGoalsFor.get(teamId) || 0;
-        const expectedGoalsFor = teamExpectedGoalsFor.get(teamId) || 0;
-        const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
-        return 0.5 * (goalsFor + expectedGoalsFor) / gamesPlayed; // AGR = 0.5 × (GF + XGF) per game
-      };
-      
-      // Get player minutes projections
-      const minutesResponse = await internalFetch("api/player-minutes-projections");
-      const minutesData = await minutesResponse.json();
-      
+        console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, saves projections from GW${startGameweek} to GW${endGameweek}`);
+
+      const { TeamGoalsService } = await import("./team-goals-service");
+      const { getLastSeasonPlayerRow, lastSeasonSavesPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+      const leagueAverages = await getLeagueAverageRates();
+
+      // Blended (50/50 this-season/last-season) average goals-for per team, computed once for
+      // all 20 teams rather than per-fixture — this replaces the old current-season-only AGR,
+      // which was 0 for every team pre-season since it only counted completed fixtures.
+      const teamAvgGoalsForMap = new Map<number, number>();
+      await Promise.all(fplData.teams.map(async (team: any) => {
+        try {
+          teamAvgGoalsForMap.set(team.id, await TeamGoalsService.getTeamAverageGoals(team.id));
+        } catch (error) {
+          console.error(`Failed to get blended average goals for team ${team.id}:`, error);
+          teamAvgGoalsForMap.set(team.id, 0);
+        }
+      }));
+
       // Count actual completed fixtures for each team instead of assuming all teams played same number of games
       const teamCompletedFixtures = new Map<number, number>();
-      
+
       // Initialize all teams with 0 games
       fplData.teams.forEach((team: any) => {
         teamCompletedFixtures.set(team.id, 0);
       });
-      
+
       // Count completed fixtures for each team
       fixturesData.forEach((fixture: any) => {
         // A fixture is completed if it has finished flag or if it's from a past gameweek
         const isCompleted = fixture.finished || fixture.event < currentGameweek;
-        
+
         if (isCompleted) {
           // Count this game for both home and away teams
           const homeTeamCount = teamCompletedFixtures.get(fixture.team_h) || 0;
           const awayTeamCount = teamCompletedFixtures.get(fixture.team_a) || 0;
-          
+
           teamCompletedFixtures.set(fixture.team_h, homeTeamCount + 1);
           teamCompletedFixtures.set(fixture.team_a, awayTeamCount + 1);
         }
       });
-      
+
       console.log(`DEBUG: Team completed fixtures calculated for saves. Example: Team 1 has played ${teamCompletedFixtures.get(1)} games`);
-      
+
       // Filter to only goalkeepers and implement new formula
       const goalkeepers = fplData.elements.filter((player: any) => player.element_type === 1);
-      
+
       const savesProjections = await Promise.all(
         goalkeepers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -16994,22 +16920,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; saves: number }> } = {};
           let totalSaves = 0;
           let totalPoints = 0;
-          
+
           // Get total season saves from current FPL data
           const currentSeasonSaves = player.saves || 0;
-          
+
           // Get actual completed games for this player's team
           const teamGamesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1); // Ensure at least 1 to avoid division by zero
-          
+
           // FULL SEASON: Calculate saves per team game for this player
           const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
 
-          // D1: Blend season avg with saves_per_90 from FPL API for recency sensitivity
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played
+          // (player.saves/minutes otherwise still reflect 2025/26's frozen pre-kickoff carryover)
+          // and once the player has enough minutes that a per-90 extrapolation isn't dominated
+          // by small-sample noise (e.g. 1 save in a single substitute cameo would otherwise
+          // extrapolate to 90 saves per 90).
           const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0');
-          const blendedSavesPerGame = savesPer90FromAPI > 0
-            ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI
-            : savesPerTeamGame;
-          
+          const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+            ? (savesPer90FromAPI > 0 ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI : savesPerTeamGame)
+            : undefined;
+
+          // Blend with the player's 2025/26 saves-per-90 (matched by name+position across the
+          // season's id reassignment), falling back to the league-average keeper rate for
+          // anyone new to the league (promoted-team keepers, summer signings from abroad).
+          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+          const lastSeasonSavesRate = lastSeasonRow ? lastSeasonSavesPer90(lastSeasonRow) : undefined;
+          const blendedSavesPerGame = blendRate(thisSeasonSavesPer90, lastSeasonSavesRate, leagueAverages.gkSavesPer90);
+
           const savesEvents: BootstrapEvent[] = fplData.events || [];
           
           // Process each FUTURE gameweek only with new formula
@@ -17033,10 +16970,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // Get opponent's AGR (Average Goals Received/Against per game)
-              const opponentAGR = getOpponentAGR(opponentId);
-              
-              // Apply formula: blended saves/game (60% season + 40% saves_per_90) × AGR of opponent/1.35 × availability
+              // Opponent's blended average goals-for per game (50/50 this-season/last-season)
+              const opponentAGR = teamAvgGoalsForMap.get(opponentId) || 0;
+
+              // Apply formula: blended saves/game × opponent's blended goals-for/1.35 × availability
               const fixtureSaves = blendedSavesPerGame * (opponentAGR / 1.35) * availabilityProb;
               gwExpectedSaves += fixtureSaves;
               
@@ -17138,11 +17075,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using formula: ((Current DC/game + Threshold)/2) × (Opponent DCC/80) × (Avg Minutes/90)");
-      
-      const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-      const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
+        console.log("DEBUG: Player Defensive Contributions API called - blended formula: 50/50 this-season/last-season DC-per-90 (falls back to position league-average for new-to-league players) × blended opponent DCC");
+
+      const { computeNextRange: computeNextRangeDC } = await import("../shared/gameweek-utils");
+
       // Get FPL bootstrap data, fixtures, and standings from cached internal endpoints for better performance
       const [fplResponse, fixturesResponse, standingsResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
@@ -17153,42 +17089,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = await fixturesResponse.json();
       const currentGameweek = computeCurrentGameweek(fplData.events);
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
-      
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+      const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
+
+      const dcDefaultRange = computeNextRangeDC(fplData.events, projectionWindowSettings.totalWeeks);
+      const startGameweek = parseInt(req.query.startGameweek as string) || dcDefaultRange.start;
+      const endGameweek = parseInt(req.query.endGameweek as string) || dcDefaultRange.end;
+
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, starting projections from GW${nextGameweek}`);
       const standingsData = await standingsResponse.json();
-      
-      // Create a map of team ID to DCC per game
-      const teamDCCPerGame = new Map<number, number>();
-      standingsData.forEach((team: any) => {
-        const dccPerGame = team.played > 0 
-          ? team.defensiveContributionsConceded / team.played 
-          : 0;
-        teamDCCPerGame.set(team.id, dccPerGame);
-      });
-      
-      console.log(`DEBUG: Loaded DCC per game for ${teamDCCPerGame.size} teams from current standings`);
-      
-      // Get player minutes projections
-      const minutesResponse = await internalFetch("api/player-minutes-projections");
-      const minutesData = await minutesResponse.json();
-      
-      // CRITICAL FIX: Use current season data from FPL bootstrap API with proper DC calculation
-      console.log("DEBUG: Using current season FPL data with proper DC calculation...");
-      
-      // Filter to players who have played (have minutes and defensive stats from current season)
-      // Exclude goalkeepers (element_type === 1) as DC points don't apply to them
-      const playersWithDefensiveData = fplData.elements.filter((player: any) => 
-        player.element_type !== 1 && // Exclude goalkeepers
-        player.minutes > 0 && (
-          player.clearances_blocks_interceptions > 0 || 
-          player.tackles > 0 || 
-          player.recoveries > 0 ||
-          player.defensive_contribution > 0  // Use existing DC if available
-        )
-      );
-      
-      console.log(`DEBUG: ${playersWithDefensiveData.length} players have current season defensive data`);
-      
+
+      const { TeamGoalsService } = await import("./team-goals-service");
+      const { getLastSeasonPlayerRow, lastSeasonDCPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+      const leagueAverages = await getLeagueAverageRates();
+      const leagueAverageDCC = await TeamGoalsService.getLeagueAverageDCCRate();
+
+      // Blended (50/50 this-season/last-season) DCC per game for every team, computed once —
+      // this-season DCC is only trusted once real fixtures are completed (team.played > 0),
+      // same reasoning as the saves endpoint's blended opponent goals-for.
+      const teamDCCPerGameMap = new Map<number, number>();
+      await Promise.all(fplData.teams.map(async (team: any) => {
+        const standingsTeam = standingsData.find((t: any) => t.id === team.id);
+        const thisSeasonDCC = standingsTeam && standingsTeam.played > 0
+          ? standingsTeam.defensiveContributionsConceded / standingsTeam.played
+          : undefined;
+        let lastSeasonDCC: number | undefined;
+        try {
+          lastSeasonDCC = await TeamGoalsService.getLastSeasonTeamDCCRate(team.id);
+        } catch (error) {
+          console.error(`Failed to get last-season DCC for team ${team.id}:`, error);
+        }
+        teamDCCPerGameMap.set(team.id, blendRate(thisSeasonDCC, lastSeasonDCC, leagueAverageDCC));
+      }));
+
+      console.log(`DEBUG: Loaded blended DCC per game for ${teamDCCPerGameMap.size} teams`);
+
+      // Every outfield player is included — no current-season minutes/DC filter — since new-to-
+      // the-league and promoted-team players (with genuine 0 current-season data) still get a
+      // projection via their 2025/26 rate or the position league-average fallback.
+      const playersWithDefensiveData = fplData.elements.filter((player: any) => player.element_type !== 1);
+
+      console.log(`DEBUG: Projecting defensive contributions for ${playersWithDefensiveData.length} outfield players`);
+
+      // Poisson probability-based DC threshold-hit chance (same style as the saves endpoint's
+      // points calc) — replaces the old per-player live element-summary fetch, which counted
+      // actual past threshold hits gameweek-by-gameweek but was a slow N+1 external-API call
+      // per player and had no way to estimate a "new to the league" player's chance at all.
+      const poissonProbAtLeastDC = (lambda: number, k: number): number => {
+        if (lambda <= 0) return 0;
+        let cumulativeProb = 0;
+        for (let i = 0; i < k; i++) {
+          cumulativeProb += Math.exp(-lambda + i * Math.log(lambda) - Array.from({ length: i }, (_, j) => Math.log(j + 1)).reduce((a, b) => a + b, 0));
+        }
+        return 1 - cumulativeProb;
+      };
+
       // Count actual completed fixtures for each team instead of assuming all teams played same number of games
       const teamCompletedFixtures = new Map<number, number>();
       
@@ -17234,63 +17188,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Determine threshold based on position (10 for DEF, 12 for MID/FWD)
           const threshold = player.element_type === 2 ? 10 : 12;
-          
-          // Fetch player's gameweek history to count actual matches played, threshold hits, and average minutes
-          let playerMatchesPlayed = 1; // Default to 1 to avoid division by zero
-          let avgMinutesPerGame = 90; // Default to full match
-          let timesHitThreshold = 0; // Count of games where player hit the DC threshold
-          let dcPerGame = seasonDefensiveContribution; // Fallback
-          
-          try {
-            const playerHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-            if (playerHistoryResponse.ok) {
-              const playerHistory = await playerHistoryResponse.json();
-              const gamesWithMinutes = playerHistory.history.filter((gw: any) => gw.minutes > 0);
-              
-              // Count gameweeks where player had minutes > 0 (including substitute appearances)
-              playerMatchesPlayed = Math.max(1, gamesWithMinutes.length);
-              
-              // Calculate average minutes per game (only from games where they played)
-              if (gamesWithMinutes.length > 0) {
-                const totalMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
-                avgMinutesPerGame = totalMinutes / gamesWithMinutes.length;
-                
-                // Count how many times player hit the threshold
-                gamesWithMinutes.forEach((gw: any) => {
-                  let gwDC = gw.defensive_contribution || 0;
-                  if (!gwDC) {
-                    // Calculate from component stats if not available
-                    const cbi = gw.clearances_blocks_interceptions || 0;
-                    const tackles = gw.tackles || 0;
-                    const recoveries = gw.recoveries || 0;
-                    if (player.element_type === 2) {
-                      gwDC = cbi + tackles;
-                    } else {
-                      gwDC = cbi + tackles + recoveries;
-                    }
-                  }
-                  if (gwDC >= threshold) {
-                    timesHitThreshold++;
-                  }
-                });
-              }
-              
-              // Calculate DC per game for reference
-              dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
-            } else {
-              // Fallback to team games if API fails
-              playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
-              dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
-            }
-          } catch (error) {
-            // Fallback to team games if fetch fails
-            playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
-            dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
-          }
-          
-          // Calculate % chance of hitting threshold
-          const chanceOfHittingThreshold = timesHitThreshold / playerMatchesPlayed;
-          
+
+          // Actual completed games for this player's team, used as the appearance-count proxy
+          // for this-season rate (avoids an N+1 live fetch per player for match-by-match history).
+          const playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
+          const avgMinutesPerGame = (player.minutes || 0) > 0 && playerMatchesPlayed > 0
+            ? (player.minutes || 0) / playerMatchesPlayed
+            : 90;
+
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played
+          // (player.minutes/defensive_contribution otherwise still reflect 2025/26's frozen
+          // pre-kickoff carryover) and once minutes clear the small-sample noise floor (e.g. 4
+          // DC in a single substitute cameo would otherwise extrapolate to 360 DC per 90).
+          const thisSeasonDCPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+            ? (seasonDefensiveContribution / (player.minutes || 1)) * 90
+            : undefined;
+
+          // Blend with the player's 2025/26 DC-per-90 (matched by name+position across the
+          // season's id reassignment), falling back to the league-average rate for the
+          // player's position group for anyone new to the league (promoted-team players,
+          // summer signings from abroad, academy graduates).
+          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+          const lastSeasonDCRate = lastSeasonRow ? lastSeasonDCPer90(lastSeasonRow) : undefined;
+          const positionLeagueAverage = player.element_type === 2 ? leagueAverages.defDCPer90 : leagueAverages.midFwdDCPer90;
+          const dcPerGame = blendRate(thisSeasonDCPer90, lastSeasonDCRate, positionLeagueAverage);
+
+          // Poisson-based chance of hitting the DC threshold in a given game, from the blended
+          // per-game rate — replaces counting actual past threshold hits (which needed the
+          // per-player live history fetch this rewrite removes, and had no answer at all for
+          // new-to-the-league players).
+          const chanceOfHittingThreshold = poissonProbAtLeastDC(dcPerGame, threshold);
+
           const dcEvents: BootstrapEvent[] = fplData.events || [];
           
           // Process each FUTURE gameweek only
@@ -17306,8 +17234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            // Get opponent's DCC per game from current standings
-            const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
+            // Opponent's blended (50/50 this-season/last-season) DCC per game
+            const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0;
             
             // Use per-GW availability probability instead of flat minutesMultiplier
             const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, dcEvents);
@@ -17353,7 +17281,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
             dcPerGame: parseFloat(dcPerGame.toFixed(2)), // DC per match played (for reference)
             chanceOfHittingThreshold: parseFloat((chanceOfHittingThreshold * 100).toFixed(1)), // % chance as percentage
-            timesHitThreshold: timesHitThreshold, // Number of times player hit threshold
             threshold: threshold, // Threshold value (10 for DEF, 12 for MID/FWD)
             playerMatchesPlayed: playerMatchesPlayed, // Actual matches played by this player
             avgMinutesPerGame: parseFloat(avgMinutesPerGame.toFixed(1)), // Average minutes per game
@@ -18131,27 +18058,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only");
-        
+        console.log("DEBUG: Player Bonus Points Projections API called - blended formula: 50/50 this-season/last-season bonus-per-start (falls back to position league-average for new-to-league players)");
+
         // Get FPL bootstrap data for current gameweek info and players
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
-        
+
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
-        
+
         // Fetch fixtures first so we can detect TBC (event=null) fixtures and extend to GW39
         const fixturesResponse = await internalFetch("api/fixtures");
         const allFixtures = await fixturesResponse.json();
         const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
         const endGameweek = hasTBCBonus ? 39 : gameweekRange.end;
-        
-        // Filter only players with 1+ minutes for meaningful projections
-        const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
+
+        // Every player is included — no current-season starts filter — since new-to-the-league
+        // and promoted-team players (with genuine 0 current-season starts) still get a
+        // projection via their 2025/26 rate or the position league-average fallback.
+        const activePlayers = fplData.elements;
         const finishedGWs = fplData.events.filter((e: any) => e.finished).length;
-        
+
+        const { getLastSeasonPlayerRow, lastSeasonBonusPerStart, getLeagueAverageRates, blendRate, MIN_STARTS_FOR_RATE } = await import("./player-history-blend-service");
+        const leagueAverages = await getLeagueAverageRates();
+        const positionLeagueAverageBonus = (elementType: number) => {
+          if (elementType === 1) return leagueAverages.gkBonusPerStart;
+          if (elementType === 2) return leagueAverages.defBonusPerStart;
+          if (elementType === 4) return leagueAverages.fwdBonusPerStart;
+          return leagueAverages.midBonusPerStart;
+        };
+
         // Count finished fixtures per team (accounts for DGWs)
         const teamFixturesPlayed = new Map<number, number>();
         allFixtures.forEach((f: any) => {
@@ -18160,9 +18098,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamFixturesPlayed.set(f.team_a, (teamFixturesPlayed.get(f.team_a) || 0) + 1);
           }
         });
-        
-        // Bonus per fixture uses season average (player.bonus / player.starts) — see inside player loop.
-        const bonusPointsProjections = activePlayers.map((player: any) => {
+
+        // Bonus per fixture blends this-season and last-season bonus-per-start.
+        const bonusPointsProjections = await Promise.all(activePlayers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const bonusPoints: { [key: string]: number } = {};
@@ -18170,12 +18108,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; bonusPoints: number }> } = {};
           let totalBonusPoints = 0;
           let totalPoints = 0;
-          
-          // Bonus per fixture = season average (total bonus / starts).
-          // Season average is the most stable predictor — avoids last-8 injury/poor-run dips
-          // collapsing projections for established bonus contributors like Haaland, Gabriel.
-          const bonusPerFixture = (player.bonus || 0) / Math.max(1, player.starts || 1);
-          
+
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played
+          // (player.bonus/starts otherwise still reflect 2025/26's frozen pre-kickoff carryover)
+          // and once starts clear the small-sample noise floor.
+          const thisSeasonBonusPerFixture = finishedGWs > 0 && (player.starts || 0) >= MIN_STARTS_FOR_RATE
+            ? (player.bonus || 0) / (player.starts || 1)
+            : undefined;
+
+          // Blend with the player's 2025/26 bonus-per-start (matched by name+position across
+          // the season's id reassignment), falling back to the league-average rate for the
+          // player's position for anyone new to the league.
+          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+          const lastSeasonBonusRate = lastSeasonRow ? lastSeasonBonusPerStart(lastSeasonRow) : undefined;
+          const bonusPerFixture = blendRate(thisSeasonBonusPerFixture, lastSeasonBonusRate, positionLeagueAverageBonus(player.element_type));
+
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = computeCurrentGameweek(fplData.events);
           
@@ -18237,8 +18184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3))
           };
-        });
-        
+        }));
+
         console.log(`✅ LIVE SUCCESS: Generated historical bonus-per-appearance projections for ${bonusPointsProjections.length} players`);
         return bonusPointsProjections;
 
