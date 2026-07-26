@@ -355,25 +355,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const getNextGameweeksForTable = () => {
     if (!bootstrapData) return [];
     
-    // Find the first gameweek that hasn't finished and isn't current
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    
-    // Start from the next upcoming gameweek
-    let startGW = nextEvent?.id || 1;
-    
-    // If no next event found, use the gameweek after the current/finished ones
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        startGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          startGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const startGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     const gameweeks = [];
     for (let i = 0; i < 7; i++) {
       const gwNumber = startGW + i;
@@ -1528,27 +1511,10 @@ export default function TransferPlanner() {
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
-    // Find the first gameweek that hasn't finished and isn't current
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    
-    // Start from the next upcoming gameweek
-    let startGW = nextEvent?.id || 1;
-    
-    // If no next event found, use the gameweek after the current/finished ones
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        startGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          startGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const startGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     const nextGameweeks = [];
-    
+
     // Get exactly 6 upcoming gameweeks (GW33-38)
     for (let i = 0; i < 6; i++) {
       const gwNumber = startGW + i;
@@ -2526,10 +2492,9 @@ export default function TransferPlanner() {
     if (!teamData?.picks || !selectedGameweek || !bootstrapData) return 0;
     
     // Get current gameweek and the first planning gameweek
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const currentGW = currentEvent?.id || 1;
+    const currentGW = computeCurrentGameweek(bootstrapData.events as any);
     const firstPlanningGW = currentGW + 1;
-    
+
     // For the first planning gameweek when using own team, include FPL API transfers.made
     // This represents transfers already confirmed on the FPL website
     if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers?.made !== undefined) {
@@ -2559,8 +2524,7 @@ export default function TransferPlanner() {
     }
     
     // Get current gameweek and the first planning gameweek
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const currentGW = currentEvent?.id || 1;
+    const currentGW = computeCurrentGameweek(bootstrapData.events as any);
     const firstPlanningGW = currentGW + 1;
 
     // Use the shared calculateFreeTransfers utility (same logic the dashboard uses)

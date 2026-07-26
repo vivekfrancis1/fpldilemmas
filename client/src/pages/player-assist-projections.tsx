@@ -354,9 +354,7 @@ export default function PlayerAssistProjections() {
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3; // Default fallback
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    return currentEvent ? currentEvent.id : 3;
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
   }, [bootstrapData]);
 
   // Get unique teams and positions for filters

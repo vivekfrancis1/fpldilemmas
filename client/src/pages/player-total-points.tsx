@@ -1121,9 +1121,7 @@ export default function PlayerTotalPoints() {
 
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3; // Default fallback
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    return currentEvent ? currentEvent.id : 3;
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek + 1;

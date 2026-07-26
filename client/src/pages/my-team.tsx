@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Target, Trophy, Star, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { extractManagerId } from "@/lib/manager-id-utils";
 
 interface TeamPick {
@@ -201,8 +202,9 @@ export default function MyTeam() {
   };
 
   const getCurrentGameweek = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
+    // Floored at 1 — this is shown directly as "Gameweek X" and used as a live-data lookup key,
+    // and GW0 isn't a real gameweek. Pre-season, GW1 is the team this page is building for.
+    return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
 
   const formatPrice = (price: number): string => {

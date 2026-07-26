@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,9 +73,9 @@ export default function ResultsAndFixtures() {
 
   // Get current gameweek for context
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 5;
-    const currentEvent = bootstrapData.events.find(event => event.is_current);
-    return currentEvent ? currentEvent.id : 5;
+    // Floored at 1 — this selects which gameweek's fixtures to show by default, and GW0
+    // isn't a real gameweek.
+    return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   }, [bootstrapData]);
 
   // Update selected gameweek to current gameweek when data loads

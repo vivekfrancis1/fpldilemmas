@@ -423,8 +423,8 @@ export default function ManagerTeam() {
   };
 
   const getCurrentGameweek = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
+    // Floored at 1 — used as a live-data lookup key/display gameweek, and GW0 isn't real.
+    return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
 
   const getCurrentGameweekFixture = (teamId: number) => {

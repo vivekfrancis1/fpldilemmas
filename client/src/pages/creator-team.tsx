@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Link, useParams } from "wouter";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import {
@@ -272,8 +273,8 @@ export default function CreatorTeam() {
   };
 
   const getCurrentGameweek = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
+    // Floored at 1 — this feeds a live-gameweek-data API call, and GW0 isn't a valid gameweek.
+    return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
 
   // Query for live gameweek data

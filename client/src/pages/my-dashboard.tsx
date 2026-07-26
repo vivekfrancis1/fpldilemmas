@@ -637,11 +637,6 @@ export default function MyDashboard() {
 
 
 
-  const getCurrentGameweek = () => {
-    if (!bootstrapData?.events) return null;
-    return bootstrapData.events.find(event => event.is_current);
-  };
-
   const getStartingEleven = () => {
     if (!teamData?.picks || !bootstrapData?.elements) return [];
     return teamData.picks
@@ -816,15 +811,12 @@ export default function MyDashboard() {
   };
 
   const getCurrentGameweekDashboard = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
   };
 
   const getNextGameweekDashboard = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    const currentId = currentEvent?.id || 1;
     // Return next gameweek, but cap at 38 (max gameweeks in a season)
-    return Math.min(currentId + 1, 38);
+    return Math.min(getCurrentGameweekDashboard() + 1, 38);
   };
 
   const getUpcomingActiveChip = (): string | null => {

@@ -382,8 +382,8 @@ export default function Top25ManagerTeam() {
   };
 
   const getCurrentGameweek = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
+    // Floored at 1 — used as a live-data/fixtures lookup key, and GW0 isn't real.
+    return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
 
   const getCurrentGWFixtures = (teamId: number): PitchPlayerFixture[] => {

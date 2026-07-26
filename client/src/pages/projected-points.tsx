@@ -258,21 +258,8 @@ export default function ProjectedPoints() {
   useEffect(() => {
     if (!bootstrapData || startGameweek !== null) return;
     
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let firstGW = nextEvent?.id || 1;
-    
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        firstGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          firstGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const firstGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     // Default to next 6 gameweeks
     setStartGameweek(firstGW);
     setEndGameweek(Math.min(firstGW + 5, 38));
@@ -282,21 +269,8 @@ export default function ProjectedPoints() {
   const getAvailableGameweeks = (): number[] => {
     if (!bootstrapData) return [];
     
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let firstGW = nextEvent?.id || 1;
-    
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        firstGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          firstGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const firstGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     const gameweeks = [];
     for (let i = 0; i < 12 && (firstGW + i) <= 38; i++) {
       gameweeks.push(firstGW + i);

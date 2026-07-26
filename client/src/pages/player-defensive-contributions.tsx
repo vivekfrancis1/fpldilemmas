@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
-import { isSeasonEnded } from "@shared/gameweek-utils";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -119,11 +119,7 @@ export default function PlayerDefensiveContributions() {
   // Calculate current gameweek and upcoming gameweeks from bootstrap data
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return null; // Return null until data loads
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    if (currentEvent) return currentEvent.id;
-    // Fallback: find first unfinished event
-    const nextEvent = bootstrapData.events.find(e => !e.finished);
-    return nextEvent ? nextEvent.id : 38;
+    return computeCurrentGameweek(bootstrapData.events as any);
   }, [bootstrapData]);
 
   const nextGameweek = currentGameweek ? Math.min(currentGameweek + 1, 38) : null;

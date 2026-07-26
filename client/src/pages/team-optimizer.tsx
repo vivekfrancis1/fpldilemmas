@@ -256,21 +256,8 @@ export default function TeamOptimizer() {
   const gameweekRange = useMemo(() => {
     if (!bootstrapData) return { start: 12, end: 23 };
     
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let startGW = nextEvent?.id || 1;
-    
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        startGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          startGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const startGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     return {
       start: startGW,
       end: Math.min(startGW + gameweekHorizon - 1, 38)
@@ -354,21 +341,8 @@ export default function TeamOptimizer() {
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let startGW = nextEvent?.id || 1;
-    
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        startGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          startGW = lastFinished.id + 1;
-        }
-      }
-    }
-    
+    const startGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
+
     const nextGameweeks = [];
     for (let i = 0; i < gameweekHorizon; i++) {
       const gwNumber = startGW + i;
