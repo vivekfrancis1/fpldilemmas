@@ -263,12 +263,17 @@ export default function BestWildcardTeam() {
       console.log(`Building starting XI with max budget: £${maxXIBudget.toFixed(1)}m (82% of £${budget}m, capped to leave £${BENCH_RESERVE}m for bench)`);
     }
 
-    // Helper to check if player can be added
-    const canAddPlayer = (player: PlayerSnapshot, position: keyof typeof slotsRemaining) => {
+    // Helper to check if player can be added. Included (must-have) players bypass the budget
+    // reserve check — the user has explicitly required them, so they should never be silently
+    // dropped for leaving "too little" reserved for other positions. If that genuinely makes the
+    // full squad unaffordable, the overall optimization fails with a clear error instead (see
+    // buildOptimalTeamWithBudget), which is the honest outcome rather than quietly omitting a
+    // player the user asked for. The team-of-3 constraint still applies unconditionally.
+    const canAddPlayer = (player: PlayerSnapshot, position: keyof typeof slotsRemaining, isIncluded = false) => {
       const teamName = player.teamName || '';
       const teamCount = teamCounts[teamName] || 0;
       if (teamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
-      if (maxXIBudget) {
+      if (maxXIBudget && !isIncluded) {
         const otherPositionsReserve = (Object.keys(slotsRemaining) as Array<keyof typeof slotsRemaining>)
           .filter(pos => pos !== position)
           .reduce((sum, pos) => sum + slotsRemaining[pos] * minPriceByPosition[pos], 0);
@@ -289,7 +294,7 @@ export default function BestWildcardTeam() {
     };
 
     // 1. Add 1 goalkeeper
-    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p, 'Goalkeeper'));
+    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p, 'Goalkeeper', true));
     if (includedGK.length > 0) {
       addPlayer(includedGK[0], 'Goalkeeper');
     } else {
@@ -302,7 +307,7 @@ export default function BestWildcardTeam() {
     let addedDef = 0;
     for (const player of playersByPosition.Defender) {
       if (addedDef >= formation.def) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Defender')) {
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Defender', true)) {
         addPlayer(player, 'Defender');
         addedDef++;
       }
@@ -320,7 +325,7 @@ export default function BestWildcardTeam() {
     let addedMid = 0;
     for (const player of playersByPosition.Midfielder) {
       if (addedMid >= formation.mid) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Midfielder')) {
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Midfielder', true)) {
         addPlayer(player, 'Midfielder');
         addedMid++;
       }
@@ -338,7 +343,7 @@ export default function BestWildcardTeam() {
     let addedFwd = 0;
     for (const player of playersByPosition.Forward) {
       if (addedFwd >= formation.fwd) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Forward')) {
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player, 'Forward', true)) {
         addPlayer(player, 'Forward');
         addedFwd++;
       }
