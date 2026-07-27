@@ -202,9 +202,7 @@ export default function Fixtures() {
 
   useEffect(() => {
     if (teamFilterId && bootstrapData?.teams) {
-      const allTeamIds = bootstrapData.teams.map((t: any) => t.id);
-      const excluded = new Set(allTeamIds.filter((id: number) => id !== teamFilterId));
-      setExcludedTeams(excluded);
+      setSelectedTeams(new Set([teamFilterId]));
     }
   }, [teamFilterId, bootstrapData?.teams]);
 
@@ -322,7 +320,7 @@ export default function Fixtures() {
       teamGameCount: {}
     };
 
-    const matrix: Record<number, Record<number, Array<{ opponent: string, difficulty: number, isHome: boolean, finished: boolean }>>> = {};
+    const matrix: Record<number, Record<number, Array<{ opponent: string, difficulty: number, isHome: boolean, finished: boolean, fixtureId?: number }>>> = {};
     const avgFDR: Record<number, number> = {};
     const gameCount: Record<number, number> = {};
     
@@ -722,7 +720,7 @@ export default function Fixtures() {
                 className="h-6 px-2 text-white hover:text-white hover:bg-white/20"
                 onClick={() => {
                   setTeamFilterId(null);
-                  setExcludedTeams(new Set());
+                  setSelectedTeams(new Set());
                   window.history.replaceState({}, '', '/fixtures');
                 }}
               >
