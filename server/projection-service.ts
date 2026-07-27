@@ -220,7 +220,7 @@ class ProjectionService {
       }
       // League-average AGR fallback (goals+xG per game across all teams)
       let leagueTotalGoals = 0, leagueTotalXg = 0, leagueTotalGP = 0;
-      for (const [teamId, stats] of teamAttackStats) {
+      for (const [teamId, stats] of Array.from(teamAttackStats)) {
         leagueTotalGoals += stats.goalsFor;
         leagueTotalXg += teamXgFor.get(teamId) || 0;
         leagueTotalGP += stats.gamesPlayed;
@@ -249,9 +249,9 @@ class ProjectionService {
         }
       }
       const teamFormMap = new Map<number, number>();
-      for (const [teamId, fixtures] of teamFinishedFixtures) {
-        const last5 = fixtures.sort((a, b) => b.gw - a.gw).slice(0, 5);
-        teamFormMap.set(teamId, last5.filter(f => f.win).length);
+      for (const [teamId, fixtures] of Array.from(teamFinishedFixtures)) {
+        const last5 = fixtures.sort((a: { gw: number; win: boolean }, b: { gw: number; win: boolean }) => b.gw - a.gw).slice(0, 5);
+        teamFormMap.set(teamId, last5.filter((f: { gw: number; win: boolean }) => f.win).length);
       }
 
       // Poisson probability helper (reused across saves + goals conceded)
@@ -557,7 +557,7 @@ class ProjectionService {
         });
 
       // Cache in database using direct SQL
-      const cachePromises = players.map(async (player) => {
+      const cachePromises = players.map(async (player: any) => {
         try {
           // Delete existing record if any
           await db.execute(sql`
