@@ -17,9 +17,9 @@ const LAST_SEASON = "2025/26";
 // every other (non-promoted) team's last-season data is based on, not their actual
 // (46-game) Championship season.
 const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsAgainst: number; played: number }> = {
-  "Coventry City": { goalsFor: 47, goalsAgainst: 58, played: 38 },
-  "Ipswich Town": { goalsFor: 38, goalsAgainst: 61, played: 38 },
-  "Hull City": { goalsFor: 33, goalsAgainst: 68, played: 38 },
+  "Coventry City": { goalsFor: 97, goalsAgainst: 58, played: 38 },
+  "Ipswich Town": { goalsFor: 80, goalsAgainst: 61, played: 38 },
+  "Hull City": { goalsFor: 70, goalsAgainst: 68, played: 38 },
 };
 
 // Cache for archived last-season team goals, keyed by team name (team IDs are reassigned
@@ -82,8 +82,8 @@ export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { g
     "van Ewijk": { goals: 0, assists: 8 },
     "Grimes": { goals: 2, assists: 2 },
     "Kitching": { goals: 2, assists: 0 },
-    "Onyeka": { goals: 2, assists: 2 },
-    "Kesler-Hayden": { goals: 2, assists: 2 },
+    "Onyeka": { goals: 1, assists: 1 },
+    "Kesler-Hayden": { goals: 1, assists: 1 },
   },
   "Ipswich Town": {
     "Clarke": { goals: 16, assists: 1 },
@@ -96,6 +96,9 @@ export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { g
     "Davis": { goals: 2, assists: 4 },
     "Taylor": { goals: 2, assists: 2 },
     "Akpom": { goals: 2, assists: 1 },
+    "O'Shea": { goals: 1, assists: 1 },
+    "Matusiwa": { goals: 1, assists: 1 },
+    "Furlong": { goals: 1, assists: 1 },
     "Diop": { goals: 0, assists: 0 }, // summer PL signing, not part of the promoted Championship squad
   },
   "Hull City": {
@@ -108,7 +111,16 @@ export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { g
     "Slater": { goals: 2, assists: 2 },
     "Gyabi": { goals: 2, assists: 1 },
     "Destan": { goals: 2, assists: 0 },
+    "Coyle": { goals: 1, assists: 1 },
+    "Hughes": { goals: 1, assists: 1 },
   },
+  // Iván Azón (Ipswich), Joe Gelhardt/Mateo Joseph/Lewis Koumas (loaned to Hull last season,
+  // now back at their parent clubs Leeds/Liverpool) and Romain Esse (Coventry, now Crystal
+  // Palace) all scored real Championship goals last season but aren't on their promoted club's
+  // CURRENT roster, so they can't be matched to a specific player here — same reasoning as Diop
+  // above. Their goals are still reflected in the team's real total (PROMOTED_TEAM_LAST_SEASON_GOALS),
+  // just not attributable to an individual, which is exactly why goal-share for promoted teams is
+  // measured against that real total rather than the sum of the players listed here.
 };
 
 interface FixtureDetail {

@@ -9302,20 +9302,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamGoalsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realGoalsByPlayerId.get(p.id) || 0), 0);
       const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
       const assumedTeamGoals = isPromoted ? assumedGoalsByTeamName.get(team.name) : undefined;
+      // For promoted teams, PROMOTED_TEAM_PLAYER_LAST_SEASON only lists each club's notable
+      // scorers — many of a promoted team's real goals came from players not listed there at
+      // all, so teamGoalsTotal (the sum of just the listed players) badly undercounts the true
+      // total. Share must be measured against the real total, not that incomplete sum.
+      const shareDenominator = (isPromoted && assumedTeamGoals !== undefined) ? assumedTeamGoals : teamGoalsTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const goals = realGoalsByPlayerId.get(p.id) || 0;
-        const goalShare = teamGoalsTotal > 0 ? (goals / teamGoalsTotal) * 100 : 0;
-        const projectedGoals = isPromoted && assumedTeamGoals !== undefined
-          ? (goalShare / 100) * assumedTeamGoals
-          : goals;
+        const goalShare = shareDenominator > 0 ? (goals / shareDenominator) * 100 : 0;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
           playerName: `${p.first_name} ${p.second_name}`,
           position,
           goalShare: Math.round(goalShare * 100) / 100,
-          projectedGoals: Math.round(projectedGoals * 100) / 100,
+          projectedGoals: Math.round(goals * 100) / 100,
         };
       }).sort((a: any, b: any) => b.goalShare - a.goalShare);
 
@@ -9325,7 +9327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamShort: team.short_name,
         season,
         games: gamesByTeamId.get(team.id) || 0,
-        expectedGoals: Math.round(teamGoalsTotal * 100) / 100,
+        expectedGoals: Math.round((isPromoted && assumedTeamGoals !== undefined ? assumedTeamGoals : teamGoalsTotal) * 100) / 100,
         assumedTeamGoals: assumedTeamGoals !== undefined ? assumedTeamGoals : undefined,
         players,
       });
@@ -9336,11 +9338,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   /** Assist-share counterpart of buildRealGoalShareForSeason — see that function for the full
-   *  explanation. No assumed-team-total override for promoted teams here: unlike goals, there's
-   *  no existing admin-configurable "assumed team assists" setting, so the team total is simply
-   *  the sum of the listed players' real assists for both promoted and established teams. */
+   *  explanation. Promoted teams' assumed team total assists = 0.85 × their assumed team goals
+   *  (there's no separate admin-configurable "assumed team assists" setting — this ratio stands
+   *  in for it), same reasoning as buildRealGoalShareForSeason's assumedTeamGoals: the listed
+   *  players in PROMOTED_TEAM_PLAYER_LAST_SEASON don't account for the whole squad's output. */
   async function buildRealAssistShareForSeason(bootstrapData: any, season: string): Promise<any[]> {
-    const { PROMOTED_TEAM_PLAYER_LAST_SEASON } = await import('./team-goals-service');
+    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, TeamGoalsService } = await import('./team-goals-service');
     const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
     const realAssistsByPlayerId = new Map<number, number>();
@@ -9389,14 +9392,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
+    const promotedGoalsSettings = season === PREVIOUS_SEASON ? await TeamGoalsService.getPromotedTeamGoalsSettings() : [];
+    const assumedAssistsByTeamName = new Map(promotedGoalsSettings.map((s: any) => [s.teamName, s.goalsFor * 0.85]));
+
     const finalResponse: any[] = [];
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
       const teamAssistsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realAssistsByPlayerId.get(p.id) || 0), 0);
+      const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
+      const assumedTeamAssists = isPromoted ? assumedAssistsByTeamName.get(team.name) : undefined;
+      const shareDenominator = (isPromoted && assumedTeamAssists !== undefined) ? assumedTeamAssists : teamAssistsTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const assists = realAssistsByPlayerId.get(p.id) || 0;
-        const assistShare = teamAssistsTotal > 0 ? (assists / teamAssistsTotal) * 100 : 0;
+        const assistShare = shareDenominator > 0 ? (assists / shareDenominator) * 100 : 0;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
@@ -9413,7 +9422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamShort: team.short_name,
         season,
         games: gamesByTeamId.get(team.id) || 0,
-        expectedAssists: Math.round(teamAssistsTotal * 100) / 100,
+        expectedAssists: Math.round((isPromoted && assumedTeamAssists !== undefined ? assumedTeamAssists : teamAssistsTotal) * 100) / 100,
+        assumedTeamAssists: assumedTeamAssists !== undefined ? Math.round(assumedTeamAssists * 100) / 100 : undefined,
         players,
       });
     });
@@ -9563,6 +9573,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // PROMOTED_TEAM_PLAYER_LAST_SEASON only lists each promoted team's notable scorers, so
+      // summing just those players' goals badly undercounts the team's true real total (e.g.
+      // Hull's listed players sum to ~37, but Hull really scored 70) — buildGoalShareResponse
+      // uses promotedTeamAssumedTotals (built below) to replace that undercounted sum with the
+      // admin-configured real total for the SHARE calculation, so shares aren't inflated.
+      const { TeamGoalsService: TeamGoalsServiceForShareFix } = await import('./team-goals-service');
+      const promotedGoalsSettingsForShareFix = await TeamGoalsServiceForShareFix.getPromotedTeamGoalsSettings();
+      const promotedTeamAssumedTotals = new Map<number, number>();
+      promotedGoalsSettingsForShareFix.forEach(({ teamName, goalsFor }) => {
+        const team = bootstrapData.teams.find((t: any) => t.name === teamName);
+        if (team) {
+          promotedTeamAssumedTotals.set(team.id, goalsFor * 0.6);
+        }
+      });
+
       const teamRecentGoalsMap = new Map<number, number>();
       bootstrapData.teams.forEach((team: any) => {
         const total = bootstrapData.elements
@@ -9571,7 +9596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamRecentGoalsMap.set(team.id, total);
       });
       
-      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap, goalBlendMap);
+      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap, goalBlendMap, promotedTeamAssumedTotals);
       
       setGoalShareCache({
         data: finalResponse,
@@ -9602,7 +9627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     recentGoalsMap: Map<number, { goals: number, poolSize: number }>,
     teamRecentGoalsMap: Map<number, number>,
     currentClubGoalsMap?: Map<number, { goals: number; xG: number }>,
-    blendMap?: Map<number, { blendWeight: number; activeGames: number; teamGames: number }>
+    blendMap?: Map<number, { blendWeight: number; activeGames: number; teamGames: number }>,
+    promotedTeamAssumedTotals?: Map<number, number>
   ) {
     const finalResponse: any[] = [];
     
@@ -9639,6 +9665,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerTotals[player.id] = playerTotal;
         teamTotal += playerTotal;
       });
+
+      // Promoted teams: the sum just computed only covers the players individually listed in
+      // PROMOTED_TEAM_PLAYER_LAST_SEASON, which badly undercounts the team's true real total
+      // (many of a promoted team's real goals came from departed/loaned-out players not on the
+      // current roster at all) — use the real total instead so shares aren't inflated.
+      if (promotedTeamAssumedTotals?.has(teamId)) {
+        teamTotal = promotedTeamAssumedTotals.get(teamId)!;
+      }
 
       // Recent context for blend
       const teamRecentTotal = teamRecentGoalsMap.get(teamId) || 0;
@@ -10563,6 +10597,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         if (teamTotals[player.team]) {
           teamTotals[player.team].total += adjustedTotal;
+        }
+      });
+
+      // Promoted teams: same real-total override as goal-share-season — PROMOTED_TEAM_PLAYER_LAST_SEASON
+      // only lists notable scorers, so the sum above badly undercounts the true total. Assumed
+      // team assists = 0.85 × the admin-configured assumed team goals (no separate assists config exists).
+      const { TeamGoalsService: TeamGoalsServiceForAssistFix } = await import('./team-goals-service');
+      const promotedGoalsSettingsForAssistFix = await TeamGoalsServiceForAssistFix.getPromotedTeamGoalsSettings();
+      promotedGoalsSettingsForAssistFix.forEach(({ teamName, goalsFor }) => {
+        const team = bootstrapData.teams.find((t: any) => t.name === teamName);
+        if (team && teamTotals[team.id]) {
+          teamTotals[team.id].total = goalsFor * 0.85 * 0.6;
         }
       });
 
