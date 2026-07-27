@@ -61,19 +61,24 @@ describe('Goal share blending (last-season fallback)', () => {
 // Team Goal/Assist Projections are per-game rates now (average of the 2025/26 and 2026/27
 // per-game rates, each itself 0.5×Goals + 0.5×xG), not season totals — pre-season, with no
 // 2026/27 games yet, this reduces to just the 2025/26 rate: (0.5×assumedTotal + 0.5×0) / 38.
+// Two different promoted-team numbers: the REAL Championship total (70/80/97 for Hull/Ipswich/
+// Coventry) is used only as the goal-share denominator; the ASSUMED, deliberately-regressed
+// PL-level total (33/38/47) feeds the Team Goal Projections rate and the "assumed goals of
+// player" multiplier — they're intentionally different, not the same number twice.
 describe('Promoted-team share uses real team total, not the incomplete listed-player sum', () => {
-  it('Projected goal share: Hull total reflects the real 70-goal season as a per-game rate, and McBurnie stays below Haaland', () => {
+  it('Projected goal share: Hull rate reflects the ASSUMED 33-goal PL estimate (not the real 70), and McBurnie stays below Haaland', () => {
     const hull = goalShareData.find((t: any) => t.teamName === 'Hull City');
     const city = goalShareData.find((t: any) => t.teamName === 'Man City');
-    expect(hull.expectedGoals).toBeCloseTo((70 * 0.5) / 38, 2); // xG=0 for promoted teams, pre-season (2025/26 rate only)
+    expect(hull.expectedGoals).toBeCloseTo((33 * 0.5) / 38, 2); // xG=0 for promoted teams, pre-season (2025/26 rate only)
     const mcburnie = hull.players.find((p: any) => p.playerName.includes('McBurnie'));
     const haaland = city.players.find((p: any) => p.playerName.includes('Haaland'));
+    expect(mcburnie.goalShare).toBeCloseTo((18 / 70) * 100, 1); // share still measured against the real 70-goal total
     expect(mcburnie.goalShare).toBeLessThan(haaland.goalShare);
   });
 
-  it('Projected assist share: Hull total reflects 0.85 × 70 as a per-game rate', () => {
+  it('Projected assist share: Hull rate reflects 0.85 × the ASSUMED 33-goal PL estimate', () => {
     const hull = assistShareData.find((t: any) => t.teamName === 'Hull City');
-    expect(hull.expectedAssists).toBeCloseTo((70 * 0.85 * 0.5) / 38, 2);
+    expect(hull.expectedAssists).toBeCloseTo((33 * 0.85 * 0.5) / 38, 2);
   });
 });
 
@@ -122,15 +127,16 @@ describe('Real season goal/assist share (?season= toggle)', () => {
     expect(city.games).toBe(38);
   });
 
-  it('2025/26 gives promoted teams their true 46-game Championship season and real assumed team total', () => {
+  it('2025/26 gives promoted teams their true 46-game Championship season and a distinct assumed (regressed) team total', () => {
     const hull = real2526.find((t: any) => t.teamName === 'Hull City');
     expect(hull.games).toBe(46);
-    expect(hull.assumedTeamGoals).toBe(70); // real 2025/26 Championship total, not the sum of listed players (~37)
+    expect(hull.expectedGoals).toBe(70); // real Championship total, share denominator
+    expect(hull.assumedTeamGoals).toBe(33); // assumed (regressed) PL-level total, the projection multiplier — deliberately different from the real 70
     // McBurnie's share must be measured against the real total (70), not the incomplete list-sum,
     // otherwise his share (and everyone else's) is roughly double what it should be.
     const mcburnie = hull.players.find((p: any) => p.playerName.includes('McBurnie'));
-    expect(mcburnie.projectedGoals).toBe(18); // his own real goal count, unaffected by the denominator fix
     expect(mcburnie.goalShare).toBeCloseTo((18 / 70) * 100, 1);
+    expect(mcburnie.projectedGoals).toBeCloseTo((18 / 70) * 33, 1); // real share × assumed team total, not his raw real goal count
 
     // Every player's projectedGoals should equal goalShare × assumedTeamGoals (an identity, since
     // that's exactly how goalShare was derived from projectedGoals/assumedTeamGoals).

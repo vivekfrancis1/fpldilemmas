@@ -8,18 +8,31 @@ import { pool } from "./db";
 // Season archived in season_fixtures_archive that GF/GC blending uses as "last season".
 const LAST_SEASON = "2025/26";
 
-// Last-season equivalent totals for the three clubs promoted into the Premier League for
-// 2026/27 (Coventry City, Ipswich Town, Hull City). FPL's current-standings API only covers
-// Premier League teams, so these clubs have no top-flight "last season" data to read from
-// season_fixtures_archive — these totals stand in for that side of the GF/GC blend (see
+// ASSUMED (deliberately regressed) goals for the three clubs promoted into the Premier League
+// for 2026/27 (Coventry City, Ipswich Town, Hull City) — an admin-configured estimate of what
+// they'll score in the tougher top-flight, NOT their real Championship total (see
+// PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS below for that). FPL's current-standings API only
+// covers Premier League teams, so these clubs have no top-flight "last season" data to read
+// from season_fixtures_archive — these totals stand in for that side of the GF/GC blend (see
 // getLastSeasonTeamGoals) until real 2026/27 PL games accumulate. Provided directly, on the
 // assumption they'd played a full 38-game Premier League season — matches the game count
 // every other (non-promoted) team's last-season data is based on, not their actual
 // (46-game) Championship season.
 const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsAgainst: number; played: number }> = {
-  "Coventry City": { goalsFor: 97, goalsAgainst: 58, played: 38 },
-  "Ipswich Town": { goalsFor: 80, goalsAgainst: 61, played: 38 },
-  "Hull City": { goalsFor: 70, goalsAgainst: 68, played: 38 },
+  "Coventry City": { goalsFor: 47, goalsAgainst: 58, played: 38 },
+  "Ipswich Town": { goalsFor: 38, goalsAgainst: 61, played: 38 },
+  "Hull City": { goalsFor: 33, goalsAgainst: 68, played: 38 },
+};
+
+// REAL final 2025/26 Championship goals scored, across the true 46-game season — distinct from
+// PROMOTED_TEAM_LAST_SEASON_GOALS above (which is a deliberately-regressed PL-level assumption).
+// Used as the goal-share denominator for these teams' players (player's real Championship goals
+// ÷ team's real Championship total), since PROMOTED_TEAM_PLAYER_LAST_SEASON only lists notable
+// scorers and badly undercounts the true total if summed directly.
+export const PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS: Record<string, number> = {
+  "Coventry City": 97,
+  "Ipswich Town": 80,
+  "Hull City": 70,
 };
 
 // Cache for archived last-season team goals, keyed by team name (team IDs are reassigned
