@@ -3,7 +3,6 @@
  * Uses the official FPL rules:
  * - Start with 1 FT each GW
  * - Bank unused FTs up to max 5
- * - GW16 AFCON top-up: everyone gets 5 FTs
  * - Wildcard/Free Hit usage: banked FTs are PRESERVED (carry through), not reset
  */
 
@@ -42,12 +41,7 @@ export function calculateFreeTransfers(
     
     // Skip future gameweeks
     if (gwNum >= currentGameweek) break;
-    
-    // GW16 AFCON top-up: everyone gets 5 FTs
-    if (gwNum === 16) {
-      freeTransfers = 5;
-    }
-    
+
     // Check if a wildcard or free hit was used this GW
     // FPL rule: banked FTs are preserved through a wildcard or free hit —
     // the chip covers all transfers so the FT bank is untouched

@@ -2528,7 +2528,7 @@ export default function TransferPlanner() {
     const firstPlanningGW = currentGW + 1;
 
     // Use the shared calculateFreeTransfers utility (same logic the dashboard uses)
-    // It correctly handles wildcard/freehit banking, AFCON top-ups, and point hits
+    // It correctly handles wildcard/freehit banking and point hits
     let currentInitial = historyData?.current
       ? calculateFreeTransfers(historyData.current, historyData.chips, firstPlanningGW)
       : (teamData.transfers.limit ?? 1);
@@ -2545,15 +2545,7 @@ export default function TransferPlanner() {
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
       const nextGW = gw + 1;
       console.log(`  ➡️ Processing GW ${gw} (next will be GW ${nextGW}), current FTs: ${currentInitial}`);
-      
-      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-      // All managers get 5 free transfers in GW16 regardless of previous banking
-      if (nextGW === 16) {
-        console.log(`  🎁 AFCON TOP-UP: GW ${nextGW} gets 5 FTs`);
-        currentInitial = 5;
-        continue;
-      }
-      
+
       // Check for chips that affect transfer banking
       const isFreeHitGW = plannedChips[gw] === 'freehit';
       const isWildcardGW = plannedChips[gw] === 'wildcard';

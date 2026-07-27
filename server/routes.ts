@@ -1124,13 +1124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const transfersUsed = Math.min(recommendationsCount, runningFTs); // Can't use more FTs than available
             const unusedFTs = Math.max(0, runningFTs - transfersUsed);
             runningFTs = Math.min(5, unusedFTs + 1); // Bank unused + 1 new, cap at 5
-            
-            // Special case: GW16 AFCON top-up
-            const nextGW = parseInt(gwKey) + 1;
-            if (nextGW === 16) {
-              runningFTs = 5;
-            }
-            
+
             console.log(`DEBUG AUTH: GW${gwKey} - Available: ${gw.freeTransfersAvailable}, Recommendations: ${recommendationsCount}, Used: ${transfersUsed}, Next GW will have: ${runningFTs}`);
           }
         }
@@ -4100,25 +4094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let freeTransfers = 1; // Start with base 1 FT
       const planningStartGW = Math.min(currentGameweek + 1, 38);
       
-      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-      if (planningStartGW === 16) {
-        // All managers get 5 free transfers in GW16 regardless of history
-        freeTransfers = 5;
-        console.log(`🎁 GW16 AFCON BONUS: Starting with 5 FTs for GW16 (AFCON top-up regardless of GW15 activity)`);
-      } else if (planningStartGW === 17 && historyData.current && historyData.current.length > 0) {
-        // SPECIAL CASE: GW17 - Calculate based on GW16 AFCON bonus
-        // In GW16, all managers had 5 FTs. Calculate: 5 - transfers_used_in_gw16 + 1
-        const gw16Data = historyData.current.find((gw: any) => gw.event === 16);
-        if (gw16Data) {
-          const transfersUsedInGW16 = gw16Data.event_transfers || 0;
-          const unusedFromGW16 = Math.max(0, 5 - transfersUsedInGW16);
-          freeTransfers = Math.min(5, unusedFromGW16 + 1); // Add 1 new FT, cap at 5
-          console.log(`🎁 GW17 POST-AFCON: GW16 had 5 FTs, used ${transfersUsedInGW16}, banked ${unusedFromGW16}, +1 new = ${freeTransfers} FTs for GW17`);
-        } else {
-          // GW16 not found in history, fall back to standard calculation
-          freeTransfers = 1;
-        }
-      } else if (historyData.current && historyData.current.length > 0) {
+      if (historyData.current && historyData.current.length > 0) {
         // Standard calculation: walk FORWARD through history (correct FPL rules)
         // Backward-scan is wrong — making transfers doesn't mean you had only 1 FT;
         // you could have banked extras and still used some.
@@ -4796,16 +4772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Frontend handles actual FT tracking based on user-applied transfers
         const transfersUsedThisGW = 0; // No auto-execution, so no transfers used
         const unusedFTs = Math.max(0, freeTransfersForGW - transfersUsedThisGW);
-        let nextGWFTs = unusedFTs + 1;
-        
-        // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-        // All managers get 5 free transfers in GW16 regardless of GW15 transfers
-        const nextGW = targetGW + 1;
-        if (nextGW === 16) {
-          nextGWFTs = 5;
-          console.log(`🎁 GW16 AFCON BONUS: All managers receive 5 FTs for GW16 (regardless of GW15 activity)`);
-        }
-        
+        const nextGWFTs = unusedFTs + 1;
+
         runningFreeTransfers = Math.min(5, nextGWFTs);
         
         console.log(`DEBUG: GW${targetGW} FT update: Had ${freeTransfersForGW}, used ${transfersUsedThisGW}, banking ${unusedFTs}, next GW will have ${runningFreeTransfers}`);
@@ -9219,53 +9187,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 4. Apply form factor (more conservative)
     const formFactor = player.form ? Math.max(0.7, Math.min(1.1, player.form / 5)) : 0.9;
     
-    // 5. Check for international tournament impact
     const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
-    const playerNationality = PLAYER_NATIONALITIES[playerName];
-    
-    let tournamentAdjustment = 1.0;
-    let tournamentWeeksOut = 0;
-    
-    if (playerNationality) {
-      // Check AFCON impact
-      const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
-      if (afcon.affectedCountries.includes(playerNationality)) {
-        tournamentWeeksOut = afcon.endGameweek - afcon.startGameweek + 1; // 3 gameweeks
-        const currentGameweek = 3; // Current season position
-        
-        // Only apply if tournament is upcoming
-        if (currentGameweek < afcon.startGameweek) {
-          const totalRemainingWeeks = 38 - currentGameweek;
-          tournamentAdjustment = (totalRemainingWeeks - tournamentWeeksOut) / totalRemainingWeeks;
-          
-          console.log(`DEBUG: ${playerName} (${playerNationality}) - AFCON impact: ${tournamentWeeksOut} weeks out, adjustment: ${tournamentAdjustment.toFixed(2)}`);
-        }
-      }
-    }
-    
-    // 6. Calculate seasonal adjustment for injured players
+
+    // 5. Calculate seasonal adjustment for injured players
     const remainingSeasonWeeks = 35; // Approximate weeks left in season
     const availableWeeks = Math.max(1, remainingSeasonWeeks - returnTimelineWeeks);
     const seasonalAvailability = availableWeeks / remainingSeasonWeeks;
-    
-    // 7. Apply injury buffer (15% reduction for realistic expectations)
+
+    // 6. Apply injury buffer (15% reduction for realistic expectations)
     const injuryBuffer = 0.85;
-    
-    // Calculate final expected minutes with comprehensive factors including tournaments
-    const finalExpectedMinutes = expectedMinutes * 
-                                availabilityFactor * 
-                                injuryMultiplier * 
-                                seasonalAvailability * 
-                                tournamentAdjustment * 
-                                formFactor * 
+
+    // Calculate final expected minutes
+    const finalExpectedMinutes = expectedMinutes *
+                                availabilityFactor *
+                                injuryMultiplier *
+                                seasonalAvailability *
+                                formFactor *
                                 injuryBuffer;
-    
-    // Debug logging for injured/unavailable players or tournament impacts (only for significant issues)
-    if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8 || tournamentAdjustment < 0.95) && 
+
+    // Debug logging for injured/unavailable players (only for significant issues)
+    if ((injuryMultiplier < 0.8 || availabilityFactor < 0.8) &&
         playerName && playerName.trim() !== '' && !playerName.includes('undefined') && playerName.length > 3) {
-      console.log(`DEBUG: ${playerName} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Tournament adj: ${tournamentAdjustment.toFixed(2)}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
+      console.log(`DEBUG: ${playerName} availability - Status: ${playerStatus}, Chance: ${avgAvailability}%, Injury mult: ${injuryMultiplier}, Return: ${returnTimelineWeeks}w, Final minutes: ${Math.round(finalExpectedMinutes)}`);
     }
-    
+
     return Math.round(Math.max(100, finalExpectedMinutes)); // Minimum 100 minutes (for severely injured players)
   }
   
@@ -19135,29 +19080,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ FPL Scoring Cache API routes registered successfully");
 
-
-  // Helper function to get team strength for supremacy calculation
-  function getTeamStrength(teamId: number): number {
-    // SIMPLIFIED: Using basic strength calculation without tier system
-    // Elite teams get higher strength, weaker teams get lower strength
-    const eliteTeams = [1, 12, 13]; // Arsenal, Liverpool, Man City
-    const strongTeams = [2, 6, 7, 14, 15, 18]; // Villa, Brighton, Chelsea, Man United, Newcastle, Spurs
-    const weakTeams = [3, 11, 17, 20]; // Promoted teams and strugglers
-    
-    if (eliteTeams.includes(teamId)) return 8; // High strength
-    if (strongTeams.includes(teamId)) return 6; // Good strength
-    if (weakTeams.includes(teamId)) return 3; // Lower strength
-    return 5; // Average strength
-    
-    // Defense strength (inverted - lower goals against = higher defense)
-    if (eliteDefenseTeams.includes(teamId)) defenseStrength = 5;
-    else if (strongDefenseTeams.includes(teamId)) defenseStrength = 4;
-    else if (weakDefenseTeams.includes(teamId)) defenseStrength = 2;
-    else if (averageDefenseTeams.includes(teamId)) defenseStrength = 3;
-    else defenseStrength = 1; // Promoted teams
-    
-    return (attackStrength + defenseStrength) / 2;
-  }
 
   // Manual trigger for daily projections (testing/admin endpoint)
   app.post("/api/daily-projections/trigger", async (req, res) => {
