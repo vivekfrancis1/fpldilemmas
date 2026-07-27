@@ -149,7 +149,7 @@ interface CachedManagersResponse {
       last_deadline_total_transfers: number;
     };
     historyData?: {
-      current: Array<{ event: number; event_transfers: number; event_transfers_cost: number }>;
+      current: Array<{ event: number; event_transfers: number; event_transfers_cost: number; overall_rank?: number }>;
       chips: Array<{ event: number; name: string }>;
     };
     success: boolean;

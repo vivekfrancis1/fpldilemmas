@@ -292,7 +292,7 @@ export default function PlayerGoalsConceded() {
                         className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                         All
                       </button>
-                      {Array.from(new Set((goalsConcededProjections || []).map((p: any) => p.teamName))).sort().map(team => (
+                      {Array.from(new Set<string>(((goalsConcededProjections as GoalsConcededProjection[]) || []).map((p: any) => p.teamName))).sort().map(team => (
                         <button key={team}
                           onClick={() => setTeamFilter(teamFilter === team ? 'all' : team)}
                           className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>

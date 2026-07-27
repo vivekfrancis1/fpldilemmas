@@ -182,7 +182,7 @@ export default function ProjectionAccuracy() {
 
   const uniqueTeams = useMemo(() => {
     if (!accuracyData?.players) return [];
-    const teams = [...new Set(accuracyData.players.map(p => normalizeTeamName(p.team_name)))];
+    const teams = Array.from(new Set(accuracyData.players.map(p => normalizeTeamName(p.team_name))));
     return teams.sort();
   }, [accuracyData?.players]);
 
@@ -371,7 +371,7 @@ export default function ProjectionAccuracy() {
   }, [accuracyData?.teams, hasActuals]);
 
   if (isLoading) {
-    return <LoadingExperience variant="table" message="Loading projection accuracy data..." />;
+    return <LoadingExperience variant="table" description="Loading projection accuracy data..." />;
   }
 
   if (error) {
@@ -753,7 +753,7 @@ export default function ProjectionAccuracy() {
             {/* Aggregate Player Projections - Total Points across all GW29-38 */}
             <TabsContent value="aggregate-players" className="mt-0">
               {aggregateLoading ? (
-                <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
+                <LoadingExperience variant="analysis" description="Loading aggregate projections..." />
               ) : aggregateData ? (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
@@ -819,7 +819,7 @@ export default function ProjectionAccuracy() {
             {/* Aggregate Team Projections - Total Goals across all GW29-38 */}
             <TabsContent value="aggregate-teams" className="mt-0">
               {aggregateLoading ? (
-                <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
+                <LoadingExperience variant="analysis" description="Loading aggregate projections..." />
               ) : aggregateData ? (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">

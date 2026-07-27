@@ -482,7 +482,7 @@ export default function ProjectedPoints() {
 
   // Render player row for list view
   const renderPlayerRow = (pick: any, idx: number | string) => {
-    const player = getPlayerById(pick.element || pick.element);
+    const player = getPlayerById(pick.element || pick.element) as Player | undefined;
     if (!player) return null;
 
     const position = getPositionName(player);
