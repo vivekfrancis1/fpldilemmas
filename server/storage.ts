@@ -183,6 +183,7 @@ export class MemStorage implements IStorage {
   private upsetConfig: UpsetConfig | undefined;
   private nextWatchlistId: number;
   private nextAlertId: number;
+  private users: Map<string, User>;
 
   constructor() {
     this.playerSummaries = new Map();
@@ -192,6 +193,24 @@ export class MemStorage implements IStorage {
     this.historicalPlayerCache = new Map();
     this.nextWatchlistId = 1;
     this.nextAlertId = 1;
+    this.users = new Map();
+  }
+
+  // User operations (required for Replit Auth) — in-memory fallback, mirrors DatabaseStorage
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const existing = this.users.get(userData.id!);
+    const user: User = {
+      ...existing,
+      ...userData,
+      createdAt: existing?.createdAt ?? new Date(),
+      updatedAt: new Date(),
+    } as User;
+    this.users.set(user.id, user);
+    return user;
   }
 
   async getBootstrapData(): Promise<BootstrapData | undefined> {
@@ -1202,13 +1221,9 @@ export class DatabaseStorage implements IStorage {
   async getTopManagers(category?: string): Promise<FplTopManager[]> {
     try {
       console.log(`📊 Fetching top managers from database${category ? ` for category ${category}` : ''}...`);
-      let query = db.select().from(fplTopManagers);
-      
-      if (category) {
-        query = query.where(eq(fplTopManagers.category, category));
-      }
-      
-      const managers = await query.orderBy(fplTopManagers.staticRank);
+      const managers = await db.select().from(fplTopManagers)
+        .where(category ? eq(fplTopManagers.category, category) : undefined)
+        .orderBy(fplTopManagers.staticRank);
       console.log(`✅ Found ${managers.length} top managers in database`);
       return managers;
     } catch (error) {
@@ -1542,7 +1557,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async removePriceChange(id: number): Promise<void> {
+  async removePriceChange(id: string): Promise<void> {
     try {
       console.log(`🗑️ Removing price change with ID: ${id}`);
       await db.delete(priceChanges).where(eq(priceChanges.id, id));
@@ -1685,7 +1700,7 @@ export class DatabaseStorage implements IStorage {
     endGameweek: number;
   }>> {
     try {
-      let query = db
+      const baseQuery = db
         .select({
           playerId: playerTotalPointsSnapshots.playerId,
           playerName: playerTotalPointsSnapshots.playerName,
@@ -1708,14 +1723,12 @@ export class DatabaseStorage implements IStorage {
           eq(playerTotalPointsSnapshots.windowId, playerTotalPointsWindows.windowId)
         );
       
-      if (windowId) {
-        query = query.where(eq(playerTotalPointsSnapshots.windowId, windowId));
-      } else {
-        // Get snapshots from the active window
-        query = query.where(eq(playerTotalPointsWindows.isActive, true));
-      }
-      
-      const results = await query.orderBy(desc(playerTotalPointsSnapshots.totalProjectedPoints));
+      // windowId given: those snapshots; else the active window's snapshots.
+      const results = await baseQuery
+        .where(windowId
+          ? eq(playerTotalPointsSnapshots.windowId, windowId)
+          : eq(playerTotalPointsWindows.isActive, true))
+        .orderBy(desc(playerTotalPointsSnapshots.totalProjectedPoints));
       
       console.log(`📊 Retrieved ${results.length} Player Total Points snapshots`);
       
@@ -1829,7 +1842,7 @@ export class DatabaseStorage implements IStorage {
       if (updates.teamValue !== undefined) {
         updateData.teamValue = updates.teamValue.toString();
       }
-      if (updates.totalProjectedPoints !== undefined) {
+      if (updates.totalProjectedPoints != null) {
         updateData.totalProjectedPoints = updates.totalProjectedPoints.toString();
       }
       if (updates.totalTransfersUsed !== undefined) {

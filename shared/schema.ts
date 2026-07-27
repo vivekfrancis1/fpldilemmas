@@ -392,8 +392,6 @@ export const priceChanges = pgTable("price_changes", {
   index("idx_price_changes_player_date").on(table.playerId, table.changeDate),
 ]);
 
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
 export type DailyPlayerPrice = typeof dailyPlayerPrices.$inferSelect;
 export type InsertDailyPlayerPrice = typeof dailyPlayerPrices.$inferInsert;
 export type PriceChange = typeof priceChanges.$inferSelect;

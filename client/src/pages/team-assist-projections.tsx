@@ -196,7 +196,7 @@ export default function TeamAssistProjections() {
       }
       if (assignedGW === null) return team;
       const key = String(assignedGW);
-      const newProjections = { ...team.gameweekProjections, [key]: (Number(team.gameweekProjections[key]) || 0) + tbcEntry.assists };
+      const newProjections: { [gameweek: number]: number } = { ...team.gameweekProjections, [key]: (Number((team.gameweekProjections as any)[key]) || 0) + tbcEntry.assists };
       const existing: FixtureDetail[] = team.fixtureDetails?.[key] ? [...team.fixtureDetails[key]] : [];
       const newFixtureDetails = { ...(team.fixtureDetails || {}), [key]: [...existing, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, assists: tbcEntry.assists }] };
       return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
