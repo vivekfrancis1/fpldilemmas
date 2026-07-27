@@ -91,7 +91,7 @@ export default function AdminProjectionValidation() {
     for (const p of data.players) {
       if (!teamSet.has(p.team)) teamSet.set(p.team, p.teamId);
     }
-    return [...teamSet.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(teamSet.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [data]);
 
   const filteredPlayers = useMemo(() => {

@@ -77,7 +77,7 @@ export async function prefetchAllPlayerHistories(playerIds: number[], finishedGW
       if (finishedGW && finishedGW > 0) {
         const sampleHistories = await getBulkPlayerHistories(playerIds.slice(0, 5));
         let maxRoundInDb = 0;
-        for (const hist of sampleHistories.values()) {
+        for (const hist of Array.from(sampleHistories.values())) {
           const m = Math.max(...hist.map((h: any) => h.round || 0), 0);
           if (m > maxRoundInDb) maxRoundInDb = m;
         }
