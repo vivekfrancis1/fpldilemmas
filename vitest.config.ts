@@ -6,6 +6,11 @@ export default defineConfig({
   test: {
     projects: [
       {
+        resolve: {
+          alias: {
+            '@shared': path.resolve(import.meta.dirname, 'shared'),
+          },
+        },
         test: {
           name: 'unit',
           include: ['tests/**/*.test.ts'],

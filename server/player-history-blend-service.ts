@@ -24,6 +24,10 @@ export interface LastSeasonPlayerRow {
   defensiveContribution: number;
   yellowCards: number;
   redCards: number;
+  goalsScored: number;
+  assists: number;
+  expectedGoals: number;
+  expectedAssists: number;
 }
 
 function normalizeName(name: string): string {
@@ -48,7 +52,7 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
     try {
       const result = await pool.query(
         `SELECT sps.first_name, sps.second_name, sps.element_type, sps.minutes, sps.starts, sps.saves, sps.bonus,
-                sps.yellow_cards, sps.red_cards,
+                sps.yellow_cards, sps.red_cards, sps.goals_scored, sps.assists, sps.expected_goals, sps.expected_assists,
                 hps.defensive_contribution
          FROM season_player_snapshot sps
          JOIN historical_player_stats hps ON hps.season = sps.season AND hps.player_id = sps.player_id
@@ -66,6 +70,10 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
         defensiveContribution: r.defensive_contribution || 0,
         yellowCards: r.yellow_cards || 0,
         redCards: r.red_cards || 0,
+        goalsScored: r.goals_scored || 0,
+        assists: r.assists || 0,
+        expectedGoals: parseFloat(r.expected_goals) || 0,
+        expectedAssists: parseFloat(r.expected_assists) || 0,
       }));
       lastSeasonPlayersCache = rows;
       return rows;
@@ -132,6 +140,22 @@ export function lastSeasonRedCardsPer90(row: LastSeasonPlayerRow): number | unde
   return per90(row.redCards, row.minutes);
 }
 
+export function lastSeasonGoalsPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.goalsScored, row.minutes);
+}
+
+export function lastSeasonXGPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.expectedGoals, row.minutes);
+}
+
+export function lastSeasonAssistsPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.assists, row.minutes);
+}
+
+export function lastSeasonXAPer90(row: LastSeasonPlayerRow): number | undefined {
+  return per90(row.expectedAssists, row.minutes);
+}
+
 let leagueAveragesCache: {
   gkSavesPer90: number;
   defDCPer90: number;
@@ -142,6 +166,10 @@ let leagueAveragesCache: {
   fwdBonusPerStart: number;
   yellowCardsPer90ByPosition: Record<string, number>;
   redCardsPer90ByPosition: Record<string, number>;
+  goalsPer90ByPosition: Record<string, number>;
+  xgPer90ByPosition: Record<string, number>;
+  assistsPer90ByPosition: Record<string, number>;
+  xaPer90ByPosition: Record<string, number>;
 } | null = null;
 
 /**
@@ -191,6 +219,30 @@ export async function getLeagueAverageRates() {
       DEF: avgPer90(defs, r => r.redCards),
       MID: avgPer90(mids, r => r.redCards),
       FWD: avgPer90(fwds, r => r.redCards),
+    },
+    goalsPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.goalsScored),
+      DEF: avgPer90(defs, r => r.goalsScored),
+      MID: avgPer90(mids, r => r.goalsScored),
+      FWD: avgPer90(fwds, r => r.goalsScored),
+    },
+    xgPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.expectedGoals),
+      DEF: avgPer90(defs, r => r.expectedGoals),
+      MID: avgPer90(mids, r => r.expectedGoals),
+      FWD: avgPer90(fwds, r => r.expectedGoals),
+    },
+    assistsPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.assists),
+      DEF: avgPer90(defs, r => r.assists),
+      MID: avgPer90(mids, r => r.assists),
+      FWD: avgPer90(fwds, r => r.assists),
+    },
+    xaPer90ByPosition: {
+      GKP: avgPer90(gks, r => r.expectedAssists),
+      DEF: avgPer90(defs, r => r.expectedAssists),
+      MID: avgPer90(mids, r => r.expectedAssists),
+      FWD: avgPer90(fwds, r => r.expectedAssists),
     },
   };
   return leagueAveragesCache;

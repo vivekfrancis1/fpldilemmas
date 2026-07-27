@@ -9875,28 +9875,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const goalBlendMap = computeGoalBlendMap(bootstrapData.elements, finishedFixturesGS, dbGoalHistories);
       persistBlendMap(goalBlendMap, bootstrapData.elements).catch(console.error);
 
-      // For each player, compute goals/xG scored ONLY in fixtures for their current club.
-      // This prevents transferred players' pre-transfer goals inflating the new club's pool.
-      // Falls back to full-season stats if no current-club history exists (brand-new signing).
+      // For each player, blend their per-90 goals/xG rate — 50/50 this-season (ONLY real
+      // 2026/27 fixtures for their current club, from DB history, never bootstrap-static's
+      // cumulative fields, which still carry last season's frozen totals until FPL resets them
+      // for kickoff) and last-season 2025/26 (matched by name+position, same as saves/DC/bonus),
+      // falling back to a position league-average for a player with neither. Without this, every
+      // player who hasn't recorded a goal/xG yet this season shows a genuine 0 — which early in
+      // a season is nearly the entire player pool — and buildGoalShareResponse drops any team
+      // whose total lands on exactly 0, silently emptying most of the league from the response.
+      const { getLastSeasonPlayerRow: getLastSeasonGoalRow, lastSeasonGoalsPer90, lastSeasonXGPer90, getLeagueAverageRates: getGoalLeagueAverages, blendRate: blendGoalRate, MIN_MINUTES_FOR_RATE: MIN_MINUTES_GOALS } = await import('./player-history-blend-service');
+      const goalLeagueAverages = await getGoalLeagueAverages();
+      const POSITION_KEY_BY_ELEMENT_TYPE: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+
       const currentClubGoalsMap = new Map<number, { goals: number; xG: number }>();
-      bootstrapData.elements.forEach((player: any) => {
+      await Promise.all(bootstrapData.elements.map(async (player: any) => {
         const history = dbGoalHistories.get(player.id) || [];
         const currentClubGames = history.filter((g: any) => {
           const fix = fixtureTeamMapGS.get(g.fixture);
           return fix && (fix.home === player.team || fix.away === player.team);
         });
-        if (currentClubGames.length >= 1) {
-          const goals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
-          const xG = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
-          currentClubGoalsMap.set(player.id, { goals, xG });
-        } else {
-          // No DB history for current club — fall back to full-season bootstrap stats
-          currentClubGoalsMap.set(player.id, {
-            goals: parseInt(player.goals_scored || 0),
-            xG: parseFloat(player.expected_goals || 0)
-          });
-        }
-      });
+        const thisSeasonMinutes = currentClubGames.reduce((s: number, g: any) => s + (g.minutes || 0), 0);
+        const thisSeasonGoals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
+        const thisSeasonXG = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
+        const thisSeasonGoalsPer90 = thisSeasonMinutes >= MIN_MINUTES_GOALS ? (thisSeasonGoals / thisSeasonMinutes) * 90 : undefined;
+        const thisSeasonXGPer90 = thisSeasonMinutes >= MIN_MINUTES_GOALS ? (thisSeasonXG / thisSeasonMinutes) * 90 : undefined;
+
+        const lastSeasonRow = await getLastSeasonGoalRow(player.first_name, player.second_name, player.element_type);
+        const lastSeasonGoalsRate = lastSeasonRow ? lastSeasonGoalsPer90(lastSeasonRow) : undefined;
+        const lastSeasonXGRate = lastSeasonRow ? lastSeasonXGPer90(lastSeasonRow) : undefined;
+
+        const positionKey = POSITION_KEY_BY_ELEMENT_TYPE[player.element_type] || 'MID';
+        const leagueAvgGoals = goalLeagueAverages.goalsPer90ByPosition[positionKey] || 0;
+        const leagueAvgXG = goalLeagueAverages.xgPer90ByPosition[positionKey] || 0;
+
+        currentClubGoalsMap.set(player.id, {
+          goals: blendGoalRate(thisSeasonGoalsPer90, lastSeasonGoalsRate, leagueAvgGoals),
+          xG: blendGoalRate(thisSeasonXGPer90, lastSeasonXGRate, leagueAvgXG),
+        });
+      }));
 
       // Promoted teams (Coventry/Ipswich/Hull) never played in the Premier League, so
       // bootstrap-static's goals_scored/expected_goals is genuinely 0 for almost their whole
@@ -10857,27 +10873,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { computeBlendMap: computeAssistBlendMap } = await import('./blend-eligible-service');
       const assistBlendMap = computeAssistBlendMap(bootstrapData.elements, finishedFixturesAS, dbAssistHistories);
 
-      // For each player, compute assists/xA scored ONLY in fixtures for their current club.
-      // This prevents transferred players' pre-transfer assists inflating the new club's pool.
+      // For each player, blend their per-90 assists/xA rate — same 50/50 this-season/last-season
+      // (falling back to position league-average) as goal-share-season above; see the comment
+      // there for why the old this-season-only computation silently emptied most of the league.
+      const { getLastSeasonPlayerRow: getLastSeasonAssistRow, lastSeasonAssistsPer90, lastSeasonXAPer90, getLeagueAverageRates: getAssistLeagueAverages, blendRate: blendAssistRate, MIN_MINUTES_FOR_RATE: MIN_MINUTES_ASSISTS } = await import('./player-history-blend-service');
+      const assistLeagueAverages = await getAssistLeagueAverages();
+      const POSITION_KEY_BY_ELEMENT_TYPE_AS: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+
       const currentClubAssistsMap = new Map<number, { assists: number; xA: number }>();
-      bootstrapData.elements.forEach((player: any) => {
+      await Promise.all(bootstrapData.elements.map(async (player: any) => {
         const history = dbAssistHistories.get(player.id) || [];
         const currentClubGames = history.filter((g: any) => {
           const fix = fixtureTeamMapAS.get(g.fixture);
           return fix && (fix.home === player.team || fix.away === player.team);
         });
-        if (currentClubGames.length >= 1) {
-          const assists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
-          const xA = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
-          currentClubAssistsMap.set(player.id, { assists, xA });
-        } else {
-          // No DB history for current club — fall back to full-season bootstrap stats
-          currentClubAssistsMap.set(player.id, {
-            assists: parseInt(player.assists || 0),
-            xA: parseFloat(player.expected_assists || 0)
-          });
-        }
-      });
+        const thisSeasonMinutes = currentClubGames.reduce((s: number, g: any) => s + (g.minutes || 0), 0);
+        const thisSeasonAssists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
+        const thisSeasonXA = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
+        const thisSeasonAssistsPer90 = thisSeasonMinutes >= MIN_MINUTES_ASSISTS ? (thisSeasonAssists / thisSeasonMinutes) * 90 : undefined;
+        const thisSeasonXAPer90 = thisSeasonMinutes >= MIN_MINUTES_ASSISTS ? (thisSeasonXA / thisSeasonMinutes) * 90 : undefined;
+
+        const lastSeasonRow = await getLastSeasonAssistRow(player.first_name, player.second_name, player.element_type);
+        const lastSeasonAssistsRate = lastSeasonRow ? lastSeasonAssistsPer90(lastSeasonRow) : undefined;
+        const lastSeasonXARate = lastSeasonRow ? lastSeasonXAPer90(lastSeasonRow) : undefined;
+
+        const positionKey = POSITION_KEY_BY_ELEMENT_TYPE_AS[player.element_type] || 'MID';
+        const leagueAvgAssists = assistLeagueAverages.assistsPer90ByPosition[positionKey] || 0;
+        const leagueAvgXA = assistLeagueAverages.xaPer90ByPosition[positionKey] || 0;
+
+        currentClubAssistsMap.set(player.id, {
+          assists: blendAssistRate(thisSeasonAssistsPer90, lastSeasonAssistsRate, leagueAvgAssists),
+          xA: blendAssistRate(thisSeasonXAPer90, lastSeasonXARate, leagueAvgXA),
+        });
+      }));
 
       // Same promoted-team override as goal-share-season — see applyPromotedTeamGoalOverrides.
       const { PROMOTED_TEAM_PLAYER_LAST_SEASON: promotedAssistData } = await import('./team-goals-service');
