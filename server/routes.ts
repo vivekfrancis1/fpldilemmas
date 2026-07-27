@@ -79,45 +79,6 @@ async function resolveHistorySeason(requestedSeason: string | undefined): Promis
   return PREVIOUS_SEASON;
 }
 
-/**
- * Override goal-share input data for promoted teams' players with real 2025/26 Championship
- * figures (see PROMOTED_TEAM_PLAYER_LAST_SEASON in team-goals-service.ts). Without this, every
- * promoted-team player who never featured in the Premier League shows a genuine 0 in
- * bootstrap-static (FPL never tracked their Championship stats), so the one player on the
- * roster with ANY leftover stale PL number - even an unrelated summer signing - captures 100%
- * of the team's projected output by default. Players not in the table (including such
- * signings) are explicitly zeroed rather than left on that stale-stat fallback.
- */
-function applyPromotedTeamGoalOverrides(
-  bootstrapData: any,
-  map: Map<number, { goals: number; xG: number }>,
-  promotedData: Record<string, Record<string, { goals: number; assists: number }>>
-): void {
-  bootstrapData.teams.forEach((team: any) => {
-    const playerTable = promotedData[team.name];
-    if (!playerTable) return;
-    bootstrapData.elements.filter((p: any) => p.team === team.id).forEach((p: any) => {
-      const entry = playerTable[p.web_name];
-      map.set(p.id, { goals: entry?.goals ?? 0, xG: 0 });
-    });
-  });
-}
-
-/** Assist-share counterpart of applyPromotedTeamGoalOverrides — see that function for why. */
-function applyPromotedTeamAssistOverrides(
-  bootstrapData: any,
-  map: Map<number, { assists: number; xA: number }>,
-  promotedData: Record<string, Record<string, { goals: number; assists: number }>>
-): void {
-  bootstrapData.teams.forEach((team: any) => {
-    const playerTable = promotedData[team.name];
-    if (!playerTable) return;
-    bootstrapData.elements.filter((p: any) => p.team === team.id).forEach((p: any) => {
-      const entry = playerTable[p.web_name];
-      map.set(p.id, { assists: entry?.assists ?? 0, xA: 0 });
-    });
-  });
-}
 
 export interface ArchivedPlayerGameweekRow {
   gameweek: number;
@@ -9432,6 +9393,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return finalResponse;
   }
 
+  // Real per-player/per-team goals+xG for both seasons, shared by buildProjectedGoalShare and
+  // buildProjectedAssistShare below. Reuses the same real-data sourcing rules as
+  // buildRealGoalShareForSeason/buildRealAssistShareForSeason (season_player_snapshot for
+  // 2025/26, current-club-only DB history for 2026/27, PROMOTED_TEAM_PLAYER_LAST_SEASON /
+  // admin-configured assumed goals for promoted teams — no real xG data exists for the
+  // Championship, so promoted-team xG is always 0, same as the assist-share promoted override).
+  async function fetchProjectedShareInputs(bootstrapData: any) {
+    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, TeamGoalsService } = await import('./team-goals-service');
+    const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
+    const { getLastSeasonPlayerRow } = await import('./player-history-blend-service');
+    const { getBulkPlayerHistories } = await import('./player-history-service');
+
+    const last26Goals = new Map<number, number>();
+    const last26XG = new Map<number, number>();
+    const last26Assists = new Map<number, number>();
+    const last26XA = new Map<number, number>();
+    await Promise.all(bootstrapData.elements.map(async (player: any) => {
+      const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+      if (team && promotedTeamNames.has(team.name)) {
+        const entry = PROMOTED_TEAM_PLAYER_LAST_SEASON[team.name][player.web_name];
+        last26Goals.set(player.id, entry?.goals ?? 0);
+        last26Assists.set(player.id, entry?.assists ?? 0);
+        last26XG.set(player.id, 0);
+        last26XA.set(player.id, 0);
+      } else {
+        const row = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+        last26Goals.set(player.id, row?.goalsScored ?? 0);
+        last26Assists.set(player.id, row?.assists ?? 0);
+        last26XG.set(player.id, row?.expectedGoals ?? 0);
+        last26XA.set(player.id, row?.expectedAssists ?? 0);
+      }
+    }));
+
+    const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+    const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
+    const finishedFixtures = allFixtures.filter((f: any) => f.finished);
+    const fixtureTeamMap = new Map<number, { home: number; away: number }>();
+    finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
+    const allPlayerIds = bootstrapData.elements.map((p: any) => p.id);
+    const dbHistories = await getBulkPlayerHistories(allPlayerIds);
+
+    const this27Goals = new Map<number, number>();
+    const this27XG = new Map<number, number>();
+    const this27Assists = new Map<number, number>();
+    const this27XA = new Map<number, number>();
+    bootstrapData.elements.forEach((player: any) => {
+      const history = dbHistories.get(player.id) || [];
+      const currentClubGames = history.filter((g: any) => {
+        const fix = fixtureTeamMap.get(g.fixture);
+        return fix && (fix.home === player.team || fix.away === player.team);
+      });
+      this27Goals.set(player.id, currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0));
+      this27XG.set(player.id, currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0));
+      this27Assists.set(player.id, currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0));
+      this27XA.set(player.id, currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0));
+    });
+
+    const gamesByTeam = new Map<number, number>();
+    bootstrapData.teams.forEach((team: any) => {
+      let count = 0;
+      finishedFixtures.forEach((f: any) => { if (f.team_h === team.id || f.team_a === team.id) count++; });
+      gamesByTeam.set(team.id, count);
+    });
+
+    const promotedGoalsSettings = await TeamGoalsService.getPromotedTeamGoalsSettings();
+    const assumedGoalsByTeamName = new Map(promotedGoalsSettings.map((s: any) => [s.teamName, s.goalsFor]));
+
+    return { promotedTeamNames, last26Goals, last26XG, last26Assists, last26XA, this27Goals, this27XG, this27Assists, this27XA, gamesByTeam, assumedGoalsByTeamName };
+  }
+
+  /**
+   * Projected (default, no ?season=) goal share — the source of the goalShare percentage that
+   * player-goal-projections and player-goals-scored-projections multiply against their own
+   * per-gameweek team-goal-projections. Formula (all confirmed with the user):
+   *   - Team Goal Projections = [(0.5×Goals + 0.5×xG) for 2025/26 + (0.5×Goals + 0.5×xG) for
+   *     2026/27] ÷ (38 + games played in 2026/27) — a per-game rate, not a season total.
+   *   - Player's goalShare for a season = player's (0.5×Goals + 0.5×xG) ÷ team's (0.5×Goals +
+   *     0.5×xG) for that same season.
+   *   - Final share = average of the 2025/26 and 2026/27 shares — but until 2026/27 has any
+   *     real team total to divide by, only the 2025/26 share is used (matches "till the season
+   *     starts we take only 2025/26 data").
+   *   - projectedGoals = final share × Team Goal Projections (also a per-game rate).
+   */
+  async function buildProjectedGoalShare(bootstrapData: any): Promise<any[]> {
+    const { promotedTeamNames, last26Goals, last26XG, this27Goals, this27XG, gamesByTeam, assumedGoalsByTeamName } = await fetchProjectedShareInputs(bootstrapData);
+
+    const finalResponse: any[] = [];
+    bootstrapData.teams.forEach((team: any) => {
+      const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
+      const isPromoted = promotedTeamNames.has(team.name);
+
+      let teamGoals2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26Goals.get(p.id) || 0), 0);
+      let teamXG2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26XG.get(p.id) || 0), 0);
+      if (isPromoted) {
+        teamGoals2526 = assumedGoalsByTeamName.get(team.name) ?? teamGoals2526;
+        teamXG2526 = 0;
+      }
+      const teamGoals2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27Goals.get(p.id) || 0), 0);
+      const teamXG2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27XG.get(p.id) || 0), 0);
+      const games2627 = gamesByTeam.get(team.id) || 0;
+
+      const team2526Combined = 0.5 * teamGoals2526 + 0.5 * teamXG2526;
+      const team2627Combined = 0.5 * teamGoals2627 + 0.5 * teamXG2627;
+      // Team Goal Projections = average of the 2025/26 and 2026/27 per-game rates — until
+      // 2026/27 has any games played, only the 2025/26 rate is used ("till the season starts
+      // we take only 2025/26 data").
+      const rate2526 = team2526Combined / SEASON_GAMES;
+      const rate2627 = games2627 > 0 ? team2627Combined / games2627 : undefined;
+      const teamGoalProjections = rate2627 !== undefined ? 0.5 * rate2526 + 0.5 * rate2627 : rate2526;
+
+      const players = teamPlayersList.map((p: any) => {
+        const player2526Combined = 0.5 * (last26Goals.get(p.id) || 0) + 0.5 * (last26XG.get(p.id) || 0);
+        const share2526 = team2526Combined > 0 ? player2526Combined / team2526Combined : 0;
+
+        const player2627Combined = 0.5 * (this27Goals.get(p.id) || 0) + 0.5 * (this27XG.get(p.id) || 0);
+        const share2627 = team2627Combined > 0 ? player2627Combined / team2627Combined : undefined;
+
+        const finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526;
+        const projectedGoals = finalShare * teamGoalProjections;
+
+        const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
+        return {
+          playerId: p.id,
+          playerName: `${p.first_name} ${p.second_name}`,
+          position,
+          goalShare: Math.round(finalShare * 100 * 100) / 100,
+          projectedGoals: Math.round(projectedGoals * 100) / 100,
+        };
+      }).sort((a: any, b: any) => b.goalShare - a.goalShare);
+
+      finalResponse.push({
+        teamId: team.id,
+        teamName: team.name,
+        teamShort: team.short_name,
+        expectedGoals: Math.round(teamGoalProjections * 100) / 100, // per-game rate, not a season total
+        players,
+      });
+    });
+
+    finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
+    return finalResponse;
+  }
+
+  /** Assist-share counterpart of buildProjectedGoalShare — see that function for the full formula. */
+  async function buildProjectedAssistShare(bootstrapData: any): Promise<any[]> {
+    const { promotedTeamNames, last26Assists, last26XA, this27Assists, this27XA, gamesByTeam, assumedGoalsByTeamName } = await fetchProjectedShareInputs(bootstrapData);
+
+    const finalResponse: any[] = [];
+    bootstrapData.teams.forEach((team: any) => {
+      const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
+      const isPromoted = promotedTeamNames.has(team.name);
+
+      const teamAssists2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26Assists.get(p.id) || 0), 0);
+      // No separate "assumed team assists" admin config — 0.85 × assumed team goals, same as
+      // buildRealAssistShareForSeason.
+      const teamXA2526 = isPromoted ? 0 : teamPlayersList.reduce((sum: number, p: any) => sum + (last26XA.get(p.id) || 0), 0);
+      const teamAssists2526Final = isPromoted ? (assumedGoalsByTeamName.get(team.name) ?? teamAssists2526) * 0.85 : teamAssists2526;
+
+      const teamAssists2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27Assists.get(p.id) || 0), 0);
+      const teamXA2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27XA.get(p.id) || 0), 0);
+      const games2627 = gamesByTeam.get(team.id) || 0;
+
+      const team2526Combined = 0.5 * teamAssists2526Final + 0.5 * teamXA2526;
+      const team2627Combined = 0.5 * teamAssists2627 + 0.5 * teamXA2627;
+      // Average of the 2025/26 and 2026/27 per-game rates — see the matching comment in
+      // buildProjectedGoalShare above.
+      const rate2526 = team2526Combined / SEASON_GAMES;
+      const rate2627 = games2627 > 0 ? team2627Combined / games2627 : undefined;
+      const teamAssistProjections = rate2627 !== undefined ? 0.5 * rate2526 + 0.5 * rate2627 : rate2526;
+
+      const players = teamPlayersList.map((p: any) => {
+        const player2526Combined = 0.5 * (last26Assists.get(p.id) || 0) + 0.5 * (isPromoted ? 0 : (last26XA.get(p.id) || 0));
+        const share2526 = team2526Combined > 0 ? player2526Combined / team2526Combined : 0;
+
+        const player2627Combined = 0.5 * (this27Assists.get(p.id) || 0) + 0.5 * (this27XA.get(p.id) || 0);
+        const share2627 = team2627Combined > 0 ? player2627Combined / team2627Combined : undefined;
+
+        const finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526;
+        const projectedAssists = finalShare * teamAssistProjections;
+
+        const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
+        return {
+          playerId: p.id,
+          playerName: `${p.first_name} ${p.second_name}`,
+          position,
+          assistShare: Math.round(finalShare * 100 * 100) / 100,
+          projectedAssists: Math.round(projectedAssists * 100) / 100,
+        };
+      }).sort((a: any, b: any) => b.assistShare - a.assistShare);
+
+      finalResponse.push({
+        teamId: team.id,
+        teamName: team.name,
+        teamShort: team.short_name,
+        expectedAssists: Math.round(teamAssistProjections * 100) / 100, // per-game rate, not a season total
+        players,
+      });
+    });
+
+    finalResponse.sort((a, b) => b.expectedAssists - a.expectedAssists);
+    return finalResponse;
+  }
+
   // Simplified Goal Share endpoint - player's goals+xG divided by team total
   // Goal share endpoint - uses ONLY full season data from FPL API (goals + xG)
   // No filtering by last X gameweeks - simplified to avoid estimations
@@ -9466,138 +9630,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log(`DEBUG: Goal share using current-club-only filtered stats (transfer fix applied)`);
-      
-      // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
-      const fixturesResGS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      const allFixturesGS: any[] = fixturesResGS.ok ? await fixturesResGS.json() : [];
-      const finishedFixturesGS = allFixturesGS.filter((f: any) => f.finished);
-      // Map fixture ID → {home teamId, away teamId, round} for finished fixtures only
-      const fixtureTeamMapGS = new Map<number, { home: number; away: number; round: number }>();
-      finishedFixturesGS.forEach((f: any) => {
-        fixtureTeamMapGS.set(f.id, { home: f.team_h, away: f.team_a, round: f.event || 0 });
-      });
+      console.log(`DEBUG: Goal share using Team Goal Projections formula (avg of 2025/26 and 2026/27 per-game rates)`);
 
-      // Count finished fixtures per team (used for blend weight denominator)
-      const teamTotalGamesMapGS = new Map<number, number>();
-      bootstrapData.teams.forEach((team: any) => {
-        let count = 0;
-        fixtureTeamMapGS.forEach(fix => { if (fix.home === team.id || fix.away === team.id) count++; });
-        teamTotalGamesMapGS.set(team.id, Math.max(1, count));
-      });
+      const finalResponse = await buildProjectedGoalShare(bootstrapData);
 
-      // Fetch player DB histories for current-club filtering
-      const { getBulkPlayerHistories: getGoalHistories, computeRecentMetrics: computeGoalMetrics } = await import('./player-history-service');
-      const allGoalPlayerIds = bootstrapData.elements.map((p: any) => p.id);
-      const dbGoalHistories = await getGoalHistories(allGoalPlayerIds);
-
-      // Compute time-weighted blend map for AFCON/injury/transfer players
-      const { computeBlendMap: computeGoalBlendMap, persistBlendMap } = await import('./blend-eligible-service');
-      const goalBlendMap = computeGoalBlendMap(bootstrapData.elements, finishedFixturesGS, dbGoalHistories);
-      persistBlendMap(goalBlendMap, bootstrapData.elements).catch(console.error);
-
-      // For each player, blend their per-90 goals/xG rate — 50/50 this-season (ONLY real
-      // 2026/27 fixtures for their current club, from DB history, never bootstrap-static's
-      // cumulative fields, which still carry last season's frozen totals until FPL resets them
-      // for kickoff) and last-season 2025/26 (matched by name+position, same as saves/DC/bonus),
-      // falling back to a position league-average for a player with neither. Without this, every
-      // player who hasn't recorded a goal/xG yet this season shows a genuine 0 — which early in
-      // a season is nearly the entire player pool — and buildGoalShareResponse drops any team
-      // whose total lands on exactly 0, silently emptying most of the league from the response.
-      const { getLastSeasonPlayerRow: getLastSeasonGoalRow, getLeagueAverageRates: getGoalLeagueAverages, blendRate: blendGoalRate, MIN_MINUTES_FOR_RATE: MIN_MINUTES_GOALS } = await import('./player-history-blend-service');
-      const goalLeagueAverages = await getGoalLeagueAverages();
-      const POSITION_KEY_BY_ELEMENT_TYPE: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-
-      const currentClubGoalsMap = new Map<number, { goals: number; xG: number }>();
-      await Promise.all(bootstrapData.elements.map(async (player: any) => {
-        const history = dbGoalHistories.get(player.id) || [];
-        const currentClubGames = history.filter((g: any) => {
-          const fix = fixtureTeamMapGS.get(g.fixture);
-          return fix && (fix.home === player.team || fix.away === player.team);
-        });
-        const thisSeasonMinutes = currentClubGames.reduce((s: number, g: any) => s + (g.minutes || 0), 0);
-        const thisSeasonGoals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
-        const thisSeasonXG = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
-        // This season's per-90 rate extrapolated to a full season — comparable scale to last
-        // season's real total. Until there's enough of a this-season sample (MIN_MINUTES_GOALS),
-        // this stays undefined and blendGoalRate falls back to last season's real total alone —
-        // i.e. "till the season starts we take only 2025/26 data".
-        const thisSeasonGoalsForSeason = thisSeasonMinutes >= MIN_MINUTES_GOALS ? (thisSeasonGoals / thisSeasonMinutes) * 90 * SEASON_GAMES : undefined;
-        const thisSeasonXGForSeason = thisSeasonMinutes >= MIN_MINUTES_GOALS ? (thisSeasonXG / thisSeasonMinutes) * 90 * SEASON_GAMES : undefined;
-
-        const lastSeasonRow = await getLastSeasonGoalRow(player.first_name, player.second_name, player.element_type);
-        // Real, exact 2025/26 totals — already season-scale, no per-90 round-trip needed (unlike
-        // the 2026/27 side, that season is complete so its real total IS the season figure).
-        const lastSeasonGoalsForSeason = lastSeasonRow ? lastSeasonRow.goalsScored : undefined;
-        const lastSeasonXGForSeason = lastSeasonRow ? lastSeasonRow.expectedGoals : undefined;
-
-        const positionKey = POSITION_KEY_BY_ELEMENT_TYPE[player.element_type] || 'MID';
-        const leagueAvgGoalsForSeason = (goalLeagueAverages.goalsPer90ByPosition[positionKey] || 0) * SEASON_GAMES;
-        const leagueAvgXGForSeason = (goalLeagueAverages.xgPer90ByPosition[positionKey] || 0) * SEASON_GAMES;
-
-        // 50/50 blend of this-season (extrapolated) and last-season (real) season-scale totals,
-        // falling back to whichever side is available, or the league average if neither.
-        currentClubGoalsMap.set(player.id, {
-          goals: blendGoalRate(thisSeasonGoalsForSeason, lastSeasonGoalsForSeason, leagueAvgGoalsForSeason),
-          xG: blendGoalRate(thisSeasonXGForSeason, lastSeasonXGForSeason, leagueAvgXGForSeason),
-        });
-      }));
-
-      // Promoted teams (Coventry/Ipswich/Hull) never played in the Premier League, so
-      // bootstrap-static's goals_scored/expected_goals is genuinely 0 for almost their whole
-      // squad — except any player with leftover stale stats from a different PL club, who'd
-      // otherwise wrongly capture ~100% of the team's share. Override with real 2025/26
-      // Championship figures instead.
-      const { PROMOTED_TEAM_PLAYER_LAST_SEASON: promotedGoalData } = await import('./team-goals-service');
-      applyPromotedTeamGoalOverrides(bootstrapData, currentClubGoalsMap, promotedGoalData);
-
-      // Build per-player recent goals map (still used for additive pool signal)
-      const recentGoalsMap = new Map<number, { goals: number, poolSize: number }>();
-      bootstrapData.elements.forEach((player: any) => {
-        const history = dbGoalHistories.get(player.id) || [];
-        const metrics = computeGoalMetrics(history, 8);
-        recentGoalsMap.set(player.id, { goals: metrics.recentGoals, poolSize: metrics.poolSize });
-      });
-
-      // Calculate team totals using current-club-only filtered stats
-      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
-      bootstrapData.teams.forEach((team: any) => {
-        teamTotals[team.id] = { total: 0, name: team.name, short_name: team.short_name };
-      });
-      bootstrapData.elements.forEach((player: any) => {
-        const filtered = currentClubGoalsMap.get(player.id) || { goals: 0, xG: 0 };
-        if (teamTotals[player.team]) {
-          // Weighted average (60% real/blended goals, 40% xG), not a sum — goals and xG both
-          // measure roughly the same underlying chances, so adding them in full double-counts.
-          teamTotals[player.team].total += filtered.goals * 0.6 + filtered.xG * 0.4;
-        }
-      });
-
-      // PROMOTED_TEAM_PLAYER_LAST_SEASON only lists each promoted team's notable scorers, so
-      // summing just those players' goals badly undercounts the team's true real total (e.g.
-      // Hull's listed players sum to ~37, but Hull really scored 70) — buildGoalShareResponse
-      // uses promotedTeamAssumedTotals (built below) to replace that undercounted sum with the
-      // admin-configured real total for the SHARE calculation, so shares aren't inflated.
-      const { TeamGoalsService: TeamGoalsServiceForShareFix } = await import('./team-goals-service');
-      const promotedGoalsSettingsForShareFix = await TeamGoalsServiceForShareFix.getPromotedTeamGoalsSettings();
-      const promotedTeamAssumedTotals = new Map<number, number>();
-      promotedGoalsSettingsForShareFix.forEach(({ teamName, goalsFor }) => {
-        const team = bootstrapData.teams.find((t: any) => t.name === teamName);
-        if (team) {
-          promotedTeamAssumedTotals.set(team.id, goalsFor * 0.6);
-        }
-      });
-
-      const teamRecentGoalsMap = new Map<number, number>();
-      bootstrapData.teams.forEach((team: any) => {
-        const total = bootstrapData.elements
-          .filter((p: any) => p.team === team.id)
-          .reduce((sum: number, p: any) => sum + (recentGoalsMap.get(p.id)?.goals || 0), 0);
-        teamRecentGoalsMap.set(team.id, total);
-      });
-      
-      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap, goalBlendMap, promotedTeamAssumedTotals);
-      
       setGoalShareCache({
         data: finalResponse,
         timestamp: Date.now(),
@@ -9617,145 +9653,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate goal share data" });
     }
   });
-  
-  // Helper function to build goal share response for full season
-  // With penalty taker and direct freekick taker bonuses (no normalization)
-  // currentClubGoalsMap: per-player goals/xG filtered to current-club fixtures only (transfer fix)
-  function buildGoalShareResponse(
-    bootstrapData: any,
-    teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
-    recentGoalsMap: Map<number, { goals: number, poolSize: number }>,
-    teamRecentGoalsMap: Map<number, number>,
-    currentClubGoalsMap?: Map<number, { goals: number; xG: number }>,
-    blendMap?: Map<number, { blendWeight: number; activeGames: number; teamGames: number }>,
-    promotedTeamAssumedTotals?: Map<number, number>
-  ) {
-    const finalResponse: any[] = [];
-    
-    Object.keys(teamTotals).forEach(teamIdStr => {
-      const teamId = parseInt(teamIdStr);
-      const teamData = teamTotals[teamId];
-      
-      if (teamData.total === 0) return;
-      
-      const teamPlayers: any[] = [];
-      const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
-      
-      // Use current-club-only filtered totals if available (transfer fix), else full-season
-      let teamTotal = 0;
-      const playerTotals: { [playerId: number]: number } = {};
-      
-      teamPlayersList.forEach((player: any) => {
-        let rawTotal: number;
-        if (currentClubGoalsMap) {
-          const filtered = currentClubGoalsMap.get(player.id) || { goals: 0, xG: 0 };
-          // Weighted average, not a sum — see the matching comment on teamTotals above.
-          rawTotal = filtered.goals * 0.6 + filtered.xG * 0.4;
-        } else {
-          rawTotal = parseInt(player.goals_scored || 0) * 0.6 + parseFloat(player.expected_goals || 0) * 0.4;
-        }
-        // Apply time-weighted blend for AFCON/injury/transfer players
-        let playerTotal = rawTotal;
-        const blendInfo = blendMap?.get(player.id);
-        if (blendInfo && rawTotal > 0) {
-          const ratePerGame = rawTotal / blendInfo.activeGames;
-          const rateNormalized = ratePerGame * blendInfo.teamGames;
-          playerTotal = rawTotal * blendInfo.blendWeight + rateNormalized * (1 - blendInfo.blendWeight);
-        }
-        playerTotals[player.id] = playerTotal;
-        teamTotal += playerTotal;
-      });
-
-      // Promoted teams: the sum just computed only covers the players individually listed in
-      // PROMOTED_TEAM_PLAYER_LAST_SEASON, which badly undercounts the team's true real total
-      // (many of a promoted team's real goals came from departed/loaned-out players not on the
-      // current roster at all) — use the real total instead so shares aren't inflated.
-      if (promotedTeamAssumedTotals?.has(teamId)) {
-        teamTotal = promotedTeamAssumedTotals.get(teamId)!;
-      }
-
-      // Recent context for blend
-      const teamRecentTotal = teamRecentGoalsMap.get(teamId) || 0;
-      
-      // Calculate shares with set piece bonuses (no normalization - just boost individuals)
-      teamPlayersList.forEach((player: any) => {
-        const playerTotal = playerTotals[player.id] || 0;
-        // For set piece bonus calculation, use current-club goals if available
-        const goalsScored = currentClubGoalsMap
-          ? (currentClubGoalsMap.get(player.id)?.goals || 0)
-          : parseInt(player.goals_scored || 0);
-        
-        if (playerTotal > 0 && teamTotal > 0) {
-          // Additive pool: (season goals + season xG + last 8 actual goals) / team equivalent.
-          // Season (~28 games) naturally dominates; recent 8 games add proportional signal
-          // without the double-share distortion of blending two separate percentages.
-          const playerRecent = recentGoalsMap.get(player.id);
-          let goalShare: number;
-          if (teamRecentTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
-            const playerCombined = playerTotal + playerRecent.goals;
-            const teamCombined = teamTotal + teamRecentTotal;
-            goalShare = teamCombined > 0 ? (playerCombined / teamCombined) * 100 : 0;
-          } else {
-            goalShare = teamTotal > 0 ? (playerTotal / teamTotal) * 100 : 0;
-          }
-          
-          // Apply penalty taker bonus (no normalization)
-          const penaltyOrder = player.penalties_order || 99;
-          let penaltyBonus = 0;
-          if (penaltyOrder === 1) {
-            // Primary penalty taker - significant goal advantage
-            penaltyBonus = 0.8 + goalsScored * 0.04;
-          } else if (penaltyOrder === 2) {
-            // Secondary penalty taker
-            penaltyBonus = 0.5 + goalsScored * 0.03;
-          }
-          penaltyBonus = Math.min(1.5, Math.max(0, penaltyBonus));
-          
-          // Apply direct freekick taker bonus (no normalization)
-          const freekickOrder = player.direct_freekicks_order || 99;
-          let freekickBonus = 0;
-          if (freekickOrder === 1) {
-            // Primary direct freekick taker
-            freekickBonus = 0.3 + goalsScored * 0.02;
-          } else if (freekickOrder === 2) {
-            // Secondary direct freekick taker
-            freekickBonus = 0.2 + goalsScored * 0.015;
-          }
-          freekickBonus = Math.min(0.4, Math.max(0, freekickBonus));
-          
-          // Add bonuses to goal share (boosting individual without normalization)
-          goalShare += penaltyBonus + freekickBonus;
-          
-          const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
-          
-          teamPlayers.push({
-            playerId: player.id,
-            playerName: `${player.first_name} ${player.second_name}`,
-            position: position,
-            goalShare: Math.round(goalShare * 100) / 100,
-            projectedGoals: Math.round(playerTotal * 100) / 100,
-            penaltyTaker: penaltyOrder <= 2 ? penaltyOrder : null,
-            directFreekickTaker: freekickOrder <= 2 ? freekickOrder : null
-          });
-        }
-      });
-      
-      teamPlayers.sort((a, b) => b.goalShare - a.goalShare);
-      
-      if (teamPlayers.length > 0) {
-        finalResponse.push({
-          teamId: teamId,
-          teamName: teamData.name,
-          teamShort: teamData.short_name,
-          expectedGoals: Math.round(teamTotal * 100) / 100,
-          players: teamPlayers
-        });
-      }
-    });
-    
-    finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
-    return finalResponse;
-  }
   
   // Helper function to build goal share response for filtered gameweeks
   // NO position caps, NO minutes weight, NO penalty adjustments - pure raw share
@@ -10518,212 +10415,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(assistShareCache.data);
       }
       
-      console.log(`DEBUG: Assist share using current-club-only filtered stats (transfer fix applied)`);
+      console.log(`DEBUG: Assist share using Team Goal Projections formula (avg of 2025/26 and 2026/27 per-game rates)`);
 
-      // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
-      const fixturesResAS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      const allFixturesAS: any[] = fixturesResAS.ok ? await fixturesResAS.json() : [];
-      const finishedFixturesAS = allFixturesAS.filter((f: any) => f.finished);
-      const fixtureTeamMapAS = new Map<number, { home: number; away: number; round: number }>();
-      finishedFixturesAS.forEach((f: any) => {
-        fixtureTeamMapAS.set(f.id, { home: f.team_h, away: f.team_a, round: f.event || 0 });
-      });
+      const finalResponse = await buildProjectedAssistShare(bootstrapData);
 
-      // Fetch player DB histories for current-club filtering
-      const { getBulkPlayerHistories: getAssistHistories, computeRecentMetrics: computeAssistMetrics } = await import('./player-history-service');
-      const allAssistPlayerIds = bootstrapData.elements.map((p: any) => p.id);
-      const dbAssistHistories = await getAssistHistories(allAssistPlayerIds);
-
-      // Compute time-weighted blend map for AFCON/injury/transfer players
-      const { computeBlendMap: computeAssistBlendMap } = await import('./blend-eligible-service');
-      const assistBlendMap = computeAssistBlendMap(bootstrapData.elements, finishedFixturesAS, dbAssistHistories);
-
-      // For each player, blend their per-90 assists/xA rate — same 50/50 this-season/last-season
-      // (falling back to position league-average) as goal-share-season above; see the comment
-      // there for why the old this-season-only computation silently emptied most of the league.
-      const { getLastSeasonPlayerRow: getLastSeasonAssistRow, getLeagueAverageRates: getAssistLeagueAverages, blendRate: blendAssistRate, MIN_MINUTES_FOR_RATE: MIN_MINUTES_ASSISTS } = await import('./player-history-blend-service');
-      const assistLeagueAverages = await getAssistLeagueAverages();
-      const POSITION_KEY_BY_ELEMENT_TYPE_AS: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
-
-      const currentClubAssistsMap = new Map<number, { assists: number; xA: number }>();
-      await Promise.all(bootstrapData.elements.map(async (player: any) => {
-        const history = dbAssistHistories.get(player.id) || [];
-        const currentClubGames = history.filter((g: any) => {
-          const fix = fixtureTeamMapAS.get(g.fixture);
-          return fix && (fix.home === player.team || fix.away === player.team);
-        });
-        const thisSeasonMinutes = currentClubGames.reduce((s: number, g: any) => s + (g.minutes || 0), 0);
-        const thisSeasonAssists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
-        const thisSeasonXA = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
-        // This season's per-90 rate extrapolated to a full season — see the matching comment in
-        // goal-share-season above for why last season doesn't need the same treatment.
-        const thisSeasonAssistsForSeason = thisSeasonMinutes >= MIN_MINUTES_ASSISTS ? (thisSeasonAssists / thisSeasonMinutes) * 90 * SEASON_GAMES : undefined;
-        const thisSeasonXAForSeason = thisSeasonMinutes >= MIN_MINUTES_ASSISTS ? (thisSeasonXA / thisSeasonMinutes) * 90 * SEASON_GAMES : undefined;
-
-        const lastSeasonRow = await getLastSeasonAssistRow(player.first_name, player.second_name, player.element_type);
-        // Real, exact 2025/26 totals — already season-scale, no per-90 round-trip needed.
-        const lastSeasonAssistsForSeason = lastSeasonRow ? lastSeasonRow.assists : undefined;
-        const lastSeasonXAForSeason = lastSeasonRow ? lastSeasonRow.expectedAssists : undefined;
-
-        const positionKey = POSITION_KEY_BY_ELEMENT_TYPE_AS[player.element_type] || 'MID';
-        const leagueAvgAssistsForSeason = (assistLeagueAverages.assistsPer90ByPosition[positionKey] || 0) * SEASON_GAMES;
-        const leagueAvgXAForSeason = (assistLeagueAverages.xaPer90ByPosition[positionKey] || 0) * SEASON_GAMES;
-
-        currentClubAssistsMap.set(player.id, {
-          assists: blendAssistRate(thisSeasonAssistsForSeason, lastSeasonAssistsForSeason, leagueAvgAssistsForSeason),
-          xA: blendAssistRate(thisSeasonXAForSeason, lastSeasonXAForSeason, leagueAvgXAForSeason),
-        });
-      }));
-
-      // Same promoted-team override as goal-share-season — see applyPromotedTeamGoalOverrides.
-      const { PROMOTED_TEAM_PLAYER_LAST_SEASON: promotedAssistData } = await import('./team-goals-service');
-      applyPromotedTeamAssistOverrides(bootstrapData, currentClubAssistsMap, promotedAssistData);
-
-      // Calculate team totals using current-club-only filtered stats + blend adjustment
-      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
-      bootstrapData.teams.forEach((team: any) => {
-        teamTotals[team.id] = { total: 0, name: team.name, short_name: team.short_name };
-      });
-      bootstrapData.elements.forEach((player: any) => {
-        const filtered = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
-        // Weighted average (60% real/blended assists, 40% xA), not a sum — same reasoning as
-        // the goals/xG weighting in goal-share-season above.
-        const rawTotal = filtered.assists * 0.6 + filtered.xA * 0.4;
-        const blendInfo = assistBlendMap.get(player.id);
-        let adjustedTotal = rawTotal;
-        if (blendInfo && rawTotal > 0) {
-          const ratePerGame = rawTotal / blendInfo.activeGames;
-          adjustedTotal = rawTotal * blendInfo.blendWeight + ratePerGame * blendInfo.teamGames * (1 - blendInfo.blendWeight);
-        }
-        if (teamTotals[player.team]) {
-          teamTotals[player.team].total += adjustedTotal;
-        }
-      });
-
-      // Promoted teams: same real-total override as goal-share-season — PROMOTED_TEAM_PLAYER_LAST_SEASON
-      // only lists notable scorers, so the sum above badly undercounts the true total. Assumed
-      // team assists = 0.85 × the admin-configured assumed team goals (no separate assists config exists).
-      const { TeamGoalsService: TeamGoalsServiceForAssistFix } = await import('./team-goals-service');
-      const promotedGoalsSettingsForAssistFix = await TeamGoalsServiceForAssistFix.getPromotedTeamGoalsSettings();
-      promotedGoalsSettingsForAssistFix.forEach(({ teamName, goalsFor }) => {
-        const team = bootstrapData.teams.find((t: any) => t.name === teamName);
-        if (team && teamTotals[team.id]) {
-          teamTotals[team.id].total = goalsFor * 0.85 * 0.6;
-        }
-      });
-
-      // Build per-player recent assists map (still used for additive pool signal)
-      const recentAssistsMap = new Map<number, { assists: number, poolSize: number }>();
-      bootstrapData.elements.forEach((player: any) => {
-        const history = dbAssistHistories.get(player.id) || [];
-        const metrics = computeAssistMetrics(history, 8);
-        recentAssistsMap.set(player.id, { assists: metrics.recentAssists, poolSize: metrics.poolSize });
-      });
-
-      // Per-team recent assists total (sum of all players on team)
-      const teamRecentAssistsMap = new Map<number, number>();
-      bootstrapData.teams.forEach((team: any) => {
-        const total = bootstrapData.elements
-          .filter((p: any) => p.team === team.id)
-          .reduce((sum: number, p: any) => sum + (recentAssistsMap.get(p.id)?.assists || 0), 0);
-        teamRecentAssistsMap.set(team.id, total);
-      });
-      
-      // Build response
-      const finalResponse: any[] = [];
-      
-      Object.keys(teamTotals).forEach(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const teamData = teamTotals[teamId];
-        
-        if (teamData.total === 0) return;
-        
-        const teamPlayers: any[] = [];
-        const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
-
-        // Recent context for this team
-        const teamRecentAssistTotal = teamRecentAssistsMap.get(teamId) || 0;
-        
-        teamPlayersList.forEach((player: any) => {
-          // Use current-club filtered totals for share computation (transfer fix)
-          const filteredCC = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
-          // Weighted average, not a sum — see the matching comment on teamTotals above.
-          const rawTotal = filteredCC.assists * 0.6 + filteredCC.xA * 0.4;
-          const assists = filteredCC.assists; // for set piece bonus calc
-          // Apply time-weighted blend for AFCON/injury/transfer players
-          let playerTotal = rawTotal;
-          const blendInfoA = assistBlendMap.get(player.id);
-          if (blendInfoA && rawTotal > 0) {
-            const ratePerGame = rawTotal / blendInfoA.activeGames;
-            playerTotal = rawTotal * blendInfoA.blendWeight + ratePerGame * blendInfoA.teamGames * (1 - blendInfoA.blendWeight);
-          }
-          
-          if (playerTotal > 0 && teamData.total > 0) {
-            // Additive pool: (season assists + season xA + last 8 actual assists) / team equivalent.
-            // Season (~28 games) naturally dominates; recent 8 games add proportional signal
-            // without the double-share distortion of blending two separate percentages.
-            const playerRecent = recentAssistsMap.get(player.id);
-            let assistShare: number;
-            if (teamRecentAssistTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
-              const playerCombined = playerTotal + playerRecent.assists;
-              const teamCombined = teamData.total + teamRecentAssistTotal;
-              assistShare = teamCombined > 0 ? (playerCombined / teamCombined) * 100 : 0;
-            } else {
-              assistShare = teamData.total > 0 ? (playerTotal / teamData.total) * 100 : 0;
-            }
-            
-            // Apply set piece taker bonus (no normalization - just boost individuals)
-            const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
-            let setPieceBonus = 0;
-            if (cornerOrder === 1) {
-              // Primary corner/indirect freekick taker - significant assist advantage
-              setPieceBonus = 0.8 + assists * 0.04;
-            } else if (cornerOrder === 2) {
-              // Secondary taker
-              setPieceBonus = 0.5 + assists * 0.03;
-            } else if (cornerOrder === 3) {
-              // Tertiary taker
-              setPieceBonus = 0.3 + assists * 0.02;
-            }
-            setPieceBonus = Math.min(1.2, Math.max(0, setPieceBonus));
-            
-            // Add bonus to assist share (no normalization)
-            assistShare += setPieceBonus;
-            
-            const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
-            
-            teamPlayers.push({
-              playerId: player.id,
-              playerName: `${player.first_name} ${player.second_name}`,
-              position: position,
-              assistShare: Math.round(assistShare * 100) / 100,
-              projectedAssists: Math.round(playerTotal * 100) / 100,
-              setPieceTaker: cornerOrder <= 3 ? cornerOrder : null
-            });
-          }
-        });
-        
-        teamPlayers.sort((a, b) => b.assistShare - a.assistShare);
-        
-        if (teamPlayers.length > 0) {
-          finalResponse.push({
-            teamId: teamId,
-            teamName: teamData.name,
-            teamShort: teamData.short_name,
-            expectedAssists: Math.round(teamData.total * 100) / 100,
-            players: teamPlayers
-          });
-        }
-      });
-      
-      finalResponse.sort((a, b) => b.expectedAssists - a.expectedAssists);
-      
       setAssistShareCache({
         data: finalResponse,
         timestamp: Date.now(),
         cacheKey: cacheKey
       } as any);
-      
+
       console.log(`DEBUG: Built full season assist share response with ${finalResponse.length} teams`);
       return res.json(finalResponse);
       

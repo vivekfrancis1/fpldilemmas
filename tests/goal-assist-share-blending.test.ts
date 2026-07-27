@@ -58,19 +58,22 @@ describe('Goal share blending (last-season fallback)', () => {
   });
 });
 
+// Team Goal/Assist Projections are per-game rates now (average of the 2025/26 and 2026/27
+// per-game rates, each itself 0.5×Goals + 0.5×xG), not season totals — pre-season, with no
+// 2026/27 games yet, this reduces to just the 2025/26 rate: (0.5×assumedTotal + 0.5×0) / 38.
 describe('Promoted-team share uses real team total, not the incomplete listed-player sum', () => {
-  it('Projected goal share: Hull total reflects the real 70-goal season, and McBurnie stays below Haaland', () => {
+  it('Projected goal share: Hull total reflects the real 70-goal season as a per-game rate, and McBurnie stays below Haaland', () => {
     const hull = goalShareData.find((t: any) => t.teamName === 'Hull City');
     const city = goalShareData.find((t: any) => t.teamName === 'Man City');
-    expect(hull.expectedGoals).toBeCloseTo(70 * 0.6, 1); // 0.6 weighting, xG=0 for promoted teams
+    expect(hull.expectedGoals).toBeCloseTo((70 * 0.5) / 38, 2); // xG=0 for promoted teams, pre-season (2025/26 rate only)
     const mcburnie = hull.players.find((p: any) => p.playerName.includes('McBurnie'));
     const haaland = city.players.find((p: any) => p.playerName.includes('Haaland'));
     expect(mcburnie.goalShare).toBeLessThan(haaland.goalShare);
   });
 
-  it('Projected assist share: Hull total reflects 0.85 × 70', () => {
+  it('Projected assist share: Hull total reflects 0.85 × 70 as a per-game rate', () => {
     const hull = assistShareData.find((t: any) => t.teamName === 'Hull City');
-    expect(hull.expectedAssists).toBeCloseTo(70 * 0.85 * 0.6, 1);
+    expect(hull.expectedAssists).toBeCloseTo((70 * 0.85 * 0.5) / 38, 2);
   });
 });
 
