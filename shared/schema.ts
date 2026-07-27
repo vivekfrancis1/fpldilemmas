@@ -1839,3 +1839,37 @@ export const managerSeasonStandings = pgTable("manager_season_standings", {
 
 export type ManagerSeasonStanding = typeof managerSeasonStandings.$inferSelect;
 export type InsertManagerSeasonStanding = typeof managerSeasonStandings.$inferInsert;
+
+// Admin-configurable last-season-equivalent goals for/against for clubs promoted into the
+// Premier League (no top-flight "last season" data of their own — see team-goals-service.ts).
+// One row per team; the app falls back to hardcoded defaults for any team with no row yet.
+export const adminPromotedTeamGoals = pgTable("admin_promoted_team_goals", {
+  id: serial("id").primaryKey(),
+  teamName: varchar("team_name", { length: 100 }).notNull(),
+  goalsFor: integer("goals_for").notNull(),
+  goalsAgainst: integer("goals_against").notNull(),
+  played: integer("played").notNull().default(38),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by", { length: 150 }),
+}, (table) => [
+  uniqueIndex("admin_promoted_team_goals_team_name_unique").on(table.teamName),
+]);
+
+export type AdminPromotedTeamGoals = typeof adminPromotedTeamGoals.$inferSelect;
+export type InsertAdminPromotedTeamGoals = typeof adminPromotedTeamGoals.$inferInsert;
+
+// Admin-configurable last-season-equivalent clean sheet counts for the same promoted clubs,
+// same reasoning as adminPromotedTeamGoals above.
+export const adminPromotedTeamCleanSheets = pgTable("admin_promoted_team_clean_sheets", {
+  id: serial("id").primaryKey(),
+  teamName: varchar("team_name", { length: 100 }).notNull(),
+  cleanSheets: integer("clean_sheets").notNull(),
+  played: integer("played").notNull().default(38),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by", { length: 150 }),
+}, (table) => [
+  uniqueIndex("admin_promoted_team_clean_sheets_team_name_unique").on(table.teamName),
+]);
+
+export type AdminPromotedTeamCleanSheets = typeof adminPromotedTeamCleanSheets.$inferSelect;
+export type InsertAdminPromotedTeamCleanSheets = typeof adminPromotedTeamCleanSheets.$inferInsert;

@@ -7821,6 +7821,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PROMOTED TEAM GOALS/CLEAN SHEETS ADMIN ENDPOINTS ====================
+  // Admin-configurable last-season-equivalent goals for/against and clean sheet counts for
+  // clubs promoted into the Premier League (no top-flight "last season" data of their own —
+  // see PROMOTED_TEAM_LAST_SEASON_GOALS / PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS in
+  // team-goals-service.ts). Admin-only in both directions per the Admin Settings requirement.
+
+  app.get("/api/admin/promoted-team-goals", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const { TeamGoalsService } = await import('./team-goals-service');
+      const teams = await TeamGoalsService.getPromotedTeamGoalsSettings();
+      res.json({ teams });
+    } catch (error) {
+      console.error("Error fetching promoted-team goals settings:", error);
+      res.status(500).json({ error: "Failed to fetch promoted-team goals settings" });
+    }
+  });
+
+  app.put("/api/admin/promoted-team-goals", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const updates = req.body?.teams;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ error: "Request body must include a non-empty 'teams' array" });
+      }
+      for (const team of updates) {
+        if (typeof team.teamName !== 'string' || !Number.isFinite(team.goalsFor) || !Number.isFinite(team.goalsAgainst)) {
+          return res.status(400).json({ error: "Each team requires teamName, goalsFor, and goalsAgainst" });
+        }
+        if (team.goalsFor < 0 || team.goalsAgainst < 0) {
+          return res.status(400).json({ error: "Goals cannot be negative" });
+        }
+      }
+      const updatedBy = req.user?.email ?? req.session?.user?.email ?? "admin";
+      const { TeamGoalsService } = await import('./team-goals-service');
+      await TeamGoalsService.updatePromotedTeamGoals(updates, updatedBy);
+      const teams = await TeamGoalsService.getPromotedTeamGoalsSettings();
+      res.json({ success: true, teams });
+    } catch (error) {
+      console.error("Error updating promoted-team goals settings:", error);
+      res.status(error instanceof Error && error.message.startsWith('Unknown promoted team') ? 400 : 500)
+        .json({ error: error instanceof Error ? error.message : "Failed to update promoted-team goals settings" });
+    }
+  });
+
+  app.get("/api/admin/promoted-team-clean-sheets", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const { TeamGoalsService } = await import('./team-goals-service');
+      const teams = await TeamGoalsService.getPromotedTeamCleanSheetSettings();
+      res.json({ teams });
+    } catch (error) {
+      console.error("Error fetching promoted-team clean sheets settings:", error);
+      res.status(500).json({ error: "Failed to fetch promoted-team clean sheets settings" });
+    }
+  });
+
+  app.put("/api/admin/promoted-team-clean-sheets", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const updates = req.body?.teams;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ error: "Request body must include a non-empty 'teams' array" });
+      }
+      for (const team of updates) {
+        if (typeof team.teamName !== 'string' || !Number.isFinite(team.cleanSheets)) {
+          return res.status(400).json({ error: "Each team requires teamName and cleanSheets" });
+        }
+        if (team.cleanSheets < 0 || team.cleanSheets > 38) {
+          return res.status(400).json({ error: "Clean sheets must be between 0 and 38" });
+        }
+      }
+      const updatedBy = req.user?.email ?? req.session?.user?.email ?? "admin";
+      const { TeamGoalsService } = await import('./team-goals-service');
+      await TeamGoalsService.updatePromotedTeamCleanSheets(updates, updatedBy);
+      const teams = await TeamGoalsService.getPromotedTeamCleanSheetSettings();
+      res.json({ success: true, teams });
+    } catch (error) {
+      console.error("Error updating promoted-team clean sheets settings:", error);
+      res.status(error instanceof Error && error.message.startsWith('Unknown promoted team') ? 400 : 500)
+        .json({ error: error instanceof Error ? error.message : "Failed to update promoted-team clean sheets settings" });
+    }
+  });
+
   // ==================== CLEAN SHEET ADMIN ENDPOINTS ====================
 
   // GET clean sheet admin settings endpoint
