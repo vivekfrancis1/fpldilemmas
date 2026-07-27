@@ -322,6 +322,9 @@ export default function PlayerDefensiveContributions() {
           };
         }).sort((a, b) => a.gameweek - b.gameweek);
 
+        const gamesPlayed = Object.keys(player.gameweekStats || {}).length;
+        const dcPerGame = gamesPlayed > 0 ? player.totalDefensiveContribution / gamesPlayed : 0;
+
         return {
           playerId: player.playerId,
           playerName: player.playerName,
@@ -329,7 +332,7 @@ export default function PlayerDefensiveContributions() {
           teamName: player.teamShort || player.teamName,
           teamCode: 0,
           currentSeasonStats: {
-            dcPer90: player.dcPerGame || 0,
+            dcPer90: dcPerGame,
             tacklesPer90: 0,
             recoveriesPer90: 0,
             cbiPer90: 0,
@@ -428,7 +431,7 @@ export default function PlayerDefensiveContributions() {
   const getAdjustedTotalDC = (player: any) => {
     const playerInfo = playerAvailabilityMap?.get(player.playerId);
     const gwMultipliers = applyAvailability 
-      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek ?? 1, bootstrapData)
       : {};
     let total = 0;
     player.gameweekProjections.forEach((gw: any) => {
@@ -443,7 +446,7 @@ export default function PlayerDefensiveContributions() {
   const getAdjustedTotalDCPoints = (player: any) => {
     const playerInfo = playerAvailabilityMap?.get(player.playerId);
     const gwMultipliers = applyAvailability 
-      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek ?? 1, bootstrapData)
       : {};
     let total = 0;
     player.gameweekProjections.forEach((gw: any) => {
@@ -515,8 +518,8 @@ export default function PlayerDefensiveContributions() {
         
         const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
         const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
-        const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gameweekSortColumn], currentGameweek, bootstrapData) : {};
-        const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gameweekSortColumn], currentGameweek, bootstrapData) : {};
+        const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gameweekSortColumn], currentGameweek ?? 1, bootstrapData) : {};
+        const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gameweekSortColumn], currentGameweek ?? 1, bootstrapData) : {};
         
         const aValue = (aGameweek?.defensiveContribution || 0) * (aMultipliers[gameweekSortColumn] ?? 1);
         const bValue = (bGameweek?.defensiveContribution || 0) * (bMultipliers[gameweekSortColumn] ?? 1);
@@ -1014,7 +1017,7 @@ export default function PlayerDefensiveContributions() {
                 {filteredPlayers.map((player) => {
                   const playerInfo = playerAvailabilityMap?.get(player.playerId);
                   const gwMultipliers = applyAvailability 
-                    ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+                    ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek ?? 1, bootstrapData)
                     : {};
                   const hasAnyAdjustment = applyAvailability && Object.values(gwMultipliers).some(m => m !== 1);
                   
