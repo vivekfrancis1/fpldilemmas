@@ -49,7 +49,7 @@ class EnhancedCache {
   private evictOldest(): void {
     let oldestKey: string | null = null;
     let oldestTime = Date.now();
-    for (const [key, entry] of this.cache) {
+    for (const [key, entry] of Array.from(this.cache)) {
       if (entry.timestamp < oldestTime) {
         oldestTime = entry.timestamp;
         oldestKey = key;
@@ -64,7 +64,7 @@ class EnhancedCache {
   private cleanup(): void {
     const now = Date.now();
     let cleaned = 0;
-    for (const [key, entry] of this.cache) {
+    for (const [key, entry] of Array.from(this.cache)) {
       if (now - entry.timestamp > (entry.ttl || this.defaultTTL)) {
         this.cache.delete(key);
         cleaned++;

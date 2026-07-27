@@ -115,7 +115,7 @@ export class ResultCacheService {
     const now = Date.now();
     let cleaned = 0;
     
-    for (const [key, cached] of this.cache.entries()) {
+    for (const [key, cached] of Array.from(this.cache.entries())) {
       if (now - cached.timestamp > cached.ttl) {
         this.cache.delete(key);
         cleaned++;
@@ -133,7 +133,7 @@ export class ResultCacheService {
   getStats(): { size: number, types: Record<string, number> } {
     const types: Record<string, number> = {};
     
-    for (const [key] of this.cache.entries()) {
+    for (const [key] of Array.from(this.cache.entries())) {
       const type = key.split(':')[0];
       types[type] = (types[type] || 0) + 1;
     }

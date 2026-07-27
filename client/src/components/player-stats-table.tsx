@@ -715,7 +715,7 @@ export default function PlayerStatsTable({
           case "total_points": return player.total_points;
           case "minutes": return player.minutes;
           case "games_played": {
-            if (player.games_played != null) return player.games_played;
+            if ((player as any).games_played != null) return (player as any).games_played;
             const pointsPerGame = parseFloat(player.points_per_game) || 0;
             return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
           }

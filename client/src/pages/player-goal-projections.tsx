@@ -13,7 +13,7 @@ import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { SeasonBadge } from "@/components/season-badge";
 
 interface BootstrapData {
-  events: Array<{ id: number; is_current: boolean; finished: boolean }>;
+  events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
 }
 
 type PlayerProjection = {

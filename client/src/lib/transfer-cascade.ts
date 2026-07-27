@@ -37,7 +37,7 @@ export function findCrossGWDependents(
   sourceCompleted: CompletedTransfer[],
   gameweekTransfers: GameweekTransfersMap
 ): CrossGWDepEntry[] {
-  const trackedPlayerIds = new Set([...cascadeIndices].map(i => sourceCompleted[i].inPlayerId));
+  const trackedPlayerIds = new Set(Array.from(cascadeIndices).map(i => sourceCompleted[i].inPlayerId));
   const result: CrossGWDepEntry[] = [];
   const futureGWIds = Object.keys(gameweekTransfers)
     .map(Number)
@@ -128,7 +128,7 @@ export function buildChainBreakPayload(
   if (!transfer) return null;
 
   const cascadeIndices = computeCascadeIndicesToRemove(completed, transferIndex);
-  const dependentIndices = [...cascadeIndices].filter(i => i !== transferIndex);
+  const dependentIndices = Array.from(cascadeIndices).filter(i => i !== transferIndex);
 
   const dependentTransfers: string[] = dependentIndices.map(
     i => `${completed[i].outPlayerName} → ${completed[i].inPlayerName}`

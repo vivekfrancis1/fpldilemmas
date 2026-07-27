@@ -42,10 +42,7 @@ export default function WatchlistManager({ data, isLoading }: WatchlistManagerPr
   // Add to watchlist mutation
   const addToWatchlistMutation = useMutation({
     mutationFn: async (entry: InsertWatchlistEntryForm) => {
-      return apiRequest('/api/watchlist', {
-        method: 'POST',
-        body: JSON.stringify(entry),
-      });
+      return apiRequest('POST', '/api/watchlist', entry);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/watchlist'] });
@@ -68,9 +65,7 @@ export default function WatchlistManager({ data, isLoading }: WatchlistManagerPr
   // Remove from watchlist mutation
   const removeFromWatchlistMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/watchlist/${id}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/watchlist/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/watchlist'] });

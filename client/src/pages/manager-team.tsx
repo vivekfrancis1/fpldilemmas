@@ -377,7 +377,7 @@ export default function ManagerTeam() {
   // Helper functions for pitch view
   const getPlayerTeam = (player: any) => {
     const playerData = getPlayerData(player.element);
-    return bootstrapData?.teams.find(t => t.id === playerData?.team);
+    return bootstrapData?.teams.find((t: any) => t.id === playerData?.team);
   };
 
   const getTeamJerseyColor = (teamId: number): string => {
@@ -419,7 +419,7 @@ export default function ManagerTeam() {
   };
 
   const getTeamById = (teamId: number) => {
-    return bootstrapData?.teams.find(t => t.id === teamId);
+    return bootstrapData?.teams.find((t: any) => t.id === teamId);
   };
 
   const getCurrentGameweek = (): number => {

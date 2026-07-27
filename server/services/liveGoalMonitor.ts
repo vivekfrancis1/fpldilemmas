@@ -598,7 +598,7 @@ export class LiveGoalMonitor {
     // never reached (e.g. an exception), duplicate polls still produce the same
     // event key and are caught by tweetedEvents.
     if (!prevState.overturnCounts) prevState.overturnCounts = new Map();
-    for (const [scorerId, count] of newOverturnCounts) {
+    for (const [scorerId, count] of Array.from(newOverturnCounts)) {
       prevState.overturnCounts.set(scorerId, count);
     }
   }
@@ -619,7 +619,7 @@ export class LiveGoalMonitor {
 
   private findRemovedEntries(prev: Map<number, number>, current: Map<number, number>): number[] {
     const results: number[] = [];
-    for (const [playerId, prevValue] of prev.entries()) {
+    for (const [playerId, prevValue] of Array.from(prev.entries())) {
       const currentValue = current.get(playerId) || 0;
       if (currentValue < prevValue) {
         for (let i = 0; i < prevValue - currentValue; i++) {

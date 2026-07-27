@@ -269,7 +269,7 @@ export default function CreatorTeam() {
   };
 
   const getTeamById = (teamId: number) => {
-    return bootstrapData?.teams.find(t => t.id === teamId);
+    return bootstrapData?.teams.find((t: any) => t.id === teamId);
   };
 
   const getCurrentGameweek = (): number => {
@@ -1477,7 +1477,7 @@ export default function CreatorTeam() {
           </DialogHeader>
           
           {selectedPlayerForBreakdown && (
-            <PlayerPopupDetails player={selectedPlayerForBreakdown}>
+            <PlayerPopupDetails player={{ ...selectedPlayerForBreakdown, id: selectedPlayerForBreakdown.element, team: selectedPlayerForBreakdown.team ?? 0, element_type: selectedPlayerForBreakdown.element_type ?? 0 }}>
               {selectedPlayerForBreakdown?.liveStats ? (
                 <>
                   {(() => {

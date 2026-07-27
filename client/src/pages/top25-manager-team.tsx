@@ -351,7 +351,7 @@ export default function Top25ManagerTeam() {
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
 
   const getTeamById = (teamId: number) => {
-    return bootstrapData?.teams.find(t => t.id === teamId);
+    return bootstrapData?.teams.find((t: any) => t.id === teamId);
   };
 
   const getCurrentGameweek = (): number => {
