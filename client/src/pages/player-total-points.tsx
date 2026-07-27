@@ -1276,7 +1276,7 @@ export default function PlayerTotalPoints() {
         const fixtureIds = tbcFixturesByTeam.get(teamShort);
         if (!fixtureIds || fixtureIds.size === 0) { unassigned.add(teamShort); return; }
         // Team stays unassigned if ANY of its TBC fixtures is not assigned within the display range
-        const hasUnassigned = [...fixtureIds].some(fid => {
+        const hasUnassigned = Array.from(fixtureIds).some(fid => {
           const assigned = tbcAssignments[fid];
           return assigned === undefined || assigned === null || assigned < startGW || assigned > endGW;
         });
@@ -1667,7 +1667,7 @@ export default function PlayerTotalPoints() {
         const gw39Fixtures = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
         if (gw39Fixtures.length === 0) return player;
 
-        let newGameweekProjections = { ...player.gameweekProjections, '39': 0 };
+        let newGameweekProjections: Record<string, number> = { ...player.gameweekProjections, '39': 0 };
         const newComponentMaps: Record<string, Record<string, number>> = {};
         compMoveKeys.forEach(key => {
           const compMap = (player as any)[key] as Record<string, number> | undefined;
@@ -1719,7 +1719,7 @@ export default function PlayerTotalPoints() {
       const gw39FixturesCust = ((player as any).fixtureDetails?.['39'] || []) as FixtureDetail[];
       if (gw39FixturesCust.length === 0) return player;
 
-      let newGameweekProjections = { ...player.gameweekProjections, '39': 0 };
+      let newGameweekProjections: Record<string, number> = { ...player.gameweekProjections, '39': 0 };
       const newComponentMapsCust: Record<string, Record<string, number>> = {};
       compMoveKeys.forEach(key => {
         const compMap = (player as any)[key] as Record<string, number> | undefined;

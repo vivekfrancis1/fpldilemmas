@@ -196,9 +196,9 @@ const ChartContainer = React.forwardRef<
           })
         }}
         {...(enableGestures && chartEnv.gestures.handlers && {
-          onTouchStart: chartEnv.gestures.handlers.onTouchStart,
-          onTouchMove: chartEnv.gestures.handlers.onTouchMove,
-          onTouchEnd: chartEnv.gestures.handlers.onTouchEnd
+          onTouchStart: (chartEnv.gestures.handlers as any).onTouchStart,
+          onTouchMove: (chartEnv.gestures.handlers as any).onTouchMove,
+          onTouchEnd: (chartEnv.gestures.handlers as any).onTouchEnd
         })}
         {...props}
       >
@@ -209,9 +209,9 @@ const ChartContainer = React.forwardRef<
             height="100%"
             minHeight={chartEnv.mobile.isMobile && chartEnv.mobile.enableOptimizations ? 200 : 300}
             debounce={chartEnv.performance.shouldSimplify ? 200 : 50}
-            ref={chartEnv.performance.chartRef}
+            ref={chartEnv.performance.chartRef as any}
           >
-            {typeof children === 'function' ? children({
+            {(typeof children === 'function' ? children({
               animationDuration: chartEnv.performance.animationDuration,
               maxDataPoints: chartEnv.performance.maxDataPoints,
               strokeWidth: chartEnv.performance.strokeWidth,
@@ -222,7 +222,7 @@ const ChartContainer = React.forwardRef<
               shouldSimplify: chartEnv.performance.shouldSimplify,
               isMobile: chartEnv.mobile.isMobile,
               isLowPerformance: chartEnv.performance.performanceMode === 'power-save' || chartEnv.performance.deviceQuality === 'low'
-            }) : children}
+            }) : children) as React.ReactElement}
           </RechartsPrimitive.ResponsiveContainer>
         ) : (
           <div 
