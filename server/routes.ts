@@ -10064,22 +10064,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // NOTE: Do NOT apply recentP60 or startingRate here.
                   // goalShare already encodes selection frequency — a rotation player scores fewer goals
                   // per season → lower goalShare. Adding a further playing-time multiplier double-counts.
-                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
-                  
+                  gameweekProjections[gameweek] = Math.round((goalShare / 100) * (teamGoals as number) * availability * 100) / 100;
+
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
                   if (teamFixtures.length > 0) {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      goals: (goalShare / 100) * (f.goals || 0) * availability
+                      goals: Math.round((goalShare / 100) * (f.goals || 0) * availability * 100) / 100
                     }));
                   }
                 });
-                
+
                 // Calculate total projected goals across all gameweeks
-                const totalProjectedGoals = Object.values(gameweekProjections).reduce((sum, goals) => sum + goals, 0);
-                
+                const totalProjectedGoals = Math.round(Object.values(gameweekProjections).reduce((sum, goals) => sum + goals, 0) * 100) / 100;
+
                 playerProjections.push({
                   playerId: player.playerId,
                   playerName: player.playerName,
@@ -10340,21 +10340,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // NOTE: Do NOT apply recentP60 or a form multiplier here.
                   // assistShare already encodes selection frequency and recent assist form through
                   // the additive pool formula. Adding a further multiplier double-counts.
-                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability;
-                  
+                  gameweekProjections[gameweek] = Math.round((assistShare / 100) * (teamAssists as number) * availability * 100) / 100;
+
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
                   if (teamFixtures.length > 0) {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      assists: (assistShare / 100) * (f.assists || 0) * availability
+                      assists: Math.round((assistShare / 100) * (f.assists || 0) * availability * 100) / 100
                     }));
                   }
                 });
-                
+
                 // Calculate total projected assists across all gameweeks
-                const totalProjectedAssists = Object.values(gameweekProjections).reduce((sum, assists) => sum + assists, 0);
+                const totalProjectedAssists = Math.round(Object.values(gameweekProjections).reduce((sum, assists) => sum + assists, 0) * 100) / 100;
                 
                 playerProjections.push({
                   playerId: player.playerId,
