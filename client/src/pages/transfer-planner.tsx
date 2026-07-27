@@ -140,6 +140,10 @@ interface Player {
   now_cost: number;
   total_points: number;
   form: string;
+  in_dreamteam?: boolean;
+  status?: string;
+  chance_of_playing_next_round?: number | null;
+  news?: string;
 }
 
 interface BootstrapData {
@@ -153,6 +157,7 @@ interface BootstrapData {
     id: number;
     name: string;
     short_name: string;
+    code?: number;
   }>;
   events: Array<{
     id: number;
@@ -2483,7 +2488,7 @@ export default function TransferPlanner() {
     // For other gameweeks, check saved transfers in the active draft
     const draft = savedDrafts.find(d => d.draftLetter === activeDraft);
     const savedTransfers = draft?.transfers || [];
-    const transfersForGW = savedTransfers.filter(t => t.gameweek === gameweek && t.completed);
+    const transfersForGW = savedTransfers.filter((t: any) => t.gameweek === gameweek && t.completed);
     return transfersForGW.length;
   };
 
@@ -3103,7 +3108,7 @@ export default function TransferPlanner() {
       { def: 5, mid: 2, fwd: 3, name: '5-2-3' }
     ];
 
-    let bestFormation = null;
+    let bestFormation: { def: number; mid: number; fwd: number; name: string } | null = null;
     let bestPoints = -1;
     let bestStarting11: TeamPick[] = [];
 
@@ -3207,7 +3212,7 @@ export default function TransferPlanner() {
     setManualLineup([...optimizedLineup]); // Force new array reference
 
     const captainPlayer = getPlayerById(optimizedLineup.find(p => p.is_captain)?.element || 0);
-    const formationName = bestFormation?.name || 'Unknown';
+    const formationName = (bestFormation as { name: string } | null)?.name || 'Unknown';
     
     console.log("🔧 OPTIMIZE DEBUG: Formation:", formationName, "Captain:", captainPlayer?.web_name);
     
@@ -3450,7 +3455,7 @@ export default function TransferPlanner() {
     isLineupOptimizedRef.current = newFlags;
 
     // If current gameweek was optimized, update manualLineup
-    if (allOptimizedLineups[selectedGameweek]) {
+    if (selectedGameweek !== null && allOptimizedLineups[selectedGameweek]) {
       setManualLineup(JSON.parse(JSON.stringify(allOptimizedLineups[selectedGameweek])));
     }
 
@@ -3458,11 +3463,11 @@ export default function TransferPlanner() {
     // Use the same approach as single optimization for consistency
     if (activeDraft !== "Base" && searchedId) {
       console.log("💾 OPTIMIZE ALL: Saving all optimized lineups to draft", activeDraft);
-      
+
       // Use the optimized lineup for the current gameweek (if it exists), otherwise use manualLineup
-      const currentOptimizedLineup = allOptimizedLineups[selectedGameweek] || manualLineup;
-      const captainPick = currentOptimizedLineup.find(p => p.is_captain);
-      const viceCaptainPick = currentOptimizedLineup.find(p => p.is_vice_captain);
+      const currentOptimizedLineup = (selectedGameweek !== null && allOptimizedLineups[selectedGameweek]) || manualLineup;
+      const captainPick = currentOptimizedLineup.find((p: any) => p.is_captain);
+      const viceCaptainPick = currentOptimizedLineup.find((p: any) => p.is_vice_captain);
       const captainPlayerObj = captainPick ? getPlayerById(captainPick.element) : null;
       const viceCaptainPlayerObj = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
       
@@ -4572,12 +4577,12 @@ export default function TransferPlanner() {
 
     // Clear optimized lineups for all affected GWs in one call
     const gwsToClear = new Set([gwId, ...crossGwDependents.map(d => d.gwId)]);
-    for (const clearGwId of gwsToClear) {
+    for (const clearGwId of Array.from(gwsToClear)) {
       delete isLineupOptimizedRef.current[getOptimizationKey(activeDraft, clearGwId)];
     }
     setOptimizedLineups(prev => {
       const updated = { ...prev };
-      for (const clearGwId of gwsToClear) delete updated[clearGwId];
+      for (const clearGwId of Array.from(gwsToClear)) delete updated[clearGwId];
       return updated;
     });
 
@@ -4593,7 +4598,7 @@ export default function TransferPlanner() {
       if (!crossGwByGW.has(dep.gwId)) crossGwByGW.set(dep.gwId, []);
       crossGwByGW.get(dep.gwId)!.push(dep.transferIndex);
     }
-    for (const [depGwId, depIndices] of crossGwByGW) {
+    for (const [depGwId, depIndices] of Array.from(crossGwByGW)) {
       const depGwData = updatedGameweekTransfers[depGwId] || { transferredOut: [], completed: [] };
       const depCompleted = depGwData.completed;
       const depRemoveSet = new Set(depIndices);
@@ -4613,7 +4618,7 @@ export default function TransferPlanner() {
     // Clear broken transfer warnings for all removed transfers (source GW + cross-GW)
     setBrokenTransfers(prev => {
       let result = filterBrokenTransfersAfterCascade(prev, gwId, indicesToRemove, currentCompleted);
-      for (const [depGwId, depIndices] of crossGwByGW) {
+      for (const [depGwId, depIndices] of Array.from(crossGwByGW)) {
         const depCompleted = gameweekTransfers[depGwId]?.completed || [];
         const depRemoveSet = new Set(depIndices);
         result = result.filter(b => {
@@ -4919,10 +4924,10 @@ export default function TransferPlanner() {
     const primaryRecommendations = primaryOnlyRecs.slice(0, freeTransfers);
 
     // Get all unapplied recommendations from primary list
-    const unappliedRecs = primaryRecommendations.filter(rec => 
+    const unappliedRecs = primaryRecommendations.filter((rec: any) =>
       !completedTransfers.some(
-        transfer => 
-          transfer.outPlayerId === rec.playerOut.id && 
+        transfer =>
+          transfer.outPlayerId === rec.playerOut.id &&
           transfer.inPlayerId === rec.playerIn.id
       )
     );
@@ -5059,7 +5064,7 @@ export default function TransferPlanner() {
     }
 
     const transferSummary = newCompletedTransfers.map(t => `${t.outPlayerName} → ${t.inPlayerName}`).join(', ');
-    const totalPoints = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
+    const totalPoints = unappliedRecs.reduce((sum: number, rec: any) => sum + (rec.pointsGain || 0), 0);
 
     // If creating new draft, save it
     if (isCreatingNewDraft) {
@@ -6836,10 +6841,10 @@ export default function TransferPlanner() {
                   if (recommendations.length === 0) return null;
                   
                   // Filter out already applied transfers
-                  const unappliedRecs = recommendations.filter(rec => 
+                  const unappliedRecs = recommendations.filter((rec: any) =>
                     !completedTransfers.some(
-                      transfer => 
-                        transfer.outPlayerId === rec.playerOut.id && 
+                      transfer =>
+                        transfer.outPlayerId === rec.playerOut.id &&
                         transfer.inPlayerId === rec.playerIn.id
                     )
                   );
@@ -6883,20 +6888,20 @@ export default function TransferPlanner() {
                 if (recommendations.length === 0) return null;
                 
                 // Filter out already applied transfers
-                const unappliedRecs = recommendations.filter(rec => 
+                const unappliedRecs = recommendations.filter((rec: any) =>
                   !completedTransfers.some(
-                    transfer => 
-                      transfer.outPlayerId === rec.playerOut.id && 
+                    transfer =>
+                      transfer.outPlayerId === rec.playerOut.id &&
                       transfer.inPlayerId === rec.playerIn.id
                   )
                 );
-                
+
                 // Don't show details if no transfers to apply
                 if (unappliedRecs.length === 0) return null;
-                
+
                 return (
                   <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5 text-center">
-                    {unappliedRecs.map((rec, idx) => (
+                    {unappliedRecs.map((rec: any, idx: number) => (
                       <p key={idx}>
                         {rec.playerOut?.webName} → {rec.playerIn?.webName} 
                         <span className="text-green-600 font-semibold ml-1">
@@ -7316,7 +7321,7 @@ export default function TransferPlanner() {
                     {activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
                   </div>
               {(() => {
-                const currentChip = plannedChips[selectedGameweek];
+                const currentChip = selectedGameweek !== null ? plannedChips[selectedGameweek] : undefined;
                 if (currentChip) {
                   return (
                     <TooltipProvider>
@@ -7369,7 +7374,7 @@ export default function TransferPlanner() {
               <div className="flex gap-4 min-w-max">
                 {/* Base Column */}
                 {(() => {
-                  const baseLineup = teamData.picks;
+                  const baseLineup = teamData?.picks || [];
                   const captain = baseLineup.find(p => p.is_captain);
                   const viceCaptain = baseLineup.find(p => p.is_vice_captain);
                   

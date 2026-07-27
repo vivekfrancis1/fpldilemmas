@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { useToast } from "@/hooks/use-toast";
 
 export interface ChainBreakPayload {
   transferIndex: number;
@@ -26,7 +27,7 @@ interface ChainBreakConfirmationDialogProps {
   onUndoAnywayHandlers: {
     handleUndoSingle: (transferIndex: number, gwId: number) => void;
     setBrokenTransfers: (updater: (prev: { gwId: number; outPlayerId: number; inPlayerId: number }[]) => { gwId: number; outPlayerId: number; inPlayerId: number }[]) => void;
-    toast: (opts: { title: string; description: string; variant?: string }) => void;
+    toast: ReturnType<typeof useToast>["toast"];
   };
 }
 
