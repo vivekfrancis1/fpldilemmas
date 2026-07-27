@@ -1,36 +1,35 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, TrendingUp, Calendar, Trophy, Filter, Zap, Target, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, TrendingUp, Trophy, Filter, Zap, Target, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface SeasonAssistShareData {
-  gameweek: number; // 0 for season-long data, or specific gameweek for range data
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedAssists: number; // Total assists for the gameweek range
+  season: string;
+  games: number; // games the team total is based on (38, or 46 for a promoted team's 2025/26 Championship season)
+  expectedAssists: number; // Real team assist total for the season
   players: {
     playerId: number;
     playerName: string;
     position: string;
-    assistShare: number; // Percentage of team's assists for the range
-    projectedAssists: number; // Total projected assists for the range
-    xaPer90?: number; // xA per 90 minutes (enhanced methodology)
+    assistShare: number; // Percentage of team's assists
+    projectedAssists: number; // assistShare applied to expectedAssists
   }[];
 }
 
-type FilterOption = 'full' | 'last6' | 'last8' | 'last12';
-
 export default function AssistShare() {
   const queryClient = useQueryClient();
-  
+
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedFilter, setSelectedFilter] = useState<FilterOption>("full");
+  const [selectedSeason, setSelectedSeason] = useState<string>(PREVIOUS_SEASON);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
@@ -40,26 +39,16 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch current season assist share data using simplified calculation with filter
+  // Fetch real (non-blended) assist share data for the selected season
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
-    queryKey: ["/api/assist-share-season", selectedFilter],
+    queryKey: ["/api/assist-share-season", selectedSeason],
     queryFn: async () => {
-      const response = await fetch(`/api/assist-share-season?filter=${selectedFilter}`);
+      const response = await fetch(`/api/assist-share-season?season=${encodeURIComponent(selectedSeason)}`);
       if (!response.ok) throw new Error('Failed to fetch assist share data');
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for fresh data
   });
-
-  // Dynamic label based on filter
-  const filterLabel = useMemo(() => {
-    switch (selectedFilter) {
-      case 'last6': return 'Last 6 Gameweeks Total';
-      case 'last8': return 'Last 8 Gameweeks Total';
-      case 'last12': return 'Last 12 Gameweeks Total';
-      default: return 'Season Total';
-    }
-  }, [selectedFilter]);
 
   // Use season assist share data directly from API
   const processedAssistShareData = useMemo(() => {
@@ -84,8 +73,8 @@ export default function AssistShare() {
     setIsRefreshing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-season", selectedFilter] });
-      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-season", selectedFilter] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-season", selectedSeason] });
+      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-season", selectedSeason] });
     } finally {
       setIsRefreshing(false);
     }
@@ -123,10 +112,10 @@ export default function AssistShare() {
               <Zap className="h-8 w-8 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Assist Share - 2025/26 Season
+              Assist Share - {selectedSeason}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Each player's percentage share of their team's assists using current season data (assists + expected assists)
+              Each player's real share of their team's assists for the {selectedSeason} season
             </p>
             <div className="mt-6">
               <Button
@@ -163,21 +152,7 @@ export default function AssistShare() {
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
                   <div className="flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-green-600" />
-                      <label className="text-sm font-medium text-gray-700">Period:</label>
-                      <Select value={selectedFilter} onValueChange={(val) => setSelectedFilter(val as FilterOption)}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="full">Full Season</SelectItem>
-                          <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
-                          <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
-                          <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
 
                     <div className="flex items-center gap-2">
                       <Filter className="h-5 w-5 text-green-600" />
@@ -214,7 +189,7 @@ export default function AssistShare() {
           {!isLoading && !assistShareLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedData.map((teamData, index) => (
-                <Card key={`${teamData.teamId}_${teamData.gameweek}`} className="overflow-hidden">
+                <Card key={teamData.teamId} className="overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white">
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -222,11 +197,11 @@ export default function AssistShare() {
                         <span>{teamData.teamShort}</span>
                       </div>
                       <Badge variant="secondary" className="bg-white text-teal-600">
-                        2025/26
+                        {teamData.season}
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      {filterLabel} (Assists + xA): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
+                      Assists ({teamData.games} games): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(0)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -289,9 +264,9 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Simple formula: (Assists + Expected Assists) / Team Total × 100</li>
-                    <li>• Uses current 2025/26 season data only</li>
-                    <li>• Combines actual assists with expected assists for better accuracy</li>
+                    <li>• Formula: Player's real assists ÷ team's real assists × 100</li>
+                    <li>• Switch season above to view real 2025/26 or 2026/27 data</li>
+                    <li>• Promoted teams (Coventry/Ipswich/Hull) use their real 2025/26 Championship figures</li>
                     <li>• All players in a team total 100%</li>
                     <li>• Shows each player's contribution to team's assist output</li>
                   </ul>

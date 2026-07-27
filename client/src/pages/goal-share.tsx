@@ -1,34 +1,36 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Users, TrendingUp, Calendar, Trophy, Filter, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, Users, TrendingUp, Trophy, Filter, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface SeasonGoalShareData {
-  gameweek: number; // 0 for season-long data, or specific gameweek for range data
   teamId: number;
   teamName: string;
   teamShort: string;
-  expectedGoals: number; // Total goals for the gameweek range
+  season: string;
+  games: number; // games the team total is based on (38, or 46 for a promoted team's 2025/26 Championship season)
+  expectedGoals: number; // Real team goal total for the season
+  assumedTeamGoals?: number; // Promoted teams only (2025/26): admin-configured assumed total, used for projectedGoals instead of expectedGoals
   players: {
     playerId: number;
     playerName: string;
     position: string;
-    goalShare: number; // Percentage of team's goals for the range
-    projectedGoals: number; // Total projected goals for the range
-    xgPer90?: number; // xG per 90 minutes (enhanced methodology)
+    goalShare: number; // Percentage of team's goals
+    projectedGoals: number; // goalShare applied to expectedGoals (or assumedTeamGoals for a promoted team)
   }[];
 }
 
 export default function GoalShare() {
   const queryClient = useQueryClient();
-  
+
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [gameweekFilter, setGameweekFilter] = useState<string>("full");
+  const [selectedSeason, setSelectedSeason] = useState<string>(PREVIOUS_SEASON);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
@@ -38,11 +40,11 @@ export default function GoalShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch current season goal share data using simplified calculation with filter
+  // Fetch real (non-blended) goal share data for the selected season
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: ["/api/goal-share-season", gameweekFilter],
+    queryKey: ["/api/goal-share-season", selectedSeason],
     queryFn: async () => {
-      const response = await fetch(`/api/goal-share-season?filter=${gameweekFilter}`);
+      const response = await fetch(`/api/goal-share-season?season=${encodeURIComponent(selectedSeason)}`);
       if (!response.ok) throw new Error("Failed to fetch goal share data");
       return response.json();
     },
@@ -72,20 +74,10 @@ export default function GoalShare() {
     setIsRefreshing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      await queryClient.invalidateQueries({ queryKey: ["/api/goal-share-season", gameweekFilter] });
-      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-season", gameweekFilter] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/goal-share-season", selectedSeason] });
+      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-season", selectedSeason] });
     } finally {
       setIsRefreshing(false);
-    }
-  };
-
-  // Get filter label for display
-  const getFilterLabel = () => {
-    switch (gameweekFilter) {
-      case 'last6': return 'Last 6 Gameweeks';
-      case 'last8': return 'Last 8 Gameweeks';
-      case 'last12': return 'Last 12 Gameweeks';
-      default: return 'Full Season';
     }
   };
 
@@ -121,10 +113,10 @@ export default function GoalShare() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Goal Share - {getFilterLabel()}
+              Goal Share - {selectedSeason}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Each player's percentage share of their team's goals using {gameweekFilter === 'full' ? 'full season' : getFilterLabel().toLowerCase()} data (goals scored + expected goals)
+              Each player's real share of their team's goals for the {selectedSeason} season
             </p>
             <div className="mt-6">
               <Button
@@ -161,21 +153,7 @@ export default function GoalShare() {
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
                   <div className="flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      <label className="text-sm font-medium text-gray-700">Period:</label>
-                      <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
-                        <SelectTrigger className="w-48" data-testid="select-period-filter">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
-                          <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
-                          <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
-                          <SelectItem value="full">Full Season</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
                     <div className="flex items-center gap-2">
                       <Filter className="h-5 w-5 text-blue-600" />
                       <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -232,8 +210,12 @@ export default function GoalShare() {
                         <div>
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
-                            {getFilterLabel()} Total (Goals + xG): 
-                            <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(2)}</span>
+                            Goals ({team.games} games): <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(0)}</span>
+                            {team.assumedTeamGoals !== undefined && (
+                              <span className="ml-2 text-amber-700">
+                                (assumed team total: {team.assumedTeamGoals})
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -291,9 +273,9 @@ export default function GoalShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Simple formula: (Goals Scored + Expected Goals) / Team Total × 100</li>
-                    <li>• Uses current 2025/26 season data only</li>
-                    <li>• Combines actual goals with expected goals for better accuracy</li>
+                    <li>• Formula: Player's real goals ÷ team's real goals × 100</li>
+                    <li>• Switch season above to view real 2025/26 or 2026/27 data</li>
+                    <li>• Promoted teams (Coventry/Ipswich/Hull) use their real 2025/26 Championship figures, with an admin-configured assumed team total for projections</li>
                     <li>• All players in a team total 100%</li>
                     <li>• Shows each player's contribution to team's goal output</li>
                   </ul>
