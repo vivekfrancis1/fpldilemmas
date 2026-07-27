@@ -165,6 +165,9 @@ interface Player {
   selected_by_percent: string;
   event_points?: number;
   in_dreamteam?: boolean;
+  status?: string;
+  chance_of_playing_next_round?: number | null;
+  news?: string;
 }
 
 interface BootstrapData {
@@ -178,6 +181,7 @@ interface BootstrapData {
     id: number;
     name: string;
     short_name: string;
+    code?: number;
   }>;
   events: Array<{
     id: number;
@@ -2005,7 +2009,7 @@ export default function MyDashboard() {
                             return freeTransfers;
                           })()}
                           {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
-                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history.event_transfers_cost}pts)</span>
+                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
                           )}
                         </p>
                       </CardContent>

@@ -118,7 +118,7 @@ export class PlayerTotalPointsAggregator {
           }
 
           let blankGWsZeroed = 0;
-          for (const [playerId, player] of playerMap.entries()) {
+          for (const [playerId, player] of Array.from(playerMap.entries())) {
             const teamId = playerTeamMap.get(playerId);
             if (teamId === undefined) continue;
             for (const [gwKey, breakdown] of Object.entries(player.gameweekBreakdown)) {
@@ -149,7 +149,7 @@ export class PlayerTotalPointsAggregator {
       }
 
       // Recompute per-GW totals from components
-      for (const player of playerMap.values()) {
+      for (const player of Array.from(playerMap.values())) {
         let runningTotal = 0;
         for (const gw of Object.values(player.gameweekBreakdown)) {
           gw.points = gw.goals + gw.assists + gw.cleanSheets + gw.minutes + gw.goalsConceded + gw.yellowCards + gw.redCards + gw.bonus + gw.saves + gw.defensiveContributions;
