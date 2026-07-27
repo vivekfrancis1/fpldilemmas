@@ -222,23 +222,6 @@ export type PlayerSummary = z.infer<typeof playerSummarySchema>;
 export type HistoricalPlayerStats = typeof historicalPlayerStats.$inferSelect;
 export type InsertHistoricalPlayerStats = typeof historicalPlayerStats.$inferInsert;
 
-// Pre-calculated player summary table for optimized queries
-export const playerSummaryCache = pgTable("player_summary_cache", {
-  playerId: integer("player_id").primaryKey(),
-  playerName: varchar("player_name", { length: 100 }),
-  teamName: varchar("team_name", { length: 50 }),
-  teamShort: varchar("team_short", { length: 10 }),
-  position: varchar("position", { length: 10 }),
-  season: varchar("season", { length: 10 }).default("2025/26"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    seasonIdx: index("player_summary_cache_season_idx").on(table.season)
-  };
-});
-
-export type PlayerSummaryCache = typeof playerSummaryCache.$inferSelect;
-export type InsertPlayerSummaryCache = typeof playerSummaryCache.$inferInsert;
 
 // Re-export watchlist types
 export * from "./watchlist-schema";
@@ -416,35 +399,6 @@ export type InsertDailyPlayerPrice = typeof dailyPlayerPrices.$inferInsert;
 export type PriceChange = typeof priceChanges.$inferSelect;
 export type InsertPriceChange = typeof priceChanges.$inferInsert;
 
-// FPL Teams table with projection metadata
-export const fplTeams = pgTable("fpl_teams", {
-  id: integer("id").primaryKey(), // Official FPL team ID
-  name: varchar("name").notNull(),
-  shortName: varchar("short_name").notNull(),
-  code: integer("code").notNull(),
-  
-  // Projection metadata for 2025/26 season
-  expectedGoalsPerGame: decimal("expected_goals_per_game", { precision: 4, scale: 2 }),
-  goalVariance: decimal("goal_variance", { precision: 4, scale: 2 }),
-  goalConfidence: decimal("goal_confidence", { precision: 4, scale: 2 }),
-  
-  baseCleanSheetRate: decimal("base_clean_sheet_rate", { precision: 4, scale: 2 }),
-  homeBonus: decimal("home_bonus", { precision: 4, scale: 2 }),
-  cleanSheetConfidence: decimal("clean_sheet_confidence", { precision: 4, scale: 2 }),
-  
-  // Team classification for tiered projections
-  attackingTier: varchar("attacking_tier"), // 'elite', 'strong', 'average', 'weak', 'promoted'
-  defensiveTier: varchar("defensive_tier"), // 'elite', 'strong', 'average', 'weak', 'promoted'
-  
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_fpl_teams_name").on(table.name),
-  index("idx_fpl_teams_tier").on(table.attackingTier),
-]);
-
-export type FplTeam = typeof fplTeams.$inferSelect;
-export type InsertFplTeam = typeof fplTeams.$inferInsert;
 
 // Player Projections Cache - Stores pre-calculated projections for fast retrieval
 export const playerProjections = pgTable("player_projections", {
@@ -584,140 +538,6 @@ export const playerContributions = pgTable("player_contributions", {
 export type PlayerContribution = typeof playerContributions.$inferSelect;
 export type InsertPlayerContribution = typeof playerContributions.$inferInsert;
 
-// Admin settings for Team Goal Projections model
-export const adminGoalProjectionSettings = pgTable("admin_goal_projection_settings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  
-  // Global multipliers
-  globalTierMultiplier: decimal("global_tier_multiplier", { precision: 4, scale: 2 }).default("1.25"),
-  lowConfidenceBoost: decimal("low_confidence_boost", { precision: 4, scale: 2 }).default("1.25"),
-  lowConfidenceThreshold: decimal("low_confidence_threshold", { precision: 4, scale: 2 }).default("0.65"),
-  
-  // Context multipliers
-  derbyGoalsMultiplier: decimal("derby_goals_multiplier", { precision: 4, scale: 2 }).default("0.87"),
-  topSixGoalsMultiplier: decimal("top_six_goals_multiplier", { precision: 4, scale: 2 }).default("1.12"),
-  relegationBattleGoalsMultiplier: decimal("relegation_battle_goals_multiplier", { precision: 4, scale: 2 }).default("0.83"),
-  earlyKickoffGoalsMultiplier: decimal("early_kickoff_goals_multiplier", { precision: 4, scale: 2 }).default("0.94"),
-  lateKickoffGoalsMultiplier: decimal("late_kickoff_goals_multiplier", { precision: 4, scale: 2 }).default("1.07"),
-  postEuropeanGoalsMultiplier: decimal("post_european_goals_multiplier", { precision: 4, scale: 2 }).default("0.88"),
-  midweekFixtureGoalsMultiplier: decimal("midweek_fixture_goals_multiplier", { precision: 4, scale: 2 }).default("0.91"),
-  seasonFinaleGoalsMultiplier: decimal("season_finale_goals_multiplier", { precision: 4, scale: 2 }).default("1.05"),
-  newManagerBounceGoalsMultiplier: decimal("new_manager_bounce_goals_multiplier", { precision: 4, scale: 2 }).default("1.08"),
-  weatherConditionsGoalsMultiplier: decimal("weather_conditions_goals_multiplier", { precision: 4, scale: 2 }).default("0.96"),
-  
-  // Market bounds
-  marketFloorMultiplier: decimal("market_floor_multiplier", { precision: 4, scale: 2 }).default("0.4"),
-  marketCeilingMultiplier: decimal("market_ceiling_multiplier", { precision: 4, scale: 2 }).default("2.0"),
-  absoluteMinGoals: decimal("absolute_min_goals", { precision: 4, scale: 2 }).default("0.3"),
-  absoluteMaxGoals: decimal("absolute_max_goals", { precision: 4, scale: 2 }).default("4.2"),
-  
-  // Clean Sheet Parameters
-  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.15"),
-  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("85"),
-  
-  // Metadata
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  updatedBy: varchar("updated_by").default("admin"),
-});
-
-export type AdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferSelect;
-export type InsertAdminGoalProjectionSettings = typeof adminGoalProjectionSettings.$inferInsert;
-
-// Admin settings for Team Clean Sheet Projections model
-export const adminCSProjectionSettings = pgTable("admin_cs_projection_settings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  
-  // Core CS parameters
-  decayFactor: decimal("decay_factor", { precision: 4, scale: 3 }).default("0.02"),
-  
-  // Base rate boosts for different defense tiers
-  weakDefenseBoost: decimal("weak_defense_boost", { precision: 4, scale: 2 }).default("3.0"), // 200% boost
-  averageDefenseBoost: decimal("average_defense_boost", { precision: 4, scale: 2 }).default("1.75"), // 75% boost
-  strongDefenseBoost: decimal("strong_defense_boost", { precision: 4, scale: 2 }).default("1.3"), // 30% boost
-  
-  // Defensive floors by tier
-  eliteDefensiveFloor: decimal("elite_defensive_floor", { precision: 4, scale: 1 }).default("25"),
-  strongDefensiveFloor: decimal("strong_defensive_floor", { precision: 4, scale: 1 }).default("22"),
-  averageDefensiveFloor: decimal("average_defensive_floor", { precision: 4, scale: 1 }).default("18"),
-  weakDefensiveFloor: decimal("weak_defensive_floor", { precision: 4, scale: 1 }).default("16"),
-  promotedDefensiveFloor: decimal("promoted_defensive_floor", { precision: 4, scale: 1 }).default("15"),
-  
-  // Context multipliers for clean sheets
-  derbyCSMultiplier: decimal("derby_cs_multiplier", { precision: 4, scale: 2 }).default("0.82"),
-  topSixCSMultiplier: decimal("top_six_cs_multiplier", { precision: 4, scale: 2 }).default("0.88"),
-  relegationBattleCSMultiplier: decimal("relegation_battle_cs_multiplier", { precision: 4, scale: 2 }).default("0.78"),
-  earlyKickoffCSMultiplier: decimal("early_kickoff_cs_multiplier", { precision: 4, scale: 2 }).default("1.06"),
-  lateKickoffCSMultiplier: decimal("late_kickoff_cs_multiplier", { precision: 4, scale: 2 }).default("0.93"),
-  postEuropeanCSMultiplier: decimal("post_european_cs_multiplier", { precision: 4, scale: 2 }).default("0.87"),
-  midweekFixtureCSMultiplier: decimal("midweek_fixture_cs_multiplier", { precision: 4, scale: 2 }).default("0.95"),
-  seasonFinaleCSMultiplier: decimal("season_finale_cs_multiplier", { precision: 4, scale: 2 }).default("0.90"),
-  newManagerBounceCSMultiplier: decimal("new_manager_bounce_cs_multiplier", { precision: 4, scale: 2 }).default("1.03"),
-  weatherConditionsCSMultiplier: decimal("weather_conditions_cs_multiplier", { precision: 4, scale: 2 }).default("1.02"),
-  
-  // Metadata
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  updatedBy: varchar("updated_by").default("admin"),
-});
-
-export type AdminCSProjectionSettings = typeof adminCSProjectionSettings.$inferSelect;
-export type InsertAdminCSProjectionSettings = typeof adminCSProjectionSettings.$inferInsert;
-
-// Admin settings for Team Goals Against Projections model
-export const adminGoalsAgainstSettings = pgTable("admin_goals_against_settings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  
-  // Core defensive parameters
-  globalDefensiveMultiplier: decimal("global_defensive_multiplier", { precision: 4, scale: 2 }).default("1.0"),
-  defensiveConfidenceBoost: decimal("defensive_confidence_boost", { precision: 4, scale: 2 }).default("0.85"),
-  weakDefenseThreshold: decimal("weak_defense_threshold", { precision: 4, scale: 2 }).default("0.60"),
-  
-  // Defensive tier multipliers
-  eliteDefenseMultiplier: decimal("elite_defense_multiplier", { precision: 4, scale: 2 }).default("0.75"),
-  strongDefenseMultiplier: decimal("strong_defense_multiplier", { precision: 4, scale: 2 }).default("0.85"),
-  averageDefenseMultiplier: decimal("average_defense_multiplier", { precision: 4, scale: 2 }).default("1.0"),
-  weakDefenseMultiplier: decimal("weak_defense_multiplier", { precision: 4, scale: 2 }).default("1.15"),
-  promotedDefenseMultiplier: decimal("promoted_defense_multiplier", { precision: 4, scale: 2 }).default("1.25"),
-  
-  // Goals against bounds
-  minGoalsAgainst: decimal("min_goals_against", { precision: 4, scale: 2 }).default("0.5"),
-  maxGoalsAgainst: decimal("max_goals_against", { precision: 4, scale: 2 }).default("3.5"),
-  
-  // Metadata
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  updatedBy: varchar("updated_by").default("admin"),
-});
-
-export type AdminGoalsAgainstSettings = typeof adminGoalsAgainstSettings.$inferSelect;
-export type InsertAdminGoalsAgainstSettings = typeof adminGoalsAgainstSettings.$inferInsert;
-
-// Admin settings for Team Assist Projections model
-export const adminAssistProjectionSettings = pgTable("admin_assist_projection_settings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  
-  // Core assist parameters
-  globalAssistMultiplier: decimal("global_assist_multiplier", { precision: 4, scale: 2 }).default("1.0"),
-  creativityBoost: decimal("creativity_boost", { precision: 4, scale: 2 }).default("1.15"),
-  lowCreativityThreshold: decimal("low_creativity_threshold", { precision: 4, scale: 2 }).default("0.65"),
-  
-  // Assist tier multipliers
-  eliteAttackMultiplier: decimal("elite_attack_multiplier", { precision: 4, scale: 2 }).default("1.35"),
-  strongAttackMultiplier: decimal("strong_attack_multiplier", { precision: 4, scale: 2 }).default("1.15"),
-  averageAttackMultiplier: decimal("average_attack_multiplier", { precision: 4, scale: 2 }).default("1.00"),
-  weakAttackMultiplier: decimal("weak_attack_multiplier", { precision: 4, scale: 2 }).default("0.85"),
-  promotedAttackMultiplier: decimal("promoted_attack_multiplier", { precision: 4, scale: 2 }).default("0.75"),
-  
-  // Assist bounds
-  minAssistsPerGame: decimal("min_assists_per_game", { precision: 4, scale: 2 }).default("0.3"),
-  maxAssistsPerGame: decimal("max_assists_per_game", { precision: 4, scale: 2 }).default("2.5"),
-  
-  // Metadata
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  updatedBy: varchar("updated_by").default("admin"),
-});
-
-export type AdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferSelect;
-export type InsertAdminAssistProjectionSettings = typeof adminAssistProjectionSettings.$inferInsert;
-
 // Player mappings for current season (stable data only)
 export const playerMappings = pgTable("player_mappings", {
   id: integer("id").primaryKey(), // FPL player ID
@@ -734,37 +554,6 @@ export const playerMappings = pgTable("player_mappings", {
 
 export type PlayerMapping = typeof playerMappings.$inferSelect;
 export type InsertPlayerMapping = typeof playerMappings.$inferInsert;
-
-// Admin settings for Match Projections model
-export const adminMatchProjectionSettings = pgTable("admin_match_projection_settings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  
-  // Core match projection parameters
-  homeAdvantageMultiplier: decimal("home_advantage_multiplier", { precision: 4, scale: 2 }).default("1.15"),
-  strengthMultiplierBase: decimal("strength_multiplier_base", { precision: 4, scale: 2 }).default("2.2"),
-  
-  // Goal bounds for match projections
-  homeMinGoals: decimal("home_min_goals", { precision: 4, scale: 2 }).default("0.5"),
-  homeMaxGoals: decimal("home_max_goals", { precision: 4, scale: 2 }).default("4.0"),
-  awayMinGoals: decimal("away_min_goals", { precision: 4, scale: 2 }).default("0.3"),
-  awayMaxGoals: decimal("away_max_goals", { precision: 4, scale: 2 }).default("3.5"),
-  
-  // Clean sheet calculation parameters
-  cleanSheetExponent: decimal("clean_sheet_exponent", { precision: 4, scale: 2 }).default("1.15"), // For Math.exp(-goals * exponent)
-  cleanSheetMultiplier: decimal("clean_sheet_multiplier", { precision: 4, scale: 2 }).default("85"), // Convert to percentage
-  
-  // Match context adjustments
-  derbyMatchMultiplier: decimal("derby_match_multiplier", { precision: 4, scale: 2 }).default("0.92"),
-  topSixMatchMultiplier: decimal("top_six_match_multiplier", { precision: 4, scale: 2 }).default("1.08"),
-  relegationBattleMultiplier: decimal("relegation_battle_multiplier", { precision: 4, scale: 2 }).default("0.88"),
-  
-  // Metadata
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  updatedBy: varchar("updated_by").default("admin"),
-});
-
-export type AdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferSelect;
-export type InsertAdminMatchProjectionSettings = typeof adminMatchProjectionSettings.$inferInsert;
 
 // Unified Projection Settings - persistent storage for all projection controls
 export const unifiedProjectionSettings = pgTable("unified_projection_settings", {
@@ -1225,44 +1014,6 @@ export const insertGameweekUpdateLogSchema = createInsertSchema(gameweekUpdateLo
 export type InsertGameweekUpdateLog = z.infer<typeof insertGameweekUpdateLogSchema>;
 export type GameweekUpdateLog = typeof gameweekUpdateLogTable.$inferSelect;
 
-// Cached spread betting odds data
-export const cachedSpreadBettingOdds = pgTable("cached_spread_betting_odds", {
-  id: serial("id").primaryKey(),
-  fixtureId: varchar("fixture_id").notNull(),
-  gameweek: integer("gameweek").notNull(),
-  kickoffTime: timestamp("kickoff_time").notNull(),
-  homeTeamId: integer("home_team_id"),
-  homeTeamName: varchar("home_team_name").notNull(),
-  homeTeamShortName: varchar("home_team_short_name").notNull(),
-  awayTeamId: integer("away_team_id"),
-  awayTeamName: varchar("away_team_name").notNull(),
-  awayTeamShortName: varchar("away_team_short_name").notNull(),
-  // Total goals spread data
-  totalGoalsSell: real("total_goals_sell").notNull(),
-  totalGoalsBuy: real("total_goals_buy").notNull(),
-  totalGoalsMidpoint: real("total_goals_midpoint").notNull(),
-  // Supremacy spread data  
-  supremacySell: real("supremacy_sell").notNull(),
-  supremacyBuy: real("supremacy_buy").notNull(),
-  supremacyMidpoint: real("supremacy_midpoint").notNull(),
-  // Calculated expected goals using T+S/2 and T-S/2 formulas
-  homeExpectedGoals: real("home_expected_goals").notNull(),
-  awayExpectedGoals: real("away_expected_goals").notNull(),
-  // Market data metadata
-  marketConfidence: varchar("market_confidence").notNull(), // High, Medium, Low
-  dataSource: varchar("data_source").notNull().default("The Odds API"),
-  bookmakerCount: integer("bookmaker_count").default(0),
-  // Cache metadata
-  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-  fetchDate: date("fetch_date").notNull(),
-}, (table) => [
-  index("idx_spread_betting_gameweek").on(table.gameweek),
-  index("idx_spread_betting_kickoff").on(table.kickoffTime),
-  index("idx_spread_betting_teams").on(table.homeTeamShortName, table.awayTeamShortName),
-  index("idx_spread_betting_fetch_date").on(table.fetchDate),
-  uniqueIndex("idx_spread_betting_unique").on(table.fixtureId, table.fetchDate),
-]);
-
 // Pre-computed 2024/25 data cache for fast goal/assist share calculations
 export const cachedHistoricalData = pgTable("cached_historical_data", {
   id: serial("id").primaryKey(),
@@ -1287,10 +1038,6 @@ export const cachedHistoricalData = pgTable("cached_historical_data", {
 // Types for cached historical data
 export type CachedHistoricalData = typeof cachedHistoricalData.$inferSelect;
 export type InsertCachedHistoricalData = typeof cachedHistoricalData.$inferInsert;
-
-// Types for spread betting odds cache
-export type CachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferSelect;
-export type InsertCachedSpreadBettingOdds = typeof cachedSpreadBettingOdds.$inferInsert;
 
 // Daily projection storage tables for ultra-fast performance
 export const teamProjectionsDaily = pgTable("team_projections_daily", {
@@ -1344,39 +1091,6 @@ export const staticProjectionRanges = pgTable("static_projection_ranges", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
-// Universal static cache for ALL projection types (players, teams, shares)
-export const staticCachedProjections = pgTable("static_cached_projections", {
-  id: serial("id").primaryKey(),
-  rangeId: integer("range_id").references(() => staticProjectionRanges.id).notNull(),
-  
-  // Universal identifiers (works for players, teams, shares)
-  entityId: integer("entity_id").notNull(), // playerId OR teamId
-  entityName: varchar("entity_name", { length: 100 }).notNull(), // playerName OR teamName
-  entityType: varchar("entity_type", { length: 20 }).notNull(), // "player" OR "team"
-  position: varchar("position", { length: 20 }), // For players only
-  teamName: varchar("team_name", { length: 50 }), // For players
-  
-  // Universal projection values (different tools use different fields)
-  projectedValue: decimal("projected_value", { precision: 8, scale: 3 }).default("0"), // Main value (goals, assists, etc.)
-  projectedPoints: decimal("projected_points", { precision: 6, scale: 2 }).default("0"), // FPL points
-  sharePercentage: decimal("share_percentage", { precision: 5, scale: 2 }).default("0"), // For goal/assist share
-  projectedMinutes: decimal("projected_minutes", { precision: 8, scale: 2 }).default("0"), // Minutes
-  
-  // Bonus values for complex projections
-  bonusValue1: decimal("bonus_value_1", { precision: 8, scale: 3 }).default("0"), // Clean sheets, saves, etc.
-  bonusValue2: decimal("bonus_value_2", { precision: 8, scale: 3 }).default("0"), // Cards, defensive, etc.
-  bonusValue3: decimal("bonus_value_3", { precision: 8, scale: 3 }).default("0"), // Bonus points, etc.
-  
-  // Gameweek-by-gameweek breakdown for detailed analysis
-  gameweekBreakdown: jsonb("gameweek_breakdown"), // {gw4: {value: 0.5, points: 2.1, ...}, ...}
-  
-  // Metadata
-  dataSource: varchar("data_source", { length: 50 }).default("api"), // "api", "calculated", "cached"
-  calculationMethod: varchar("calculation_method", { length: 30 }), // "hybrid", "projection", "share"
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
-});
 
 // Static Player Projections - Dedicated table for ultra-fast player projection caching
 export const staticPlayerProjections = pgTable("static_player_projections", {
@@ -1423,8 +1137,6 @@ export type SelectAssistShareDaily = typeof assistShareDaily.$inferSelect;
 // Types for comprehensive static cache tables
 export type StaticProjectionRange = typeof staticProjectionRanges.$inferSelect;
 export type InsertStaticProjectionRange = typeof staticProjectionRanges.$inferInsert;
-export type StaticCachedProjection = typeof staticCachedProjections.$inferSelect;
-export type InsertStaticCachedProjection = typeof staticCachedProjections.$inferInsert;
 
 // Types for static player projections
 export type StaticPlayerProjection = typeof staticPlayerProjections.$inferSelect;

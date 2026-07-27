@@ -24,7 +24,6 @@ const PlayerTotalPoints = lazy(() => import("./pages/player-total-points"));
 const BestFreehitTeam = lazy(() => import("./pages/best-freehit-team"));
 const BestWildcardTeam = lazy(() => import("./pages/best-wildcard-team"));
 const MyTeam = lazy(() => import("./pages/my-team"));
-const MyLeagues = lazy(() => import("./pages/my-leagues"));
 const MyDashboard = lazy(() => import("./pages/my-dashboard"));
 const LeagueAnalysisPage = lazy(() => import("./pages/league-analysis"));
 const RecentPriceChanges = lazy(() => import("./pages/recent-price-changes"));
@@ -65,7 +64,6 @@ const PlayerYellowCards = lazy(() => import("./pages/player-yellow-cards"));
 const PlayerRedCards = lazy(() => import("./pages/player-red-cards"));
 const PlayerBonusPoints = lazy(() => import("./pages/player-bonus-points"));
 const Login = lazy(() => import("./pages/login"));
-const ResponsiveTableDemo = lazy(() => import("./pages/responsive-table-demo"));
 const CurrentStandings = lazy(() => import("./pages/current-standings"));
 const TransferPlanner = lazy(() => import("./pages/transfer-planner"));
 const ProjectedPoints = lazy(() => import("./pages/projected-points"));
@@ -101,15 +99,12 @@ function Router() {
         <Route path="/transfer-recommendations" component={TransferRecommendations} />
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
-        <Route path="/my-leagues" component={MyLeagues} />
         <Route path="/transfer-planner" component={TransferPlanner} />
         <Route path="/league-analysis/:leagueId/:leagueName/:managerId" component={LeagueAnalysisPage} />
         <Route path="/recent-price-changes" component={RecentPriceChanges} />
-        <Route path="/predicted-price-changes" component={TransferTracker} />
         <Route path="/transfer-tracker" component={TransferTracker} />
         <Route path="/player-statistics" component={PlayerStats} />
         <Route path="/player/:id" component={PlayerDetail} />
-        <Route path="/responsive-table-demo" component={ResponsiveTableDemo} />
 
         <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
         <Route path="/projected-standings" component={ProjectedStandings} />
@@ -142,13 +137,6 @@ function Router() {
         <Route path="/goal-share" component={GoalShare} />
         <Route path="/assist-share" component={AssistShare} />
         <Route path="/player-goal-projections">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <PlayerGoalProjections />
-            </Suspense>
-          </ProtectedRoute>
-        </Route>
-        <Route path="/player-goals-scored">
           <ProtectedRoute requireAdmin={true}>
             <Suspense fallback={<PageLoader />}>
               <PlayerGoalProjections />
