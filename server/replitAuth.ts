@@ -39,10 +39,19 @@ export async function setupAuth(app: Express) {
 
   // Only set up Google OAuth if credentials are configured
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    // GOOGLE_CALLBACK_URL (explicit, e.g. the fpldilemmas.com custom domain) always wins —
+    // Google OAuth matches redirect URIs exactly, so this should point at whatever domain is
+    // actually registered as an Authorized redirect URI in Google Cloud Console. The two
+    // fallbacks below only matter when that's unset: RAILWAY_PUBLIC_DOMAIN is set automatically
+    // by Railway (e.g. fpldilemmas-production.up.railway.app), and the REPL_SLUG/REPL_OWNER
+    // branch is legacy from when this app was hosted on Replit (harmless to keep, just dead
+    // in practice on Railway).
     const callbackURL = process.env.GOOGLE_CALLBACK_URL ||
-      (process.env.REPL_SLUG && process.env.REPL_OWNER
-        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`
-        : 'http://localhost:5000/api/auth/google/callback');
+      (process.env.RAILWAY_PUBLIC_DOMAIN
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/auth/google/callback`
+        : process.env.REPL_SLUG && process.env.REPL_OWNER
+          ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`
+          : 'http://localhost:5000/api/auth/google/callback');
 
     passport.use(
       new GoogleStrategy(
