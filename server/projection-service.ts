@@ -611,7 +611,7 @@ class ProjectionService {
       console.log(`DEBUG: Cached ${players.length} player projections in ${duration}ms`);
 
       // Return in API format with detailed breakdowns
-      return players.map(player => ({
+      return players.map((player: any) => ({
         playerId: player.playerId,
         name: player.playerName,
         fullName: player.playerName,
@@ -636,7 +636,7 @@ class ProjectionService {
         totalPointsFromDefensiveContributions: player.totalDefensivePoints,
         totalPointsFromMinutes: player.totalMinutesPoints,
         totalPointsFromBonus: player.totalBonusPoints
-      })).sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
+      })).sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
 
     } catch (error) {
       const duration = Date.now() - startTime;

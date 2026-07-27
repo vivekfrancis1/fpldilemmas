@@ -159,8 +159,8 @@ export default function TeamGoalsAgainstProjections() {
 
   // Create a mapping of FPL short_name + gameweek -> opponent info
   const opponentMap = useMemo(() => {
-    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
-    
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
+
     const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }[]>();
     
     fixturesData.forEach((fixture: any) => {
@@ -826,7 +826,7 @@ export default function TeamGoalsAgainstProjections() {
                                   <PopoverTrigger asChild>
                                     <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                       <div className="flex flex-col items-center">
-                                        <span>{viewMode === "past" ? Math.round(totalGA) : totalGA.toFixed(2)}</span>
+                                        <span>{totalGA.toFixed(2)}</span>
                                         {showOpponent && (
                                           <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                             {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
@@ -855,7 +855,7 @@ export default function TeamGoalsAgainstProjections() {
                                 </Popover>
                               ) : (
                                 <div className="flex flex-col items-center">
-                                  <span>{viewMode === "past" ? Math.round(fixtures[0].goalsAgainst) : fixtures[0].goalsAgainst.toFixed(2)}</span>
+                                  <span>{fixtures[0].goalsAgainst.toFixed(2)}</span>
                                   {showOpponent && (
                                     <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                       {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
