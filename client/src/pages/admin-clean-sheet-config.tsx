@@ -90,6 +90,42 @@ export default function AdminCleanSheetConfig() {
     updateSettingsMutation.mutate(formData);
   };
 
+  // Promoted teams' assumed last-season (2025/26) clean sheet counts — separate settings
+  // endpoint from the exponent/multiplier form above, since this is raw baseline data for
+  // Coventry/Ipswich/Hull rather than a formula parameter. See team-goals-service.ts.
+  const { data: promotedTeamCleanSheetsData } = useQuery<{ teams: Array<{ teamName: string; cleanSheets: number; played: number }> }>({
+    queryKey: ['/api/admin/promoted-team-clean-sheets'],
+  });
+  const [promotedTeamCleanSheetsForm, setPromotedTeamCleanSheetsForm] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (promotedTeamCleanSheetsData?.teams) {
+      const map: Record<string, number> = {};
+      promotedTeamCleanSheetsData.teams.forEach(t => { map[t.teamName] = t.cleanSheets; });
+      setPromotedTeamCleanSheetsForm(map);
+    }
+  }, [promotedTeamCleanSheetsData]);
+
+  const updatePromotedTeamCleanSheetsMutation = useMutation({
+    mutationFn: async () => {
+      const teams = Object.entries(promotedTeamCleanSheetsForm).map(([teamName, cleanSheets]) => ({ teamName, cleanSheets }));
+      const response = await fetch('/api/admin/promoted-team-clean-sheets', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams }),
+      });
+      if (!response.ok) throw new Error('Failed to update promoted team clean sheets');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Promoted Team Clean Sheets Updated", description: "Last-season-equivalent clean sheet counts have been saved." });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/promoted-team-clean-sheets'] });
+    },
+    onError: () => {
+      toast({ title: "Update Failed", description: "Failed to update promoted team clean sheets. Please try again.", variant: "destructive" });
+    },
+  });
+
   const resetToDefaults = () => {
     if (confirm('Reset all clean sheet settings to default values?')) {
       setFormData({
@@ -275,6 +311,66 @@ export default function AdminCleanSheetConfig() {
             </ul>
           </AlertDescription>
         </Alert>
+
+        {/* Promoted Teams */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Promoted Teams — Last Season Clean Sheets</CardTitle>
+            <CardDescription>
+              Coventry City, Ipswich Town, and Hull City never played in the Premier League last season, so there's
+              no real 2025/26 top-flight data to blend for them. These assumed clean sheet counts (out of an
+              equivalent 38-game season) stand in for that side of the blend in clean sheet projections until real
+              2026/27 games accumulate.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left p-3 font-medium border border-gray-200 dark:border-gray-700">Team</th>
+                    <th className="text-center p-3 font-medium border border-gray-200 dark:border-gray-700">Clean Sheets (of 38)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(promotedTeamCleanSheetsData?.teams ?? []).map((team) => {
+                    const value = promotedTeamCleanSheetsForm[team.teamName] ?? team.cleanSheets;
+                    return (
+                      <tr key={team.teamName} className="border-b hover:bg-muted/25">
+                        <td className="p-3 border border-gray-200 dark:border-gray-700 font-medium">{team.teamName}</td>
+                        <td className="text-center p-3 border border-gray-200 dark:border-gray-700">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={38}
+                            value={value}
+                            onChange={(e) => setPromotedTeamCleanSheetsForm(prev => ({
+                              ...prev,
+                              [team.teamName]: parseInt(e.target.value) || 0,
+                            }))}
+                            className="w-24 text-center font-mono mx-auto"
+                            data-testid={`input-promoted-clean-sheets-${team.teamName.replace(/\s+/g, '-').toLowerCase()}`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={() => updatePromotedTeamCleanSheetsMutation.mutate()}
+                disabled={updatePromotedTeamCleanSheetsMutation.isPending}
+                className="flex items-center gap-2"
+                data-testid="button-save-promoted-team-clean-sheets"
+              >
+                <Save className="h-4 w-4" />
+                {updatePromotedTeamCleanSheetsMutation.isPending ? 'Saving...' : 'Save Promoted Team Clean Sheets'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Actions */}
         <Card>

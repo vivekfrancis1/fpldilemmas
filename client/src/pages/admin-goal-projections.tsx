@@ -172,6 +172,42 @@ export default function AdminGoalProjections() {
     },
   });
 
+  // Promoted teams' assumed last-season (2025/26) goals for/against — separate settings
+  // endpoint from the tuning-multiplier form above, since these are raw baseline data for
+  // Coventry/Ipswich/Hull rather than a model multiplier. See team-goals-service.ts.
+  const { data: promotedTeamGoalsData } = useQuery<{ teams: Array<{ teamName: string; goalsFor: number; goalsAgainst: number; played: number }> }>({
+    queryKey: ['/api/admin/promoted-team-goals'],
+  });
+  const [promotedTeamGoalsForm, setPromotedTeamGoalsForm] = useState<Record<string, { goalsFor: number; goalsAgainst: number }>>({});
+
+  useEffect(() => {
+    if (promotedTeamGoalsData?.teams) {
+      const map: Record<string, { goalsFor: number; goalsAgainst: number }> = {};
+      promotedTeamGoalsData.teams.forEach(t => { map[t.teamName] = { goalsFor: t.goalsFor, goalsAgainst: t.goalsAgainst }; });
+      setPromotedTeamGoalsForm(map);
+    }
+  }, [promotedTeamGoalsData]);
+
+  const updatePromotedTeamGoalsMutation = useMutation({
+    mutationFn: async () => {
+      const teams = Object.entries(promotedTeamGoalsForm).map(([teamName, v]) => ({ teamName, ...v }));
+      const response = await fetch('/api/admin/promoted-team-goals', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams }),
+      });
+      if (!response.ok) throw new Error('Failed to update promoted team goals');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Promoted Team Goals Updated", description: "Last-season-equivalent goals for/against have been saved." });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/promoted-team-goals'] });
+    },
+    onError: () => {
+      toast({ title: "Update Failed", description: "Failed to update promoted team goals. Please try again.", variant: "destructive" });
+    },
+  });
+
   // Default team tier assignments - Updated per user specifications
   const DEFAULT_TEAM_TIERS = {
     eliteAttackTeams: [12, 13], // Liverpool, Man City
@@ -699,6 +735,7 @@ export default function AdminGoalProjections() {
 
       <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2 bg-muted rounded-lg">
+          <TabsTrigger value="promoted-teams" className="text-xs md:text-sm whitespace-nowrap">Promoted Teams</TabsTrigger>
           <TabsTrigger value="calculation-base" className="text-xs md:text-sm whitespace-nowrap">Projection Model</TabsTrigger>
           <TabsTrigger value="base-xg" className="text-xs md:text-sm whitespace-nowrap">Base xG Settings</TabsTrigger>
           <TabsTrigger value="attacking-teams" className="text-xs md:text-sm whitespace-nowrap">Attack Teams</TabsTrigger>
@@ -1942,6 +1979,80 @@ export default function AdminGoalProjections() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="promoted-teams" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Promoted Teams — Last Season Goals</CardTitle>
+              <CardDescription>
+                Coventry City, Ipswich Town, and Hull City never played in the Premier League last season, so there's
+                no real 2025/26 top-flight data to blend for them. These assumed goals for/against (on an equivalent
+                38-game basis) stand in for that side of the blend in team goal projections until real 2026/27 games
+                accumulate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-medium">Team</th>
+                      <th className="text-center p-2 font-medium">Goals For</th>
+                      <th className="text-center p-2 font-medium">Goals Against</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(promotedTeamGoalsData?.teams ?? []).map((team) => {
+                      const formValue = promotedTeamGoalsForm[team.teamName] ?? { goalsFor: team.goalsFor, goalsAgainst: team.goalsAgainst };
+                      return (
+                        <tr key={team.teamName} className="border-b hover:bg-muted/50">
+                          <td className="p-2 font-medium">{team.teamName}</td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={formValue.goalsFor}
+                              onChange={(e) => setPromotedTeamGoalsForm(prev => ({
+                                ...prev,
+                                [team.teamName]: { ...formValue, goalsFor: parseInt(e.target.value) || 0 },
+                              }))}
+                              className="w-24 text-center mx-auto"
+                              data-testid={`input-promoted-goals-for-${team.teamName.replace(/\s+/g, '-').toLowerCase()}`}
+                            />
+                          </td>
+                          <td className="text-center p-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={formValue.goalsAgainst}
+                              onChange={(e) => setPromotedTeamGoalsForm(prev => ({
+                                ...prev,
+                                [team.teamName]: { ...formValue, goalsAgainst: parseInt(e.target.value) || 0 },
+                              }))}
+                              className="w-24 text-center mx-auto"
+                              data-testid={`input-promoted-goals-against-${team.teamName.replace(/\s+/g, '-').toLowerCase()}`}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={() => updatePromotedTeamGoalsMutation.mutate()}
+                  disabled={updatePromotedTeamGoalsMutation.isPending}
+                  className="flex items-center gap-2"
+                  data-testid="button-save-promoted-team-goals"
+                >
+                  <Save className="h-4 w-4" />
+                  {updatePromotedTeamGoalsMutation.isPending ? 'Saving...' : 'Save Promoted Team Goals'}
+                </Button>
               </div>
             </CardContent>
           </Card>
