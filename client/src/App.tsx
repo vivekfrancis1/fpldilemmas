@@ -13,8 +13,6 @@ import { Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/protected-route";
 
 const Fixtures = lazy(() => import("./pages/fixtures"));
-const Transfers = lazy(() => import("./pages/transfers"));
-const Captain = lazy(() => import("./pages/captain"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
 const AssistShare = lazy(() => import("./pages/assist-share"));
 const PlayerGoalProjections = lazy(() => import("./pages/player-goal-projections"));
@@ -25,13 +23,10 @@ const PlayerCleanSheetPoints = lazy(() => import("./pages/player-cleansheet-poin
 const PlayerTotalPoints = lazy(() => import("./pages/player-total-points"));
 const BestFreehitTeam = lazy(() => import("./pages/best-freehit-team"));
 const BestWildcardTeam = lazy(() => import("./pages/best-wildcard-team"));
-const Watchlist = lazy(() => import("./pages/watchlist"));
-const LiveRank = lazy(() => import("./pages/live-rank"));
 const MyTeam = lazy(() => import("./pages/my-team"));
 const MyLeagues = lazy(() => import("./pages/my-leagues"));
 const MyDashboard = lazy(() => import("./pages/my-dashboard"));
 const LeagueAnalysisPage = lazy(() => import("./pages/league-analysis"));
-const PriceTracker = lazy(() => import("./pages/price-tracker"));
 const RecentPriceChanges = lazy(() => import("./pages/recent-price-changes"));
 const TransferTracker = lazy(() => import("./pages/transfer-tracker"));
 const OpenFPLProjections = lazy(() => import("./pages/openfpl-projections"));
@@ -41,7 +36,6 @@ const Top25Managers = lazy(() => import("./pages/top25-managers"));
 const Top25ManagerTeam = lazy(() => import("./pages/top25-manager-team"));
 const Top25TeamAnalysis = lazy(() => import("./pages/top25-team-analysis"));
 const ManagerTeam = lazy(() => import("./pages/manager-team"));
-const LeagueComparison = lazy(() => import("./pages/league-comparison"));
 const PlayerStats = lazy(() => import("./pages/player-stats"));
 const PlayerDetail = lazy(() => import("./pages/player-detail"));
 const ResultsAndFixtures = lazy(() => import("./pages/results-and-fixtures"));
@@ -101,24 +95,18 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/" component={MyDashboard} />
-        <Route path="/live-rank" component={LiveRank} />
         <Route path="/my-dashboard" component={MyDashboard} />
         <Route path="/projected-points" component={ProjectedPoints} />
         <Route path="/team-optimizer" component={TeamOptimizer} />
         <Route path="/transfer-recommendations" component={TransferRecommendations} />
         <Route path="/fixtures" component={Fixtures} />
-        <Route path="/transfers" component={Transfers} />
-        <Route path="/captain" component={Captain} />
-        <Route path="/watchlist" component={Watchlist} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/my-leagues" component={MyLeagues} />
         <Route path="/transfer-planner" component={TransferPlanner} />
         <Route path="/league-analysis/:leagueId/:leagueName/:managerId" component={LeagueAnalysisPage} />
-        <Route path="/price-tracker" component={PriceTracker} />
         <Route path="/recent-price-changes" component={RecentPriceChanges} />
         <Route path="/predicted-price-changes" component={TransferTracker} />
         <Route path="/transfer-tracker" component={TransferTracker} />
-        <Route path="/league-comparison" component={LeagueComparison} />
         <Route path="/player-statistics" component={PlayerStats} />
         <Route path="/player/:id" component={PlayerDetail} />
         <Route path="/responsive-table-demo" component={ResponsiveTableDemo} />
