@@ -455,9 +455,9 @@ export class TeamGoalsService {
    * Uses verified data from current standings API - no estimations
    */
   private static async calculateFixtureGoals(
-    team: any, 
-    opponent: any, 
-    fixture: any, 
+    team: any,
+    opponent: any,
+    fixture: any,
     isHome: boolean,
     bootstrapData: any,
     fixturesData: any[],
@@ -465,6 +465,14 @@ export class TeamGoalsService {
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
   ): Promise<number> {
+    // 'tiered' mode uses the pre-2025 formula (base xG x venue x tier/context
+    // multipliers) instead of live performance data — restored from git history
+    // (pre-f01baa93) as an admin-selectable alternative, not the default.
+    if (adminGoalSettings.calculationMode === 'tiered') {
+      return TeamGoalsService.calculateFixtureGoalsTiered(
+        team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+      );
+    }
     try {
       // SEASON DATA ONLY: Uses verified data from current standings API
       // Formula: GF×0.25 + xGF×0.25 + GC×0.25 + xGC×0.25
@@ -502,7 +510,178 @@ export class TeamGoalsService {
       throw error;
     }
   }
-  
+
+  /**
+   * 'tiered' calculationMode formula, restored from git history (commit f50b3429,
+   * before tier logic was stripped in f01baa93): base xG x venue x opponent's
+   * defense-tier multiplier x team's own attack-tier multiplier x context
+   * multipliers, clamped to market bounds then absolute bounds. All inputs come
+   * from adminGoalSettings (admin-editable in the Admin Goal Projections page),
+   * falling back to MASTER_TEAM_DEFAULTS.
+   */
+  private static calculateFixtureGoalsTiered(
+    team: any,
+    opponent: any,
+    fixture: any,
+    isHome: boolean,
+    fixturesData: any[],
+    adminGoalSettings: any,
+    MASTER_TEAM_DEFAULTS: any
+  ): number {
+    // Phase 1: Universal base xG foundation
+    let expectedGoals = TeamGoalsService.num(adminGoalSettings.averageBaseXGPerTeamPerGame, MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame);
+
+    // Phase 2: Venue factor
+    const venueMultiplier = isHome
+      ? TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier, MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier)
+      : TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier, MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier);
+    expectedGoals = TeamGoalsService.safeMul(expectedGoals, venueMultiplier, 1.0);
+
+    // Phase 3: Opponent's defensive tier
+    const defensiveTier = TeamGoalsService.getDefensiveTier(opponent.id, adminGoalSettings);
+    const defensiveMultiplier = TeamGoalsService.getDefensiveMultiplier(defensiveTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+    expectedGoals = TeamGoalsService.safeMul(expectedGoals, defensiveMultiplier, 1.0);
+
+    // Phase 4: Team's own attacking tier
+    const attackingTier = TeamGoalsService.getAttackingTier(team.id, adminGoalSettings);
+    const attackingMultiplier = TeamGoalsService.getAttackingMultiplier(attackingTier, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+    expectedGoals = TeamGoalsService.safeMul(expectedGoals, attackingMultiplier, 1.0);
+
+    // Phase 5: Context multipliers (form, derby/top-six/relegation-battle, season finale)
+    expectedGoals = TeamGoalsService.applyContextMultipliers(
+      expectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings
+    );
+
+    // Phase 6: Market bounds (relative to the base xG)
+    const averageBaseXG = TeamGoalsService.num(adminGoalSettings.averageBaseXGPerTeamPerGame, MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame);
+    const marketFloor = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketFloorMultiplier, 0.4);
+    const marketCeiling = averageBaseXG * TeamGoalsService.num(adminGoalSettings.marketCeilingMultiplier, 2.0);
+    expectedGoals = Math.max(marketFloor, Math.min(marketCeiling, expectedGoals));
+
+    // Final absolute bounds
+    const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
+    const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
+    return Math.max(absoluteMin, Math.min(absoluteMax, expectedGoals));
+  }
+
+  private static parseTeamArray(teamData: any): number[] {
+    if (Array.isArray(teamData)) return teamData;
+    if (typeof teamData === 'string') {
+      try { return JSON.parse(teamData); } catch { return []; }
+    }
+    return [];
+  }
+
+  private static getDefensiveTier(teamId: number, adminGoalSettings: any): string {
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.eliteDefenseTeams).includes(teamId)) return 'elite';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.strongDefenseTeams).includes(teamId)) return 'strong';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.weakDefenseTeams).includes(teamId)) return 'weak';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.promotedDefenseTeams).includes(teamId)) return 'promoted';
+    return 'average';
+  }
+
+  private static getDefensiveMultiplier(tier: string, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
+    switch (tier) {
+      case 'elite': return TeamGoalsService.num(adminGoalSettings.eliteDefenseMultiplier, MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier);
+      case 'strong': return TeamGoalsService.num(adminGoalSettings.strongDefenseMultiplier, MASTER_TEAM_DEFAULTS.strongDefenseMultiplier);
+      case 'average': return TeamGoalsService.num(adminGoalSettings.averageDefenseMultiplier, MASTER_TEAM_DEFAULTS.averageDefenseMultiplier);
+      case 'weak': return TeamGoalsService.num(adminGoalSettings.weakDefenseMultiplier, MASTER_TEAM_DEFAULTS.weakDefenseMultiplier);
+      case 'promoted': return TeamGoalsService.num(adminGoalSettings.promotedDefenseMultiplier, MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier);
+      default: return 1.0;
+    }
+  }
+
+  private static getAttackingTier(teamId: number, adminGoalSettings: any): string {
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.eliteAttackTeams).includes(teamId)) return 'elite';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.strongAttackTeams).includes(teamId)) return 'strong';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.weakAttackTeams).includes(teamId)) return 'weak';
+    if (TeamGoalsService.parseTeamArray(adminGoalSettings.promotedAttackTeams).includes(teamId)) return 'promoted';
+    return 'average';
+  }
+
+  private static getAttackingMultiplier(tier: string, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): number {
+    switch (tier) {
+      case 'elite': return TeamGoalsService.num(adminGoalSettings.eliteAttackMultiplier, MASTER_TEAM_DEFAULTS.eliteAttackMultiplier);
+      case 'strong': return TeamGoalsService.num(adminGoalSettings.strongAttackMultiplier, MASTER_TEAM_DEFAULTS.strongAttackMultiplier);
+      case 'average': return TeamGoalsService.num(adminGoalSettings.averageAttackMultiplier, MASTER_TEAM_DEFAULTS.averageAttackMultiplier);
+      case 'weak': return TeamGoalsService.num(adminGoalSettings.weakAttackMultiplier, MASTER_TEAM_DEFAULTS.weakAttackMultiplier);
+      case 'promoted': return TeamGoalsService.num(adminGoalSettings.promotedAttackMultiplier, MASTER_TEAM_DEFAULTS.promotedAttackMultiplier);
+      default: return 1.0;
+    }
+  }
+
+  // Current-roster rivalry pairs / top-six group / relegation-battle group — derived from
+  // 2025/26 final standings the same way as the tier assignments in team-config.ts (see the
+  // comment on MASTER_TEAM_DEFAULTS). Team IDs match this app's PREMIER_LEAGUE_TEAMS constant.
+  private static readonly RIVALRY_PAIRS: Array<[number, number]> = [
+    [1, 19],  // Arsenal - Spurs (North London Derby)
+    [15, 16], // Man City - Man Utd (Manchester Derby)
+    [14, 9],  // Liverpool - Everton (Merseyside Derby)
+    [17, 20], // Newcastle - Sunderland (Tyne-Wear Derby)
+    [6, 10],  // Chelsea - Fulham (West London)
+  ];
+  private static readonly TOP_SIX_TEAMS = [1, 6, 14, 15, 16, 19]; // Arsenal, Chelsea, Liverpool, Man City, Man Utd, Spurs
+  private static readonly RELEGATION_BATTLE_TEAMS = [9, 10, 20, 8, 3, 17, 13, 19, 11, 12, 7]; // weak attack/defense + promoted
+
+  private static applyContextMultipliers(
+    expectedGoals: number,
+    team: any,
+    opponent: any,
+    fixture: any,
+    isHome: boolean,
+    fixturesData: any[],
+    adminGoalSettings: any
+  ): number {
+    let adjusted = expectedGoals;
+
+    const teamFormMultiplier = TeamGoalsService.calculateTeamForm(team.id, fixture.event, fixturesData, adminGoalSettings);
+    adjusted = TeamGoalsService.safeMul(adjusted, teamFormMultiplier, 1.0);
+
+    const isRivalryMatch = TeamGoalsService.RIVALRY_PAIRS.some(
+      ([a, b]) => (team.id === a && opponent.id === b) || (team.id === b && opponent.id === a)
+    );
+    const isTopSixBattle = TeamGoalsService.TOP_SIX_TEAMS.includes(team.id) && TeamGoalsService.TOP_SIX_TEAMS.includes(opponent.id);
+    const isRelegationBattle = TeamGoalsService.RELEGATION_BATTLE_TEAMS.includes(team.id) && TeamGoalsService.RELEGATION_BATTLE_TEAMS.includes(opponent.id);
+
+    if (isRivalryMatch) {
+      adjusted = TeamGoalsService.safeMul(adjusted, adminGoalSettings.derbyGoalsMultiplier, 0.87);
+    } else if (isTopSixBattle) {
+      adjusted = TeamGoalsService.safeMul(adjusted, adminGoalSettings.topSixGoalsMultiplier, 1.12);
+    } else if (isRelegationBattle) {
+      adjusted = TeamGoalsService.safeMul(adjusted, adminGoalSettings.relegationBattleGoalsMultiplier, 0.83);
+    }
+
+    // Season finale (last 2 gameweeks) — the only timing factor derivable from real FPL data;
+    // weather/referee/travel/new-manager-bounce etc. were dropped as synthetic (not FPL data).
+    if (fixture.event >= 37) {
+      adjusted = TeamGoalsService.safeMul(adjusted, adminGoalSettings.seasonFinaleGoalsMultiplier, 1.05);
+    }
+
+    return adjusted;
+  }
+
+  private static calculateTeamForm(teamId: number, currentGameweek: number, fixturesData: any[], adminGoalSettings: any): number {
+    const recentGames = fixturesData
+      .filter((f: any) => f.finished && f.event < currentGameweek && (f.team_h === teamId || f.team_a === teamId))
+      .sort((a: any, b: any) => b.event - a.event)
+      .slice(0, 5);
+
+    if (recentGames.length === 0) return 1.0;
+
+    let wins = 0;
+    recentGames.forEach((game: any) => {
+      const isHomeGame = game.team_h === teamId;
+      const teamScore = isHomeGame ? game.team_h_score : game.team_a_score;
+      const opponentScore = isHomeGame ? game.team_a_score : game.team_h_score;
+      if (teamScore > opponentScore) wins++;
+    });
+
+    const formMultiplier = TeamGoalsService.num(adminGoalSettings.teamFormMultiplier, 1.06);
+    if (wins >= 3) return formMultiplier;
+    if (wins <= 1) return 2 - formMultiplier;
+    return 1.0;
+  }
+
   /**
    * Fetch current standings data with caching
    */

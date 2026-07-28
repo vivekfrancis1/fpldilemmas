@@ -6905,6 +6905,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { MASTER_TEAM_DEFAULTS } = await import('./team-config');
   
   let adminGoalSettings = {
+    // Which formula calculateFixtureGoals uses: 'dynamic' (default, live performance
+    // data only) or 'tiered' (base xG x venue x tier/context multipliers below).
+    calculationMode: 'dynamic' as 'dynamic' | 'tiered',
+
     // Base Calculation Parameters - Using team-config.ts as single source of truth
     averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
     defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
@@ -6939,6 +6943,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
     weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
     promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
+    // Context Multipliers - only applied in 'tiered' calculationMode
+    derbyGoalsMultiplier: 0.87,
+    topSixGoalsMultiplier: 1.12,
+    relegationBattleGoalsMultiplier: 0.83,
+    seasonFinaleGoalsMultiplier: 1.05,
+    teamFormMultiplier: 1.06,
     // Market Bounds - simplified
     marketFloorMultiplier: 0.4,
     marketCeilingMultiplier: 2.0,
@@ -7055,10 +7065,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       adminGoalSettings = updatedSettings;
-      
+      // team-config.ts keeps its own copy (read by TeamGoalsService via getAdminGoalSettings())
+      // to avoid a circular import — without re-calling this, calculateFixtureGoals would keep
+      // reading the settings object from server startup and never see admin changes.
+      setAdminGoalSettings(adminGoalSettings);
+
       // Clear cached data to force recalculation with new settings
+      const { TeamGoalsService } = await import('./team-goals-service');
+      TeamGoalsService.clearCache();
       console.log("Goals Scored admin settings updated, projection model will use new parameters");
-      
+
       res.json({
         success: true,
         message: "Goal scored settings updated successfully",
@@ -7078,6 +7094,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Reset to default values using MASTER_TEAM_DEFAULTS as single source of truth
       adminGoalSettings = {
+        calculationMode: 'dynamic' as 'dynamic' | 'tiered',
+
         // Base Calculation Parameters
         averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
         defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
@@ -7085,33 +7103,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
         homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
         awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
-        
-        // REMOVED: All attack tier multipliers and team assignments
-        // Now using dynamic performance-based calculations only
-        
+
+        // Attack Multipliers + Team Assignments (only used in 'tiered' calculationMode)
+        eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
+        strongAttackMultiplier: MASTER_TEAM_DEFAULTS.strongAttackMultiplier,
+        averageAttackMultiplier: MASTER_TEAM_DEFAULTS.averageAttackMultiplier,
+        weakAttackMultiplier: MASTER_TEAM_DEFAULTS.weakAttackMultiplier,
+        promotedAttackMultiplier: MASTER_TEAM_DEFAULTS.promotedAttackMultiplier,
+        eliteAttackTeams: MASTER_TEAM_DEFAULTS.eliteAttackTeams,
+        strongAttackTeams: MASTER_TEAM_DEFAULTS.strongAttackTeams,
+        averageAttackTeams: MASTER_TEAM_DEFAULTS.averageAttackTeams,
+        weakAttackTeams: MASTER_TEAM_DEFAULTS.weakAttackTeams,
+        promotedAttackTeams: MASTER_TEAM_DEFAULTS.promotedAttackTeams,
+
         // Defense Multipliers
         eliteDefenseMultiplier: MASTER_TEAM_DEFAULTS.eliteDefenseMultiplier,
         strongDefenseMultiplier: MASTER_TEAM_DEFAULTS.strongDefenseMultiplier,
         averageDefenseMultiplier: MASTER_TEAM_DEFAULTS.averageDefenseMultiplier,
         weakDefenseMultiplier: MASTER_TEAM_DEFAULTS.weakDefenseMultiplier,
         promotedDefenseMultiplier: MASTER_TEAM_DEFAULTS.promotedDefenseMultiplier,
-        
+
         // Defense Team Assignments
         eliteDefenseTeams: MASTER_TEAM_DEFAULTS.eliteDefenseTeams,
         strongDefenseTeams: MASTER_TEAM_DEFAULTS.strongDefenseTeams,
         averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
         weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
         promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-        
+
+        // Context Multipliers (only used in 'tiered' calculationMode)
+        derbyGoalsMultiplier: 0.87,
+        topSixGoalsMultiplier: 1.12,
+        relegationBattleGoalsMultiplier: 0.83,
+        seasonFinaleGoalsMultiplier: 1.05,
+        teamFormMultiplier: 1.06,
+
         // Bounds - simplified
         marketFloorMultiplier: 0.4,
         marketCeilingMultiplier: 2.0,
         absoluteMinGoals: 0.3,
         absoluteMaxGoals: 4.2,
+        cleanSheetExponent: 1.0,
+        cleanSheetMultiplier: 100,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
-      
+
+      setAdminGoalSettings(adminGoalSettings);
+      const { TeamGoalsService } = await import('./team-goals-service');
+      TeamGoalsService.clearCache();
       console.log("Goals Scored admin settings reset to defaults");
       
       res.json({

@@ -23,6 +23,8 @@ interface Team {
 
 
 interface AdminSettings {
+  // Which formula calculateFixtureGoals uses for team goal projections
+  calculationMode: 'dynamic' | 'tiered';
   // Base Calculation Parameters - Previously Hardcoded
   averageBaseXGPerTeamPerGame: number;
   defaultTeamVariance: number;
@@ -208,13 +210,15 @@ export default function AdminGoalProjections() {
     },
   });
 
-  // Default team tier assignments - Updated per user specifications
+  // Default team tier assignments — derived from 2025/26 final standings (goals-for,
+  // descending) for the current 20-team roster; see MASTER_TEAM_DEFAULTS in
+  // server/team-config.ts for the same assignments and how they were computed.
   const DEFAULT_TEAM_TIERS = {
-    eliteAttackTeams: [12, 13], // Liverpool, Man City
-    strongAttackTeams: [1, 7, 15, 18], // Arsenal, Chelsea, Newcastle, Spurs
-    averageAttackTeams: [6, 14, 4, 5, 10, 8, 2, 9], // Brighton, Man Utd, Bournemouth, Brentford, Fulham, Crystal Palace, Aston Villa, Everton
-    weakAttackTeams: [16, 19, 20], // Nott'm Forest, West Ham, Wolves
-    promotedAttackTeams: [17, 11, 3], // Sunderland, Leeds, Burnley
+    eliteAttackTeams: [15, 1, 16], // Man City, Arsenal, Man Utd
+    strongAttackTeams: [14, 6, 3, 2, 4], // Liverpool, Chelsea, Bournemouth, Aston Villa, Brentford
+    averageAttackTeams: [17, 5, 13, 18, 19], // Newcastle, Brighton, Leeds, Nott'm Forest, Spurs
+    weakAttackTeams: [9, 10, 20, 8], // Everton, Fulham, Sunderland, Crystal Palace
+    promotedAttackTeams: [11, 12, 7], // Hull City, Ipswich Town, Coventry City
   };
 
   // Initialize form data when settings are loaded
@@ -282,6 +286,12 @@ export default function AdminGoalProjections() {
     setHasChanges(true);
   };
 
+  const handleCalculationModeChange = (mode: 'dynamic' | 'tiered') => {
+    setFormData(prev => ({ ...prev, calculationMode: mode }));
+    setHasChanges(true);
+    updateSettingsMutation.mutate({ calculationMode: mode });
+  };
+
   // Team tier assignment helper functions
   const getTeamTier = (teamId: number): string => {
     if (formData.eliteAttackTeams?.includes(teamId)) return 'elite';
@@ -299,13 +309,15 @@ export default function AdminGoalProjections() {
     return 'average';
   };
 
-  // Default defensive tier assignments - Updated per user specifications
+  // Default defensive tier assignments — derived from 2025/26 final standings
+  // (goals-against, ascending = best defense) for the current 20-team roster; see
+  // MASTER_TEAM_DEFAULTS in server/team-config.ts for the same assignments.
   const DEFAULT_DEFENSIVE_TIERS = {
-    eliteDefenseTeams: [1], // Arsenal
-    strongDefenseTeams: [12, 13, 7, 15], // Liverpool, Man City, Chelsea, Newcastle
-    averageDefenseTeams: [2, 9, 14, 18, 8, 10, 16], // Aston Villa, Everton, Man Utd, Spurs, Crystal Palace, Fulham, Nott'm Forest
-    weakDefenseTeams: [4, 5, 6, 19, 20], // Bournemouth, Brentford, Brighton, West Ham, Wolves
-    promotedDefenseTeams: [3, 11, 17], // Burnley, Leeds, Sunderland
+    eliteDefenseTeams: [1, 15, 5], // Arsenal, Man City, Brighton
+    strongDefenseTeams: [20, 2, 16, 9, 10], // Sunderland, Aston Villa, Man Utd, Everton, Fulham
+    averageDefenseTeams: [8, 18, 4, 6, 14], // Crystal Palace, Nott'm Forest, Brentford, Chelsea, Liverpool
+    weakDefenseTeams: [3, 17, 13, 19], // Bournemouth, Newcastle, Leeds, Spurs
+    promotedDefenseTeams: [11, 12, 7], // Hull City, Ipswich Town, Coventry City
   };
 
   // Defensive tier assignment helper functions
@@ -762,9 +774,36 @@ export default function AdminGoalProjections() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="p-4 border-2 rounded-lg bg-muted/30">
+                  <h3 className="font-semibold text-sm mb-1">Calculation Mode</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Choose which formula team goal projections use. Switching takes effect immediately.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={formData.calculationMode !== 'tiered' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleCalculationModeChange('dynamic')}
+                      data-testid="button-mode-dynamic"
+                    >
+                      Dynamic (performance-based)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={formData.calculationMode === 'tiered' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleCalculationModeChange('tiered')}
+                      data-testid="button-mode-tiered"
+                    >
+                      Tiered (tier + context multipliers)
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <div className="p-3 border rounded-lg">
+                    <div className={`p-3 border rounded-lg ${formData.calculationMode === 'tiered' ? 'opacity-60' : ''}`}>
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Hybrid Foundation</h4>
                       <p className="text-sm text-muted-foreground">
                         <strong>Formula:</strong> (Team Avg Goals + Real Team xGF + Opponent Avg GC + Real Opponent xGA) × 0.25<br/>
@@ -772,25 +811,25 @@ export default function AdminGoalProjections() {
                         <strong>Note:</strong> No longer uses synthetic base xG - now exclusively real data
                       </p>
                     </div>
-                    
-                    <div className="p-3 border rounded-lg opacity-60">
-                      <h4 className="font-semibold text-sm mb-2">Phase 2: Attack Tiers (RETIRED)</h4>
+
+                    <div className={`p-3 border rounded-lg ${formData.calculationMode !== 'tiered' ? 'opacity-60' : ''}`}>
+                      <h4 className="font-semibold text-sm mb-2">Phase 2: Attack Tiers {formData.calculationMode === 'tiered' ? '(ACTIVE)' : '(RETIRED)'}</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Status:</strong> <span className="font-mono text-red-600">No longer used in primary calculation</span><br/>
-                        <strong>Replaced by:</strong> Real xGF data from current FPL standings<br/>
-                        <strong>Note:</strong> Tiers remain available for other projection tools
+                        <strong>Status:</strong> <span className={`font-mono ${formData.calculationMode === 'tiered' ? 'text-green-600' : 'text-red-600'}`}>{formData.calculationMode === 'tiered' ? 'Applied in Tiered calculation mode' : 'No longer used in primary calculation'}</span><br/>
+                        <strong>{formData.calculationMode === 'tiered' ? 'Configured in:' : 'Replaced by:'}</strong> {formData.calculationMode === 'tiered' ? 'Attack Teams / Attack Multipliers tabs' : 'Real xGF data from current FPL standings'}<br/>
+                        <strong>Note:</strong> {formData.calculationMode === 'tiered' ? 'Switch to Dynamic mode above to disable' : 'Tiers remain available in Tiered calculation mode'}
                       </p>
                     </div>
-                    
-                    <div className="p-3 border rounded-lg opacity-60">
-                      <h4 className="font-semibold text-sm mb-2">Phase 3: Defense Tiers (RETIRED)</h4>
+
+                    <div className={`p-3 border rounded-lg ${formData.calculationMode !== 'tiered' ? 'opacity-60' : ''}`}>
+                      <h4 className="font-semibold text-sm mb-2">Phase 3: Defense Tiers {formData.calculationMode === 'tiered' ? '(ACTIVE)' : '(RETIRED)'}</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Status:</strong> <span className="font-mono text-red-600">No longer used in primary calculation</span><br/>
-                        <strong>Replaced by:</strong> Real xGA data from current FPL standings<br/>
-                        <strong>Note:</strong> Tiers remain available for other projection tools
+                        <strong>Status:</strong> <span className={`font-mono ${formData.calculationMode === 'tiered' ? 'text-green-600' : 'text-red-600'}`}>{formData.calculationMode === 'tiered' ? 'Applied in Tiered calculation mode' : 'No longer used in primary calculation'}</span><br/>
+                        <strong>{formData.calculationMode === 'tiered' ? 'Configured in:' : 'Replaced by:'}</strong> {formData.calculationMode === 'tiered' ? 'Defence Teams / Defence Multipliers tabs' : 'Real xGA data from current FPL standings'}<br/>
+                        <strong>Note:</strong> {formData.calculationMode === 'tiered' ? 'Switch to Dynamic mode above to disable' : 'Tiers remain available in Tiered calculation mode'}
                       </p>
                     </div>
-                    
+
                     <div className="p-3 border rounded-lg">
                       <h4 className="font-semibold text-sm mb-2">Phase 2: Venue Adjustments</h4>
                       <p className="text-sm text-muted-foreground">
