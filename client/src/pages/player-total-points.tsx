@@ -992,7 +992,7 @@ export default function PlayerTotalPoints() {
   const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
   
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {

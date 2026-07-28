@@ -9,6 +9,7 @@ import PlayerGameweekModal from "../components/player-gameweek-modal";
 import PlayerComparisonModal from "../components/player-comparison-modal";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,13 +75,9 @@ export default function PlayerStats() {
     ? (filteredError || currentError) 
     : historicalError;
 
-  // Calculate current gameweek from bootstrap data
+  // Calculate current gameweek from bootstrap data (0 pre-season, before any gameweek starts)
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 26;
-    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
-    if (currentEvent) return currentEvent.id;
-    const finishedEvents = bootstrapData.events.filter((event: any) => event.finished);
-    return finishedEvents.length > 0 ? finishedEvents[finishedEvents.length - 1].id : 26;
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
   }, [bootstrapData?.events]);
 
   // Determine if we need gameweek-filtered data
@@ -206,7 +203,7 @@ export default function PlayerStats() {
             <SelectContent>
               <SelectItem value="current">
                 <div className="flex items-center space-x-2">
-                  <span>2025-26 (Current)</span>
+                  <span>2026-27 (Current)</span>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
                     Live
                   </Badge>
@@ -221,7 +218,7 @@ export default function PlayerStats() {
           </Select>
           {selectedSeason === "current" && (
             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-1">
-              GW{startGameweek}-{endGameweek || currentGameweek}
+              {currentGameweek === 0 ? "Pre-season" : `GW${startGameweek}-${endGameweek || currentGameweek}`}
             </Badge>
           )}
         </div>

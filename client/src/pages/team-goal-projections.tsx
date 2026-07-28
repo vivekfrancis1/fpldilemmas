@@ -168,7 +168,7 @@ export default function TeamGoalProjections() {
     }
   };
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
   // Fetch past team xG history (after startGameweek/endGameweek defined)
   const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<TeamXgHistory>({

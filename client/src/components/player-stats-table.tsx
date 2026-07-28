@@ -278,7 +278,7 @@ export default function PlayerStatsTable({
   }, [zoomLevel]);
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
-  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
+  const isHistoricalSeason = Boolean(season) && season !== "current";
 
   // Get available columns based on current mode (filtered but not reordered - for the selector UI)
   const availableColumns = useMemo(() => {

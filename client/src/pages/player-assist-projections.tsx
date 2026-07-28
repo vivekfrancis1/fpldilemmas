@@ -125,7 +125,7 @@ export default function PlayerAssistProjections() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
   // Fixture mode toggle for TBC column behaviour
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 

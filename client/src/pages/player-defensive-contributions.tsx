@@ -141,7 +141,7 @@ export default function PlayerDefensiveContributions() {
   const [applyAvailability, setApplyAvailability] = useState(true);
   
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
   // Dynamic gameweek range state - only set once bootstrap data is loaded
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });

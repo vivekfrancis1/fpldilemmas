@@ -92,7 +92,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={MyDashboard} />
+        <Route path="/" component={PlayerTotalPoints} />
         <Route path="/my-dashboard" component={MyDashboard} />
         <Route path="/projected-points" component={ProjectedPoints} />
         <Route path="/team-optimizer" component={TeamOptimizer} />

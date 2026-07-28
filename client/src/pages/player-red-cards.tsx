@@ -41,7 +41,7 @@ export default function PlayerRedCards() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"totalRedCards" | "totalPoints">("totalRedCards");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
   const [includeTBC, setIncludeTBC] = useState(true);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);

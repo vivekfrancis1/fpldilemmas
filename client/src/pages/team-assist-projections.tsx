@@ -85,7 +85,7 @@ export default function TeamAssistProjections() {
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }

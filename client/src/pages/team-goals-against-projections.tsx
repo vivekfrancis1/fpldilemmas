@@ -136,7 +136,7 @@ export default function TeamGoalsAgainstProjections() {
   const [showOpponent, setShowOpponent] = useState<boolean>(false);
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }

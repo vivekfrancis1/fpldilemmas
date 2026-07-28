@@ -36,7 +36,7 @@ export default function PlayerMinutes() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => window.innerWidth >= 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
 
   // Fetch player minutes projections data
