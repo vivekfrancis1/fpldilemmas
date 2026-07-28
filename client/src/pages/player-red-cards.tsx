@@ -93,9 +93,10 @@ export default function PlayerRedCards() {
   const showGW39Column = fixtureMode === 'base' && includeTBC;
   const gameweeks = showGW39Column ? allGameweeks : allGameweeks.filter(gw => gw !== 39);
 
-  // Effective start/end for display (clamped to available gameweeks)
+  // Effective start/end for display (clamped to available gameweeks; defaults to a 6-gameweek window)
   const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? 1);
-  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (gameweeks[gameweeks.length - 1] ?? 38);
+  const lastRealGW = allGameweeks.filter(gw => gw !== 39).slice(-1)[0] ?? 38;
+  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : Math.min(effectiveStartGW + 5, lastRealGW);
   const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW && !excludedGWs.has(gw));
   
   const gameweekRange = displayGWs.length > 0 ? `${displayGWs[0]}-${displayGWs[displayGWs.length - 1]}` : "6-11";

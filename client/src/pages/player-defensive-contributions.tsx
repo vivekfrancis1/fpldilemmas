@@ -177,10 +177,10 @@ export default function PlayerDefensiveContributions() {
     } else if (viewMode === "future" && nextGameweek && nextGameweek > 0) {
       const start = nextGameweek;
       const maxEnd = tbcTeamInfoMap.size > 0 ? 39 : 38;
-      const end = Math.min(nextGameweek + 11, maxEnd);
+      const end = maxEnd;
       setGameweekRange({ start, end });
       setStartGameweek(start);
-      setEndGameweek(Math.min(start + 7, maxEnd));
+      setEndGameweek(Math.min(start + 5, maxEnd));
       setSelectedGameweeks(new Set());
     }
   }, [nextGameweek, viewMode, historyData?.lastFinishedGW, tbcTeamInfoMap.size]);
@@ -200,9 +200,9 @@ export default function PlayerDefensiveContributions() {
       const lastFinished = historyData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
-    // Future mode: next 12 gameweeks, extending to 39 if TBC fixture exists
-    if (!nextGameweek) return Array.from({ length: 12 }, (_, i) => i + 1);
-    const gws = Array.from({ length: 12 }, (_, i) => nextGameweek + i).filter(gw => gw <= 38);
+    // Future mode: next gameweeks up to GW38, extending to 39 if TBC fixture exists
+    if (!nextGameweek) return Array.from({ length: 38 }, (_, i) => i + 1);
+    const gws = Array.from({ length: 38 - nextGameweek + 1 }, (_, i) => nextGameweek + i).filter(gw => gw <= 38);
     if (tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
   }, [viewMode, historyData?.lastFinishedGW, nextGameweek, tbcTeamInfoMap]);
@@ -355,7 +355,7 @@ export default function PlayerDefensiveContributions() {
     if (displayData.length > 0 && displayData[0].gameweekProjections.length > 0) {
       return displayData[0].gameweekProjections.map(gw => gw.gameweek);
     }
-    return gameweekRange.start > 0 ? Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
+    return gameweekRange.start > 0 ? Array.from({ length: 38 - gameweekRange.start + 1 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
   }, [viewMode, historyData?.lastFinishedGW, displayData, gameweekRange.start]);
   
   // Filter gameweeks based on selected range

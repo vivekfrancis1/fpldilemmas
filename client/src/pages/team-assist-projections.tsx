@@ -44,7 +44,7 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -71,7 +71,7 @@ export default function TeamAssistProjections() {
   }, [bootstrapData, hasTBCFixture, fixtureMode]);
   
   const availableGameweeks = useMemo(() => {
-    const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], totalWeeks);
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];

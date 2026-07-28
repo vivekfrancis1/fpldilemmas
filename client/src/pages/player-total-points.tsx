@@ -907,7 +907,7 @@ const TOTAL_COMPONENT_KEYS: Record<string, string> = {
 };
 
 export default function PlayerTotalPoints() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -1068,7 +1068,7 @@ export default function PlayerTotalPoints() {
       // Past mode: GW1 to last finished gameweek
       return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
     if (fixtureMode === 'base' && tbcTeamShortNames.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
   }, [bootstrapData?.events, viewMode, lastFinishedGW, fixtureMode, tbcTeamShortNames]);

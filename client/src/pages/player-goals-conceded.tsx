@@ -68,20 +68,21 @@ export default function PlayerGoalsConceded() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  // Get current gameweek and calculate next 6 gameweeks
+  // Get current gameweek — dropdown options span next gameweek through GW38, default view is 6 gameweeks
   const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const nextGameweek = currentGameweek + 1;
-  const baseGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+  const defaultGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
+  const allSelectableGameweeks = Array.from({ length: Math.max(38 - nextGameweek + 1, 0) }, (_, i) => nextGameweek + i);
   // In custom/expert mode, GW39 is absorbed into the assigned GW — no separate column
   const showGW39Column = fixtureMode === 'base' && includeTBC && tbcTeamInfoMap.size > 0;
-  const gameweeks = showGW39Column ? [...baseGameweeks, 39] : baseGameweeks;
-  // API needs GW39 data for merging in custom/expert mode
-  const apiEndGameweek = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0) ? 39 : baseGameweeks[baseGameweeks.length - 1];
+  const gameweeks = showGW39Column ? [...allSelectableGameweeks, 39] : allSelectableGameweeks;
+  // API needs GW39 data for merging in custom/expert mode; otherwise fetch through GW38 so any selected end GW has real data
+  const apiEndGameweek = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0) ? 39 : 38;
   const endGameweek = apiEndGameweek;
 
-  // Effective start/end for display (clamped to available gameweeks)
-  const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (gameweeks[0] ?? nextGameweek);
-  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (gameweeks[gameweeks.length - 1] ?? endGameweek);
+  // Effective start/end for display (clamped to available gameweeks; defaults to the next 6 gameweeks when nothing selected)
+  const effectiveStartGW = selectedStartGW !== null && gameweeks.includes(selectedStartGW) ? selectedStartGW : (defaultGameweeks[0] ?? nextGameweek);
+  const effectiveEndGW = selectedEndGW !== null && gameweeks.includes(selectedEndGW) && selectedEndGW >= effectiveStartGW ? selectedEndGW : (defaultGameweeks[defaultGameweeks.length - 1] ?? endGameweek);
   const displayGWs = gameweeks.filter(gw => gw >= effectiveStartGW && gw <= effectiveEndGW && !excludedGWs.has(gw));
 
   // Live API call for goals conceded projections

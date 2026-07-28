@@ -40,7 +40,7 @@ interface MatchProjection {
 }
 
 export default function ProjectedGoalsCS() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -123,7 +123,7 @@ export default function ProjectedGoalsCS() {
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 7);
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
     // Only add GW39 in base mode (expert/custom remap TBC to a regular GW)
     if (fixtureMode === 'base' && hasTBCFixture && !gws.includes(39)) {
       return [...gws, 39];

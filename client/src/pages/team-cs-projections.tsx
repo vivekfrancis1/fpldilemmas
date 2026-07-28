@@ -47,7 +47,7 @@ interface TeamCSProjection {
 }
 
 export default function TeamCSProjections() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -141,7 +141,7 @@ export default function TeamCSProjections() {
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];

@@ -54,7 +54,7 @@ interface PlayerGoalsHistory {
 }
 
 export default function PlayerGoalsScoredProjections() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const [viewMode, setViewMode] = useViewModeParam<"past" | "pastXg" | "future">("view", "future", ["future", "past", "pastXg"]);
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -228,7 +228,7 @@ export default function PlayerGoalsScoredProjections() {
     if (!bootstrapData?.events) {
       return [];
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
     if (tbcTeamInfoMap.size > 0 && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }

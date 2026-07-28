@@ -122,7 +122,7 @@ export default function BestWildcardTeam() {
   }, [bootstrapData]);
 
   // State for gameweek horizon selection
-  const [gameweekHorizon, setGameweekHorizon] = useState<number>(12);
+  const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
   
   // Calculate dynamic gameweek range based on selected horizon
   const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
@@ -1285,6 +1285,8 @@ export default function BestWildcardTeam() {
                 <SelectItem value="8">Next 8 Gameweeks</SelectItem>
                 <SelectItem value="10">Next 10 Gameweeks</SelectItem>
                 <SelectItem value="12">Next 12 Gameweeks</SelectItem>
+                <SelectItem value="20">Next 20 Gameweeks</SelectItem>
+                <SelectItem value="38">Rest of Season (up to GW38)</SelectItem>
               </SelectContent>
             </Select>
           </div>

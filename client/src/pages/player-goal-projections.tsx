@@ -111,7 +111,7 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
 }
 
 export default function PlayerGoalProjections() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -123,7 +123,7 @@ export default function PlayerGoalProjections() {
     if (!bootstrapData?.events) {
       return [];
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+    return getNextGameweeksForDropdown(bootstrapData.events, totalWeeks); // Show 12 gameweeks in dropdown
   }, [bootstrapData?.events]);
 
   const [searchFilter, setSearchFilter] = useState("");

@@ -37,7 +37,7 @@ interface PlayerCleanSheetData {
 type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
 
 export default function PlayerCleanSheetPoints() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const [startGameweek, setStartGameweek] = useState(6);
   const [endGameweek, setEndGameweek] = useState(13); // Default 8 gameweeks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
@@ -87,9 +87,9 @@ export default function PlayerCleanSheetPoints() {
   // Available gameweeks for selects (dynamic from bootstrap, up to GW38 normally)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) return Array.from({ length: 12 }, (_, i) => i + 4);
-    const nextRange = computeNextRange(bootstrapData.events, 12);
+    const nextRange = computeNextRange(bootstrapData.events, totalWeeks);
     return nextRange.list.length > 0 ? nextRange.list : Array.from({ length: 12 }, (_, i) => i + 4);
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, totalWeeks]);
 
   // Update gameweek range when bootstrap data is available
   useEffect(() => {

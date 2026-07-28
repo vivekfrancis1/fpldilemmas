@@ -67,7 +67,7 @@ export default function ProjectedStandings() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  const maxEndGameweek = Math.min(currentGameweek + 12, hasTBCFixture ? 39 : 38);
+  const maxEndGameweek = Math.min(currentGameweek + 6, hasTBCFixture ? 39 : 38);
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
 
   useEffect(() => {
@@ -309,7 +309,7 @@ export default function ProjectedStandings() {
                         <SelectValue placeholder="..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {bootstrapData && Array.from({ length: 12 }, (_, i) => {
+                        {bootstrapData && Array.from({ length: 38 }, (_, i) => {
                           const gw = currentGameweek + 1 + i;
                           if (gw > 38 && !(gw === 39 && hasTBCFixture)) return null;
                           return (

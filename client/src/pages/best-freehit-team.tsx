@@ -97,7 +97,7 @@ export default function BestFreehitTeam() {
   // Calculate dynamic gameweek range (next 12 gameweeks)
   const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const startGameweek = currentGameweek + 1;
-  const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
+  const endGameweek = 38; // Gameweek dropdown offers every remaining gameweek through GW38
 
   const [selectedGameweek, setSelectedGameweek] = useState<number>(startGameweek);
   const [isOptimizing, setIsOptimizing] = useState(false);

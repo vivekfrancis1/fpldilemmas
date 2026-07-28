@@ -265,14 +265,14 @@ export default function ProjectedPoints() {
     setEndGameweek(Math.min(firstGW + 5, 38));
   }, [bootstrapData, startGameweek]);
   
-  // Get available gameweek options (next 12 gameweeks)
+  // Get available gameweek options (next gameweek through GW38)
   const getAvailableGameweeks = (): number[] => {
     if (!bootstrapData) return [];
-    
+
     const firstGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
 
     const gameweeks = [];
-    for (let i = 0; i < 12 && (firstGW + i) <= 38; i++) {
+    for (let i = 0; (firstGW + i) <= 38; i++) {
       gameweeks.push(firstGW + i);
     }
     return gameweeks;

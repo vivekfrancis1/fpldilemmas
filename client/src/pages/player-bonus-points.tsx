@@ -47,7 +47,7 @@ type SortField = 'name' | 'team' | 'totalBonusPoints' | string;
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerBonusPoints() {
-  const { defaultWeeks } = useProjectionSettings();
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -92,7 +92,7 @@ export default function PlayerBonusPoints() {
     if (!bootstrapData?.events) {
       return [];
     }
-    const gws = getNextGameweeksForDropdown(bootstrapData.events, 12);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
     if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
   }, [bootstrapData?.events, fixtureMode, tbcTeamInfoMap]);
