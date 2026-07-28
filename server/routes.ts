@@ -11730,10 +11730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
         console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}, finished GWs: ${finishedGWCount}`);
         
-        // Filter players with minutes for detailed processing
-        const playersWithMinutes = players.filter((p: any) => (p.minutes || 0) >= 1);
-        console.log(`DEBUG: Processing ${playersWithMinutes.length} players with minutes for 60-min threshold calculation`);
-        
+        // Every player is included — no current-season minutes filter — since new-to-the-league
+        // and promoted-team players (with genuine 0 current-season minutes) still get an expected
+        // minutes projection via their 2025/26 rate or the position league-average fallback below,
+        // instead of being silently dropped (which previously zeroed out minutes, clean sheets, and
+        // goals-conceded points for virtually every promoted-team squad member).
+        const playersWithMinutes = players;
+        console.log(`DEBUG: Processing ${playersWithMinutes.length} players for 60-min threshold calculation`);
+
+        const { getLastSeasonPlayerRow, lastSeasonMinutesPerStart, getLeagueAverageRates } = await import('./player-history-blend-service');
+        const leagueAverageMinutes = await getLeagueAverageRates();
+
         // Bulk-load player histories from DB cache (set at startup; avoids 515 external API calls)
         const { getBulkPlayerHistories, computeRecentMetrics } = await import('./player-history-service');
         const allPlayerIds = playersWithMinutes.map((p: any) => p.id);
@@ -11785,13 +11792,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const position = positions.find((p: any) => p.id === player.element_type);
               const totalMinutes = player.minutes || 0;
               const playerStarts = player.starts || 0;
-              
+
               // Default values (fallback if history fetch fails)
               let appearances = Math.max(1, playerStarts);
               let gamesHit60Plus = playerStarts; // Assume all starts hit 60+ as fallback
               let gamesBelow60 = 0;
               let avgMinutesPerGame = Math.min(90, totalMinutes / Math.max(1, appearances));
-              
+
+              // New to the league this season (promoted-team squads, new signings, academy
+              // graduates) — player.minutes/starts are genuinely 0, so there's no history to
+              // fetch. Blend their 2025/26 minutes-per-start rate (matched by name+position
+              // across the season's id reassignment), falling back to the position
+              // league-average for anyone with no PL history at all — instead of silently
+              // projecting 0 expected minutes (which previously zeroed out clean sheets and
+              // goals-conceded points downstream too).
+              if (totalMinutes === 0 && playerStarts === 0) {
+                const positionCode = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
+                const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
+                const lastSeasonRate = lastSeasonRow ? lastSeasonMinutesPerStart(lastSeasonRow) : undefined;
+                avgMinutesPerGame = lastSeasonRate ?? leagueAverageMinutes.minutesPerStartByPosition[positionCode] ?? 75;
+                // Use the full confidence-threshold appearance count — this is a deliberate
+                // estimate (last-season rate or position average), not noisy small-sample data,
+                // so it shouldn't also get dampened by the low-appearances confidence factor below.
+                appearances = 10;
+                gamesHit60Plus = avgMinutesPerGame >= 60 ? appearances : 0;
+                gamesBelow60 = avgMinutesPerGame >= 60 ? 0 : appearances;
+              } else {
               try {
                 // Use DB-cached history (pre-fetched at startup) — falls back to live fetch if missing
                 const cachedHistory = dbHistories.get(player.id);
@@ -11802,7 +11828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     })();
                 if (historyArr.length >= 0) {
                   const gamesWithMinutes = historyArr.filter((gw: any) => gw.minutes > 0);
-                  
+
                   if (gamesWithMinutes.length > 0) {
                     appearances = gamesWithMinutes.length;
                     // recentP60: P(60+ mins) from recent completed games.
@@ -11829,7 +11855,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } catch (historyError) {
                 // Use fallback values if history fetch fails
               }
-              
+              }
+
               // Calculate percentages
               const pct60Plus = Math.round((gamesHit60Plus / appearances) * 100 * 10) / 10; // % chance of 60+ mins
               const pctBelow60 = Math.round((gamesBelow60 / appearances) * 100 * 10) / 10; // % chance below 60 mins

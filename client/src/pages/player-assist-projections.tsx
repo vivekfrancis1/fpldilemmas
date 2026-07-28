@@ -1036,7 +1036,7 @@ export default function PlayerAssistProjections() {
                               const multiplier = gwMultipliers[gw] ?? 1;
                               const displayValue = projValue * multiplier;
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
-                              const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(1);
+                              const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
                                   <div className="flex flex-col items-center">
@@ -1099,7 +1099,7 @@ export default function PlayerAssistProjections() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 text-amber-700 font-medium">
-                                        {tbcAssists.toFixed(1)}
+                                        {tbcAssists.toFixed(2)}
                                       </button>
                                     </PopoverTrigger>
                                     <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-amber-200 z-50">
@@ -1111,7 +1111,7 @@ export default function PlayerAssistProjections() {
                                         <span className={`text-xs ${tbcAssistEntry.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                           {tbcAssistEntry.opponent} ({tbcAssistEntry.isHome ? 'H' : 'A'})
                                         </span>
-                                        <span className="font-medium text-xs">{tbcAssists.toFixed(1)}</span>
+                                        <span className="font-medium text-xs">{tbcAssists.toFixed(2)}</span>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
@@ -1125,11 +1125,11 @@ export default function PlayerAssistProjections() {
                                 const tbcContrib = showTBCColumn ? tbcAssists : 0;
                                 return hasAnyAdjustment ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(1)}</span>
-                                    <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcContrib) : (originalTotal + tbcContrib).toFixed(1)}</span>
+                                    <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
+                                    <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcContrib) : (originalTotal + tbcContrib).toFixed(2)}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(1)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
                                 );
                               })()}
                             </td>

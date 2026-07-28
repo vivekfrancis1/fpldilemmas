@@ -156,6 +156,11 @@ export function lastSeasonXAPer90(row: LastSeasonPlayerRow): number | undefined 
   return per90(row.expectedAssists, row.minutes);
 }
 
+/** Expected minutes per start, capped at 90 — used to seed a minutes projection from a player's last-season row. */
+export function lastSeasonMinutesPerStart(row: LastSeasonPlayerRow): number | undefined {
+  return row.starts >= MIN_STARTS_FOR_RATE ? Math.min(90, row.minutes / row.starts) : undefined;
+}
+
 let leagueAveragesCache: {
   gkSavesPer90: number;
   defDCPer90: number;
@@ -170,6 +175,7 @@ let leagueAveragesCache: {
   xgPer90ByPosition: Record<string, number>;
   assistsPer90ByPosition: Record<string, number>;
   xaPer90ByPosition: Record<string, number>;
+  minutesPerStartByPosition: Record<string, number>;
 } | null = null;
 
 /**
@@ -192,6 +198,11 @@ export async function getLeagueAverageRates() {
     const totalStarts = filtered.reduce((sum, r) => sum + r.starts, 0);
     const totalBonus = filtered.reduce((sum, r) => sum + r.bonus, 0);
     return totalStarts > 0 ? totalBonus / totalStarts : 0;
+  };
+  const avgMinutesPerStart = (filtered: LastSeasonPlayerRow[]) => {
+    const totalStarts = filtered.reduce((sum, r) => sum + r.starts, 0);
+    const totalMinutes = filtered.reduce((sum, r) => sum + r.minutes, 0);
+    return totalStarts > 0 ? Math.min(90, totalMinutes / totalStarts) : 75;
   };
 
   const gks = withMinutes.filter(r => r.elementType === 1);
@@ -243,6 +254,12 @@ export async function getLeagueAverageRates() {
       DEF: avgPer90(defs, r => r.expectedAssists),
       MID: avgPer90(mids, r => r.expectedAssists),
       FWD: avgPer90(fwds, r => r.expectedAssists),
+    },
+    minutesPerStartByPosition: {
+      GKP: avgMinutesPerStart(gks),
+      DEF: avgMinutesPerStart(defs),
+      MID: avgMinutesPerStart(mids),
+      FWD: avgMinutesPerStart(fwds),
     },
   };
   return leagueAveragesCache;
