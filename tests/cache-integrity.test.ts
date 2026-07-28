@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE_URL = `http://localhost:5000`;
+const BASE_URL = `http://localhost:5050`;
 
 async function fetchJSON(path: string) {
   const response = await fetch(`${BASE_URL}${path}`);

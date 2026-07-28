@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE = 'http://localhost:5000';
+const BASE = 'http://localhost:5050';
 const get = (path: string) =>
   fetch(`${BASE}${path}`).then(r => {
     if (!r.ok) throw new Error(`GET ${path} → ${r.status}`);

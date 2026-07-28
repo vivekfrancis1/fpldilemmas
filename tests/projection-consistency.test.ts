@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { computeCurrentGameweek } from '../shared/gameweek-utils';
 
-const BASE_URL = `http://localhost:5000`;
+const BASE_URL = `http://localhost:5050`;
 
 async function fetchJSON(path: string) {
   const response = await fetch(`${BASE_URL}${path}`);
@@ -19,7 +20,9 @@ let livePlayerTotalPoints: any[];
 
 beforeAll(async () => {
   bootstrapData = await fetchJSON('/api/bootstrap-static');
-  currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+  // Same detection the app itself uses (handles pre-season, where no event is_current and the
+  // naive `?.id || 1` fallback would wrongly imply GW1 is already underway).
+  currentGameweek = computeCurrentGameweek(bootstrapData.events);
   nextGameweek = Math.min(currentGameweek + 1, 38);
 
   cachedPlayerTotalPoints = await fetchJSON('/api/cached/player-total-points');
@@ -270,7 +273,12 @@ describe('Server-Side Availability Adjustments', () => {
     expect(adjustedCount).toBeGreaterThan(0);
   });
 
-  it('injured players (0% chance) have zero projections in adjusted response', () => {
+  it('injured players (0% chance) have reduced projections in adjusted response', () => {
+    // Per calculateAvailabilityProbability's documented model, a 0%-chance player is not always
+    // scaled to exactly 0 for the immediate next gameweek: one with a parseable news return date
+    // landing on that gameweek gets 0.5 ("uncertain if starting on return"), not 0.0 — only players
+    // without a resolvable return date (or whose return is later) get a hard 0. So the invariant
+    // this asserts is "adjusted <= 50% of raw", not "adjusted === 0".
     const injuredPlayers = bootstrapData.elements.filter(
       (el: any) => el.chance_of_playing_next_round === 0
     );
@@ -281,15 +289,19 @@ describe('Server-Side Availability Adjustments', () => {
       const adjustedPlayer = cachedPlayerTotalPoints.find(
         (p: any) => p.playerId === injured.id
       );
+      const rawPlayer = rawCachedPlayerTotalPoints.find(
+        (p: any) => p.playerId === injured.id
+      );
 
-      if (!adjustedPlayer) continue;
+      if (!adjustedPlayer || !rawPlayer) continue;
 
       const nextGWKey = nextGameweek.toString();
       const gwProjection = adjustedPlayer.gameweekProjections?.[nextGWKey] || 0;
+      const rawGWProjection = rawPlayer.gameweekProjections?.[nextGWKey] || 0;
 
-      if (gwProjection > 0) {
+      if (gwProjection > rawGWProjection * 0.5 + 0.01) {
         issues.push(
-          `${injured.web_name} (ID: ${injured.id}): 0% chance but adjusted GW${nextGameweek} = ${gwProjection.toFixed(2)}`
+          `${injured.web_name} (ID: ${injured.id}): 0% chance but adjusted GW${nextGameweek} = ${gwProjection.toFixed(2)} (raw=${rawGWProjection.toFixed(2)})`
         );
       }
     }

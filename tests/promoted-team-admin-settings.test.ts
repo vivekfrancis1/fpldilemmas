@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'http://localhost:5050';
 // Matches the seeded admin account in server/seed-admin-user.ts — not imported directly
 // because these tests are plain HTTP clients against a running server (no @shared/* path
 // alias is configured for the vitest 'unit' project, so importing server-side modules here

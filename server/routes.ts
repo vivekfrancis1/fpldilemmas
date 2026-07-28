@@ -18453,65 +18453,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cached Team Assist Projections
   app.get("/api/cached/team-assist-projections", async (req, res) => {
     try {
-      console.log("📊 Serving cached team assist projections from database");
-      const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'));
-
-      // Determine next gameweek to filter out stale past-GW rows
-      let nextGameweek = 1;
-      try {
-        const bootstrapResponse = await internalFetch("api/bootstrap-static");
-        if (bootstrapResponse.ok) {
-          const bootstrapData = await bootstrapResponse.json();
-          const currentGW = computeCurrentGameweek(bootstrapData.events);
-          nextGameweek = currentGW + 1;
-        }
-      } catch (_) {}
-      
-      // Transform to expected format with assist multiplier
-      const teamAssistData = cachedData.map((team) => {
-        const rawGoalProjections = team.goalProjections as any;
-        // Strip past GW keys and any beyond GW38
-        const goalProjections: any = {};
-        for (const gwKey of Object.keys(rawGoalProjections)) {
-          const gw = parseInt(gwKey);
-          if (gw >= nextGameweek && gw <= 38) {
-            goalProjections[gwKey] = rawGoalProjections[gwKey];
-          }
-        }
-        const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
-        const totalAssists = totalGoals * 0.85; // FPL assist multiplier (higher than standard due to FPL's generous assist rules)
-        
-        // Create assist projections based on goal projections
-        const assistProjections: any = {};
-        Object.keys(goalProjections).forEach(gw => {
-          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.85 * 100) / 100;
-        });
-        
-        return {
-          id: team.teamId,
-          teamId: team.teamId,
-          teamName: team.teamName,
-          team: team.teamName,
-          teamShort: team.teamName.slice(0, 3).toUpperCase(),
-          gameweekProjections: assistProjections,
-          totalProjectedAssists: Math.round(totalAssists * 100) / 100,
-          totalAssists: Math.round(totalAssists * 100) / 100,
-          averageAssistsPerGame: Math.round((totalAssists / Math.max(1, Object.keys(goalProjections).length)) * 100) / 100,
-          confidence: "High" as const
-        };
-      });
-      
-      // Sort by total assists descending
-      teamAssistData.sort((a, b) => b.totalAssists - a.totalAssists);
-      
-      // Add position after sorting
-      const teamAssistDataWithPosition = teamAssistData.map((team, index) => ({
-        ...team,
-        position: index + 1
-      }));
-      
-      res.json(teamAssistDataWithPosition);
+      // Forward to the live endpoint which uses TeamGoalsService's per-team assist ratio (with its
+      // own in-memory cache). This ensures cached and live responses are always consistent — the
+      // old DB-backed copy derived assists from a stale, separately-cached goalProjections blob
+      // via a flat 0.85 multiplier, which could drift out of sync with the live gameweek range
+      // and the live endpoint's more accurate per-team ratio, same reasoning as team-goal-projections.
+      console.log("📊 Forwarding cached team-assist-projections to live endpoint for consistency");
+      const liveResponse = await internalFetch("api/team-assist-projections");
+      if (!liveResponse.ok) throw new Error(`Live team-assist-projections failed: ${liveResponse.status}`);
+      const liveData = await liveResponse.json();
+      res.json(liveData);
     } catch (error) {
       console.error("Error fetching cached team assist projections:", error);
       res.status(500).json({ error: "Failed to fetch cached team assist projections" });
