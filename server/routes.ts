@@ -2303,6 +2303,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Last-season (2025/26) form-based FDR calculation endpoint — same PPG-tier methodology as
+  // /api/form-based-fdr above, but sourced from the durable season_fixtures_archive instead of
+  // the live (in-progress, early-season/pre-season) fixtures feed. Team IDs are reassigned every
+  // season by the FPL API, so the archive is keyed by team name; results are joined back to the
+  // CURRENT season's live team IDs via bootstrap-static so the response matches the same
+  // Record<teamId, {home, away}> shape /api/form-based-fdr returns.
+  app.get("/api/last-season-form-fdr", async (req, res) => {
+    const LAST_SEASON_FDR = "2025/26";
+    try {
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrap = await bootstrapResponse.json();
+
+      const archiveResult = await pool.query(
+        `SELECT team_h_name, team_a_name, team_h_score, team_a_score
+         FROM season_fixtures_archive
+         WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
+        [LAST_SEASON_FDR]
+      );
+
+      // Aggregate home/away points-per-game by team NAME (the only stable join key across the
+      // season boundary) — same points logic as the live form-based-fdr endpoint.
+      const statsByName: Record<string, {
+        home: { gamesPlayed: number; points: number };
+        away: { gamesPlayed: number; points: number };
+      }> = {};
+      const ensure = (name: string) => {
+        if (!statsByName[name]) {
+          statsByName[name] = { home: { gamesPlayed: 0, points: 0 }, away: { gamesPlayed: 0, points: 0 } };
+        }
+        return statsByName[name];
+      };
+
+      archiveResult.rows.forEach((row: any) => {
+        const home = ensure(row.team_h_name);
+        const away = ensure(row.team_a_name);
+        home.home.gamesPlayed += 1;
+        away.away.gamesPlayed += 1;
+        if (row.team_h_score > row.team_a_score) {
+          home.home.points += 3;
+        } else if (row.team_h_score < row.team_a_score) {
+          away.away.points += 3;
+        } else {
+          home.home.points += 1;
+          away.away.points += 1;
+        }
+      });
+
+      // Same PPG thresholds as /api/form-based-fdr, for visual/behavioral consistency between
+      // the two "form" modes.
+      const getPPGTier = (ppg: number): number => {
+        if (ppg <= 0.6) return 1; // Very Easy
+        if (ppg <= 1.2) return 2; // Easy
+        if (ppg <= 1.8) return 3; // Medium
+        if (ppg <= 2.4) return 4; // Hard
+        return 5; // Very Hard (>2.4)
+      };
+
+      // Promoted clubs (Coventry City, Ipswich Town, Hull City for 2026/27) have no 2025/26
+      // top-flight fixtures in the archive — same "no games played" default (PPG=1.0) as
+      // form-based-fdr uses for a team with zero completed fixtures.
+      const fdrRatings: Record<number, { home: number; away: number }> = {};
+      bootstrap.teams.forEach((team: any) => {
+        const stats = statsByName[team.name];
+        const homePPG = stats && stats.home.gamesPlayed > 0 ? stats.home.points / stats.home.gamesPlayed : 1.0;
+        const awayPPG = stats && stats.away.gamesPlayed > 0 ? stats.away.points / stats.away.gamesPlayed : 1.0;
+        fdrRatings[team.id] = {
+          home: getPPGTier(homePPG),
+          away: getPPGTier(awayPPG),
+        };
+      });
+
+      res.json(fdrRatings);
+    } catch (error) {
+      console.error("Error calculating last-season form-based FDR:", error);
+      res.status(500).json({
+        error: "Failed to calculate last-season form-based FDR",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Live FPL entry data (for league analysis)
   app.get("/api/entry/:entryId", async (req, res) => {
     try {

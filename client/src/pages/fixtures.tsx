@@ -90,7 +90,7 @@ export default function Fixtures() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [customFDROpen, setCustomFDROpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'custom'>('official');
+  const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'lastSeason' | 'custom'>('official');
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<number>>(new Set());
   const [teamFilterId, setTeamFilterId] = useState<number | null>(() => {
@@ -184,6 +184,14 @@ export default function Fixtures() {
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     enabled: fdrMode === 'form',
+  });
+
+  // Fetch last-season (2025/26) form-based FDR ratings - only when lastSeason mode is selected
+  const { data: lastSeasonFormFDR } = useQuery<Record<number, { home: number; away: number }>>({
+    queryKey: ["/api/last-season-form-fdr"],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: fdrMode === 'lastSeason',
   });
 
   // Whether any fixture has event=null (used to show the view mode toggle)
@@ -346,7 +354,7 @@ export default function Fixtures() {
         return originalDifficulty > 0 ? originalDifficulty : 3;
       }
       
-      // Mode 2: Form-based FDR
+      // Mode 2: Form-based FDR (current season)
       if (fdrMode === 'form' && formBasedFDR) {
         const formRating = formBasedFDR[opponentId];
         if (formRating) {
@@ -355,8 +363,18 @@ export default function Fixtures() {
           return isHome ? formRating.away : formRating.home;
         }
       }
-      
-      // Mode 3: Official FPL ratings (default)
+
+      // Mode 3: Last season's form-based FDR
+      if (fdrMode === 'lastSeason' && lastSeasonFormFDR) {
+        const lastSeasonRating = lastSeasonFormFDR[opponentId];
+        if (lastSeasonRating) {
+          // If you're playing at home, opponent is away (use their away rating)
+          // If you're playing away, opponent is at home (use their home rating)
+          return isHome ? lastSeasonRating.away : lastSeasonRating.home;
+        }
+      }
+
+      // Mode 4: Official FPL ratings (default)
       return originalDifficulty > 0 ? originalDifficulty : 3;
     };
 
@@ -460,7 +478,7 @@ export default function Fixtures() {
       teamAverageFDR: avgFDR,
       teamGameCount: gameCount
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, selectedGameweeks, viewMode, tbcAssignments]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, lastSeasonFormFDR, selectedGameweeks, viewMode, tbcAssignments]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -695,7 +713,7 @@ export default function Fixtures() {
           <h1 className="text-lg sm:text-xl lg:text-2xl">Fixture Analyzer</h1>
         </div>
         <p className="fpl-page-subtitle text-xs sm:text-sm">
-          Analyze fixtures based on Official FPL ratings, Season Form or Custom ratings
+          Analyze fixtures based on Official FPL ratings, Season Form, Last Season Form or Custom ratings
         </p>
         {teamFilterId && bootstrapData?.teams && (
           <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 relative z-10">
@@ -753,7 +771,7 @@ export default function Fixtures() {
               {/* Section 1: FDR Mode */}
               <div className="bg-gray-50 rounded-lg p-3">
                 <Label className="text-xs font-semibold text-gray-700 block mb-2">FDR Mode</Label>
-                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-2 justify-center">
+                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'lastSeason' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-2 justify-center">
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
                     <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official ratings</Label>
@@ -761,6 +779,10 @@ export default function Fixtures() {
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="form" id="fdr-form" data-testid="radio-fdr-form" />
                     <Label htmlFor="fdr-form" className="text-xs cursor-pointer">Season Form</Label>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <RadioGroupItem value="lastSeason" id="fdr-last-season" data-testid="radio-fdr-last-season" />
+                    <Label htmlFor="fdr-last-season" className="text-xs cursor-pointer">Last Season Form</Label>
                   </div>
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="custom" id="fdr-custom" data-testid="radio-fdr-custom" />
