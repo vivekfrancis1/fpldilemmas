@@ -889,7 +889,7 @@ export default function TeamGoalProjections() {
                                   {fixtures.length > 0
                                     ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')
                                     : teamOpponentInfos.length > 0
-                                      ? teamOpponentInfos.map(o => `${o.opponent}(${o.isHome ? 'H' : 'A'})`).join(' / ')
+                                      ? teamOpponentInfos.map((o: any) => `${o.opponent}(${o.isHome ? 'H' : 'A'})`).join(' / ')
                                       : '\u00A0'}
                                 </span>
                               )}

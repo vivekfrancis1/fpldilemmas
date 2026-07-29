@@ -872,7 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let knownManagerId: number | null = null;
 
     // Helper: fetch from public endpoint; returns empty array rather than throwing
-    const fetchPublicTransfers = async (managerId: number): Promise<void> => {
+    const fetchPublicTransfers = async (managerId: number) => {
       console.log(`DEBUG my-transfers: Falling back to public endpoint for manager ${managerId}`);
       try {
         const publicResponse = await internalFetch(`api/manager/${managerId}/transfers`);
@@ -2062,7 +2062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamAssistShares[teamName].players.push({
           id: player.id,
           name: playerFullName,
-          position: player.elementTypeName || 'Unknown',
+          position: player.positionName || 'Unknown',
           assists: assists,
           minutes: player.minutes || 0,
           totalPoints: player.totalPoints || 0
@@ -3635,7 +3635,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentGameweek = 1; // fallback
         }
       }
-      
+      // Every branch above assigns a real gameweek number — this just gives the type
+      // checker the same guarantee already true at runtime.
+      currentGameweek = currentGameweek ?? 1;
+
       // Fetch initial picks for current gameweek
       let response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       
@@ -8937,7 +8940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).filter(Boolean);
         
         // Calculate totals and averages for next 12 gameweeks (actual projections)
-        const totalCSProbability = projections.reduce((sum, p) => sum + (p ? p.cleanSheetOdds : 0), 0);
+        const totalCSProbability = projections.reduce((sum: number, p: any) => sum + (p ? p.cleanSheetOdds : 0), 0);
         const averageCleanSheetOdds = projections.length > 0 ? totalCSProbability / projections.length : 0;
         
         // Convert projections array to gameweekProjections object
@@ -10829,7 +10832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // DATA-DRIVEN assist share distribution mirroring goals methodology
   function distributeAssistSharesDataDriven(players: any[], positions: any[], bootstrapData: any) {
-    const playerShares = [];
+    const playerShares: any[] = [];
     let totalContribution = 0;
 
     // Pure projection approach - no gameweek calculations needed since we're only projecting next 6 GWs
@@ -11045,7 +11048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Fallback to simplified approach if bootstrapData is not available
-    const playerShares = [];
+    const playerShares: any[] = [];
     
     players.forEach(player => {
       const position = positions.find(p => p.id === player.element_type);
@@ -12917,14 +12920,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             xgPer90: adjustedProjectedGoals > 0 ? 
               Math.round((adjustedProjectedGoals / 30) * 100) / 100 : 0 // Estimate based on ~30 games
           };
-        }).filter(p => p !== null); // Remove transferred players
-        
+        }).filter((p: any) => p !== null); // Remove transferred players
+
         // NO normalization - use raw adjusted values
-        const totalAdjustedGoals = adjustedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0);
+        const totalAdjustedGoals = adjustedPlayers.reduce((sum: number, p: any) => sum + p.projectedGoals, 0);
         const targetTeamGoals = team2024.expectedGoals * 0.95; // Slight conservative adjustment
-        
+
         // Sort by goal share without normalizing
-        const sortedPlayers = adjustedPlayers.sort((a, b) => b.goalShare - a.goalShare);
+        const sortedPlayers = adjustedPlayers.sort((a: any, b: any) => b.goalShare - a.goalShare);
         
         adjustedResults.push({
           gameweek: 0,
@@ -15196,8 +15199,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallPoints: managerData.summary_overall_points || null,
             gameweekPoints: managerData.summary_event_points || 0,
             gameweekRank: managerData.summary_event_rank || null,
-            teamValue: managerData.last_deadline_value ? parseFloat((managerData.last_deadline_value / 10).toFixed(1)) : null, // Convert from pence to pounds
-            bank: managerData.last_deadline_bank ? parseFloat((managerData.last_deadline_bank / 10).toFixed(1)) : null,
+            teamValue: managerData.last_deadline_value ? (managerData.last_deadline_value / 10).toFixed(1) : null, // Convert from pence to pounds; decimal column expects a string
+            bank: managerData.last_deadline_bank ? (managerData.last_deadline_bank / 10).toFixed(1) : null,
             totalTransfers: allTimeTransfers,
             freeTransfers: managerData.free_transfers || 1,
             wildcardUsed: false, // Will need to check picks history for chips used
@@ -15704,7 +15707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (cachedGoals.length > 0) {
         // Check if cache is recent (less than 12 hours old)
-        const cacheAge = Date.now() - new Date(cachedGoals[0].calculatedAt).getTime();
+        const cacheAge = Date.now() - new Date(cachedGoals[0].calculatedAt || 0).getTime();
         const cacheHours = cacheAge / (1000 * 60 * 60);
         
         if (cacheHours < 24) { // Extended to 24 hours for testing
@@ -15826,7 +15829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(playerAssistProjections.season, "2025/26"));
       
       if (cachedAssists.length > 0) {
-        const cacheAge = Date.now() - new Date(cachedAssists[0].calculatedAt).getTime();
+        const cacheAge = Date.now() - new Date(cachedAssists[0].calculatedAt || 0).getTime();
         const cacheHours = cacheAge / (1000 * 60 * 60);
         
         if (cacheHours < 12) {
@@ -15928,7 +15931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(playerMinutesProjections.season, "2025/26"));
       
       if (cachedMinutes.length > 0) {
-        const cacheAge = Date.now() - new Date(cachedMinutes[0].calculatedAt).getTime();
+        const cacheAge = Date.now() - new Date(cachedMinutes[0].calculatedAt || 0).getTime();
         const cacheHours = cacheAge / (1000 * 60 * 60);
         
         if (cacheHours < 12) {
@@ -16031,7 +16034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(teamCleanSheetProjections.season, "2025/26"));
       
       if (cachedCS.length > 0) {
-        const cacheAge = Date.now() - new Date(cachedCS[0].calculatedAt).getTime();
+        const cacheAge = Date.now() - new Date(cachedCS[0].calculatedAt || 0).getTime();
         const cacheHours = cacheAge / (1000 * 60 * 60);
         
         if (cacheHours < 12) {
