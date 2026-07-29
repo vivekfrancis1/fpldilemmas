@@ -9058,7 +9058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`🔄 DERIVATION: Goal Share using TeamGoalsService for GW${gameweek}`);
         
         // Get team projections from shared service for this specific gameweek
-        const teamProjections = await TeamGoalsService.calculateTeamGoals(gameweek, gameweek);
+        const teamProjections = await TeamGoalsService.getTeamGoalProjections(gameweek, gameweek);
         
         // Generate goal share data using Team Goal Projections expected goals for this gameweek
         const weekGoalShareData = await generateGoalShareFromTeamProjections(bootstrapData, fixturesData, teamProjections, gameweek);
@@ -14528,68 +14528,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch current players" });
     }
   });
-
-  // Helper function to get player fixtures for a specific gameweek
-  async function getPlayerFixturesForGameweek(gw: number, playerId: number, bootstrapData: any) {
-    try {
-      // Get player's team from bootstrap data
-      const player = bootstrapData.elements.find((p: any) => p.id === playerId);
-      if (!player) return [];
-
-      // Fetch fixtures for this gameweek
-      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      if (!fixturesResponse.ok) return [];
-      
-      const allFixtures = await fixturesResponse.json();
-      
-      // Filter fixtures for this gameweek and player's team
-      const playerFixtures = allFixtures.filter((fixture: any) => 
-        fixture.event === gw && 
-        (fixture.team_h === player.team || fixture.team_a === player.team)
-      );
-      
-      return playerFixtures;
-    } catch (error) {
-      console.error(`Error fetching fixtures for player ${playerId} GW${gw}:`, error);
-      return [];
-    }
-  }
-
-  // Helper function to calculate hybrid points for ongoing gameweek (actual + projected)
-  function calculateHybridGameweekPoints(fixtures: any[], gw: number, player: any, assistPlayer: any, cleanSheetPlayer: any, minutesPlayer: any, pointsSystem: any) {
-    let actualPoints = 0;
-    let projectedPoints = 0;
-    let completedFixtures = 0;
-    let totalFixtures = fixtures.length;
-    
-    fixtures.forEach((fixture: any) => {
-      if (fixture.finished) {
-        // For completed fixtures, we would fetch actual player performance
-        // For now, we'll implement the framework and use proportional projections
-        completedFixtures++;
-        console.log(`DEBUG: Fixture ${fixture.id} completed - ${fixture.team_h_score}-${fixture.team_a_score}`);
-      }
-    });
-    
-    if (totalFixtures === 0) {
-      // No fixtures this gameweek, use full projections
-      return calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
-    }
-    
-    // Calculate hybrid points based on completion ratio
-    const completionRatio = completedFixtures / totalFixtures;
-    const projectionRatio = (totalFixtures - completedFixtures) / totalFixtures;
-    
-    const fullProjectedPoints = calculateProjectedPoints(gw, player, assistPlayer, cleanSheetPlayer, minutesPlayer, pointsSystem);
-    
-    // For completed fixtures, we'd use actual data - for now, use proportional projections
-    actualPoints = fullProjectedPoints * completionRatio;
-    projectedPoints = fullProjectedPoints * projectionRatio;
-    
-    console.log(`DEBUG: Hybrid calculation - ${completedFixtures}/${totalFixtures} fixtures complete, actual: ${actualPoints.toFixed(2)}, projected: ${projectedPoints.toFixed(2)}`);
-    
-    return actualPoints + projectedPoints;
-  }
 
   // API endpoint to fetch and update player mappings (stable data only)
   app.post("/api/players/update-mappings", async (req, res) => {

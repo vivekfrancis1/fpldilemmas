@@ -127,7 +127,7 @@ class ProjectionCacheWorker {
   /**
    * Cache goals projections from API with set piece adjustments applied
    */
-  private async cacheGoalsProjections(): Promise<void> {
+  async cacheGoalsProjections(): Promise<void> {
     console.log(`🚀 GOALS CACHER: position caps enabled`);
     try {
       console.log(`📊 Caching goals projections with set piece adjustments...`);
@@ -301,7 +301,7 @@ class ProjectionCacheWorker {
   /**
    * Cache assist projections from API with set piece adjustments applied
    */
-  private async cacheAssistProjections(): Promise<void> {
+  async cacheAssistProjections(): Promise<void> {
     try {
       console.log(`📊 Caching assist projections with set piece adjustments...`);
       
@@ -499,7 +499,7 @@ class ProjectionCacheWorker {
   /**
    * Cache clean sheet projections (team-level data)
    */
-  private async cacheCleanSheetProjections(): Promise<void> {
+  async cacheCleanSheetProjections(): Promise<void> {
     try {
       console.log(`📊 Caching team clean sheet projections...`);
       
@@ -565,7 +565,7 @@ class ProjectionCacheWorker {
   /**
    * Cache minutes projections from bootstrap data (estimated)
    */
-  private async cacheMinutesProjections(): Promise<void> {
+  async cacheMinutesProjections(): Promise<void> {
     try {
       console.log(`📊 Caching minutes projections...`);
       
