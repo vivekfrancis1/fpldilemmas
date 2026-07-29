@@ -13381,13 +13381,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const bootstrapResponse = await internalFetch('api/bootstrap-static');
         bootstrapData = await bootstrapResponse.json();
-        const currentEvent = bootstrapData.events.find((event: any) => event.is_current) || 
-                            bootstrapData.events.find((event: any) => event.is_next);
-        if (currentEvent) {
-          currentGameweek = currentEvent.id;
-          dynamicStart = currentGameweek + 1;
-          dynamicEnd = Math.min(dynamicStart + projectionWindowSettings.totalWeeks - 1, 38); // Next 12 gameweeks
-        }
+        // Use the shared pre-season-aware detector (matches every other endpoint in this file) —
+        // falling back to `is_next` here wrongly treated the upcoming gameweek as already
+        // "current" during pre-season, shifting every downstream availability-probability
+        // calculation (calculateAvailabilityProbability's nextGW) off by one gameweek.
+        currentGameweek = computeCurrentGameweek(bootstrapData.events);
+        dynamicStart = currentGameweek + 1;
+        dynamicEnd = Math.min(dynamicStart + projectionWindowSettings.totalWeeks - 1, 38); // Next 12 gameweeks
       } catch (error) {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
