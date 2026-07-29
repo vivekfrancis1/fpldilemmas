@@ -279,15 +279,20 @@ export default function PlayerStatsTable({
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = Boolean(season) && season !== "current";
+  // "currentSeasonOnly" columns (DC, xG, save/minutes points, ownership, form, etc.) are also
+  // enriched for 2025/26 specifically (see server/storage.ts getHistoricalPlayers) — other
+  // historical seasons don't have a reliable player-ID crosswalk for that enrichment, so they
+  // keep showing the older placeholder-only columns.
+  const hideEnrichedOnlyColumns = isHistoricalSeason && season !== "2025/26";
 
   // Get available columns based on current mode (filtered but not reordered - for the selector UI)
   const availableColumns = useMemo(() => {
     return COLUMN_DEFINITIONS.filter(col => {
-      if (col.currentSeasonOnly && isHistoricalSeason) return false;
+      if (col.currentSeasonOnly && hideEnrichedOnlyColumns) return false;
       if (col.totalsOnly && displayMode !== 'totals') return false;
       return true;
     });
-  }, [displayMode, isHistoricalSeason]);
+  }, [displayMode, hideEnrichedOnlyColumns]);
 
   // Get columns in user's custom order (for display in table and reorder UI)
   const orderedColumns = useMemo(() => {
@@ -295,11 +300,11 @@ export default function PlayerStatsTable({
       .map(id => COLUMN_DEFINITIONS.find(c => c.id === id))
       .filter((col): col is ColumnDefinition => {
         if (!col) return false;
-        if (col.currentSeasonOnly && isHistoricalSeason) return false;
+        if (col.currentSeasonOnly && hideEnrichedOnlyColumns) return false;
         if (col.totalsOnly && displayMode !== 'totals') return false;
         return true;
       });
-  }, [columnOrder, displayMode, isHistoricalSeason]);
+  }, [columnOrder, displayMode, hideEnrichedOnlyColumns]);
 
   // Toggle all columns in a category
   const toggleCategory = (category: string) => {
@@ -337,7 +342,7 @@ export default function PlayerStatsTable({
   const isColumnVisible = (columnId: string) => {
     const col = COLUMN_DEFINITIONS.find(c => c.id === columnId);
     if (!col) return false;
-    if (col.currentSeasonOnly && isHistoricalSeason) return false;
+    if (col.currentSeasonOnly && hideEnrichedOnlyColumns) return false;
     if (col.totalsOnly && displayMode !== 'totals') return false;
     return visibleColumns.has(columnId);
   };
@@ -409,28 +414,34 @@ export default function PlayerStatsTable({
     retry: 1,
   });
 
-  // Helper function to get CBIT points for a player
-  const getCbitPoints = (playerId: number): number => {
+  // Helper function to get CBIT points for a player. 2025/26 is enriched server-side
+  // (see getHistoricalPlayers) with a real season-total defensive_contribution_points
+  // field; other historical seasons have no reliable per-GW source for this, so they
+  // fall back to 0 same as before.
+  const getCbitPoints = (player: any): number => {
+    if (season === "2025/26") return player?.defensive_contribution_points || 0;
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
-    return cbitPointsData[playerId.toString()]?.seasonTotal || 0;
+    return cbitPointsData[player.id.toString()]?.seasonTotal || 0;
   };
 
   // Helper function to get Save points for a player
-  const getSavePoints = (playerId: number): number => {
+  const getSavePoints = (player: any): number => {
+    if (season === "2025/26") return player?.save_points || 0;
     if (isHistoricalSeason || !savePointsData || isSavePointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
-    return savePointsData[playerId.toString()]?.seasonTotal || 0;
+    return savePointsData[player.id.toString()]?.seasonTotal || 0;
   };
 
   // Helper function to get Minutes points for a player
-  const getMinutesPoints = (playerId: number): number => {
+  const getMinutesPoints = (player: any): number => {
+    if (season === "2025/26") return player?.minutes_points || 0;
     if (isHistoricalSeason || !minutesPointsData || isMinutesPointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
-    return minutesPointsData[playerId.toString()]?.seasonTotal || 0;
+    return minutesPointsData[player.id.toString()]?.seasonTotal || 0;
   };
 
   // Helper function to calculate stat based on display mode
@@ -487,7 +498,7 @@ export default function PlayerStatsTable({
       case 'defensive_contribution_points':
         if (isCbitPointsLoading) return <span className="text-gray-400">...</span>;
         if (isCbitPointsError) return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
-        return <span className="text-yellow-600">{calculateStat(player, getCbitPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+        return <span className="text-yellow-600">{calculateStat(player, getCbitPoints(player)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
       case 'value_season':
         return <span className="text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</span>;
       case 'points_per_game':
@@ -514,11 +525,11 @@ export default function PlayerStatsTable({
         if (position !== 'GKP') return <span className="text-gray-400">-</span>;
         if (isSavePointsLoading) return <span className="text-gray-400">...</span>;
         if (isSavePointsError) return <span className="text-gray-400" title="Save points data unavailable">N/A</span>;
-        return <span className="text-blue-600">{calculateStat(player, getSavePoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+        return <span className="text-blue-600">{calculateStat(player, getSavePoints(player)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
       case 'minutes_points':
         if (isMinutesPointsLoading) return <span className="text-gray-400">...</span>;
         if (isMinutesPointsError) return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
-        return <span className="text-orange-600">{calculateStat(player, getMinutesPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+        return <span className="text-orange-600">{calculateStat(player, getMinutesPoints(player)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
       case 'tackles':
         return <span className="text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
       case 'recoveries':
@@ -772,15 +783,15 @@ export default function PlayerStatsTable({
           case "expected_goals_conceded_per_90": return player.expected_goals_conceded_per_90 || 0;
           case "defensive_contribution_points": {
             // Use the CBIT points data from the API instead of inline calculation
-            return getCbitPoints(player.id);
+            return getCbitPoints(player);
           }
           case "save_points": {
             // Use the Save points data from the API
-            return getSavePoints(player.id);
+            return getSavePoints(player);
           }
           case "minutes_points": {
             // Use the Minutes points data from the API
-            return getMinutesPoints(player.id);
+            return getMinutesPoints(player);
           }
           default: return player.total_points;
         }

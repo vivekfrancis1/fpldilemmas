@@ -1,7 +1,9 @@
 import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, sql, inArray, desc, and } from "drizzle-orm";
+import { computeCbitPoints } from "./fpl-scoring-cache-service";
+import { nameMatchKey } from "./player-history-blend-service";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -617,6 +619,148 @@ export class DatabaseStorage implements IStorage {
     return form;
   }
 
+  // Enrich the 2025/26 historical player-statistics view with fields the base
+  // historical_players table doesn't carry: defensive contribution, xG/xA/xGC, tackles,
+  // recoveries, CBI, starts (historical_player_stats), ownership/form/value (a point-in-time
+  // snapshot from season_player_snapshot), and season-total defensive-contribution/save/minutes
+  // points (computed from real per-gameweek data in gameweek_player_data, since those points
+  // are threshold checks evaluated per match, not derivable from a season-total raw stat).
+  //
+  // IMPORTANT: historical_players uses the CURRENT (2026/27) bootstrap element-ID scheme, while
+  // historical_player_stats / season_player_snapshot / gameweek_player_data all share a
+  // DIFFERENT, mutually-consistent native 2025/26 element-ID scheme (verified: those three
+  // agree with each other exactly, e.g. Haaland is player_id 430 in all three, summing to his
+  // real 27 goals / 2953 minutes — but historical_players lists him as player_id 411, its
+  // current-bootstrap ID). A naive player_id join across schemes silently pairs the wrong
+  // player for ~99% of rows. Every lookup here is by normalized (first name, second name,
+  // position) instead, same reasoning as PlayerHistoryBlendService.
+  // Scoped to 2025/26 only — see the comment at its call site in getHistoricalPlayers for why.
+  private async fetchSeason202526Enrichment(
+    players: { playerId: number; firstName: string | null; secondName: string | null; webName: string | null; positionName: string | null }[]
+  ): Promise<Map<number, {
+    defensiveContribution: number; defensiveContributionPoints: number;
+    expectedGoals: string; expectedAssists: string; expectedGoalInvolvements: string; expectedGoalsConceded: string;
+    tackles: number; recoveries: number; clearancesBlocksInterceptions: number; starts: number;
+    selectedByPercent: string; form: string; valueForm: string;
+    savePoints: number; minutesPoints: number;
+  }>> {
+    const SEASON = "2025/26";
+    const result = new Map<number, any>();
+
+    const elementTypeFromPosition = (positionName: string | null): number =>
+      positionName === "Goalkeeper" ? 1 : positionName === "Defender" ? 2 : positionName === "Midfielder" ? 3 : 4;
+    // historical_player_stats only carries a single short "web_name"-style player_name column
+    // (e.g. "Haaland", "M.Salah"), not separate first/second names, so it needs its own
+    // normalized-webName-based key instead of nameMatchKey's first+second name key.
+    const webNameKey = (webName: string, elementType: number): string =>
+      `${(webName || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "")}|${elementType}`;
+
+    const [statsRes, snapshotRes] = await Promise.all([
+      pool.query(
+        `SELECT player_id, player_name, element_type, defensive_contribution,
+                expected_goals, expected_assists, expected_goals_conceded,
+                tackles, recoveries, clearances_blocks_interceptions, starts
+         FROM historical_player_stats WHERE season = $1`,
+        [SEASON]
+      ),
+      pool.query(
+        `SELECT player_id, first_name, second_name, element_type, selected_by_percent, form, value_form
+         FROM season_player_snapshot WHERE season = $1`,
+        [SEASON]
+      ),
+    ]);
+
+    // historical_player_stats, season_player_snapshot, and gameweek_player_data all share the
+    // SAME native 2025/26 player_id scheme (verified: Haaland is player_id 430 in all three).
+    // So the most reliable crosswalk is: name-match against season_player_snapshot (which has
+    // full first+second names, same as historical_players) to resolve the native player_id, then
+    // look up historical_player_stats directly BY THAT ID — no second, less-reliable name-match
+    // needed. The webName-based key is kept only as a fallback for the rare player the snapshot
+    // crosswalk itself misses (e.g. a short-name that changed between seasons).
+    const statsByNativeId = new Map<number, any>();
+    for (const row of statsRes.rows) statsByNativeId.set(row.player_id, row);
+    const statsByNameKey = new Map<string, any>();
+    for (const row of statsRes.rows) {
+      statsByNameKey.set(webNameKey(row.player_name || "", row.element_type), row);
+    }
+    const snapshotByNameKey = new Map<string, any>();
+    for (const row of snapshotRes.rows) {
+      snapshotByNameKey.set(nameMatchKey(row.first_name || "", row.second_name || "", row.element_type), row);
+    }
+
+    // Resolve each current-scheme player to their native-2025/26 player_id (for the
+    // gameweek_player_data query below) via the season_player_snapshot crosswalk.
+    const nativeIdByCurrentId = new Map<number, number>();
+
+    for (const player of players) {
+      const elementType = elementTypeFromPosition(player.positionName);
+      const snapshotRow = snapshotByNameKey.get(nameMatchKey(player.firstName || "", player.secondName || "", elementType));
+      if (snapshotRow) nativeIdByCurrentId.set(player.playerId, snapshotRow.player_id);
+      const statsRow = (snapshotRow && statsByNativeId.get(snapshotRow.player_id))
+        || statsByNameKey.get(webNameKey(player.webName || "", elementType));
+
+      if (!statsRow && !snapshotRow) continue;
+
+      const xg = parseFloat(statsRow?.expected_goals) || 0;
+      const xa = parseFloat(statsRow?.expected_assists) || 0;
+      result.set(player.playerId, {
+        defensiveContribution: statsRow?.defensive_contribution || 0,
+        defensiveContributionPoints: 0, // filled in below from per-GW data
+        expectedGoals: xg.toFixed(2),
+        expectedAssists: xa.toFixed(2),
+        expectedGoalInvolvements: (xg + xa).toFixed(2),
+        expectedGoalsConceded: (parseFloat(statsRow?.expected_goals_conceded) || 0).toFixed(2),
+        tackles: statsRow?.tackles || 0,
+        recoveries: statsRow?.recoveries || 0,
+        clearancesBlocksInterceptions: statsRow?.clearances_blocks_interceptions || 0,
+        starts: statsRow?.starts || 0,
+        selectedByPercent: snapshotRow?.selected_by_percent ?? "0.0",
+        form: snapshotRow?.form ?? "0.0",
+        valueForm: snapshotRow?.value_form ?? "0.0",
+        savePoints: 0,
+        minutesPoints: 0,
+      });
+    }
+
+    const nativeIds = Array.from(new Set(nativeIdByCurrentId.values()));
+    if (nativeIds.length === 0) return result;
+
+    const gwRes = await pool.query(
+      `SELECT player_id, minutes, saves, defensive_contribution
+       FROM gameweek_player_data WHERE season = $1 AND player_id = ANY($2::int[])`,
+      [SEASON, nativeIds]
+    );
+
+    // position lookup for element_type -> "GKP"/"DEF"/"MID"/"FWD", needed by computeCbitPoints
+    const posMap: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+    const positionByNativeId = new Map<number, number>();
+    for (const row of statsRes.rows) positionByNativeId.set(row.player_id, row.element_type);
+
+    const savePointsByNativeId = new Map<number, number>();
+    const minutesPointsByNativeId = new Map<number, number>();
+    const dcPointsByNativeId = new Map<number, number>();
+    for (const row of gwRes.rows) {
+      const minutes = row.minutes || 0;
+      if (minutes === 0) continue;
+      const saves = row.saves || 0;
+      const dc = row.defensive_contribution || 0;
+      const position = posMap[positionByNativeId.get(row.player_id) || 3] || "MID";
+
+      savePointsByNativeId.set(row.player_id, (savePointsByNativeId.get(row.player_id) || 0) + Math.floor(saves / 3));
+      minutesPointsByNativeId.set(row.player_id, (minutesPointsByNativeId.get(row.player_id) || 0) + (minutes >= 60 ? 2 : 1));
+      dcPointsByNativeId.set(row.player_id, (dcPointsByNativeId.get(row.player_id) || 0) + computeCbitPoints(dc, position));
+    }
+    for (const [currentId, nativeId] of nativeIdByCurrentId) {
+      const existing = result.get(currentId);
+      if (!existing) continue;
+      existing.savePoints = savePointsByNativeId.get(nativeId) || 0;
+      existing.minutesPoints = minutesPointsByNativeId.get(nativeId) || 0;
+      existing.defensiveContributionPoints = dcPointsByNativeId.get(nativeId) || 0;
+    }
+
+    return result;
+  }
+
   // Bootstrap data methods (keep using memory for fast access)
   async getBootstrapData(): Promise<BootstrapData | undefined> {
     return this.memFallback.getBootstrapData();
@@ -706,9 +850,22 @@ export class DatabaseStorage implements IStorage {
       
       if (dbPlayers.length > 0) {
         console.log(`✅ Found ${dbPlayers.length} players in database for ${season}`);
-        
+
+        // 2025/26 is the only historical season with a reliable player_id crosswalk to the
+        // richer stat tables (historical_player_stats, season_player_snapshot,
+        // gameweek_player_data) — older seasons' IDs don't line up reliably (verified: only
+        // 33-71% coincidental matches, some of which would silently pair the wrong player's
+        // stats), so this enrichment is intentionally scoped to 2025/26 only.
+        const enrichment = season === "2025/26"
+          ? await this.fetchSeason202526Enrichment(dbPlayers.map(p => ({
+              playerId: p.playerId, firstName: p.firstName, secondName: p.secondName, webName: p.webName, positionName: p.positionName,
+            })))
+          : null;
+
         // Convert database format to API format for compatibility
-        return dbPlayers.map(player => ({
+        return dbPlayers.map(player => {
+          const enriched = enrichment?.get(player.playerId);
+          return {
           ...player,
           // Keep the string ID as required by the schema
           id: player.id, // This is already a string from the schema
@@ -742,16 +899,16 @@ export class DatabaseStorage implements IStorage {
           threat: player.threat,
           ict_index: player.ictIndex,
           // Add commonly needed fields with calculated values for historical data
-          form: this.calculateHistoricalForm(player.totalPoints || 0, player.minutes || 0),
-          points_per_game: player.totalPoints && player.minutes ? 
+          form: enriched?.form ?? this.calculateHistoricalForm(player.totalPoints || 0, player.minutes || 0),
+          points_per_game: player.totalPoints && player.minutes ?
             ((player.totalPoints / (player.minutes / 90)) || 0).toFixed(1) : "0.0",
-          selected_by_percent: "0.0", // Not available for historical data
+          selected_by_percent: enriched?.selectedByPercent ?? "0.0", // Only available for 2025/26
           now_cost: player.endCost || player.startCost || 0,
-          value_form: "0.0", // Not available for historical data
-          value_season: player.totalPoints && player.endCost ? 
+          value_form: enriched?.valueForm ?? "0.0", // Only available for 2025/26
+          value_season: player.totalPoints && player.endCost ?
             ((player.totalPoints / (player.endCost / 10)) || 0).toFixed(1) : "0.0",
           transfers_in: 0, // Not available for historical data
-          transfers_out: 0, // Not available for historical data  
+          transfers_out: 0, // Not available for historical data
           transfers_in_event: 0, // Not available for historical data
           transfers_out_event: 0, // Not available for historical data
           cost_change_event: 0, // Not available for historical data
@@ -763,11 +920,26 @@ export class DatabaseStorage implements IStorage {
           squad_number: 0, // Not available for historical data
           event_points: 0, // Not available for historical data - this is last gameweek points
           dreamteam_count: 0, // Not available for historical data
-          element_type: player.positionName === 'Goalkeeper' ? 1 : 
-                       player.positionName === 'Defender' ? 2 : 
+          // Only populated for 2025/26 (see fetchSeason202526Enrichment) — other historical
+          // seasons don't have a reliable player-ID crosswalk to these richer stat tables.
+          defensive_contribution: enriched?.defensiveContribution ?? 0,
+          defensive_contribution_points: enriched?.defensiveContributionPoints ?? 0,
+          expected_goals: enriched?.expectedGoals ?? "0.00",
+          expected_assists: enriched?.expectedAssists ?? "0.00",
+          expected_goal_involvements: enriched?.expectedGoalInvolvements ?? "0.00",
+          expected_goals_conceded: enriched?.expectedGoalsConceded ?? "0.00",
+          tackles: enriched?.tackles ?? 0,
+          recoveries: enriched?.recoveries ?? 0,
+          clearances_blocks_interceptions: enriched?.clearancesBlocksInterceptions ?? 0,
+          starts: enriched?.starts ?? 0,
+          save_points: enriched?.savePoints ?? 0,
+          minutes_points: enriched?.minutesPoints ?? 0,
+          element_type: player.positionName === 'Goalkeeper' ? 1 :
+                       player.positionName === 'Defender' ? 2 :
                        player.positionName === 'Midfielder' ? 3 : 4,
           team: this.getTeamIdFromName(player.teamName || player.teamShortName || "")
-        }));
+        };
+        });
       }
       
       console.log(`❌ No data found in database for ${season}`);
