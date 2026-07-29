@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Calendar } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
@@ -46,11 +46,12 @@ export default function PlayerStats() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  // Get current season data (for metadata like teams, current gameweek)
+  // Get current season data (for metadata like teams, current gameweek).
+  // Always fetched (not gated on selectedSeason) so the pre-season auto-default
+  // effect below can detect "no data yet" before the user has chosen a season.
   const { data: bootstrapData, isLoading: currentLoading, error: currentError } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: selectedSeason === "current",
   });
 
   // Get gameweek-filtered player stats when filters are used
@@ -79,6 +80,21 @@ export default function PlayerStats() {
   const currentGameweek = useMemo(() => {
     return computeCurrentGameweek((bootstrapData?.events || []) as any);
   }, [bootstrapData?.events]);
+
+  // Default to the most recent season that actually has data. The "current" season
+  // (bootstrap-static) has zero games until kickoff, so showing it by default would
+  // just be an empty table — fall back to the latest historical season until then.
+  // Only runs once, and only if the user hasn't already picked a season themselves.
+  const hasAutoDefaulted = useRef(false);
+  useEffect(() => {
+    if (hasAutoDefaulted.current) return;
+    if (!bootstrapData || !seasons || seasons.length === 0) return;
+    hasAutoDefaulted.current = true;
+    if (currentGameweek === 0) {
+      const latestSeason = [...seasons].sort((a, b) => b.localeCompare(a))[0];
+      if (latestSeason) setSelectedSeason(latestSeason);
+    }
+  }, [bootstrapData, seasons, currentGameweek]);
 
   // Determine if we need gameweek-filtered data
   const needsGameweekFilter = selectedSeason === "current" && (startGameweek !== 1 || (endGameweek !== null && endGameweek !== currentGameweek));
