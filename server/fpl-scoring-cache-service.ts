@@ -5,6 +5,19 @@ import { pool } from "./db";
 import { CURRENT_SEASON } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
+/**
+ * FPL's own `defensive_contribution` field (stored as-is in gameweek_player_data) is already
+ * computed per-position by the FPL API — CBIT (clearances+blocks+interceptions+tackles) for
+ * defenders, CBIRT (+recoveries) for midfielders/forwards — so only the point-award threshold
+ * needs to be position-aware here: defenders need 10, midfielders/forwards need 12, and
+ * goalkeepers are never eligible for defensive contribution points at all.
+ */
+export function computeCbitPoints(defensiveContribution: number, position: string): number {
+  if (position === 'GKP') return 0;
+  const threshold = position === 'DEF' ? 10 : 12;
+  return defensiveContribution >= threshold ? 2 : 0;
+}
+
 export class FPLScoringCacheService {
   private static updateLock = false;
   static lastRunAt: Date | null = null;
@@ -137,8 +150,7 @@ export class FPLScoringCacheService {
     try {
       const [queryResult, playerInfoMap] = await Promise.all([
         pool.query(
-          `SELECT player_id, gameweek,
-             CASE WHEN defensive_contribution >= 10 THEN 2 ELSE 0 END AS cbit_points
+          `SELECT player_id, gameweek, defensive_contribution
            FROM gameweek_player_data
            WHERE season = $1
            ORDER BY player_id, gameweek`,
@@ -150,8 +162,8 @@ export class FPLScoringCacheService {
       const cbitData: Record<string, any> = {};
       for (const row of queryResult.rows) {
         const id = row.player_id.toString();
+        const info = playerInfoMap.get(row.player_id) || { playerName: '', teamName: '', position: '' };
         if (!cbitData[id]) {
-          const info = playerInfoMap.get(row.player_id) || { playerName: '', teamName: '', position: '' };
           cbitData[id] = {
             playerId: row.player_id,
             playerName: info.playerName,
@@ -161,7 +173,7 @@ export class FPLScoringCacheService {
             seasonTotal: 0,
           };
         }
-        const pts = row.cbit_points || 0;
+        const pts = computeCbitPoints(row.defensive_contribution || 0, info.position);
         cbitData[id].gameweeks.push({ gameweek: row.gameweek, cbitPoints: pts });
         cbitData[id].seasonTotal += pts;
       }
