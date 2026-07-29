@@ -17,7 +17,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
-import { extractManagerId } from "@/lib/manager-id-utils";
+import { extractManagerId, isTeamNotAvailableError } from "@/lib/manager-id-utils";
 import { computeCascadeIndicesToRemove, executeUndoAllCheck, executeUndoChainCheck, filterBrokenTransfersAfterCascade, findCrossGWDependents, type UndoAllPayload } from "@/lib/transfer-cascade";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -6100,6 +6100,20 @@ export default function TransferPlanner() {
           </Alert>
         );
       })()}
+
+      {/* Error state — teamDataError was previously captured but never rendered, so a failed
+          team fetch (e.g. pre-season, before a gameweek's deadline has passed) left the whole
+          page silently blank below the search bar. */}
+      {searchedId && !isLoadingTeam && teamDataError && (
+        <Alert variant={isTeamNotAvailableError(teamDataError) ? "default" : "destructive"}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {isTeamNotAvailableError(teamDataError)
+              ? "Your team data isn't available yet — this happens before the season starts or before a gameweek's deadline has passed. Check back once the next gameweek locks."
+              : "Failed to load your team. Please check the Manager ID and try again."}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Draft Selection Section - Collapsed by default */}
       {searchedId && teamData && selectedGameweek && (

@@ -13,7 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
-import { extractManagerId } from "@/lib/manager-id-utils";
+import { extractManagerId, isTeamNotAvailableError } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -802,12 +802,16 @@ export default function TransferRecommendations() {
           );
         })()}
 
-        {/* Error state - only show if fallback also failed */}
-        {recommendationsError && useFallbackEndpoint && (
-          <Alert variant="destructive">
+        {/* Error state — covers both the authenticated-endpoint-with-failed-fallback case and
+            plain public Manager ID lookups (which never set useFallbackEndpoint, so without this
+            the page previously rendered nothing at all when the request failed). */}
+        {recommendationsError && !isLoadingRecommendations && (
+          <Alert variant={isTeamNotAvailableError(recommendationsError) ? "default" : "destructive"}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load transfer recommendations. Please check the Manager ID and try again.
+              {isTeamNotAvailableError(recommendationsError)
+                ? "Your team data isn't available yet — this happens before the season starts or before a gameweek's deadline has passed. Check back once the next gameweek locks."
+                : "Failed to load transfer recommendations. Please check the Manager ID and try again."}
             </AlertDescription>
           </Alert>
         )}

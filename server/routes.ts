@@ -3643,24 +3643,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // checker the same guarantee already true at runtime.
       currentGameweek = currentGameweek ?? 1;
 
-      // Fetch initial picks for current gameweek
-      let response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
-      
-      // If the requested GW picks are not yet available (future GW), fall back to the previous GW
+      // Fetch initial picks for current gameweek. fetchWithRetry throws rather than returning a
+      // non-ok response, so a 404 (picks not locked yet — pre-season, or before this gameweek's
+      // deadline) needs to be caught here, not checked via response.ok afterward.
+      let response: Response;
       let resolvedPicksGW = currentGameweek;
-      if (!response.ok && response.status === 404 && currentGameweek > 1) {
-        console.log(`DEBUG: GW${currentGameweek} picks not available (404), falling back to GW${currentGameweek - 1}`);
-        resolvedPicksGW = currentGameweek - 1;
-        response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${resolvedPicksGW}/picks/`);
+      try {
+        response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      } catch (fetchError) {
+        const is404 = fetchError instanceof Error && /\b404\b/.test(fetchError.message);
+        if (!is404) throw fetchError;
+
+        // If the requested GW picks are not yet available (future GW), fall back to the previous GW
+        if (currentGameweek > 1) {
+          console.log(`DEBUG: GW${currentGameweek} picks not available (404), falling back to GW${currentGameweek - 1}`);
+          resolvedPicksGW = currentGameweek - 1;
+          try {
+            response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${resolvedPicksGW}/picks/`);
+          } catch (fallbackError) {
+            const fallbackIs404 = fallbackError instanceof Error && /\b404\b/.test(fallbackError.message);
+            if (!fallbackIs404) throw fallbackError;
+            return res.status(404).json({ message: "SEASON_NOT_STARTED: Manager team not found for this gameweek", code: 'TEAM_NOT_AVAILABLE' });
+          }
+        } else {
+          return res.status(404).json({
+            message: "SEASON_NOT_STARTED: Your team isn't available yet — check back after the gameweek deadline has passed.",
+            code: 'TEAM_NOT_AVAILABLE',
+          });
+        }
       }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return res.status(404).json({ message: "Manager team not found for this gameweek" });
-        }
-        throw new Error(`FPL API responded with status: ${response.status}`);
-      }
-      
       let data = await response.json();
       
       // Check if this gameweek was played with Free Hit - if so, we need to get the persistent squad
@@ -4045,9 +4057,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Using authenticated team picks (${authenticatedPicks.length} players) - includes pending transfers`);
       } else {
         // Get team data from public API - use the determined gameweek
-        const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
-        if (!teamResponse.ok) {
-          throw new Error("Failed to fetch team data");
+        let teamResponse: Response;
+        try {
+          teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
+        } catch (fetchError) {
+          // FPL 404s this endpoint until a gameweek's squad has actually locked (pre-season, or
+          // between the season starting and the first deadline passing) — that's an expected,
+          // temporary "no data yet" state, not a real failure, so tag it distinctly for the
+          // route's catch block to turn into a friendly response instead of a generic 500.
+          const is404 = fetchError instanceof Error && /\b404\b/.test(fetchError.message);
+          if (is404) {
+            throw Object.assign(
+              new Error(`SEASON_NOT_STARTED: Your GW${teamDataGameweek} squad isn't available yet — check back after the gameweek deadline has passed.`),
+              { code: 'TEAM_NOT_AVAILABLE' }
+            );
+          }
+          throw fetchError;
         }
         teamData = await teamResponse.json();
         console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''} (current GW${currentGameweek} is_current=${currentGW?.is_current}, finished=${isCurrentGWFinished})`);
@@ -4774,6 +4799,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(responseData);
       
     } catch (error) {
+      if ((error as any)?.code === 'TEAM_NOT_AVAILABLE') {
+        return res.status(404).json({
+          error: (error as Error).message,
+          code: 'TEAM_NOT_AVAILABLE',
+        });
+      }
       console.error(`Error calculating recommended transfers for manager ${req.params.managerId}:`, error);
       res.status(500).json({
         error: "Failed to calculate recommended transfers",
@@ -12492,8 +12523,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchOdds = [];
       const teamIds = Array.from(teamLookup.keys());
       
-      // Process only next 6 gameweeks (exclude completed and current)
-      const maxGameweek = Math.min(currentGameweek + 6, 38);
+      // Process next projectionWindowSettings.totalWeeks gameweeks (exclude completed and current)
+      const maxGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       for (let gw = currentGameweek + 1; gw <= maxGameweek; gw++) {
         // Get real fixtures for this gameweek
         const gwRealFixtures = realFixtures.filter((f: any) => f.event === gw);
