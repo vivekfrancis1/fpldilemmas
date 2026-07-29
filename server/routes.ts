@@ -11994,7 +11994,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await computePromise;
-        playerMinutesCache.set(cacheKey, { data, timestamp: Date.now() });
+        // Don't cache an empty fallback result — a transient live-calc failure (e.g. a
+        // self-fetch socket reset under load) shouldn't poison this key for the full TTL.
+        if (Array.isArray(data) && data.length > 0) {
+          playerMinutesCache.set(cacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player minutes projections:", error);
@@ -12049,9 +12053,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current gameweek from bootstrap data
       const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       
-      // Dynamic gameweek range - start from current+1 (next gameweek) for 12 weeks
+      // Dynamic gameweek range - start from current+1 (next gameweek)
       const startGameweek = reqStart ?? (currentGameweek + 1);
-      const endGameweek = reqEnd ?? Math.min(startGameweek + 11, 39);
+      const endGameweek = reqEnd ?? Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, 39);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
       // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets
@@ -12187,7 +12191,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await csPromise;
-        cleansheetCache.set(csCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          cleansheetCache.set(csCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player clean sheet points:", error);
@@ -16497,7 +16503,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await savesComputePromise;
-        playerSavesCache.set(savesCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          playerSavesCache.set(savesCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player saves projections:", error);
@@ -16914,7 +16922,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await gcPromise;
-        goalsConcededCache.set(gcCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          goalsConcededCache.set(gcCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player goals conceded projections:", error);
@@ -17067,7 +17077,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await ycPromise;
-        yellowCardsCache.set(ycCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          yellowCardsCache.set(ycCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player yellow cards projections:", error);
@@ -17219,7 +17231,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await rcPromise;
-        redCardsCache.set(rcCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          redCardsCache.set(rcCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player red cards projections:", error);
@@ -17396,7 +17410,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = await bpPromise;
-        bonusPointsCache.set(bpCacheKey, { data, timestamp: Date.now() });
+        if (Array.isArray(data) && data.length > 0) {
+          bonusPointsCache.set(bpCacheKey, { data, timestamp: Date.now() });
+        }
         return res.json(data);
       } catch (error) {
         console.error("❌ COMPLETE FAILURE in player bonus points projections:", error);
@@ -17443,9 +17459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse availabilityAdjusted flag (default true)
       const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
 
-      // Calculate next 12 gameweeks range — cap at 38 (GW39 is a synthetic TBC bucket, never expose it)
+      // Calculate the projection range — cap at 38 (GW39 is a synthetic TBC bucket, never expose it)
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(startGameweek + 11, 38);
+      const endGameweek = Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, 38);
 
       // For raw (unadjusted) requests, always delegate to the live aggregator which applies
       // comprehensive inverse-availability scaling across gameweekProjections, component breakdowns,
@@ -18230,9 +18246,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const nextGameweek = currentGameweek + 1;
       
-      // Set defaults: next 12 gameweeks if no parameters provided
+      // Set defaults: next N gameweeks (per projectionWindowSettings.totalWeeks) if no parameters provided
       const defaultStartGw = nextGameweek;
-      const defaultEndGw = Math.min(nextGameweek + 11, 38);
+      const defaultEndGw = Math.min(nextGameweek + projectionWindowSettings.totalWeeks - 1, 38);
       
       const finalStartGw = startGw || defaultStartGw;
       const finalEndGw = endGw || defaultEndGw;
@@ -18360,9 +18376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = computeCurrentGameweek(bootstrapData.events);
       const nextGameweek = currentGameweek + 1;
       
-      // Set defaults: next 12 gameweeks if no parameters provided
+      // Set defaults: next N gameweeks (per projectionWindowSettings.totalWeeks) if no parameters provided
       const defaultStartGw = nextGameweek;
-      const defaultEndGw = Math.min(nextGameweek + 11, 38);
+      const defaultEndGw = Math.min(nextGameweek + projectionWindowSettings.totalWeeks - 1, 38);
       
       const finalStartGw = startGw || defaultStartGw;
       const finalEndGw = endGw || defaultEndGw;

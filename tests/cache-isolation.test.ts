@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { PROJECTION_TOTAL_WEEKS, computeCurrentGameweek } from '@shared/gameweek-utils';
 
 const BASE = 'http://localhost:5050';
 const get = (path: string) =>
@@ -13,9 +14,11 @@ let singleGwKey: string;
 
 beforeAll(async () => {
   const bootstrap = await get('/api/bootstrap-static');
-  const currentGW: number = bootstrap.events.find((e: any) => e.is_current)?.id ?? 1;
+  const currentGW: number = computeCurrentGameweek(bootstrap.events);
   startGW = Math.min(currentGW + 1, 38);
-  const endGW = Math.min(startGW + 11, 38);
+  // Matches /api/cached/player-total-points' default range (routes.ts): the
+  // full projection window, not a hardcoded 12 weeks.
+  const endGW = Math.min(startGW + PROJECTION_TOTAL_WEEKS - 1, 38);
   rangeKey = `${startGW}-${endGW}`;
   singleGwKey = `${startGW}-${startGW}`;
 }, 30_000);

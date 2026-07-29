@@ -104,6 +104,16 @@ app.use((req, res, next) => {
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
     
+    // Node's default keepAliveTimeout (5s) is shorter than some of this app's own
+    // internal self-fetch calls (server calling its own /api/* routes over HTTP to
+    // aggregate projections, which can run well past 5s of synchronous computation).
+    // A pooled keep-alive socket sitting idle while the event loop is busy can get
+    // closed out from under an in-flight internal fetch, surfacing as a spurious
+    // "SocketError: other side closed" — raise both timeouts comfortably above
+    // internalFetch's own 120s abort timeout (server/config.ts).
+    server.keepAliveTimeout = 130_000;
+    server.headersTimeout = 131_000;
+
     server.listen({
       port,
       host: "0.0.0.0",
