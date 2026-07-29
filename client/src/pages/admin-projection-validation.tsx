@@ -34,6 +34,7 @@ interface PlayerValidation {
 }
 
 type AvgMode = "perMatch" | "perGW";
+type CompareSeason = "current" | "2025/26";
 
 const COMPONENTS = [
   { key: "totalPoints", label: "Total Points", hasRaw: false },
@@ -73,6 +74,7 @@ export default function AdminProjectionValidation() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("pts");
   const [avgMode, setAvgMode] = useState<AvgMode>("perMatch");
+  const [compareSeason, setCompareSeason] = useState<CompareSeason>("current");
   const [sortColumn, setSortColumn] = useState("totalPoints_proj_pts");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [visibleComponents, setVisibleComponents] = useState<Set<string>>(
@@ -80,8 +82,14 @@ export default function AdminProjectionValidation() {
   );
   const [showColumnPicker, setShowColumnPicker] = useState(false);
 
-  const { data, isLoading, error } = useQuery<{ currentGameweek: number; playerCount: number; players: PlayerValidation[] }>({
-    queryKey: ["/api/admin/projection-validation"],
+  const { data, isLoading, error } = useQuery<{ currentGameweek: number; compareSeason: CompareSeason; playerCount: number; players: PlayerValidation[] }>({
+    queryKey: ["/api/admin/projection-validation", compareSeason],
+    queryFn: async () => {
+      const params = compareSeason !== "current" ? `?compareSeason=${encodeURIComponent(compareSeason)}` : "";
+      const res = await fetch(`/api/admin/projection-validation${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}: Failed to fetch projection validation data`);
+      return res.json();
+    },
     enabled: isAdmin && isAuthenticated,
   });
 
@@ -246,7 +254,9 @@ export default function AdminProjectionValidation() {
                 Projection Validation
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Past avg/match vs Projected avg/{avgMode === "perMatch" ? "match" : "GW"} ({data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
+                {compareSeason === "current"
+                  ? "Past avg/match (2026/27 so far)"
+                  : "Past avg/match (2025/26 historical backtest)"} vs Projected avg/{avgMode === "perMatch" ? "match" : "GW"} ({data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
               </p>
             </div>
           </div>
@@ -285,6 +295,16 @@ export default function AdminProjectionValidation() {
                 {teams.map(([name]) => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={compareSeason} onValueChange={v => setCompareSeason(v as CompareSeason)}>
+              <SelectTrigger className="w-[170px] h-9 text-sm">
+                <SelectValue placeholder="Compare Against" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">Current Season (2026/27)</SelectItem>
+                <SelectItem value="2025/26">2025/26 (Historical)</SelectItem>
               </SelectContent>
             </Select>
 

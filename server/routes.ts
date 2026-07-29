@@ -34,7 +34,8 @@ import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
 import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-utils';
-import { FPLScoringCacheService } from './fpl-scoring-cache-service';
+import { FPLScoringCacheService, computeCbitPoints } from './fpl-scoring-cache-service';
+import { nameMatchKey } from './player-history-blend-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
 import { calculateAvailabilityProbability, parseReturnDate, getGameweekFromDate, BootstrapEvent } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
@@ -20638,6 +20639,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!bootstrapRes.ok) throw new Error("Failed to fetch bootstrap data");
       const bootstrap = await bootstrapRes.json() as any;
 
+      // "current" (default) validates against the current season's own finished gameweeks —
+      // empty pre-season, since there's nothing finished to validate against yet. "2025/26"
+      // backtests instead: name-matches each current player to their 2025/26 row and pulls
+      // real per-gameweek stats from the historical archive, so the tool is useful year-round.
+      const compareSeason: "current" | "2025/26" = req.query.compareSeason === "2025/26" ? "2025/26" : "current";
+
       const currentGW = computeCurrentGameweek(bootstrap.events);
       const finishedGWs = bootstrap.events.filter((e: any) => e.finished).map((e: any) => e.id);
       const lastFinishedGW = finishedGWs.length > 0 ? Math.max(...finishedGWs) : 0;
@@ -20657,31 +20664,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedMap = new Map<number, any>();
       for (const p of cachedPlayers) cachedMap.set(p.playerId, p);
 
-      console.log(`Projection Validation: Fetching live data for GW1-${lastFinishedGW} (${lastFinishedGW} gameweeks)...`);
-
-      // Fetch in batches of 3 to avoid OOM from simultaneous large responses
-      const liveResults: ({ gw: number; data: any } | null)[] = [];
-      for (let i = 0; i < finishedGWs.length; i += 3) {
-        const batch = finishedGWs.slice(i, i + 3);
-        const batchResults = await Promise.all(batch.map(async (gw: number) => {
-          try {
-            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-            if (liveResponse.ok) return { gw, data: await liveResponse.json() };
-          } catch (err) {
-            console.error(`Error fetching GW${gw} live data:`, err);
-          }
-          return null;
-        }));
-        liveResults.push(...batchResults);
-      }
-
-      const identifierMap: Record<string, string> = {
-        minutes: 'minutes', goals_scored: 'goals', assists: 'assists',
-        clean_sheets: 'cleanSheets', goals_conceded: 'goalsConceded',
-        yellow_cards: 'yellowCards', red_cards: 'redCards',
-        bonus: 'bonus', saves: 'saves', defensive_contribution: 'defensiveContributions'
-      };
-
       const playerActuals = new Map<number, {
         matchesPlayed: number;
         totalGoals: number; totalGoalPts: number;
@@ -20697,65 +20679,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPoints: number;
       }>();
 
-      for (const result of liveResults) {
-        if (!result) continue;
-        const { data: liveData } = result;
+      const newPA = () => ({
+        matchesPlayed: 0,
+        totalGoals: 0, totalGoalPts: 0,
+        totalAssists: 0, totalAssistPts: 0,
+        totalCS: 0, totalCSPts: 0,
+        totalMinutes: 0, totalMinPts: 0,
+        totalGC: 0, totalGCPts: 0,
+        totalYC: 0, totalYCPts: 0,
+        totalRC: 0, totalRCPts: 0,
+        totalBonus: 0, totalBonusPts: 0,
+        totalSaves: 0, totalSavesPts: 0,
+        totalDCRaw: 0, totalDCPts: 0,
+        totalPoints: 0,
+      });
 
-        for (const el of liveData.elements) {
-          const stats = el.stats;
-          if ((stats.minutes || 0) === 0) continue;
+      if (compareSeason === "current") {
+        console.log(`Projection Validation: Fetching live data for GW1-${lastFinishedGW} (${lastFinishedGW} gameweeks)...`);
 
-          const playerInfo = playerInfoMap.get(el.id);
-          if (!playerInfo) continue;
+        // Fetch in batches of 3 to avoid OOM from simultaneous large responses
+        const liveResults: ({ gw: number; data: any } | null)[] = [];
+        for (let i = 0; i < finishedGWs.length; i += 3) {
+          const batch = finishedGWs.slice(i, i + 3);
+          const batchResults = await Promise.all(batch.map(async (gw: number) => {
+            try {
+              const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+              if (liveResponse.ok) return { gw, data: await liveResponse.json() };
+            } catch (err) {
+              console.error(`Error fetching GW${gw} live data:`, err);
+            }
+            return null;
+          }));
+          liveResults.push(...batchResults);
+        }
 
-          const fixtureCount = (el.explain || []).length || 1;
+        const identifierMap: Record<string, string> = {
+          minutes: 'minutes', goals_scored: 'goals', assists: 'assists',
+          clean_sheets: 'cleanSheets', goals_conceded: 'goalsConceded',
+          yellow_cards: 'yellowCards', red_cards: 'redCards',
+          bonus: 'bonus', saves: 'saves', defensive_contribution: 'defensiveContributions'
+        };
 
-          const explainPtsMap: Record<string, number> = {};
-          const explainRawMap: Record<string, number> = {};
-          for (const fixture of (el.explain || [])) {
-            for (const stat of (fixture.stats || [])) {
-              const key = identifierMap[stat.identifier];
-              if (key) {
-                explainPtsMap[key] = (explainPtsMap[key] || 0) + (stat.points || 0);
-                explainRawMap[key] = (explainRawMap[key] || 0) + (stat.value || 0);
+        for (const result of liveResults) {
+          if (!result) continue;
+          const { data: liveData } = result;
+
+          for (const el of liveData.elements) {
+            const stats = el.stats;
+            if ((stats.minutes || 0) === 0) continue;
+
+            const playerInfo = playerInfoMap.get(el.id);
+            if (!playerInfo) continue;
+
+            const fixtureCount = (el.explain || []).length || 1;
+
+            const explainPtsMap: Record<string, number> = {};
+            const explainRawMap: Record<string, number> = {};
+            for (const fixture of (el.explain || [])) {
+              for (const stat of (fixture.stats || [])) {
+                const key = identifierMap[stat.identifier];
+                if (key) {
+                  explainPtsMap[key] = (explainPtsMap[key] || 0) + (stat.points || 0);
+                  explainRawMap[key] = (explainRawMap[key] || 0) + (stat.value || 0);
+                }
               }
             }
-          }
 
-          if (!playerActuals.has(el.id)) {
-            playerActuals.set(el.id, {
-              matchesPlayed: 0,
-              totalGoals: 0, totalGoalPts: 0,
-              totalAssists: 0, totalAssistPts: 0,
-              totalCS: 0, totalCSPts: 0,
-              totalMinutes: 0, totalMinPts: 0,
-              totalGC: 0, totalGCPts: 0,
-              totalYC: 0, totalYCPts: 0,
-              totalRC: 0, totalRCPts: 0,
-              totalBonus: 0, totalBonusPts: 0,
-              totalSaves: 0, totalSavesPts: 0,
-              totalDCRaw: 0, totalDCPts: 0,
-              totalPoints: 0,
-            });
-          }
+            if (!playerActuals.has(el.id)) {
+              playerActuals.set(el.id, newPA());
+            }
 
-          const pa = playerActuals.get(el.id)!;
-          pa.matchesPlayed += fixtureCount;
-          pa.totalGoals += (explainRawMap.goals || 0); pa.totalGoalPts += (explainPtsMap.goals || 0);
-          pa.totalAssists += (explainRawMap.assists || 0); pa.totalAssistPts += (explainPtsMap.assists || 0);
-          pa.totalCS += (explainRawMap.cleanSheets || 0); pa.totalCSPts += (explainPtsMap.cleanSheets || 0);
-          pa.totalMinutes += (explainRawMap.minutes || 0); pa.totalMinPts += (explainPtsMap.minutes || 0);
-          pa.totalGC += (explainRawMap.goalsConceded || 0); pa.totalGCPts += (explainPtsMap.goalsConceded || 0);
-          pa.totalYC += (explainRawMap.yellowCards || 0); pa.totalYCPts += (explainPtsMap.yellowCards || 0);
-          pa.totalRC += (explainRawMap.redCards || 0); pa.totalRCPts += (explainPtsMap.redCards || 0);
-          pa.totalBonus += (explainRawMap.bonus || 0); pa.totalBonusPts += (explainPtsMap.bonus || 0);
-          pa.totalSaves += (explainRawMap.saves || 0); pa.totalSavesPts += (explainPtsMap.saves || 0);
-          pa.totalDCRaw += (explainRawMap.defensiveContributions || 0); pa.totalDCPts += (explainPtsMap.defensiveContributions || 0);
-          pa.totalPoints += (stats.total_points || 0);
+            const pa = playerActuals.get(el.id)!;
+            pa.matchesPlayed += fixtureCount;
+            pa.totalGoals += (explainRawMap.goals || 0); pa.totalGoalPts += (explainPtsMap.goals || 0);
+            pa.totalAssists += (explainRawMap.assists || 0); pa.totalAssistPts += (explainPtsMap.assists || 0);
+            pa.totalCS += (explainRawMap.cleanSheets || 0); pa.totalCSPts += (explainPtsMap.cleanSheets || 0);
+            pa.totalMinutes += (explainRawMap.minutes || 0); pa.totalMinPts += (explainPtsMap.minutes || 0);
+            pa.totalGC += (explainRawMap.goalsConceded || 0); pa.totalGCPts += (explainPtsMap.goalsConceded || 0);
+            pa.totalYC += (explainRawMap.yellowCards || 0); pa.totalYCPts += (explainPtsMap.yellowCards || 0);
+            pa.totalRC += (explainRawMap.redCards || 0); pa.totalRCPts += (explainPtsMap.redCards || 0);
+            pa.totalBonus += (explainRawMap.bonus || 0); pa.totalBonusPts += (explainPtsMap.bonus || 0);
+            pa.totalSaves += (explainRawMap.saves || 0); pa.totalSavesPts += (explainPtsMap.saves || 0);
+            pa.totalDCRaw += (explainRawMap.defensiveContributions || 0); pa.totalDCPts += (explainPtsMap.defensiveContributions || 0);
+            pa.totalPoints += (stats.total_points || 0);
+          }
+        }
+      } else {
+        console.log(`Projection Validation: Backtesting against 2025/26 historical data...`);
+
+        // Name-match every current player to their 2025/26 row (element IDs are reassigned
+        // every season, same reasoning as PlayerHistoryBlendService) to get their 2025/26
+        // player_id, then pull that player's real per-gameweek stats.
+        const snapshotResult = await pool.query(
+          `SELECT player_id, first_name, second_name, element_type FROM season_player_snapshot WHERE season = $1`,
+          ["2025/26"]
+        );
+        const idByNameKey = new Map<string, number>();
+        for (const row of snapshotResult.rows) {
+          idByNameKey.set(nameMatchKey(row.first_name || "", row.second_name || "", row.element_type), row.player_id);
+        }
+
+        const currentIdTo2025Id = new Map<number, number>();
+        for (const el of bootstrap.elements) {
+          const matchedId = idByNameKey.get(nameMatchKey(el.first_name || "", el.second_name || "", el.element_type));
+          if (matchedId !== undefined) currentIdTo2025Id.set(el.id, matchedId);
+        }
+        const matched2025Ids = Array.from(new Set(currentIdTo2025Id.values()));
+
+        console.log(`Projection Validation: Matched ${matched2025Ids.length} current players to 2025/26 rows`);
+
+        const gwRowsResult = matched2025Ids.length > 0
+          ? await pool.query(
+              `SELECT player_id, minutes, goals_scored, assists, clean_sheets, goals_conceded,
+                      yellow_cards, red_cards, saves, bonus, defensive_contribution, total_points
+               FROM gameweek_player_data WHERE season = $1 AND player_id = ANY($2::int[])`,
+              ["2025/26", matched2025Ids]
+            )
+          : { rows: [] as any[] };
+
+        const gwRowsBy2025Id = new Map<number, any[]>();
+        for (const row of gwRowsResult.rows) {
+          if (!gwRowsBy2025Id.has(row.player_id)) gwRowsBy2025Id.set(row.player_id, []);
+          gwRowsBy2025Id.get(row.player_id)!.push(row);
+        }
+
+        for (const [currentId, id2025] of currentIdTo2025Id) {
+          const playerInfo = playerInfoMap.get(currentId);
+          if (!playerInfo) continue;
+          const rows = gwRowsBy2025Id.get(id2025);
+          if (!rows || rows.length === 0) continue;
+
+          const isGkp = playerInfo.element_type === 1;
+          const isDef = playerInfo.element_type === 2;
+          const isMid = playerInfo.element_type === 3;
+          const position = posMap[playerInfo.element_type] || "MID";
+          const goalMultiplier = isGkp ? 10 : isDef ? 6 : isMid ? 5 : 4;
+          const csMultiplier = (isGkp || isDef) ? 4 : isMid ? 1 : 0;
+
+          const pa = newPA();
+          for (const row of rows) {
+            const minutes = row.minutes || 0;
+            if (minutes === 0) continue;
+
+            const goals = row.goals_scored || 0;
+            const assists = row.assists || 0;
+            const cs = row.clean_sheets || 0;
+            const gc = row.goals_conceded || 0;
+            const yc = row.yellow_cards || 0;
+            const rc = row.red_cards || 0;
+            const saves = row.saves || 0;
+            const bonus = row.bonus || 0;
+            const dc = row.defensive_contribution || 0;
+
+            pa.matchesPlayed += 1;
+            pa.totalGoals += goals; pa.totalGoalPts += goals * goalMultiplier;
+            pa.totalAssists += assists; pa.totalAssistPts += assists * 3;
+            pa.totalCS += cs; pa.totalCSPts += cs * csMultiplier;
+            pa.totalMinutes += minutes; pa.totalMinPts += minutes >= 60 ? 2 : 1;
+            pa.totalGC += gc; pa.totalGCPts += (isGkp || isDef) ? -Math.floor(gc / 2) : 0;
+            pa.totalYC += yc; pa.totalYCPts += -yc;
+            pa.totalRC += rc; pa.totalRCPts += -rc * 3;
+            pa.totalBonus += bonus; pa.totalBonusPts += bonus;
+            pa.totalSaves += saves; pa.totalSavesPts += Math.floor(saves / 3);
+            pa.totalDCRaw += dc; pa.totalDCPts += computeCbitPoints(dc, position);
+            pa.totalPoints += row.total_points || 0;
+          }
+          if (pa.matchesPlayed > 0) playerActuals.set(currentId, pa);
         }
       }
 
-      console.log(`Projection Validation: Processed ${playerActuals.size} players from live GW data`);
+      console.log(`Projection Validation: Processed ${playerActuals.size} players from ${compareSeason === "current" ? "live GW data" : "2025/26 historical data"}`);
 
       const results: any[] = [];
 
@@ -20865,6 +20958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         currentGameweek: currentGW,
         lastFinishedGW,
+        compareSeason,
         playerCount: results.length,
         players: results
       });
