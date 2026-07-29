@@ -79,7 +79,11 @@ export async function setupAuth(app: Express) {
 
     app.get("/api/auth/google",
       passport.authenticate("google", {
-        scope: ["profile", "email"]
+        scope: ["profile", "email"],
+        // Without this, Google silently reuses the browser's existing session and skips
+        // the account chooser whenever only one Google account is signed in (or consent
+        // was already granted) — forcing it open lets users pick/switch accounts every time.
+        prompt: "select_account"
       })
     );
 
