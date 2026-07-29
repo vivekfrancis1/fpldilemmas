@@ -17,6 +17,7 @@ import {
   getPlayerNameForDebug,
   TeamPlayerShare
 } from "./projection-adjustments";
+import { PROJECTION_TOTAL_WEEKS } from "@shared/gameweek-utils";
 // Removed minutes scaling utils per simplification mandate
 
 interface ProjectionData {
@@ -311,12 +312,12 @@ class ProjectionCacheWorker {
       }
       const bootstrapData = await bootstrapResponse.json();
       
-      // Calculate current gameweek and next 6 gameweeks range
+      // Calculate current gameweek and the full projection window range
       const currentGameweek = this.computeCurrentGameweek(bootstrapData.events);
       const startGameweek = Math.max(1, currentGameweek + 1); // Next gameweek
-      const endGameweek = Math.min(38, startGameweek + 5); // Next 6 gameweeks
-      
-      console.log(`📊 Dynamically fetching assist projections for GW${startGameweek}-${endGameweek} (next 6 gameweeks)`);
+      const endGameweek = Math.min(38, startGameweek + PROJECTION_TOTAL_WEEKS - 1);
+
+      console.log(`📊 Dynamically fetching assist projections for GW${startGameweek}-${endGameweek}`);
       
       const projResponse = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       
@@ -510,8 +511,8 @@ class ProjectionCacheWorker {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = this.computeCurrentGameweek(bootstrapData.events);
       const startGameweek = Math.max(1, currentGameweek + 1);
-      const endGameweek = Math.min(38, startGameweek + 5);
-      
+      const endGameweek = Math.min(38, startGameweek + PROJECTION_TOTAL_WEEKS - 1);
+
       const response = await internalFetch(`api/team-cs-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
         console.log(`Team CS projections API returned ${response.status}, skipping clean sheet cache`);
@@ -1124,10 +1125,9 @@ class ProjectionCacheWorker {
       // Get dynamic gameweek range (same logic as Player Total Points endpoint)
       const bootstrapResponse = await internalFetch('api/bootstrap-static');
       const bootstrap = await bootstrapResponse.json();
-      const currentEvent = bootstrap.events.find((event: any) => event.is_current);
-      const currentGameweek = currentEvent ? currentEvent.id : 5; // Use actual current gameweek ID
+      const currentGameweek = this.computeCurrentGameweek(bootstrap.events);
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks
+      const endGameweek = Math.min(startGameweek + PROJECTION_TOTAL_WEEKS - 1, 38);
       
       console.log(`📊 FPL Scoring Cache: Current GW: ${currentGameweek}, caching scoring data for GW${startGameweek}-${endGameweek}`);
       

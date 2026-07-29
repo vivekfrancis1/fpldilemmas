@@ -3,7 +3,7 @@ import { internalFetch } from "./config";
 import { totalPointsCache } from "./total-points-cache";
 import { pool } from "./db";
 import { CURRENT_SEASON } from "@shared/schema";
-import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, PROJECTION_TOTAL_WEEKS } from "@shared/gameweek-utils";
 
 /**
  * FPL's own `defensive_contribution` field (stored as-is in gameweek_player_data) is already
@@ -71,7 +71,7 @@ export class FPLScoringCacheService {
             const bootstrapData = await bootstrapResp.json();
             const currentGW = computeCurrentGameweek(bootstrapData.events);
             resolvedStart = currentGW + 1;
-            resolvedEnd = Math.min(currentGW + 12, 39);
+            resolvedEnd = Math.min(currentGW + PROJECTION_TOTAL_WEEKS, 39);
           }
         } catch {
           resolvedStart = resolvedStart ?? 25;
