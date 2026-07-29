@@ -268,13 +268,17 @@ export class TeamGoalsService {
     // instead of skipping ahead. A plain `events.find(is_current)?.id || <hardcoded number>`
     // is wrong here specifically because that hardcoded number is what gets used every time
     // pre-season, not just as a rare edge case.
-    const { computeCurrentGameweek } = await import("@shared/gameweek-utils");
+    const { computeCurrentGameweek, PROJECTION_TOTAL_WEEKS } = await import("@shared/gameweek-utils");
     const currentGameweek = computeCurrentGameweek(bootstrapData.events);
-    
+
     // Determine gameweek range — extend upper bound to 39 to include the TBC fixture (GW39)
+    // Falls back to PROJECTION_TOTAL_WEEKS (compile-time mirror of the admin-configurable
+    // projectionWindowSettings.totalWeeks in routes.ts) when no endGameweek is supplied —
+    // every current caller passes an explicit endGameweek already derived from that setting,
+    // so this is a defensive default, not the primary path.
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);
     const hasTBCFixtures = rawFixturesData.some((f: any) => f.event === null || f.event === undefined);
-    const calculatedEndGameweek = endGameweek || (hasTBCFixtures ? 39 : Math.min(currentGameweek + 6, 38));
+    const calculatedEndGameweek = endGameweek || (hasTBCFixtures ? 39 : Math.min(currentGameweek + PROJECTION_TOTAL_WEEKS, 38));
     
     // Use centralized team service for betting data
     const teamService = await createTeamService();
@@ -477,6 +481,10 @@ export class TeamGoalsService {
       // SEASON DATA ONLY: Uses verified data from current standings API
       // Formula: GF×0.25 + xGF×0.25 + GC×0.25 + xGC×0.25
       // 50% attack (50% GF + 50% xGF) + 50% defence (50% GC + 50% xGC). Weights sum to 1.0.
+      // Before the current season has any games, xG/xGC have no data to blend from (unlike
+      // GF/GC, which fall back to real last-season archives) — their weight is redistributed
+      // onto GF/GC instead of being spent on a flat, team-agnostic guess that would only
+      // dilute the real signal without differentiating any team from any other.
 
       // SEASON AVERAGES (from current standings - full season data)
       const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
@@ -484,10 +492,16 @@ export class TeamGoalsService {
       const opponentAvgGCSeason = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
       const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
 
-      // Calculate base expected goals using season data only
-      // GF: 0.50×0.50=0.25, xGF: 0.50×0.50=0.25, GC: 0.50×0.50=0.25, xGC: 0.50×0.50=0.25
-      let baseExpectedGoals = teamAvgGoalsSeason * 0.25 + teamAvgXGSeason * 0.25
-        + opponentAvgGCSeason * 0.25 + opponentAvgXGCSeason * 0.25;
+      // Attack half: GF+xGF normally split 0.25/0.25; if xGF is unavailable, GF takes the full 0.5.
+      const attackHalf = teamAvgXGSeason !== null
+        ? teamAvgGoalsSeason * 0.25 + teamAvgXGSeason * 0.25
+        : teamAvgGoalsSeason * 0.5;
+      // Defence half: same reweighting between GC and xGC.
+      const defenceHalf = opponentAvgXGCSeason !== null
+        ? opponentAvgGCSeason * 0.25 + opponentAvgXGCSeason * 0.25
+        : opponentAvgGCSeason * 0.5;
+
+      let baseExpectedGoals = attackHalf + defenceHalf;
       
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
@@ -1104,37 +1118,43 @@ export class TeamGoalsService {
   }
 
   /**
-   * Get team's average expected goals per game from current standings data
+   * Get team's average expected goals per game from current standings data.
+   * Returns null (not a flat league-average guess) when there's no current-season
+   * data yet — unlike goals-for/against, xG has no last-season archive to blend in,
+   * and a flat constant is identical for every team, so it would only dilute the
+   * real last-season signal in calculateFixtureGoals without differentiating anyone.
+   * calculateFixtureGoals reweights toward goals-for/against when this is null.
    */
-  private static async getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
+  private static async getTeamAverageXG(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number | null> {
     try {
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      
+
       if (teamData && teamData.played > 0) {
         return teamData.expectedGoalsFor / teamData.played;
       }
-      
-      return adminGoalSettings.defaultExpectedGoalsPerGame || MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame || 1.3;
+
+      return null;
     } catch (error) {
       console.error(`Failed to fetch team average xG for team ${teamId}:`, error);
       throw error;
     }
   }
-  
+
   /**
-   * Get opponent's average expected goals conceded per game from current standings data  
+   * Get opponent's average expected goals conceded per game from current standings data.
+   * Returns null when there's no current-season data yet — see getTeamAverageXG.
    */
-  private static async getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number> {
+  private static async getTeamAverageXGC(teamId: number, adminGoalSettings: any, MASTER_TEAM_DEFAULTS: any): Promise<number | null> {
     try {
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      
+
       if (teamData && teamData.played > 0) {
         return teamData.expectedGoalsAgainst / teamData.played;
       }
-      
-      return 1.5; // Premier League average fallback
+
+      return null;
     } catch (error) {
       console.error(`Failed to fetch team average xGC for team ${teamId}:`, error);
       throw error;
