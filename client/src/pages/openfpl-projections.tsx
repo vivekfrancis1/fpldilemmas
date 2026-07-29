@@ -588,7 +588,7 @@ export default function OpenFPLProjections() {
           </div>
 
           {/* Responsive Model Performance Metrics - Moved to Bottom */}
-          {modelMetrics && (
+          {!!modelMetrics && (
             <div className="fpl-card border-2 border-blue-200 shadow-lg">
               <div className="fpl-card-header">
                 <div className="fpl-card-title">

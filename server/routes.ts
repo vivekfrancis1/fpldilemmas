@@ -487,8 +487,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activityType = req.query.type as string;
       const offset = (page - 1) * limit;
 
-      let query = db.select().from(userActivityLogs).orderBy(desc(userActivityLogs.createdAt)).limit(limit).offset(offset);
-      let countQuery = db.select({ count: sql<number>`count(*)` }).from(userActivityLogs);
+      // Drizzle's query builder type narrows per chained method, so conditionally
+      // reassigning with an extra .where() below doesn't match the initial type —
+      // typed any to sidestep that (purely a type-checker quirk, same query either way).
+      let query: any = db.select().from(userActivityLogs).orderBy(desc(userActivityLogs.createdAt)).limit(limit).offset(offset);
+      let countQuery: any = db.select({ count: sql<number>`count(*)` }).from(userActivityLogs);
 
       if (activityType) {
         query = db.select().from(userActivityLogs).where(eq(userActivityLogs.activityType, activityType)).orderBy(desc(userActivityLogs.createdAt)).limit(limit).offset(offset);
@@ -7470,90 +7473,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== LEGACY GOAL PROJECTION ADMIN ENDPOINTS ====================
-
-  // Get admin settings
-  app.get("/api/admin/goal-projection-settings", async (req, res) => {
-    try {
-      // Add cache-busting headers to ensure immediate reflection of changes
-      res.set({
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      });
-      res.json(adminGoalSettings);
-    } catch (error) {
-      console.error("Error fetching admin settings:", error);
-      res.status(500).json({ error: "Failed to fetch admin settings" });
-    }
-  });
-
-  // Update admin settings
-  app.put("/api/admin/goal-projection-settings", async (req, res) => {
-    try {
-      const updatedSettings = {
-        ...adminGoalSettings,
-        ...req.body,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: "admin"
-      };
-      
-      adminGoalSettings = updatedSettings;
-      
-      // Clear cached data to force recalculation with new settings
-      // Note: In production this would clear database cache
-      console.log("Admin settings updated, projection model will use new parameters");
-      
-      res.json({ 
-        success: true, 
-        message: "Admin settings updated successfully",
-        settings: adminGoalSettings 
-      });
-    } catch (error) {
-      console.error("Error updating admin settings:", error);
-      res.status(500).json({ error: "Failed to update admin settings" });
-    }
-  });
-
-  // Reset admin settings to defaults
-  app.post("/api/admin/goal-projection-settings/reset", async (req, res) => {
-    try {
-      adminGoalSettings = {
-        globalTierMultiplier: 1.25,
-        // Venue Multipliers
-        homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
-        awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
-        // REMOVED: All attacking tier multipliers and team assignments
-        // Now using dynamic performance-based calculations only
-        // Defensive Tier Multipliers
-        eliteDefenseMultiplier: 0.60,
-        strongDefenseMultiplier: 0.75,
-        averageDefenseMultiplier: 1.00,
-        weakDefenseMultiplier: 1.35,
-        promotedDefenseMultiplier: 1.60,
-      
-        marketFloorMultiplier: 0.4,
-        marketCeilingMultiplier: 2.0,
-        absoluteMinGoals: 0.3,
-        absoluteMaxGoals: 4.2,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: "admin"
-      };
-      
-      res.json({ 
-        success: true, 
-        message: "Admin settings reset to defaults",
-        settings: adminGoalSettings 
-      });
-    } catch (error) {
-      console.error("Error resetting admin settings:", error);
-      res.status(500).json({ error: "Failed to reset admin settings" });
-    }
-  });
-
-
-
-
 
 
   // Team Goal Projections endpoint with caching
@@ -11703,7 +11622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create and store the in-flight promise — resolves to a pre-serialized JSON string
       // so all 200+ waiting callers share a single Buffer instead of each calling JSON.stringify
-      const computePromise: Promise<Buffer> = (async () => {
+      const computePromise: Promise<Buffer | undefined> = (async () => {
         const enhancedStandings = await computeCurrentStandings(venue);
         const serialized = Buffer.from(JSON.stringify(enhancedStandings));
         currentStandingsCache.set(cacheKey, { serialized, timestamp: Date.now() });
@@ -11711,16 +11630,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return serialized;
       })().finally(() => {
         currentStandingsInFlight.delete(cacheKey);
-      }).catch(() => {});
+      }).catch(() => undefined);
       currentStandingsInFlight.set(cacheKey, computePromise as any);
-      
-      try {
-        const serialized = await computePromise;
-        res.setHeader('Content-Type', 'application/json');
-        res.send(serialized);
-      } catch {
+
+      const serialized = await computePromise;
+      if (!serialized) {
         throw new Error('Standings computation failed');
       }
+      res.setHeader('Content-Type', 'application/json');
+      res.send(serialized);
     } catch (error) {
       console.error('Error generating enhanced current standings:', error);
       res.status(500).json({ error: 'Failed to generate enhanced current standings' });
