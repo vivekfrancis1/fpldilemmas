@@ -3932,7 +3932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           console.log("DEBUG: Could not fetch live data, using static points");
         }
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.log("DEBUG: Error fetching live data:", liveError);
       }
       }
@@ -10146,7 +10146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           throw new Error(`API response failed: goalShare=${goalShareResponse.status}, teamProjections=${teamProjectionsResponse.status}`);
         }
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE API FAILED: ${liveError.message}, attempting cache fallback...`);
         
         // FALLBACK TO CACHE
@@ -10159,16 +10159,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             throw new Error(`Cache also failed: ${cacheResponse.status}`);
           }
-        } catch (cacheError) {
+        } catch (cacheError: any) {
           console.error(`❌ CACHE FAILED: ${cacheError.message}`);
           throw new Error(`Both live API and cache failed. Live: ${liveError.message}, Cache: ${cacheError.message}`);
         }
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ COMPLETE FAILURE: Player goal projections unavailable:", error);
-      res.status(500).json({ 
-        error: "Failed to get player goal projections", 
+      res.status(500).json({
+        error: "Failed to get player goal projections",
         details: error.message || "Both live API and cache systems failed"
       });
     }
@@ -10422,7 +10422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           throw new Error(`API response failed: assistShare=${assistShareResponse.status}, teamProjections=${teamProjectionsResponse.status}`);
         }
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE API FAILED: ${liveError.message}, attempting cache fallback...`);
         
         // FALLBACK TO CACHE
@@ -10435,16 +10435,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             throw new Error(`Cache also failed: ${cacheResponse.status}`);
           }
-        } catch (cacheError) {
+        } catch (cacheError: any) {
           console.error(`❌ CACHE FAILED: ${cacheError.message}`);
           throw new Error(`Both live API and cache failed. Live: ${liveError.message}, Cache: ${cacheError.message}`);
         }
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ COMPLETE FAILURE: Player assist projections unavailable:", error);
-      res.status(500).json({ 
-        error: "Failed to get player assist projections", 
+      res.status(500).json({
+        error: "Failed to get player assist projections",
         details: error.message || "Both live API and cache systems failed"
       });
     }
@@ -11971,7 +11971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated minutes projections with 60-min threshold for ${playerMinutesProjections.length} players`);
         return playerMinutesProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player minutes projections: ${(liveError as Error).message}`);
         
         // FALLBACK TO CACHE
@@ -11985,7 +11985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             throw new Error("Cache endpoint failed");
           }
-        } catch (cacheError) {
+        } catch (cacheError: any) {
           console.error("❌ CACHE ALSO FAILED:", (cacheError as Error).message);
           throw new Error("Both live calculation and cache failed");
         }
@@ -12185,7 +12185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated simplified clean sheet projections for ${playerCleanSheetProjections.length} players for GW${startGameweek}-${endGameweek}`);
         return playerCleanSheetProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player clean sheet points: ${liveError.message}`);
         throw new Error("Live calculation failed and no cache available");
       }
@@ -12629,7 +12629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Helper function to process fixtures with projection data
   function processFixtureWithProjections(fixture: any, homeTeam: any, awayTeam: any, gameweek: number, currentGameweek: number) {
-    const matchOdds = {
+    const matchOdds: any = {
       id: fixture.id,
       gameweek: gameweek,
       kickoffTime: fixture.kickoff_time || `2025-08-${15 + gameweek}T15:00:00Z`,
@@ -13543,7 +13543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               availAdj[gwKey] = { original, adjusted: Math.round(rawVal * 100) / 100, reason };
             }
           }
-          const scaledTotal = Object.values(gwProj).reduce((s: number, v: number) => s + v, 0);
+          const scaledTotal = (Object.values(gwProj) as number[]).reduce((s: number, v: number) => s + v, 0);
           const out: any = {
             ...player,
             ...unscaledCompResult,
@@ -13741,16 +13741,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create lookup maps for each API data by playerId
       const playerDataMaps = {
-        goals: new Map(goalsData.map((p: any) => [p.playerId, p])),
-        assists: new Map(assistsData.map((p: any) => [p.playerId, p])),
-        minutes: new Map(minutesData.map((p: any) => [p.playerId, p])),
-        cleansheet: new Map(cleansheetData.map((p: any) => [p.playerId, p])),
-        goalsConceded: new Map(goalsConcededData.map((p: any) => [p.playerId, p])),
-        yellowCards: new Map(yellowCardsData.map((p: any) => [p.playerId, p])),
-        redCards: new Map(redCardsData.map((p: any) => [p.playerId, p])),
-        bonusPoints: new Map(bonusPointsData.map((p: any) => [p.playerId, p])),
-        saves: new Map(savesData.map((p: any) => [p.playerId, p])),
-        defensiveContributions: new Map(defensiveContributionsData.map((p: any) => [p.playerId, p]))
+        goals: new Map<number, any>(goalsData.map((p: any) => [p.playerId, p])),
+        assists: new Map<number, any>(assistsData.map((p: any) => [p.playerId, p])),
+        minutes: new Map<number, any>(minutesData.map((p: any) => [p.playerId, p])),
+        cleansheet: new Map<number, any>(cleansheetData.map((p: any) => [p.playerId, p])),
+        goalsConceded: new Map<number, any>(goalsConcededData.map((p: any) => [p.playerId, p])),
+        yellowCards: new Map<number, any>(yellowCardsData.map((p: any) => [p.playerId, p])),
+        redCards: new Map<number, any>(redCardsData.map((p: any) => [p.playerId, p])),
+        bonusPoints: new Map<number, any>(bonusPointsData.map((p: any) => [p.playerId, p])),
+        saves: new Map<number, any>(savesData.map((p: any) => [p.playerId, p])),
+        defensiveContributions: new Map<number, any>(defensiveContributionsData.map((p: any) => [p.playerId, p]))
       };
 
       // Get all unique player IDs from all APIs
@@ -16480,7 +16480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: Average saves/game × AGR of opponent/1.35`);
         return savesProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player saves projections: ${(liveError as Error).message}`);
         
         // FALLBACK TO CACHE
@@ -16494,7 +16494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             throw new Error("Cache endpoint failed");
           }
-        } catch (cacheError) {
+        } catch (cacheError: any) {
           console.error("❌ CACHE ALSO FAILED:", (cacheError as Error).message);
           throw new Error("Both live calculation and cache failed");
         }
@@ -16747,7 +16747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated defensive contributions projections for ${defensiveProjections.length} players using current season FPL data`);
         return res.json(defensiveProjections);
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player defensive contributions projections: ${liveError.message}`);
         
         // FALLBACK TO CACHE (no specific cache endpoint available, so this will fail gracefully)
@@ -16914,7 +16914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
         return goalsConcededProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player goals conceded projections: ${liveError.message}`);
         const cacheResponse = await internalFetch("api/cached/player-goals-conceded-projections");
         if (cacheResponse.ok) return cacheResponse.json();
@@ -17069,7 +17069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
         return yellowCardProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player yellow cards projections: ${liveError.message}`);
         const cacheResponse = await internalFetch("api/cached/player-yellow-cards-projections");
         if (cacheResponse.ok) return cacheResponse.json();
@@ -17223,7 +17223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
         return redCardProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player red cards projections: ${liveError.message}`);
         const cacheResponse = await internalFetch("api/cached/player-red-cards-projections");
         if (cacheResponse.ok) return cacheResponse.json();
@@ -17402,7 +17402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ LIVE SUCCESS: Generated historical bonus-per-appearance projections for ${bonusPointsProjections.length} players`);
         return bonusPointsProjections;
 
-      } catch (liveError) {
+      } catch (liveError: any) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player bonus points projections: ${liveError.message}`);
         const cacheResponse = await internalFetch("api/cached/player-bonus-points-projections");
         if (cacheResponse.ok) return cacheResponse.json();
