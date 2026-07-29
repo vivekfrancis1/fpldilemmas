@@ -226,7 +226,7 @@ async function getArchivedPlayerGameweekHistory(
 }
 
 // Helper function for FPL API requests with retry logic
-const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
+const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -264,6 +264,10 @@ const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
       await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
     }
   }
+  // Unreachable with retries >= 1 (every path above either returns or throws on the last
+  // attempt) — this only guards the retries === 0 edge case, and gives fetchWithRetry a
+  // return type of Promise<Response> instead of Promise<Response | undefined>.
+  throw new Error(`FPL API ${url} failed: no attempts were made (retries=${retries})`);
 };
 
 async function fetchGWTransfersForManagers(
@@ -4116,10 +4120,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
+      const elementsByPlayerId = new Map<number, any>(bootstrapData.elements.map((p: any) => [p.id, p]));
       
       // Initialize team composition - convert array to array of player IDs with position info
-      let currentTeamComposition = teamData.picks.map((pick: any) => ({
+      let currentTeamComposition: { playerId: any; position: any; elementType: any }[] = teamData.picks.map((pick: any) => ({
         playerId: pick.element,
         position: pick.position,
         elementType: elementsByPlayerId.get(pick.element)?.element_type
@@ -4187,7 +4191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
-        const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
+        const projectionsByPlayerId = new Map<number, any>(projectionsData.map((p: any) => [p.playerId, p]));
         
         // Filter cached projections for just this single gameweek for threshold checking (instant!)
         // Keep all original data fields preserved
@@ -4203,7 +4207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
-        const singleGWProjectionsByPlayerId = new Map(singleGWProjectionsData.map((p: any) => [p.playerId, p]));
+        const singleGWProjectionsByPlayerId = new Map<number, any>(singleGWProjectionsData.map((p: any) => [p.playerId, p]));
         
         // Filter cached projections for the next 6 gameweeks (or remaining gameweeks if less than 6)
         const fourGWEnd = Math.min(targetGW + 5, planningEnd);
@@ -4224,7 +4228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
-        const fourGWProjectionsByPlayerId = new Map(fourGWProjectionsData.map((p: any) => [p.playerId, p]));
+        const fourGWProjectionsByPlayerId = new Map<number, any>(fourGWProjectionsData.map((p: any) => [p.playerId, p]));
         
         // Build current team IDs from the current composition
         const currentTeamIds = new Set(currentTeamComposition.map(p => p.playerId));
