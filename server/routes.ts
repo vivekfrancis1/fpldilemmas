@@ -8711,7 +8711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process next 12 gameweeks (extend to 39 to include TBC fixtures)
       const startGameweek = currentGameweek + 1;
       const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
-      console.log(`DEBUG: Team Assist Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
+      console.log(`DEBUG: Team Assist Projections - Limiting to next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Use TeamGoalsService directly (not HTTP call) as architect specified
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -11108,8 +11108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try { customTBCAssignments = JSON.parse(req.query.tbcAssignments as string); } catch {}
       }
 
-      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead, or tbcGameweek for TBC)
-      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, tbcGameweek);
+      // Accept endGameweek parameter from query, with bounds checking (up to totalWeeks gameweeks ahead, or tbcGameweek for TBC)
+      const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + projectionWindowSettings.totalWeeks, tbcGameweek);
       const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, tbcGameweek);
       // Allow tbcGameweek explicitly (handles GW39 which is outside the normal 1-38 fixture range); otherwise cap at maxAllowed
       const endGameweek = requestedEndGameweek >= tbcGameweek
@@ -12358,7 +12358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Call TeamGoalsService directly — has its own 30-min cache + in-flight dedup, no HTTP round-trip
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoalProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
-      console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
+      console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek}`);
       
       teams.forEach((team: any) => {
         const gameweekProjections: any = {};
@@ -12494,7 +12494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Debug info (season totals removed)
-      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next 12 gameweeks: GW${startGameweek}-${endGameweek})`);
+      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek})`);
       
       // Convert to array and sort by team ID since no season totals
       const finalProjections = Array.from(teamsGoalsAgainst.values())
@@ -17692,9 +17692,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
-      // Use query parameters or calculate from current gameweek (next 6 future gameweeks)
+      // Use query parameters or calculate from current gameweek (next projectionWindowSettings.totalWeeks future gameweeks)
       const startGameweek = parseInt(req.query.start as string) || (currentGameweek + 1);
-      const endGameweek = parseInt(req.query.end as string) || Math.min(startGameweek + 5, 38);
+      const endGameweek = parseInt(req.query.end as string) || Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, 38);
       
       console.log(`📅 Current gameweek: ${currentGameweek}, Target range: GW${startGameweek}-${endGameweek}`);
       
@@ -18257,13 +18257,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (finalStartGw > finalEndGw) {
         return res.status(400).json({ error: "Start gameweek must be <= end gameweek" });
       }
-      if (finalEndGw - finalStartGw + 1 > 12) {
-        return res.status(400).json({ error: "Gameweek range cannot exceed 6 gameweeks" });
+      if (finalEndGw - finalStartGw + 1 > projectionWindowSettings.totalWeeks) {
+        return res.status(400).json({ error: `Gameweek range cannot exceed ${projectionWindowSettings.totalWeeks} gameweeks` });
       }
       if (finalStartGw < nextGameweek) {
         return res.status(400).json({ error: `Start gameweek must be >= ${nextGameweek} (next gameweek)` });
       }
-      
+
       // Create cache key that includes gameweek range
       const cacheKey = `goal-share-${finalStartGw}-${finalEndGw}`;
       
@@ -18387,13 +18387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (finalStartGw > finalEndGw) {
         return res.status(400).json({ error: "Start gameweek must be <= end gameweek" });
       }
-      if (finalEndGw - finalStartGw + 1 > 12) {
-        return res.status(400).json({ error: "Gameweek range cannot exceed 6 gameweeks" });
+      if (finalEndGw - finalStartGw + 1 > projectionWindowSettings.totalWeeks) {
+        return res.status(400).json({ error: `Gameweek range cannot exceed ${projectionWindowSettings.totalWeeks} gameweeks` });
       }
       if (finalStartGw < nextGameweek) {
         return res.status(400).json({ error: `Start gameweek must be >= ${nextGameweek} (next gameweek)` });
       }
-      
+
       // Create cache key that includes gameweek range
       const cacheKey = `assist-share-${finalStartGw}-${finalEndGw}`;
       
