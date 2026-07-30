@@ -46,24 +46,11 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    section: "My FPL",
+    section: "Statistics",
     items: [
-      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
-      { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
-      { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
-      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
-      { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
-    ],
-  },
-  {
-    section: "Player Projections",
-    items: [
-      { path: "/player-total-points", label: "Points", icon: Target },
-      { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy },
-      { path: "/player-assist-projections", label: "Assists", icon: Zap },
-      { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield },
-      { path: "/player-saves", label: "Saves", icon: Shield },
-      { path: "/player-bonus-points", label: "Bonus Points", icon: Star, adminOnly: true },
+      { path: "/results-and-fixtures", label: "Match Results", icon: Trophy },
+      { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
+      { path: "/current-standings", label: "Team Stats", icon: Trophy },
     ],
   },
   {
@@ -77,11 +64,14 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    section: "Statistics",
+    section: "Player Projections",
     items: [
-      { path: "/results-and-fixtures", label: "Match Results", icon: Trophy },
-      { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
-      { path: "/current-standings", label: "Team Stats", icon: Trophy },
+      { path: "/player-total-points", label: "Points", icon: Target },
+      { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy },
+      { path: "/player-assist-projections", label: "Assists", icon: Zap },
+      { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield },
+      { path: "/player-saves", label: "Saves", icon: Shield },
+      { path: "/player-bonus-points", label: "Bonus Points", icon: Star, adminOnly: true },
     ],
   },
   {
@@ -99,6 +89,16 @@ const navSections: NavSection[] = [
     items: [
       { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown },
       { path: "/content-creators", label: "Content Creators", icon: Users },
+    ],
+  },
+  {
+    section: "My FPL",
+    items: [
+      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
+      { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
+      { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
+      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
+      { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
     ],
   },
 ];
