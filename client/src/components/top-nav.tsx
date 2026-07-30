@@ -48,9 +48,9 @@ const navSections: NavSection[] = [
   {
     section: "Statistics",
     items: [
-      { path: "/results-and-fixtures", label: "Match Results", icon: Trophy },
-      { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
       { path: "/current-standings", label: "Team Stats", icon: Trophy },
+      { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
+      { path: "/results-and-fixtures", label: "Match Stats", icon: Trophy },
     ],
   },
   {

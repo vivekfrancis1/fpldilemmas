@@ -1,4 +1,5 @@
-import { Search, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { Search, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { FilterState } from "@/lib/types";
 import { Team, ElementType } from "@shared/schema";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ export default function FiltersPanel({
   onEndGWChange,
   showGWFilters = false
 }: FiltersPanelProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters({ ...filters, [key]: value });
   };
@@ -91,12 +93,19 @@ export default function FiltersPanel({
 
   return (
     <div className="fpl-filters">
-      <div className="fpl-card-header">
-        <div className="fpl-card-title">
-          <Search className="h-5 w-5 text-blue-600" />
-          Smart Filters & Search
+      <div
+        className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="fpl-card-title flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <Search className="h-5 w-5 text-blue-600" />
+            Smart Filters & Search
+          </div>
+          {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
         </div>
       </div>
+      {isExpanded && (
       <div className="fpl-card-content">
         {/* Search Section */}
         <div className="mb-6">
@@ -256,6 +265,7 @@ export default function FiltersPanel({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

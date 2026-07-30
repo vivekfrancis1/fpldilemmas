@@ -6,9 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles, Clock } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
+
+interface PricePrediction {
+  player_id: number;
+  player_name: string;
+  team_name: string;
+  position: string;
+  current_price: number;
+  predicted_change: number;
+  confidence: number;
+  ownership_percentage: number;
+  reason: string;
+  probability: string;
+  estimated_time: string;
+}
+
+type PredictionSortField = 'confidence' | 'predicted_change' | 'ownership_percentage' | 'current_price';
 
 interface PriceChange {
   player_id: number;
@@ -32,17 +49,28 @@ type SortField = 'change_date' | 'player_name' | 'team_name' | 'position' | 'old
 type SortDirection = 'asc' | 'desc';
 
 export default function RecentPriceChanges() {
+  const [activeTab, setActiveTab] = useState<"predicted" | "recent">("predicted");
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [changeTypeFilter, setChangeTypeFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>('change_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [predictionSearchTerm, setPredictionSearchTerm] = useState("");
+  const [predictionPositionFilter, setPredictionPositionFilter] = useState("all");
+  const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('confidence');
+  const [predictionSortDirection, setPredictionSortDirection] = useState<SortDirection>('desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { data: predictionsData, isLoading: isLoadingPredictions, error: predictionsError } = useQuery<PricePrediction[]>({
+    queryKey: ["/api/price-predictions"],
+    enabled: activeTab === "predicted",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: priceChanges, isLoading: isLoadingChanges, error: changesError } = useQuery({
@@ -172,7 +200,38 @@ export default function RecentPriceChanges() {
       return 0;
     }) : [];
 
+  // Only players the algorithm actually expects to move — during pre-season (or any point
+  // with no gameweek transfer activity yet) every player's net transfers sit at 0, so nothing
+  // crosses a rise/fall threshold and this list is legitimately empty. That's shown to the user
+  // as an empty state below, not treated as an error.
+  const meaningfulPredictions = Array.isArray(predictionsData)
+    ? predictionsData.filter((p: PricePrediction) => p.predicted_change !== 0)
+    : [];
 
+  const filteredAndSortedPredictions = meaningfulPredictions
+    .filter((p: PricePrediction) => {
+      const matchesSearch = p.player_name.toLowerCase().includes(predictionSearchTerm.toLowerCase()) ||
+                           p.team_name.toLowerCase().includes(predictionSearchTerm.toLowerCase());
+      const matchesPosition = predictionPositionFilter === "all" || p.position === predictionPositionFilter;
+      return matchesSearch && matchesPosition;
+    })
+    .sort((a: PricePrediction, b: PricePrediction) => {
+      const aValue = a[predictionSortField] ?? 0;
+      const bValue = b[predictionSortField] ?? 0;
+      const result = predictionSortField === 'predicted_change'
+        ? Math.abs(aValue) - Math.abs(bValue)
+        : aValue - bValue;
+      return predictionSortDirection === 'asc' ? result : -result;
+    });
+
+  const handlePredictionSort = (field: PredictionSortField) => {
+    if (predictionSortField === field) {
+      setPredictionSortDirection(predictionSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPredictionSortField(field);
+      setPredictionSortDirection('desc');
+    }
+  };
 
   // Calculate today's price change statistics
   const getTodayStats = () => {
@@ -214,14 +273,216 @@ export default function RecentPriceChanges() {
       <div className="fpl-page-header">
         <div className="fpl-page-title">
           <Calendar className="h-8 w-8" />
-          <h1>Recent Price Changes</h1>
+          <h1>Price Changes</h1>
         </div>
         <p className="fpl-page-subtitle">
-          All season price changes ordered by recency and significance
+          Upcoming price change predictions and this season's confirmed price changes
         </p>
       </div>
 
       <div className="fpl-section-spacing">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "predicted" | "recent")}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="predicted" data-testid="tab-predicted-price-changes">
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Predicted Price Changes
+            </TabsTrigger>
+            <TabsTrigger value="recent" data-testid="tab-recent-price-changes">
+              <Calendar className="h-4 w-4 mr-1.5" />
+              Recent Price Changes
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="predicted">
+            {predictionsError && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Unable to load price predictions from FPL API. Please check your connection and try again.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!isLoadingPredictions && !predictionsError && meaningfulPredictions.length === 0 && (
+              <Alert className="mb-6" data-testid="alert-no-predictions">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  No predicted price changes right now — this shows up once real transfer activity for the {" "}
+                  {bootstrapData?.events?.find((e: any) => e.is_current) ? "current gameweek" : "2026/27 season"} builds up enough momentum to cross a rise or fall threshold. Check back closer to (or after) the season kicks off.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search players or teams..."
+                        value={predictionSearchTerm}
+                        onChange={(e) => setPredictionSearchTerm(e.target.value)}
+                        className="pl-9"
+                        data-testid="input-search-predictions"
+                      />
+                    </div>
+                  </div>
+                  <Select value={predictionPositionFilter} onValueChange={setPredictionPositionFilter}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-position-filter">
+                      <SelectValue placeholder="All Positions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Positions</SelectItem>
+                      {getPlayersByPosition().map(pos => (
+                        <SelectItem key={pos.id} value={pos.name}>
+                          {pos.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Predicted Price Changes
+                </CardTitle>
+                <CardDescription>
+                  Players projected to rise or fall based on transfer momentum vs. ownership-scaled thresholds
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPredictions ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center p-3 border rounded">
+                        <div className="h-4 w-4 bg-gray-200 rounded mr-3"></div>
+                        <div className="flex-1 space-y-1">
+                          <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                          <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                          <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredAndSortedPredictions.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/20">
+                          <th className="text-left p-2 sm:p-3 font-medium">Player</th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('current_price')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Price
+                              {predictionSortField === 'current_price' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('ownership_percentage')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Own%
+                              {predictionSortField === 'ownership_percentage' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('predicted_change')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Predicted
+                              {predictionSortField === 'predicted_change' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('confidence')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Confidence
+                              {predictionSortField === 'confidence' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="hidden md:table-cell text-left p-3 font-medium">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAndSortedPredictions.map((prediction: PricePrediction) => (
+                          <tr
+                            key={prediction.player_id}
+                            className="border-b hover:bg-muted/50 transition-colors"
+                            data-testid={`prediction-${prediction.player_id}`}
+                          >
+                            <td className="p-2 sm:p-3">
+                              <div className="flex items-center gap-1.5">
+                                {prediction.predicted_change > 0 ? (
+                                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
+                                ) : (
+                                  <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 shrink-0" />
+                                )}
+                                <div>
+                                  <p className="font-medium text-xs sm:text-sm leading-tight">{prediction.player_name}</p>
+                                  <p className="text-xs text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              {formatPrice(prediction.current_price)}
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              {prediction.ownership_percentage?.toFixed(1) || "0.0"}%
+                            </td>
+                            <td className="p-2 sm:p-3 text-right">
+                              <Badge variant={prediction.predicted_change > 0 ? "success" : "destructive"}>
+                                {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
+                              </Badge>
+                            </td>
+                            <td className="p-2 sm:p-3 text-right">
+                              <div className="text-sm font-medium">{prediction.confidence}%</div>
+                              <div className="text-xs text-muted-foreground">{prediction.probability}</div>
+                            </td>
+                            <td className="hidden md:table-cell p-3">
+                              <div className="text-xs text-muted-foreground max-w-xs">{prediction.reason}</div>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                <Clock className="h-3 w-3" />
+                                {prediction.estimated_time}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : !isLoadingPredictions && !predictionsError ? null : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No predicted price changes found matching your filters</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="recent">
         {/* Today's Statistics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 px-1">
           <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
@@ -347,10 +608,10 @@ export default function RecentPriceChanges() {
 
         {/* Info message for new databases */}
         {!isLoadingChanges && Array.isArray(priceChanges) && priceChanges.length === 0 && (
-          <Alert className="mb-6">
+          <Alert className="mb-6" data-testid="alert-no-recent-changes">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              No price changes recorded yet. Click "Refresh from FPL API" to initialize the database with season price changes.
+              No 2026/27 price changes recorded yet — this fills in once FPL starts moving player prices for the new season. Click "Refresh from FPL API" to check for the latest data.
             </AlertDescription>
           </Alert>
         )}
@@ -363,7 +624,7 @@ export default function RecentPriceChanges() {
               Recent Price Changes
             </CardTitle>
             <CardDescription>
-              All season price changes ordered by recency and significance
+              2026/27 season price changes ordered by recency and significance
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -557,6 +818,8 @@ export default function RecentPriceChanges() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

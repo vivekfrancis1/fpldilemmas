@@ -2387,6 +2387,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical fixture results for a completed season, sourced from the durable
+  // season_fixtures_archive table (real 2025/26 results) rather than FPL's live /api/fixtures/
+  // feed, which only ever reflects the current (2026/27) season. Team names/short names are
+  // embedded directly on each fixture from the archive (rather than requiring the client to
+  // join by ID against the current bootstrap teams list), since 3 of last season's clubs
+  // (Burnley, West Ham, Wolves) were relegated and no longer appear in the current bootstrap at
+  // all — only clubs still in the current top flight get a crest `code` resolved; the rest fall
+  // back to a generic icon client-side.
+  app.get("/api/fixtures-history", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || "2025/26";
+
+      const [archiveResult, bootstrapResponse] = await Promise.all([
+        pool.query(
+          `SELECT fixture_id, gameweek, team_h_name, team_h_short, team_a_name, team_a_short,
+                  team_h_score, team_a_score, kickoff_time, finished
+           FROM season_fixtures_archive
+           WHERE season = $1
+           ORDER BY gameweek ASC, kickoff_time ASC`,
+          [season]
+        ),
+        internalFetch("api/bootstrap-static"),
+      ]);
+
+      const codeByName = new Map<string, number>();
+      if (bootstrapResponse.ok) {
+        const bootstrap = await bootstrapResponse.json();
+        (bootstrap.teams || []).forEach((team: any) => {
+          codeByName.set(team.name, team.code);
+        });
+      }
+
+      const fixtures = archiveResult.rows.map((row: any) => ({
+        id: row.fixture_id,
+        event: row.gameweek,
+        team_h: row.fixture_id * 2, // synthetic, opaque — not used for bootstrap ID lookups
+        team_a: row.fixture_id * 2 + 1,
+        team_h_score: row.team_h_score,
+        team_a_score: row.team_a_score,
+        kickoff_time: row.kickoff_time,
+        finished: row.finished,
+        team_h_name: row.team_h_name,
+        team_h_short_name: row.team_h_short,
+        team_h_code: codeByName.get(row.team_h_name),
+        team_a_name: row.team_a_name,
+        team_a_short_name: row.team_a_short,
+        team_a_code: codeByName.get(row.team_a_name),
+      }));
+
+      res.json(fixtures);
+    } catch (error) {
+      console.error("Error fetching historical fixtures:", error);
+      res.status(500).json({
+        error: "Failed to fetch historical fixtures",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Live FPL entry data (for league analysis)
   app.get("/api/entry/:entryId", async (req, res) => {
     try {
@@ -5769,13 +5828,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Fetching recent price changes from database...");
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'unknown'}`);
       console.log(`🔧 Database URL exists: ${!!process.env.DATABASE_URL}`);
-      
+
       // Get all recent price changes from our tracking system
       const priceChanges = await storage.getPriceChanges(500); // Increased limit to show all changes
       console.log(`📊 Raw data from storage: ${priceChanges.length} records`);
-      
+
+      // price_changes has no season column — rows are just whatever the live price-scheduler
+      // detected at the time, so old (e.g. 2025/26) rows linger in the table across a season
+      // boundary. Filter to the current season only, using June 1 of CURRENT_SEASON's start
+      // year as a cutoff: safely after the previous season ends (~May) and safely before this
+      // season's pre-season price activity begins.
+      const currentSeasonStartYear = parseInt(CURRENT_SEASON.split('/')[0], 10);
+      const currentSeasonCutoff = `${currentSeasonStartYear}-06-01`;
+      const currentSeasonChanges = priceChanges.filter((change: any) => {
+        const changeDate = typeof change.changeDate === 'string' ? change.changeDate : new Date(change.changeDate).toISOString().split('T')[0];
+        return changeDate >= currentSeasonCutoff;
+      });
+
       // Format data for frontend compatibility
-      const formattedChanges = priceChanges.map((change: any) => ({
+      const formattedChanges = currentSeasonChanges.map((change: any) => ({
         player_id: change.playerId,
         player_name: change.playerName,
         team_name: change.teamName || "Unknown",
@@ -11700,27 +11771,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return standings.map((team, index) => ({ ...team, position: index + 1 }));
   }
 
+  // Same enhanced-standings shape as computeCurrentStandings, but for a completed historical
+  // season sourced entirely from durable archive tables instead of FPL's live (current-season
+  // only) endpoints:
+  //   - season_fixtures_archive: match results (core W/D/L/GF/GA/CS/Pts, respects `venue`)
+  //   - historical_player_stats: player -> {team, position} for that season (native player_id
+  //     scheme, same as gameweek_player_data — a direct ID join is safe here, unlike joining
+  //     across a season boundary)
+  //   - gameweek_player_data: per-gameweek player stats to sum into team totals (cards, saves,
+  //     own goals, penalties, xG, defensive contributions), and to cross-attribute each match's
+  //     defensive-contributions/xG to the OPPONENT via a shared fixture_id, mirroring
+  //     computeCurrentStandings' xGA/DCC logic exactly.
+  // Enhanced stats (everything except played/W/D/L/GF/GA/CS) accumulate across the full season
+  // regardless of `venue`, matching computeCurrentStandings' existing behavior.
+  async function computeHistoricalStandings(venue: string, season: string): Promise<any> {
+    const [playerRowsResult, gwRowsResult, fixturesResult, bootstrapResponse] = await Promise.all([
+      pool.query(
+        `SELECT player_id, team_name, element_type FROM historical_player_stats WHERE season = $1`,
+        [season]
+      ),
+      pool.query(
+        `SELECT player_id, fixture_id, yellow_cards, red_cards, saves, own_goals,
+                penalties_saved, penalties_missed, expected_goals,
+                clearances_blocks_interceptions, tackles, recoveries
+         FROM gameweek_player_data WHERE season = $1`,
+        [season]
+      ),
+      pool.query(
+        `SELECT fixture_id, team_h_name, team_a_name, team_h_short, team_a_short,
+                team_h_score, team_a_score, finished
+         FROM season_fixtures_archive WHERE season = $1`,
+        [season]
+      ),
+      internalFetch("api/bootstrap-static"),
+    ]);
+
+    const playerMap = new Map<number, { teamName: string; elementType: number }>();
+    playerRowsResult.rows.forEach((row: any) => {
+      playerMap.set(row.player_id, { teamName: row.team_name, elementType: row.element_type });
+    });
+
+    const shortNameByTeamName = new Map<string, string>();
+    const teamTotals = new Map<string, any>();
+    const ensureTeam = (name: string) => {
+      if (!teamTotals.has(name)) {
+        teamTotals.set(name, {
+          name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0,
+          cleanSheets: 0, yellowCards: 0, redCards: 0, saves: 0, ownGoals: 0,
+          penaltiesSaved: 0, penaltiesMissed: 0, expectedGoalsFor: 0, expectedGoalsAgainst: 0,
+          tackles: 0, defensiveActions: 0, defensiveContributions: 0, defensiveContributionsConceded: 0,
+        });
+      }
+      return teamTotals.get(name);
+    };
+    fixturesResult.rows.forEach((row: any) => {
+      ensureTeam(row.team_h_name);
+      ensureTeam(row.team_a_name);
+      shortNameByTeamName.set(row.team_h_name, row.team_h_short);
+      shortNameByTeamName.set(row.team_a_name, row.team_a_short);
+    });
+
+    // Position-weighted DC, identical formula to computeCurrentStandings (GKP excluded).
+    const computeDC = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
+      if (elementType === 1) return 0;
+      if (elementType === 2) return cbi + tackles;
+      return cbi + tackles + recoveries;
+    };
+
+    const perFixtureDC = new Map<number, Map<string, number>>();
+    const perFixtureXGF = new Map<number, Map<string, number>>();
+
+    gwRowsResult.rows.forEach((row: any) => {
+      const player = playerMap.get(row.player_id);
+      if (!player) return;
+      const team = teamTotals.get(player.teamName);
+      if (!team) return;
+
+      team.yellowCards += row.yellow_cards || 0;
+      team.redCards += row.red_cards || 0;
+      team.saves += row.saves || 0;
+      team.ownGoals += row.own_goals || 0;
+      team.penaltiesSaved += row.penalties_saved || 0;
+      team.penaltiesMissed += row.penalties_missed || 0;
+
+      const xg = parseFloat(row.expected_goals) || 0;
+      team.expectedGoalsFor += xg;
+
+      const cbi = row.clearances_blocks_interceptions || 0;
+      const tackles = row.tackles || 0;
+      const recoveries = row.recoveries || 0;
+      const dc = computeDC(player.elementType, cbi, tackles, recoveries);
+      team.defensiveContributions += dc;
+      team.tackles += tackles;
+      team.defensiveActions += cbi + tackles + recoveries;
+
+      if (row.fixture_id != null) {
+        if (!perFixtureDC.has(row.fixture_id)) perFixtureDC.set(row.fixture_id, new Map());
+        if (!perFixtureXGF.has(row.fixture_id)) perFixtureXGF.set(row.fixture_id, new Map());
+        const dcMap = perFixtureDC.get(row.fixture_id)!;
+        const xgMap = perFixtureXGF.get(row.fixture_id)!;
+        dcMap.set(player.teamName, (dcMap.get(player.teamName) || 0) + dc);
+        xgMap.set(player.teamName, (xgMap.get(player.teamName) || 0) + xg);
+      }
+    });
+
+    // Cross-attribute each fixture's DC/xG to the opponent, via the shared fixture_id — avoids
+    // needing to resolve gameweek_player_data's `opponent_team` ID scheme at all.
+    const crossAttribute = (perFixture: Map<number, Map<string, number>>, targetField: 'defensiveContributionsConceded' | 'expectedGoalsAgainst') => {
+      perFixture.forEach(teamMap => {
+        const entries = Array.from(teamMap.entries());
+        if (entries.length !== 2) return;
+        const [[nameA, valueA], [nameB, valueB]] = entries;
+        const teamA = teamTotals.get(nameA);
+        const teamB = teamTotals.get(nameB);
+        if (teamA) teamA[targetField] += valueB;
+        if (teamB) teamB[targetField] += valueA;
+      });
+    };
+    crossAttribute(perFixtureDC, 'defensiveContributionsConceded');
+    crossAttribute(perFixtureXGF, 'expectedGoalsAgainst');
+
+    // Core W/D/L/GF/GA/CS/Pts — respects `venue`, same as computeCurrentStandings.
+    fixturesResult.rows.forEach((row: any) => {
+      if (!row.finished || row.team_h_score == null || row.team_a_score == null) return;
+      const homeTeam = teamTotals.get(row.team_h_name);
+      const awayTeam = teamTotals.get(row.team_a_name);
+      if (!homeTeam || !awayTeam) return;
+
+      const processHome = venue === 'all' || venue === 'home';
+      const processAway = venue === 'all' || venue === 'away';
+
+      if (processHome) {
+        homeTeam.played++;
+        homeTeam.goalsFor += row.team_h_score;
+        homeTeam.goalsAgainst += row.team_a_score;
+        if (row.team_a_score === 0) homeTeam.cleanSheets++;
+      }
+      if (processAway) {
+        awayTeam.played++;
+        awayTeam.goalsFor += row.team_a_score;
+        awayTeam.goalsAgainst += row.team_h_score;
+        if (row.team_h_score === 0) awayTeam.cleanSheets++;
+      }
+
+      if (row.team_h_score > row.team_a_score) {
+        if (processHome) { homeTeam.wins++; homeTeam.points += 3; }
+        if (processAway) { awayTeam.losses++; }
+      } else if (row.team_a_score > row.team_h_score) {
+        if (processHome) { homeTeam.losses++; }
+        if (processAway) { awayTeam.wins++; awayTeam.points += 3; }
+      } else {
+        if (processHome) { homeTeam.draws++; homeTeam.points += 1; }
+        if (processAway) { awayTeam.draws++; awayTeam.points += 1; }
+      }
+    });
+
+    // Resolve each archived team name to a current-bootstrap ID/crest where the club is still
+    // in the top flight; relegated clubs (no longer in the current bootstrap) get a stable
+    // synthetic negative ID so the client can still key/render their row — just without a crest.
+    let bootstrapTeamsByName = new Map<string, any>();
+    if (bootstrapResponse.ok) {
+      const bootstrap = await bootstrapResponse.json();
+      (bootstrap.teams || []).forEach((team: any) => bootstrapTeamsByName.set(team.name, team));
+    }
+
+    const standings = Array.from(teamTotals.values()).map((team: any, index: number) => {
+      const bootstrapTeam = bootstrapTeamsByName.get(team.name);
+      return {
+        ...team,
+        id: bootstrapTeam?.id ?? -(index + 1),
+        shortName: bootstrapTeam?.short_name ?? shortNameByTeamName.get(team.name) ?? team.name,
+        goalDifference: team.goalsFor - team.goalsAgainst,
+        adjustedGoalRate: team.played > 0 ? (0.5 * (team.goalsFor + team.expectedGoalsFor)) / team.played : 0,
+        adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0,
+      };
+    });
+
+    standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+      return b.goalsFor - a.goalsFor;
+    });
+
+    return standings.map((team, index) => ({ ...team, position: index + 1 }));
+  }
+
   // Current Standings endpoint - calculates actual Premier League table with detailed statistics from completed matches only
-  app.get("/api/current-standings", 
+  app.get("/api/current-standings",
     requireReadiness(['bootstrap-data'], 'current-standings'),
     async (req, res) => {
     try {
       const venue = (req.query.venue as string) || 'all';
-      
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const isHistoricalSeason = season !== CURRENT_SEASON;
+
       if (!['all', 'home', 'away'].includes(venue)) {
         return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
       }
-      
-      const cacheKey = `detailed_standings_${venue}`;
+
+      const cacheKey = `detailed_standings_${season}_${venue}`;
       const now = Date.now();
-      
+
       // Check cache first (with venue-specific cache key) — serves pre-serialized JSON
       const cached = currentStandingsCache.get(cacheKey);
       if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
         res.setHeader('Content-Type', 'application/json');
         return res.send(cached.serialized);
       }
-      
+
       // Check if there's already an in-flight request for this venue
       // All concurrent callers share the same Promise and receive the pre-serialized result
       const inFlight = currentStandingsInFlight.get(cacheKey);
@@ -11733,13 +11991,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // In-flight request failed, fall through to compute
         }
       }
-      
-      console.log(`DEBUG: Computing current standings (venue: ${venue})`);
-      
+
+      console.log(`DEBUG: Computing current standings (season: ${season}, venue: ${venue})`);
+
       // Create and store the in-flight promise — resolves to a pre-serialized JSON string
       // so all 200+ waiting callers share a single Buffer instead of each calling JSON.stringify
       const computePromise: Promise<Buffer | undefined> = (async () => {
-        const enhancedStandings = await computeCurrentStandings(venue);
+        const enhancedStandings = isHistoricalSeason
+          ? await computeHistoricalStandings(venue, season)
+          : await computeCurrentStandings(venue);
         const serialized = Buffer.from(JSON.stringify(enhancedStandings));
         currentStandingsCache.set(cacheKey, { serialized, timestamp: Date.now() });
         console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams`);

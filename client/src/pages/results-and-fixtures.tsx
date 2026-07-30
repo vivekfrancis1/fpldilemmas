@@ -1,28 +1,39 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
-import { BootstrapData } from "@shared/schema";
+import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface Fixture {
   id: number;
   event: number;
   team_h: number;
   team_a: number;
-  team_h_difficulty: number;
-  team_a_difficulty: number;
+  team_h_difficulty?: number;
+  team_a_difficulty?: number;
   kickoff_time: string;
   finished: boolean;
   team_h_score?: number;
   team_a_score?: number;
   minutes?: number;
   started?: boolean;
+  // Only present on historical (season_fixtures_archive-backed) fixtures — embedded directly
+  // since relegated clubs from that season no longer appear in the current bootstrap teams
+  // list, so an ID-based join against it can't resolve their name/short name.
+  team_h_name?: string;
+  team_h_short_name?: string;
+  team_h_code?: number;
+  team_a_name?: string;
+  team_a_short_name?: string;
+  team_a_code?: number;
 }
 
 interface Team {
@@ -31,9 +42,15 @@ interface Team {
   short_name: string;
 }
 
+// Common shape processedFixtures normalizes both live (bootstrap-joined) and historical
+// (archive-embedded) team data into, so the rest of the component can render either uniformly.
+type TeamRef = { id: number; name?: string; short_name?: string; code?: number };
+
 
 export default function ResultsAndFixtures() {
   const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(5);
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
+  const isHistorical = selectedSeason !== CURRENT_SEASON;
   const [, navigate] = useLocation();
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -41,10 +58,39 @@ export default function ResultsAndFixtures() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: fixturesData, isLoading: isLoadingFixtures } = useQuery<Fixture[]>({
+  const { data: liveFixturesData, isLoading: isLoadingFixtures } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: historicalFixturesData, isLoading: isLoadingHistorical } = useQuery<Fixture[]>({
+    queryKey: ["/api/fixtures-history", selectedSeason],
+    queryFn: () => fetch(`/api/fixtures-history?season=${encodeURIComponent(selectedSeason)}`).then(r => r.json()),
+    staleTime: 10 * 60 * 1000,
+    enabled: isHistorical,
+  });
+
+  const fixturesData = isHistorical ? historicalFixturesData : liveFixturesData;
+
+  // Current (2026/27) season has zero real fixtures until kickoff — default to the last
+  // completed season so the page isn't just empty. Only runs once, and only if the user
+  // hasn't already picked a season themselves.
+  const hasAutoDefaulted = useRef(false);
+  useEffect(() => {
+    if (hasAutoDefaulted.current) return;
+    if (!bootstrapData?.events) return;
+    hasAutoDefaulted.current = true;
+    if (computeCurrentGameweek(bootstrapData.events as any) === 0) {
+      setSelectedSeason(PREVIOUS_SEASON);
+    }
+  }, [bootstrapData]);
+
+  // Historical seasons have no single "current" gameweek to jump to — show the full season.
+  useEffect(() => {
+    if (isHistorical) {
+      setSelectedGameweek("all");
+    }
+  }, [isHistorical]);
 
   // Get available gameweeks
   const availableGameweeks = useMemo(() => {
@@ -80,19 +126,41 @@ export default function ResultsAndFixtures() {
 
   // Update selected gameweek to current gameweek when data loads
   useEffect(() => {
+    if (isHistorical) return;
     if (bootstrapData?.events && currentGameweek) {
       setSelectedGameweek(currentGameweek);
     }
-  }, [bootstrapData, currentGameweek]);
+  }, [bootstrapData, currentGameweek, isHistorical]);
 
-  // Process fixtures data
+  // Process fixtures data. Historical fixtures embed their own team name/short name/crest
+  // (see the Fixture interface comment) instead of being joined against the current bootstrap
+  // teams list, since relegated clubs no longer appear there at all.
   const processedFixtures = useMemo(() => {
-    if (!fixturesData || !bootstrapData?.teams) return [];
+    if (!fixturesData) return [];
+
+    if (isHistorical) {
+      return fixturesData.map(fixture => {
+        const homeTeam: TeamRef | undefined = { id: fixture.team_h, name: fixture.team_h_name, short_name: fixture.team_h_short_name, code: fixture.team_h_code };
+        const awayTeam: TeamRef | undefined = { id: fixture.team_a, name: fixture.team_a_name, short_name: fixture.team_a_short_name, code: fixture.team_a_code };
+        return {
+          ...fixture,
+          homeTeam,
+          awayTeam,
+          isResult: fixture.finished,
+          isUpcoming: false,
+          isLive: false,
+        };
+      });
+    }
+
+    if (!bootstrapData?.teams) return [];
 
     return fixturesData.map(fixture => {
-      const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
-      const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
-      
+      const homeTeamData = bootstrapData.teams.find(t => t.id === fixture.team_h);
+      const awayTeamData = bootstrapData.teams.find(t => t.id === fixture.team_a);
+      const homeTeam: TeamRef | undefined = homeTeamData && { id: homeTeamData.id, name: homeTeamData.name, short_name: homeTeamData.short_name, code: homeTeamData.code };
+      const awayTeam: TeamRef | undefined = awayTeamData && { id: awayTeamData.id, name: awayTeamData.name, short_name: awayTeamData.short_name, code: awayTeamData.code };
+
       return {
         ...fixture,
         homeTeam,
@@ -102,7 +170,7 @@ export default function ResultsAndFixtures() {
         isLive: fixture.started && !fixture.finished,
       };
     });
-  }, [fixturesData, bootstrapData]);
+  }, [fixturesData, bootstrapData, isHistorical]);
 
   // Filter fixtures based on selected gameweek
   const filteredFixtures = useMemo(() => {
@@ -161,6 +229,9 @@ export default function ResultsAndFixtures() {
   };
 
   const handleMatchClick = (fixture: any) => {
+    // Historical fixture IDs come from season_fixtures_archive, not FPL's live fixture IDs
+    // that /match-stats/:id expects — there's no per-match detail page for archived seasons.
+    if (isHistorical) return;
     if (!fixture.isResult && !fixture.isLive) return;
     navigate(`/match-stats/${fixture.id}`);
   };
@@ -194,13 +265,13 @@ export default function ResultsAndFixtures() {
     };
   }, [processedFixtures, currentGameweek]);
 
-  if (isLoadingBootstrap || isLoadingFixtures) {
+  if (isLoadingBootstrap || isLoadingFixtures || (isHistorical && isLoadingHistorical)) {
     return (
       <div className="fpl-page-container">
         <div className="fpl-page-header">
           <div className="fpl-page-title">
             <Calendar className="h-8 w-8" />
-            <h1>Results and Fixtures</h1>
+            <h1>Match Stats</h1>
           </div>
           <p className="fpl-page-subtitle">
             Complete Premier League schedule with results and upcoming fixtures
@@ -221,11 +292,15 @@ export default function ResultsAndFixtures() {
       <div className="fpl-page-header">
         <div className="fpl-page-title">
           <Calendar className="h-8 w-8" />
-          <h1>Results and Fixtures</h1>
+          <h1>Match Stats</h1>
+          <SeasonBadge season={selectedSeason} />
         </div>
         <p className="fpl-page-subtitle">
           Complete Premier League schedule with results and upcoming fixtures
         </p>
+        <div className="mt-2">
+          <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+        </div>
       </div>
 
       <div className="fpl-section-spacing">
@@ -255,7 +330,7 @@ export default function ResultsAndFixtures() {
                   <SelectItem value="all">All Gameweeks</SelectItem>
                   {availableGameweeks.map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>
-                      GW{gw} {gw === currentGameweek ? "(Current)" : ""}
+                      GW{gw} {!isHistorical && gw === currentGameweek ? "(Current)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -296,7 +371,7 @@ export default function ResultsAndFixtures() {
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">
                         Gameweek {gameweek}
-                        {gameweek === currentGameweek && (
+                        {!isHistorical && gameweek === currentGameweek && (
                           <Badge variant="outline" className="ml-2 text-blue-600">Current</Badge>
                         )}
                       </h3>
@@ -310,12 +385,12 @@ export default function ResultsAndFixtures() {
                         <div 
                           key={fixture.id} 
                           className={`p-3 bg-gray-50 rounded-lg transition-colors ${
-                            (fixture.isResult || fixture.isLive)
+                            (!isHistorical && (fixture.isResult || fixture.isLive))
                               ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
                               : 'hover:bg-gray-100'
                           }`}
-                          onClick={() => (fixture.isResult || fixture.isLive) && handleMatchClick(fixture)}
-                          title={(fixture.isResult || fixture.isLive) ? 'Click to view match statistics' : ''}
+                          onClick={() => (!isHistorical && (fixture.isResult || fixture.isLive)) && handleMatchClick(fixture)}
+                          title={(!isHistorical && (fixture.isResult || fixture.isLive)) ? 'Click to view match statistics' : ''}
                         >
                           {/* Mobile layout: stacked */}
                           <div className="flex flex-col space-y-2 md:hidden">
@@ -446,7 +521,7 @@ export default function ResultsAndFixtures() {
                               {getStatusBadge(fixture)}
                               
                               {/* Click indicator for completed and live matches */}
-                              {(fixture.isResult || fixture.isLive) && (
+                              {(!isHistorical && (fixture.isResult || fixture.isLive)) && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                                   Player Stats
                                 </Badge>
@@ -466,12 +541,12 @@ export default function ResultsAndFixtures() {
                   <div 
                     key={fixture.id} 
                     className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
-                      (fixture.isResult || fixture.isLive)
+                      (!isHistorical && (fixture.isResult || fixture.isLive))
                         ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
                         : 'hover:shadow-sm'
                     }`}
-                    onClick={() => (fixture.isResult || fixture.isLive) && handleMatchClick(fixture)}
-                    title={(fixture.isResult || fixture.isLive) ? 'Click to view match statistics' : ''}
+                    onClick={() => (!isHistorical && (fixture.isResult || fixture.isLive)) && handleMatchClick(fixture)}
+                    title={(!isHistorical && (fixture.isResult || fixture.isLive)) ? 'Click to view match statistics' : ''}
                   >
                     {/* Mobile layout: stacked */}
                     <div className="flex flex-col space-y-2 md:hidden">
@@ -604,7 +679,7 @@ export default function ResultsAndFixtures() {
                         {getStatusBadge(fixture)}
                         
                         {/* Click indicator for completed and live matches */}
-                        {(fixture.isResult || fixture.isLive) && (
+                        {(!isHistorical && (fixture.isResult || fixture.isLive)) && (
                           <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                             Player Stats
                           </Badge>

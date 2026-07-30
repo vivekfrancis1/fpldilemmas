@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown, Info } from "lucide-react";
-import { BootstrapData } from "@shared/schema";
+import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { SeasonBadge } from "@/components/season-badge";
 
 interface CurrentTeamStanding {
   id: number;
@@ -60,29 +63,43 @@ export default function CurrentStandings() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [venue, setVenue] = useState<'all' | 'home' | 'away'>('all');
   const [statsView, setStatsView] = useState<'totals' | 'per-game'>('totals');
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const queryClient = useQueryClient();
-
-  const { data: standingsData, isLoading, error } = useQuery<CurrentTeamStanding[]>({
-    queryKey: ["/api/current-standings", venue],
-    queryFn: async () => {
-      const response = await fetch(`/api/current-standings?venue=${venue}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch current standings');
-      }
-      const data = await response.json();
-      
-      // Return raw data, AGR and AGAR will be calculated based on statsView
-      return data;
-    },
-  });
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Current (2026/27) season has zero completed matches until kickoff — default to the last
+  // completed season so the page isn't just an empty table. Only runs once, and only if the
+  // user hasn't already picked a season themselves.
+  const hasAutoDefaulted = useRef(false);
+  useEffect(() => {
+    if (hasAutoDefaulted.current) return;
+    if (!bootstrapData?.events) return;
+    hasAutoDefaulted.current = true;
+    if (computeCurrentGameweek(bootstrapData.events as any) === 0) {
+      setSelectedSeason(PREVIOUS_SEASON);
+    }
+  }, [bootstrapData]);
+
+  const { data: standingsData, isLoading, error } = useQuery<CurrentTeamStanding[]>({
+    queryKey: ["/api/current-standings", venue, selectedSeason],
+    queryFn: async () => {
+      const response = await fetch(`/api/current-standings?venue=${venue}&season=${encodeURIComponent(selectedSeason)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch current standings');
+      }
+      const data = await response.json();
+
+      // Return raw data, AGR and AGAR will be calculated based on statsView
+      return data;
+    },
+  });
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["/api/current-standings", venue] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/current-standings", venue, selectedSeason] });
     setIsRefreshing(false);
   };
 
@@ -293,10 +310,14 @@ export default function CurrentStandings() {
           <div className="fpl-page-title">
             <Trophy className="h-8 w-8" />
             <h1>Team Statistics</h1>
+            <SeasonBadge season={selectedSeason} />
           </div>
           <p className="fpl-page-subtitle">
             Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
+          <div className="mt-2">
+            <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+          </div>
         </div>
       </div>
 
@@ -321,7 +342,7 @@ export default function CurrentStandings() {
                 <div className="flex items-center gap-3">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                   <span className="text-sm font-semibold text-gray-700">
-                    Updated: After Each Gameweek
+                    {selectedSeason === CURRENT_SEASON ? "Updated: After Each Gameweek" : "Final Season Standings"}
                   </span>
                 </div>
               </div>
