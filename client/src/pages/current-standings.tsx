@@ -315,9 +315,6 @@ export default function CurrentStandings() {
           <p className="fpl-page-subtitle">
             Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
-          <div className="mt-2">
-            <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
-          </div>
         </div>
       </div>
 
@@ -354,6 +351,9 @@ export default function CurrentStandings() {
         <Card className="mb-6 shadow-md border-0 bg-white">
           <CardContent className="p-4">
             <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-3">
+                <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+              </div>
               <div className="flex items-center gap-3">
                 <label className="text-sm font-semibold text-gray-700">Filter by Venue:</label>
                 <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
