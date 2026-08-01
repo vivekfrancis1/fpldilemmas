@@ -655,7 +655,7 @@ export default function PlayerDefensiveContributions() {
     );
   }
 
-  if (isLoading || displayData.length === 0) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
         <Card className="w-full max-w-sm shadow-lg">
@@ -667,12 +667,40 @@ export default function PlayerDefensiveContributions() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 text-sm">
-              {viewMode === "future" 
+              {viewMode === "future"
                 ? "Calculating defensive contribution projections for all players across the next 12 gameweeks..."
                 : "Loading historical defensive contribution data..."}
             </p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // A genuinely empty result (not a loading state) — e.g. selecting the 2026-27 "past" view
+  // before that season has any finished gameweeks. Was previously indistinguishable from the
+  // loading spinner above, which made the season selector look broken/unresponsive.
+  if (displayData.length === 0) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <div className="min-h-[50vh] flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-fpl-purple/10">
+                <Shield className="h-6 w-6 text-fpl-purple" />
+              </div>
+              <CardTitle className="text-lg">No Data Yet</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-sm text-gray-600">
+                {viewMode === "past"
+                  ? `No defensive contribution history is available for ${historySeason ?? "this season"} yet.`
+                  : "No defensive contribution projections are available right now."}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
