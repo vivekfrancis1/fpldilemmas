@@ -89,9 +89,10 @@ export default function PlayerStats() {
     return computeCurrentGameweek((bootstrapData?.events || []) as any);
   }, [bootstrapData?.events]);
 
-  // Default to the most recent season that actually has data. The "current" season
-  // (bootstrap-static) has zero games until kickoff, so showing it by default would
-  // just be an empty table — fall back to the latest historical season until then.
+  // Default to "Blended" until the first gameweek of the current season actually kicks off.
+  // The "current" season (bootstrap-static) has zero games until then, so showing it by
+  // default would just be an empty table — Blended gives real 2025/26 stats plus live
+  // 2026/27 price/ownership, which is the most useful default for a pre-season view.
   // Only runs once, and only if the user hasn't already picked a season themselves.
   const hasAutoDefaulted = useRef(false);
   useEffect(() => {
@@ -99,8 +100,7 @@ export default function PlayerStats() {
     if (!bootstrapData || !seasons || seasons.length === 0) return;
     hasAutoDefaulted.current = true;
     if (currentGameweek === 0) {
-      const latestSeason = [...seasons].sort((a, b) => b.localeCompare(a))[0];
-      if (latestSeason) setSelectedSeason(latestSeason);
+      setSelectedSeason("blended");
     }
   }, [bootstrapData, seasons, currentGameweek]);
 
