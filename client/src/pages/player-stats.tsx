@@ -226,20 +226,10 @@ export default function PlayerStats() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="current">
-                <div className="flex items-center space-x-2">
-                  <span>2026-27 (Current)</span>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                    Live
-                  </Badge>
-                </div>
+                2026-27 (Current)
               </SelectItem>
               <SelectItem value="blended">
-                <div className="flex items-center space-x-2">
-                  <span>Blended (25/26 + 26/27)</span>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                    Blend
-                  </Badge>
-                </div>
+                Blended (25/26 + 26/27)
               </SelectItem>
               {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
                 <SelectItem key={season} value={season}>
