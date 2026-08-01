@@ -231,7 +231,9 @@ export default function PlayerDetail() {
     return [...lastSeasonData.history].sort((a, b) => b.round - a.round);
   }, [lastSeasonData]);
 
-  const seasonHistory = playerDetailData?.history_past || [];
+  const seasonHistory = useMemo(() => {
+    return [...(playerDetailData?.history_past || [])].sort((a, b) => b.season_name.localeCompare(a.season_name));
+  }, [playerDetailData]);
 
   const teamName = useMemo(() => {
     if (!player || !bootstrapData?.teams) return 'Unknown';
