@@ -37,6 +37,7 @@ const Top25TeamAnalysis = lazy(() => import("./pages/top25-team-analysis"));
 const ManagerTeam = lazy(() => import("./pages/manager-team"));
 const PlayerStats = lazy(() => import("./pages/player-stats"));
 const PlayerDetail = lazy(() => import("./pages/player-detail"));
+const TeamDetail = lazy(() => import("./pages/team-detail"));
 const ResultsAndFixtures = lazy(() => import("./pages/results-and-fixtures"));
 const MatchStats = lazy(() => import("./pages/match-stats"));
 const ProjectedGoalsCS = lazy(() => import("./pages/projected-goals-cs"));
@@ -105,6 +106,7 @@ function Router() {
         <Route path="/transfer-tracker" component={TransferTracker} />
         <Route path="/player-statistics" component={PlayerStats} />
         <Route path="/player/:id" component={PlayerDetail} />
+        <Route path="/team/:name" component={TeamDetail} />
 
         <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
         <Route path="/projected-standings" component={ProjectedStandings} />

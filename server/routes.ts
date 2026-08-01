@@ -1924,6 +1924,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team-level per-gameweek stat totals, for the Team Detail page's Gameweek Performance
+  // tab. Neither FPL's live API nor season_fixtures_archive carries this (only match
+  // results) — it's aggregated here from gameweek_player_data, which has no team_id column
+  // of its own, so each player's row is attributed to a team via historical_player_stats
+  // (2025/26, same native ID scheme) or the live bootstrap (current season, current-bootstrap
+  // ID scheme — gameweek_player_data uses that scheme for CURRENT_SEASON rows).
+  app.get("/api/team-gameweek-stats/:teamName", async (req, res) => {
+    try {
+      const teamName = decodeURIComponent(req.params.teamName);
+      const season = (req.query.season as string) || CURRENT_SEASON;
+
+      const playerIds: number[] = [];
+      const elementTypeByPlayerId = new Map<number, number>();
+
+      if (season === CURRENT_SEASON) {
+        const bootstrapResponse = await internalFetch("api/bootstrap-static");
+        const bootstrapData = await bootstrapResponse.json();
+        const team = (bootstrapData.teams || []).find((t: any) => t.name === teamName);
+        if (team) {
+          for (const el of bootstrapData.elements || []) {
+            if (el.team === team.id) {
+              playerIds.push(el.id);
+              elementTypeByPlayerId.set(el.id, el.element_type);
+            }
+          }
+        }
+      } else {
+        const statsRes = await pool.query(
+          `SELECT DISTINCT player_id, element_type FROM historical_player_stats WHERE season = $1 AND team_name = $2`,
+          [season, teamName]
+        );
+        for (const row of statsRes.rows) {
+          playerIds.push(row.player_id);
+          elementTypeByPlayerId.set(row.player_id, row.element_type);
+        }
+      }
+
+      if (playerIds.length === 0) {
+        return res.json({ gameweeks: [] });
+      }
+
+      const gwRes = await pool.query(
+        `SELECT gameweek, player_id, minutes, goals_scored, assists, yellow_cards, red_cards, saves,
+                own_goals, penalties_saved, penalties_missed, bonus, bps, starts,
+                clearances_blocks_interceptions, tackles, recoveries,
+                expected_goals, expected_assists, expected_goals_conceded
+         FROM gameweek_player_data
+         WHERE season = $1 AND player_id = ANY($2::int[])
+         ORDER BY gameweek ASC`,
+        [season, playerIds]
+      );
+
+      // Position-weighted DC, identical formula to computeCurrentStandings/computeHistoricalStandings.
+      const computeDC = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {
+        if (elementType === 1) return 0;
+        if (elementType === 2) return cbi + tackles;
+        return cbi + tackles + recoveries;
+      };
+
+      const byGw = new Map<number, any>();
+      for (const row of gwRes.rows) {
+        const gw = row.gameweek;
+        if (!byGw.has(gw)) {
+          byGw.set(gw, {
+            gameweek: gw, minutes: 0, goals_scored: 0, assists: 0, yellow_cards: 0, red_cards: 0,
+            saves: 0, own_goals: 0, penalties_saved: 0, penalties_missed: 0, bonus: 0, bps: 0, starts: 0,
+            defensive_contribution: 0, tackles: 0, recoveries: 0, clearances_blocks_interceptions: 0,
+            expected_goals: 0, expected_assists: 0, expected_goals_conceded: 0,
+          });
+        }
+        const acc = byGw.get(gw);
+        acc.minutes += row.minutes || 0;
+        acc.goals_scored += row.goals_scored || 0;
+        acc.assists += row.assists || 0;
+        acc.yellow_cards += row.yellow_cards || 0;
+        acc.red_cards += row.red_cards || 0;
+        acc.saves += row.saves || 0;
+        acc.own_goals += row.own_goals || 0;
+        acc.penalties_saved += row.penalties_saved || 0;
+        acc.penalties_missed += row.penalties_missed || 0;
+        acc.bonus += row.bonus || 0;
+        acc.bps += row.bps || 0;
+        acc.starts += row.starts || 0;
+        const cbi = row.clearances_blocks_interceptions || 0;
+        const tackles = row.tackles || 0;
+        const recoveries = row.recoveries || 0;
+        const elementType = elementTypeByPlayerId.get(row.player_id) || 3;
+        acc.defensive_contribution += computeDC(elementType, cbi, tackles, recoveries);
+        acc.tackles += tackles;
+        acc.recoveries += recoveries;
+        acc.clearances_blocks_interceptions += cbi;
+        acc.expected_goals += parseFloat(row.expected_goals) || 0;
+        acc.expected_assists += parseFloat(row.expected_assists) || 0;
+        acc.expected_goals_conceded += parseFloat(row.expected_goals_conceded) || 0;
+      }
+
+      const gameweeks = Array.from(byGw.values()).sort((a, b) => a.gameweek - b.gameweek);
+      res.json({ gameweeks });
+    } catch (error) {
+      console.error(`Error fetching team gameweek stats for ${req.params.teamName}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch team gameweek stats",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Available seasons endpoint
   app.get("/api/seasons", async (req, res) => {
     try {

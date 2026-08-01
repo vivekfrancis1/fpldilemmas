@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown, Info } from "lucide-react";
 import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
@@ -58,6 +59,7 @@ type SortField = keyof CurrentTeamStanding;
 type SortDirection = 'asc' | 'desc';
 
 export default function CurrentStandings() {
+  const [, navigate] = useLocation();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortField, setSortField] = useState<SortField>('position');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -560,13 +562,16 @@ export default function CurrentStandings() {
                       </td>
                       
                       <td className="px-2 sm:px-4 py-4 sticky left-12 sm:left-16 bg-white hover:bg-gray-50 border-r min-w-[80px]">
-                        <div className="flex items-center gap-2">
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => navigate(`/team/${encodeURIComponent(team.name)}?from=${encodeURIComponent(window.location.pathname)}`)}
+                        >
                           {(() => {
                             const teamData = bootstrapData?.teams?.find((t: any) => t.short_name === team.shortName || t.id === team.id);
                             const teamCode = teamData?.code;
                             return teamCode ? (
-                              <img 
-                                src={teamCode === 14 
+                              <img
+                                src={teamCode === 14
                                   ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                   : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                 alt={`${team.name} badge`}
@@ -575,7 +580,7 @@ export default function CurrentStandings() {
                               />
                             ) : null;
                           })()}
-                          <div className="text-sm font-medium text-gray-900" data-testid={`team-name-${team.shortName}`}>
+                          <div className="text-sm font-medium text-gray-900 hover:text-purple-700 hover:underline" data-testid={`team-name-${team.shortName}`}>
                             {team.shortName}
                           </div>
                         </div>
