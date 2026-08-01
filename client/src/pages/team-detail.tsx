@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2, Trophy } from "lucide-react";
@@ -291,6 +291,18 @@ export default function TeamDetail() {
     return rows.sort((a, b) => b.gameweek - a.gameweek);
   }, [currentFixtures, bootstrapTeam, bootstrapData, currentTeamGwStats]);
 
+  // Default the Gameweek Performance tab to 2025/26 when the current season has no data yet
+  // (pre-season) — only runs once, and only if the user hasn't already picked a tab themselves.
+  const [activeGwTab, setActiveGwTab] = useState("current");
+  const hasAutoDefaultedTab = useRef(false);
+  const isCurrentGwLoading = isCurrentFixturesLoading || isCurrentTeamGwStatsLoading;
+  useEffect(() => {
+    if (hasAutoDefaultedTab.current) return;
+    if (isCurrentGwLoading) return;
+    hasAutoDefaultedTab.current = true;
+    if (currentGameweekRows.length === 0) setActiveGwTab("last");
+  }, [isCurrentGwLoading, currentGameweekRows]);
+
   // Merge fixture results with aggregated player stats for 2025/26
   const lastSeasonGameweekRows = useMemo((): GameweekRow[] => {
     if (!lastSeasonFixtures) return [];
@@ -575,7 +587,7 @@ export default function TeamDetail() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="current" className="w-full">
+      <Tabs value={activeGwTab} onValueChange={setActiveGwTab} className="w-full">
         <TabsList>
           <TabsTrigger value="current">{CURRENT_SEASON} (Current)</TabsTrigger>
           <TabsTrigger value="last">{LAST_SEASON} Season</TabsTrigger>

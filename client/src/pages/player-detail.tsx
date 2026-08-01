@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
@@ -247,6 +247,17 @@ export default function PlayerDetail() {
     if (!playerDetailData?.history) return [];
     return [...playerDetailData.history].sort((a, b) => b.round - a.round);
   }, [playerDetailData]);
+
+  // Default the Gameweek Performance tab to 2025/26 when the current season has no data yet
+  // (pre-season) — only runs once, and only if the user hasn't already picked a tab themselves.
+  const [activeGwTab, setActiveGwTab] = useState("current");
+  const hasAutoDefaultedTab = useRef(false);
+  useEffect(() => {
+    if (hasAutoDefaultedTab.current) return;
+    if (isLoading) return;
+    hasAutoDefaultedTab.current = true;
+    if (sortedHistory.length === 0) setActiveGwTab("2025/26");
+  }, [isLoading, sortedHistory]);
 
   const elementType = player?.element_type || 0;
 
@@ -744,7 +755,7 @@ export default function PlayerDetail() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="current" className="w-full">
+      <Tabs value={activeGwTab} onValueChange={setActiveGwTab} className="w-full">
         <TabsList>
           <TabsTrigger value="current">2026/27 (Current)</TabsTrigger>
           <TabsTrigger value="2025/26">2025/26 Season</TabsTrigger>

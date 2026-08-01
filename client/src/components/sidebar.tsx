@@ -54,8 +54,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Statistics",
       items: [
-        { path: "/current-standings", label: "Team Stats", icon: Trophy, description: "Enhanced table with clean sheets, cards, xG and venue splits", popular: false },
         { path: "/player-statistics", label: "Player Stats", icon: BarChart3, description: "Comprehensive player data", popular: false },
+        { path: "/current-standings", label: "Team Stats", icon: Trophy, description: "Enhanced table with clean sheets, cards, xG and venue splits", popular: false },
         { path: "/results-and-fixtures", label: "Match Stats", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
       ]
     },
