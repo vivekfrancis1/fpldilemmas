@@ -211,292 +211,122 @@ export default function BestFreehitTeam() {
     return 'Forward';
   };
 
-  // Calculate minimum bench cost for a given formation
-  const calculateMinBenchCost = (
-    formation: typeof VALID_FORMATIONS[0],
-    playersByPosition: Record<string, PlayerSnapshot[]>,
-    startingXI: PlayerSnapshot[] = []
-  ): number => {
-    const usedPlayerIds = new Set(startingXI.map(p => p.playerId));
-    const teamCounts: Record<string, number> = {};
-    startingXI.forEach(p => {
-      const teamName = p.teamName || '';
-      teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-    });
+  // Points per £m — used to rank players by value when filling/upgrading a squad
+  const playerValue = (player: PlayerSnapshot): number => player.totalProjectedPoints / Math.max(player.price, 0.1);
 
-    // Calculate what positions we need on the bench
-    const startingCounts = startingXI.length > 0 ? {
-      Goalkeeper: startingXI.filter(p => normalizePosition(p.position) === 'Goalkeeper').length,
-      Defender: startingXI.filter(p => normalizePosition(p.position) === 'Defender').length,
-      Midfielder: startingXI.filter(p => normalizePosition(p.position) === 'Midfielder').length,
-      Forward: startingXI.filter(p => normalizePosition(p.position) === 'Forward').length
-    } : {
-      Goalkeeper: 1, // Formation always has 1 GK
-      Defender: formation.def,
-      Midfielder: formation.mid,
-      Forward: formation.fwd
-    };
-
-    const benchNeeds = {
-      Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers - startingCounts.Goalkeeper,
-      Defender: SQUAD_CONSTRAINTS.defenders - startingCounts.Defender,
-      Midfielder: SQUAD_CONSTRAINTS.midfielders - startingCounts.Midfielder,
-      Forward: SQUAD_CONSTRAINTS.forwards - startingCounts.Forward
-    };
-
-    let minCost = 0;
-    const positions: Array<keyof typeof benchNeeds> = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
-
-    for (const position of positions) {
-      const needed = benchNeeds[position];
-      if (needed <= 0) continue;
-
-      // Find cheapest players for this position that respect team constraints
-      const available = playersByPosition[position]
-        .filter(p => {
-          if (usedPlayerIds.has(p.playerId)) return false;
-          const teamName = p.teamName || '';
-          const teamCount = teamCounts[teamName] || 0;
-          return teamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
-        })
-        .sort((a, b) => a.price - b.price);
-
-      // Add the cheapest players for this position
-      for (let i = 0; i < needed && i < available.length; i++) {
-        minCost += available[i].price;
-        usedPlayerIds.add(available[i].playerId);
-        const teamName = available[i].teamName || '';
-        teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-      }
-    }
-
-    return minCost;
-  };
-
-  // Build starting XI for a specific formation
-  const buildStartingXIForFormation = (
+  /**
+   * Build a full 15-player squad for a given formation. The starting XI is solved completely
+   * first — fill, then upgrade to convergence — before the bench is even considered.
+   *   Phase 1 (XI):    a) force in must-includes that fit an XI slot, capped at 82% of budget
+   *                    b) fill remaining XI slots by highest value (points per £m)
+   *                    c) upgrade pass: replace weakest non-included XI player with the
+   *                       highest-points affordable alternative, repeat until no upgrade fits
+   *   Phase 2 (Bench):  a) any must-include that didn't fit the XI goes here instead
+   *                    b) fill remaining bench slots by highest value, capped at 18% of budget
+   *                       (falls back to whatever's left of the total budget if the strict 18%
+   *                       pool can't be filled)
+   *                    c) upgrade pass, same cap rule
+   */
+  const buildSquadForFormation = (
     formation: typeof VALID_FORMATIONS[0],
     playersByPosition: Record<string, PlayerSnapshot[]>,
     includedPlayerIds: Set<number>,
     budget?: number
-  ): { players: PlayerSnapshot[], totalCost: number, totalPoints: number } | null => {
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], totalCost: number } | null => {
+    const hasBudget = budget !== undefined;
+    const benchBudgetCap = hasBudget ? budget! * 0.18 : Infinity;
+    const positions: Array<'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forward'> = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+    const totalNeeds = { Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers, Defender: SQUAD_CONSTRAINTS.defenders, Midfielder: SQUAD_CONSTRAINTS.midfielders, Forward: SQUAD_CONSTRAINTS.forwards };
+    const xiNeeds = { Goalkeeper: 1, Defender: formation.def, Midfielder: formation.mid, Forward: formation.fwd };
+    const benchNeeds = { Goalkeeper: totalNeeds.Goalkeeper - xiNeeds.Goalkeeper, Defender: totalNeeds.Defender - xiNeeds.Defender, Midfielder: totalNeeds.Midfielder - xiNeeds.Midfielder, Forward: totalNeeds.Forward - xiNeeds.Forward };
+    const teamCounts: Record<string, number> = {};
+    const canAddTeam = (player: PlayerSnapshot) => (teamCounts[player.teamName || ''] || 0) < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+    const usedIds = new Set<number>();
+
+    // Reserve a cushion of near-minimum-price players at each position for the bench BEFORE
+    // the XI is built (prevents XI's greedy fill from hoarding cheap "enabler" players)
+    const reservedForBench = new Set<number>();
+    let benchMinCostEstimate = 0;
+    for (const pos of positions) {
+      if (benchNeeds[pos] <= 0) continue;
+      const eligible = playersByPosition[pos].filter(p => !includedPlayerIds.has(p.playerId));
+      if (eligible.length === 0) continue;
+      const cheapestSorted = [...eligible].sort((a, b) => a.price - b.price);
+      const minPrice = cheapestSorted[0].price;
+      cheapestSorted.filter(p => p.price <= minPrice + 0.5).forEach(p => reservedForBench.add(p.playerId));
+      benchMinCostEstimate += cheapestSorted.slice(0, benchNeeds[pos]).reduce((sum, p) => sum + p.price, 0);
+    }
+    const xiBudgetCap = hasBudget ? Math.min(budget! * 0.82, budget! - benchMinCostEstimate) : Infinity;
+
+    const runUpgradePass = (group: PlayerSnapshot[], cap: number, groupCost: () => number, addCost: (delta: number) => void) => {
+      let upgraded = true;
+      while (upgraded) {
+        upgraded = false;
+        const swappable = group.filter(p => !includedPlayerIds.has(p.playerId)).sort((a, b) => playerValue(a) - playerValue(b));
+        for (const weakest of swappable) {
+          const pos = normalizePosition(weakest.position);
+          const candidates = playersByPosition[pos]
+            .filter(p => !usedIds.has(p.playerId))
+            .filter(p => p.totalProjectedPoints > weakest.totalProjectedPoints)
+            .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+          let swappedThisPlayer = false;
+          for (const candidate of candidates) {
+            const newCost = groupCost() - weakest.price + candidate.price;
+            if (newCost > cap) continue;
+            const weakestTeam = weakest.teamName || ''; const candidateTeam = candidate.teamName || '';
+            const newCandidateTeamCount = (teamCounts[candidateTeam] || 0) + (candidateTeam === weakestTeam ? -1 : 0) + 1;
+            if (newCandidateTeamCount > SQUAD_CONSTRAINTS.maxPlayersPerTeam) continue;
+            const groupIdx = group.findIndex(p => p.playerId === weakest.playerId);
+            group[groupIdx] = candidate;
+            usedIds.delete(weakest.playerId); usedIds.add(candidate.playerId);
+            teamCounts[weakestTeam] = (teamCounts[weakestTeam] || 0) - 1;
+            teamCounts[candidateTeam] = (teamCounts[candidateTeam] || 0) + 1;
+            addCost(candidate.price - weakest.price);
+            upgraded = true; swappedThisPlayer = true; break;
+          }
+          if (swappedThisPlayer) break;
+        }
+      }
+    };
+
+    // Phase 1: XI
     const startingXI: PlayerSnapshot[] = [];
-    const teamCounts: Record<string, number> = {};
-    let totalCost = 0;
-    let totalPoints = 0;
-
-    // Allocate 80% of total budget to starting XI, 20% for bench
-    const maxXIBudget = budget ? budget * 0.8 : undefined;
-    
-    if (maxXIBudget) {
-      console.log(`Building starting XI with max budget: £${maxXIBudget.toFixed(1)}m (80% of £${budget}m)`);
+    const xiFilled: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
+    let xiCost = 0;
+    const addToXI = (player: PlayerSnapshot) => { startingXI.push(player); usedIds.add(player.playerId); xiCost += player.price; teamCounts[player.teamName || ''] = (teamCounts[player.teamName || ''] || 0) + 1; xiFilled[normalizePosition(player.position)]++; };
+    // (a) force must-includes
+    for (const pos of positions) { for (const player of playersByPosition[pos]) { if (!includedPlayerIds.has(player.playerId) || usedIds.has(player.playerId)) continue; if (xiFilled[pos] >= xiNeeds[pos]) continue; if (!canAddTeam(player)) continue; addToXI(player); } }
+    // (b) fill by value within cap, excluding bench-reserved cushion
+    for (const pos of positions) {
+      const candidates = playersByPosition[pos].filter(p => !usedIds.has(p.playerId) && !reservedForBench.has(p.playerId)).sort((a, b) => playerValue(b) - playerValue(a));
+      for (const player of candidates) { if (xiFilled[pos] >= xiNeeds[pos]) break; if (!canAddTeam(player)) continue; if (xiCost + player.price > xiBudgetCap) continue; addToXI(player); }
+      if (xiFilled[pos] < xiNeeds[pos]) return null;
     }
+    // (c) upgrade pass
+    runUpgradePass(startingXI, xiBudgetCap, () => xiCost, (delta) => { xiCost += delta; });
 
-    // Helper to check if player can be added
-    const canAddPlayer = (player: PlayerSnapshot) => {
-      const teamName = player.teamName || '';
-      const teamCount = teamCounts[teamName] || 0;
-      if (teamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
-      if (maxXIBudget && totalCost + player.price > maxXIBudget) return false;
-      return true;
-    };
-
-    // Helper to add player
-    const addPlayer = (player: PlayerSnapshot) => {
-      startingXI.push(player);
-      const teamName = player.teamName || '';
-      teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-      totalCost += player.price;
-      totalPoints += getGameweekPoints(player, selectedGameweek);
-    };
-
-    // 1. Add 1 goalkeeper
-    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
-    if (includedGK.length > 0) {
-      addPlayer(includedGK[0]);
-    } else {
-      const bestGK = playersByPosition.Goalkeeper.find(canAddPlayer);
-      if (!bestGK) return null;
-      addPlayer(bestGK);
-    }
-
-    // 2. Add required defenders
-    let addedDef = 0;
-    for (const player of playersByPosition.Defender) {
-      if (addedDef >= formation.def) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedDef++;
-      }
-    }
-    for (const player of playersByPosition.Defender) {
-      if (addedDef >= formation.def) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedDef++;
-      }
-    }
-    if (addedDef < formation.def) return null;
-
-    // 3. Add required midfielders
-    let addedMid = 0;
-    for (const player of playersByPosition.Midfielder) {
-      if (addedMid >= formation.mid) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedMid++;
-      }
-    }
-    for (const player of playersByPosition.Midfielder) {
-      if (addedMid >= formation.mid) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedMid++;
-      }
-    }
-    if (addedMid < formation.mid) return null;
-
-    // 4. Add required forwards
-    let addedFwd = 0;
-    for (const player of playersByPosition.Forward) {
-      if (addedFwd >= formation.fwd) break;
-      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedFwd++;
-      }
-    }
-    for (const player of playersByPosition.Forward) {
-      if (addedFwd >= formation.fwd) break;
-      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
-        addPlayer(player);
-        addedFwd++;
-      }
-    }
-    if (addedFwd < formation.fwd) return null;
-
-    return { players: startingXI, totalCost, totalPoints };
-  };
-
-  // Build bench with remaining budget
-  // Starting XI uses 80% of budget, bench gets whatever remains
-  const buildBenchWithBudget = (
-    startingXI: PlayerSnapshot[],
-    playersByPosition: Record<string, PlayerSnapshot[]>,
-    includedPlayerIds: Set<number>,
-    totalBudget: number
-  ): PlayerSnapshot[] | null => {
+    // Phase 2: Bench
     const bench: PlayerSnapshot[] = [];
-    const usedPlayerIds = new Set(startingXI.map(p => p.playerId));
-    
-    // Clone team counts from starting XI to avoid mutation bugs
-    const teamCounts: Record<string, number> = {};
-    startingXI.forEach(p => {
-      const teamName = p.teamName || '';
-      teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-    });
-
-    const startingXICost = startingXI.reduce((sum, p) => sum + p.price, 0);
-    let remainingBudget = totalBudget - startingXICost;
+    const benchFilled: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
     let benchCost = 0;
-
-    console.log(`Building bench with remaining budget: £${remainingBudget.toFixed(1)}m (Total: £${totalBudget}m, XI: £${startingXICost.toFixed(1)}m)`);
-
-    // Helper to check if player can be added to bench
-    const canAddToBench = (player: PlayerSnapshot) => {
-      if (usedPlayerIds.has(player.playerId)) return false;
-      if (player.price > remainingBudget) return false;
-      const teamName = player.teamName || '';
-      const teamCount = teamCounts[teamName] || 0;
-      return teamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
-    };
-
-    // Helper to add player to bench (only called after canAddToBench confirms it's valid)
-    const addToBench = (player: PlayerSnapshot) => {
-      bench.push(player);
-      usedPlayerIds.add(player.playerId);
-      const teamName = player.teamName || '';
-      teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-      remainingBudget -= player.price;
-      benchCost += player.price;
-    };
-
-    // Calculate what we need for bench: total squad - starting XI
-    const startingCounts = {
-      Goalkeeper: startingXI.filter(p => normalizePosition(p.position) === 'Goalkeeper').length,
-      Defender: startingXI.filter(p => normalizePosition(p.position) === 'Defender').length,
-      Midfielder: startingXI.filter(p => normalizePosition(p.position) === 'Midfielder').length,
-      Forward: startingXI.filter(p => normalizePosition(p.position) === 'Forward').length
-    };
-
-    const benchNeeds = {
-      Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers - startingCounts.Goalkeeper,
-      Defender: SQUAD_CONSTRAINTS.defenders - startingCounts.Defender,
-      Midfielder: SQUAD_CONSTRAINTS.midfielders - startingCounts.Midfielder,
-      Forward: SQUAD_CONSTRAINTS.forwards - startingCounts.Forward
-    };
-
-    // Try to fill bench with best affordable players, fallback to cheapest if needed
-    const positions: Array<keyof typeof benchNeeds> = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
-    
-    for (const position of positions) {
-      const needed = benchNeeds[position];
-      if (needed <= 0) continue;
-
-      let addedForPosition = 0;
-
-      // First, try included players (re-check constraint before each add)
-      for (const player of playersByPosition[position]) {
-        if (addedForPosition >= needed) break;
-        if (includedPlayerIds.has(player.playerId) && canAddToBench(player)) {
-          addToBench(player);
-          addedForPosition++;
-        }
+    const addToBench = (player: PlayerSnapshot) => { bench.push(player); usedIds.add(player.playerId); benchCost += player.price; teamCounts[player.teamName || ''] = (teamCounts[player.teamName || ''] || 0) + 1; benchFilled[normalizePosition(player.position)]++; };
+    for (const pos of positions) { for (const player of playersByPosition[pos]) { if (!includedPlayerIds.has(player.playerId) || usedIds.has(player.playerId)) continue; if (benchFilled[pos] >= benchNeeds[pos]) continue; if (!canAddTeam(player)) continue; addToBench(player); } }
+    const fillBench = (cap: number) => {
+      for (const pos of positions) {
+        const pool = playersByPosition[pos].filter(p => !usedIds.has(p.playerId));
+        const reserved = pool.filter(p => reservedForBench.has(p.playerId)).sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+        const rest = pool.filter(p => !reservedForBench.has(p.playerId)).sort((a, b) => playerValue(b) - playerValue(a));
+        for (const player of [...reserved, ...rest]) { if (benchFilled[pos] >= benchNeeds[pos]) break; if (!canAddTeam(player)) continue; if (benchCost + player.price > cap) continue; addToBench(player); }
       }
+    };
+    let benchCap = benchBudgetCap;
+    fillBench(benchCap);
+    if (positions.some(pos => benchFilled[pos] < benchNeeds[pos]) && hasBudget) { benchCap = Math.max(benchBudgetCap, budget! - xiCost); fillBench(benchCap); }
+    for (const pos of positions) { if (benchFilled[pos] < benchNeeds[pos]) return null; }
+    runUpgradePass(bench, benchCap, () => benchCost, (delta) => { benchCost += delta; });
 
-      // Then fill with best affordable players (sorted by points, re-check constraint before each add)
-      if (addedForPosition < needed) {
-        const sortedByPoints = playersByPosition[position]
-          .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek));
-        
-        for (const player of sortedByPoints) {
-          if (addedForPosition >= needed) break;
-          if (canAddToBench(player)) {
-            addToBench(player);
-            addedForPosition++;
-          }
-        }
-      }
-
-      // If still can't afford, try cheapest players
-      if (addedForPosition < needed) {
-        const sortedByPrice = playersByPosition[position]
-          .sort((a, b) => a.price - b.price);
-        
-        for (const player of sortedByPrice) {
-          if (addedForPosition >= needed) break;
-          if (canAddToBench(player)) {
-            addToBench(player);
-            addedForPosition++;
-          }
-        }
-      }
-    }
-
-    // Check if we filled all bench spots
-    if (bench.length < 4) {
-      console.log(`❌ Could not fill all 4 bench spots (only filled ${bench.length})`);
-      return null;
-    }
-    
-    // Final validation: ensure total cost doesn't exceed budget
-    const totalCost = startingXICost + benchCost;
-    if (totalCost > totalBudget) {
-      console.log(`❌ Budget exceeded: £${totalCost.toFixed(1)}m > £${totalBudget}m (XI: £${startingXICost.toFixed(1)}m, Bench: £${benchCost.toFixed(1)}m)`);
-      return null;
-    }
-    
-    console.log(`✅ Bench built successfully: £${benchCost.toFixed(1)}m (remaining budget: £${remainingBudget.toFixed(1)}m)`);
-    return bench;
+    const squad = [...startingXI, ...bench];
+    return { squad, starting11: startingXI, totalCost: xiCost + benchCost };
   };
 
   // Enforce max 3 players per team constraint on a built squad
@@ -531,7 +361,7 @@ export default function BestFreehitTeam() {
           const bInXI = fixedStarting11.some(s => s.playerId === b.playerId);
           if (aInXI && !bInXI) return -1;
           if (!aInXI && bInXI) return 1;
-          return getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+          return b.totalProjectedPoints - a.totalProjectedPoints;
         });
 
       const toRemove = teamPlayers.slice(SQUAD_CONSTRAINTS.maxPlayersPerTeam);
@@ -555,7 +385,7 @@ export default function BestFreehitTeam() {
             const tc = currentTeamCounts[t] || 0;
             return tc < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
           })
-          .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))[0];
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints)[0];
 
         if (replacement) {
           fixedSquad = fixedSquad.map(p => p.playerId === removePlayer.playerId ? replacement : p);
@@ -569,280 +399,24 @@ export default function BestFreehitTeam() {
     return { squad: fixedSquad, starting11: fixedStarting11 };
   };
 
-  // Main optimization function with budget awareness
   const buildOptimalTeamWithBudget = (
     playersByPosition: Record<string, PlayerSnapshot[]>,
     includedPlayerIds: Set<number>,
     budget?: number
   ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], formation: string } | null => {
-    console.log(`Building optimal team with budget: ${budget ? `£${budget}m` : 'unlimited'}`);
-
-    // Try each formation, starting with those that maximize points
-    const formationAttempts: Array<{ formation: typeof VALID_FORMATIONS[0], xi: ReturnType<typeof buildStartingXIForFormation> }> = [];
-
+    let best: { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], formation: string, totalCost: number, xiPoints: number, includedInXI: number } | null = null;
     for (const formation of VALID_FORMATIONS) {
-      const xi = buildStartingXIForFormation(formation, playersByPosition, includedPlayerIds, budget);
-      if (xi) {
-        formationAttempts.push({ formation, xi });
+      const result = buildSquadForFormation(formation, playersByPosition, includedPlayerIds, budget);
+      if (!result) continue;
+      const xiPoints = result.starting11.reduce((sum, p) => sum + p.totalProjectedPoints, 0);
+      const includedInXI = result.starting11.filter(p => includedPlayerIds.has(p.playerId)).length;
+      if (!best || includedInXI > best.includedInXI || (includedInXI === best.includedInXI && xiPoints > best.xiPoints)) {
+        best = { squad: result.squad, starting11: result.starting11, formation: formation.name, totalCost: result.totalCost, xiPoints, includedInXI };
       }
     }
-
-    // Sort by total points (best first)
-    formationAttempts.sort((a, b) => (b.xi?.totalPoints || 0) - (a.xi?.totalPoints || 0));
-
-    console.log(`Found ${formationAttempts.length} valid starting XI candidates`);
-
-    // Try each XI candidate, attempting to build a valid bench
-    for (const { formation, xi } of formationAttempts) {
-      if (!xi) continue;
-
-      if (!budget) {
-        // Unlimited budget: just build best bench
-        const bench = buildBenchWithBudget(xi.players, playersByPosition, includedPlayerIds, 999);
-        if (bench) {
-          const rawSquad = [...xi.players, ...bench];
-          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
-          console.log(`✅ Built team with formation ${formation.name}, XI: £${xi.totalCost.toFixed(1)}m, Points: ${xi.totalPoints.toFixed(1)}`);
-          return { squad, starting11, formation: formation.name };
-        }
-      } else {
-        // Budget-constrained: try to build bench with remaining budget
-        const bench = buildBenchWithBudget(xi.players, playersByPosition, includedPlayerIds, budget);
-        if (bench) {
-          const rawSquad = [...xi.players, ...bench];
-          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
-          const totalCost = squad.reduce((sum, p) => sum + p.price, 0);
-          console.log(`✅ Built team with formation ${formation.name}, Total: £${totalCost.toFixed(1)}m, XI Points: ${xi.totalPoints.toFixed(1)}`);
-          return { squad, starting11, formation: formation.name };
-        } else {
-          console.log(`❌ Formation ${formation.name}: Could not build affordable bench (XI cost: £${xi.totalCost.toFixed(1)}m, budget: £${budget}m)`);
-        }
-      }
-    }
-
-    console.log('❌ Could not build a valid team within budget');
-    return null;
-  };
-
-  // Helper function to build unlimited budget team with inclusion/exclusion constraints
-  const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
-    console.log('UNLIMITED BUDGET MODE - Top players by GW' + selectedGameweek + ' points:');
-    console.log('Included players:', includedPlayers.map(p => p.playerName));
-    console.log('Excluded players:', excludedPlayers.map(p => p.playerName));
-
-    // Filter out excluded players from all positions
-    const excludedIds = new Set(excludedPlayers.map(p => p.playerId));
-    const filteredPlayersByPosition = {
-      Goalkeeper: playersByPosition.Goalkeeper.filter((p: any) => !excludedIds.has(p.playerId)),
-      Defender: playersByPosition.Defender.filter((p: any) => !excludedIds.has(p.playerId)),
-      Midfielder: playersByPosition.Midfielder.filter((p: any) => !excludedIds.has(p.playerId)),
-      Forward: playersByPosition.Forward.filter((p: any) => !excludedIds.has(p.playerId))
-    };
-
-    console.log('Top 2 GKP:', filteredPlayersByPosition.Goalkeeper.slice(0, 2).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 5 DEF:', filteredPlayersByPosition.Defender.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 5 MID:', filteredPlayersByPosition.Midfielder.slice(0, 5).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-    console.log('Top 3 FWD:', filteredPlayersByPosition.Forward.slice(0, 3).map((p: any) => `${p.playerName} (${getGameweekPoints(p, selectedGameweek).toFixed(2)} pts GW${selectedGameweek})`));
-
-    // Start with included players
-    let squad: PlayerSnapshot[] = [...includedPlayers];
-    const positionCounts = {
-      Goalkeeper: includedPlayers.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').length,
-      Defender: includedPlayers.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').length,
-      Midfielder: includedPlayers.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').length,
-      Forward: includedPlayers.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').length
-    };
-
-    // Helper function to count players by team in current squad
-    const getTeamCounts = () => {
-      const teamCounts: { [teamName: string]: number } = {};
-      squad.forEach(player => {
-        const teamName = player.teamName || '';
-        teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-      });
-      return teamCounts;
-    };
-
-    // Fill remaining spots with best available players (enforcing 3-players-per-team limit)
-    const fillPosition = (position: keyof typeof filteredPlayersByPosition, maxCount: number) => {
-      const needed = maxCount - positionCounts[position];
-      if (needed > 0) {
-        const availablePlayers = filteredPlayersByPosition[position]
-          .filter((p: any) => !squad.some(sp => sp.playerId === p.playerId));
-        
-        const toAdd: PlayerSnapshot[] = [];
-        for (const player of availablePlayers) {
-          if (toAdd.length >= needed) break;
-          
-          const teamCounts = getTeamCounts();
-          const playerTeam = player.teamName || '';
-          const currentTeamCount = teamCounts[playerTeam] || 0;
-          
-          // Only add player if it doesn't violate the 3-players-per-team constraint
-          if (currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam) {
-            toAdd.push(player);
-            squad.push(player);
-          }
-        }
-        
-        return toAdd.length;
-      }
-      return 0;
-    };
-
-    fillPosition('Goalkeeper', SQUAD_CONSTRAINTS.goalkeepers);
-    fillPosition('Defender', SQUAD_CONSTRAINTS.defenders);
-    fillPosition('Midfielder', SQUAD_CONSTRAINTS.midfielders);
-    fillPosition('Forward', SQUAD_CONSTRAINTS.forwards);
-
-    // Select starting 11: prioritize included players, then best performers
-    const squadByPosition = {
-      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
-    };
-
-    const starting11 = [
-      squadByPosition.Goalkeeper[0], // 1 GK
-      ...squadByPosition.Defender.slice(0, 4), // 4 DEF (minimum)
-      ...squadByPosition.Midfielder.slice(0, 5), // 5 MID
-      squadByPosition.Forward[0] // 1 FWD
-    ].filter(Boolean);
-
-    return { squad, starting11 };
-  };
-
-  // Helper function to adjust team for budget constraints
-  const adjustTeamForBudget = (unlimitedSquad: PlayerSnapshot[], unlimitedStarting11: PlayerSnapshot[], budget: number) => {
-    const currentValue = unlimitedSquad.reduce((total, player) => total + player.price, 0);
-    
-    if (budget >= currentValue) {
-      // Budget is sufficient for unlimited team
-      console.log(`Budget ${budget}m >= unlimited team value ${currentValue.toFixed(1)}m - using unlimited team`);
-      return { squad: unlimitedSquad, starting11: unlimitedStarting11 };
-    }
-
-    console.log(`Budget ${budget}m < unlimited team value ${currentValue.toFixed(1)}m - making adjustments`);
-    
-    let adjustedSquad = [...unlimitedSquad];
-    let adjustedStarting11 = [...unlimitedStarting11];
-    let savings = currentValue - budget;
-
-    // Create sets for quick lookup of constraint players
-    const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
-    const excludedPlayerIds = new Set(excludedPlayers.map(p => p.playerId));
-
-    // Step 1: Replace bench players with cheaper alternatives (prioritize bench changes)
-    // Only consider players that are NOT in the included list
-    const benchPlayers = adjustedSquad.filter(player => 
-      !adjustedStarting11.some(starter => starter.playerId === player.playerId) &&
-      !includedPlayerIds.has(player.playerId) // NEVER replace included players
-    );
-
-    // Sort bench by price (most expensive first for replacement)
-    const expensiveBench = benchPlayers.sort((a, b) => b.price - a.price);
-
-    for (const expensivePlayer of expensiveBench) {
-      if (savings <= 0) break;
-
-      const position = expensivePlayer.position;
-      const allInPosition = snapshots.filter(p => 
-        p.position === position &&
-        !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
-        !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
-      );
-      const cheaperAlternatives = allInPosition
-        .filter(p => {
-          if (p.price >= expensivePlayer.price) return false;
-          if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
-          
-          // Check team constraint: count current team members (excluding the player being replaced)
-          const teamCounts: { [teamName: string]: number } = {};
-          adjustedSquad.forEach(player => {
-            if (player.playerId !== expensivePlayer.playerId) {
-              const teamName = player.teamName || '';
-              teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-            }
-          });
-          
-          const replacementTeam = p.teamName || '';
-          const currentTeamCount = teamCounts[replacementTeam] || 0;
-          return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
-        })
-        .sort((a, b) => a.price - b.price);
-
-      if (cheaperAlternatives.length > 0) {
-        const replacement = cheaperAlternatives[0];
-        const savedAmount = expensivePlayer.price - replacement.price;
-        
-        if (savedAmount > 0) {
-          // Replace expensive bench player with cheaper alternative
-          adjustedSquad = adjustedSquad.map(p => 
-            p.playerId === expensivePlayer.playerId ? replacement : p
-          );
-          savings -= savedAmount;
-          console.log(`Replaced bench ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
-        }
-      }
-    }
-
-    // Step 2: If still over budget, replace starting 11 players (most expensive first)
-    // Only consider players that are NOT in the included list
-    if (savings > 0) {
-      const expensiveStarters = adjustedStarting11
-        .filter(player => !includedPlayerIds.has(player.playerId)) // NEVER replace included players
-        .sort((a, b) => b.price - a.price);
-
-      for (const expensivePlayer of expensiveStarters) {
-        if (savings <= 0) break;
-
-        const position = expensivePlayer.position;
-        const allInPosition = snapshots.filter(p => 
-          p.position === position &&
-          !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
-          !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
-        );
-        const cheaperAlternatives = allInPosition
-          .filter(p => {
-            if (p.price >= expensivePlayer.price) return false;
-            if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
-            
-            // Check team constraint: count current team members (excluding the player being replaced)
-            const teamCounts: { [teamName: string]: number } = {};
-            adjustedSquad.forEach(player => {
-              if (player.playerId !== expensivePlayer.playerId) {
-                const teamName = player.teamName || '';
-                teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
-              }
-            });
-            
-            const replacementTeam = p.teamName || '';
-            const currentTeamCount = teamCounts[replacementTeam] || 0;
-            return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
-          })
-          .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)); // Best performing cheaper alternative
-
-        if (cheaperAlternatives.length > 0) {
-          const replacement = cheaperAlternatives[0];
-          const savedAmount = expensivePlayer.price - replacement.price;
-          
-          if (savedAmount > 0) {
-            // Replace expensive starting player with cheaper alternative
-            adjustedSquad = adjustedSquad.map(p => 
-              p.playerId === expensivePlayer.playerId ? replacement : p
-            );
-            adjustedStarting11 = adjustedStarting11.map(p => 
-              p.playerId === expensivePlayer.playerId ? replacement : p
-            );
-            savings -= savedAmount;
-            console.log(`Replaced starter ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
-          }
-        }
-      }
-    }
-
-    return { squad: adjustedSquad, starting11: adjustedStarting11 };
+    if (!best) return null;
+    const { squad, starting11 } = enforceTeamConstraint(best.squad, best.starting11, playersByPosition, includedPlayerIds);
+    return { squad, starting11, formation: best.formation };
   };
 
   // Optimize team selection
@@ -880,158 +454,26 @@ export default function BestFreehitTeam() {
         throw new Error(`No players found with points for gameweek ${selectedGameweek}`);
       }
 
-      let squadPlayers: PlayerSnapshot[] = [];
-      let bestXI: PlayerSnapshot[] = [];
-      let optimalFormation = '4-4-2';
+      const groupedByPos: Record<string, PlayerSnapshot[]> = {
+        Goalkeeper: allCandidates.filter(p => normalizePosition(p.position) === 'Goalkeeper'),
+        Defender:   allCandidates.filter(p => normalizePosition(p.position) === 'Defender'),
+        Midfielder: allCandidates.filter(p => normalizePosition(p.position) === 'Midfielder'),
+        Forward:    allCandidates.filter(p => normalizePosition(p.position) === 'Forward'),
+      };
 
-      if (unlimitedBudget) {
-        // ── UNLIMITED MODE: one-pass global greedy for all 15 squad slots ─────────────
-        // No budget constraint so we can safely fill the full squad in a single pass.
-        const POSITION_QUOTAS: Record<string, number> = {
-          Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers,
-          Defender:   SQUAD_CONSTRAINTS.defenders,
-          Midfielder: SQUAD_CONSTRAINTS.midfielders,
-          Forward:    SQUAD_CONSTRAINTS.forwards,
-        };
-        const posCounts: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
-        const teamSlots: Record<string, number> = {};
+      const result = buildOptimalTeamWithBudget(
+        groupedByPos,
+        includedPlayerIds,
+        unlimitedBudget ? undefined : budgetConstraint
+      );
 
-        const tryAddUnlimited = (p: typeof allCandidates[0]): boolean => {
-          if (squadPlayers.some(s => s.playerId === p.playerId)) return false;
-          const pos = normalizePosition(p.position);
-          if (posCounts[pos] >= POSITION_QUOTAS[pos]) return false;
-          const team = p.teamName || '';
-          if ((teamSlots[team] || 0) >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
-          squadPlayers.push(p);
-          posCounts[pos]++;
-          teamSlots[team] = (teamSlots[team] || 0) + 1;
-          return true;
-        };
-
-        for (const p of allCandidates.filter(c => includedPlayerIds.has(c.playerId))) tryAddUnlimited(p);
-        for (const p of allCandidates) {
-          if (squadPlayers.length >= 15) break;
-          if (!includedPlayerIds.has(p.playerId)) tryAddUnlimited(p);
-        }
-
-        if (squadPlayers.length < 15) {
-          throw new Error('Could not build a full unlimited squad. Please check player data.');
-        }
-
-        // Derive best starting XI by trying all valid formations against the selected squad.
-        const byPos = {
-          Goalkeeper: squadPlayers.filter(p => normalizePosition(p.position) === 'Goalkeeper')
-                                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-          Defender:   squadPlayers.filter(p => normalizePosition(p.position) === 'Defender')
-                                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-          Midfielder: squadPlayers.filter(p => normalizePosition(p.position) === 'Midfielder')
-                                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-          Forward:    squadPlayers.filter(p => normalizePosition(p.position) === 'Forward')
-                                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-        };
-        let bestXIPoints = -1;
-        for (const f of VALID_FORMATIONS) {
-          if (byPos.Defender.length < f.def || byPos.Midfielder.length < f.mid || byPos.Forward.length < f.fwd) continue;
-          const xi = [byPos.Goalkeeper[0], ...byPos.Defender.slice(0, f.def), ...byPos.Midfielder.slice(0, f.mid), ...byPos.Forward.slice(0, f.fwd)];
-          const pts = xi.reduce((s, p) => s + getGameweekPoints(p, selectedGameweek), 0);
-          if (pts > bestXIPoints) { bestXIPoints = pts; bestXI = xi; optimalFormation = f.name; }
-        }
-
-      } else {
-        // ── BUDGET MODE: two-phase per formation with bench-cost reservation ──────────
-        // For each valid formation:
-        //   1. Compute minimum bench cost (cheapest possible bench fillers for this formation).
-        //   2. Build XI using global greedy within (budget − minBenchCost).
-        //   3. Fill bench from remaining (budget − XIcost).
-        // This guarantees there will always be enough budget left to complete the full 15.
-        const groupedByPos = {
-          Goalkeeper: allCandidates.filter(p => normalizePosition(p.position) === 'Goalkeeper') as PlayerSnapshot[],
-          Defender:   allCandidates.filter(p => normalizePosition(p.position) === 'Defender') as PlayerSnapshot[],
-          Midfielder: allCandidates.filter(p => normalizePosition(p.position) === 'Midfielder') as PlayerSnapshot[],
-          Forward:    allCandidates.filter(p => normalizePosition(p.position) === 'Forward') as PlayerSnapshot[],
-        };
-
-        let bestBudgetXIPoints = -1;
-
-        // Comparators reused inside the formation loop
-        const byPtsDesc = (a: PlayerSnapshot, b: PlayerSnapshot) =>
-          getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
-        const byPriceAsc = (a: PlayerSnapshot, b: PlayerSnapshot) => a.price - b.price;
-
-        for (const f of VALID_FORMATIONS) {
-          // Estimate minimum bench cost from the non-XI candidate pool.
-          // groupedByPos arrays are sorted by GW points desc (inherited from allCandidates).
-          // Skip the top XI slots for each position before finding cheapest bench fillers —
-          // this prevents understating bench cost by counting players who will be in the XI.
-          const minBenchCost =
-            // 1 bench GKP: cheapest from GKPs ranked #2+ by projected pts
-            [...groupedByPos.Goalkeeper].sort(byPtsDesc).slice(1).sort(byPriceAsc).slice(0, 1)
-              .reduce((s, p) => s + p.price, 0) +
-            // bench DEFs: cheapest from DEFs ranked f.def+1 onwards
-            [...groupedByPos.Defender].sort(byPtsDesc).slice(f.def).sort(byPriceAsc).slice(0, 5 - f.def)
-              .reduce((s, p) => s + p.price, 0) +
-            // bench MIDs: cheapest from MIDs ranked f.mid+1 onwards
-            [...groupedByPos.Midfielder].sort(byPtsDesc).slice(f.mid).sort(byPriceAsc).slice(0, 5 - f.mid)
-              .reduce((s, p) => s + p.price, 0) +
-            // bench FWDs: cheapest from FWDs ranked f.fwd+1 onwards
-            [...groupedByPos.Forward].sort(byPtsDesc).slice(f.fwd).sort(byPriceAsc).slice(0, 3 - f.fwd)
-              .reduce((s, p) => s + p.price, 0);
-
-          const xiBudget = budgetConstraint - minBenchCost;
-          if (xiBudget <= 0) continue;
-
-          // Build starting XI (11 players) using global greedy within xiBudget.
-          const xiPosQuotas: Record<string, number> = { Goalkeeper: 1, Defender: f.def, Midfielder: f.mid, Forward: f.fwd };
-          const xiPosCounts: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
-          const xiTeamCounts: Record<string, number> = {};
-          const xi: PlayerSnapshot[] = [];
-          let xiCost = 0;
-
-          const canAddXI = (p: typeof allCandidates[0]): boolean => {
-            if (xi.some(s => s.playerId === p.playerId)) return false;
-            const pos = normalizePosition(p.position);
-            if (xiPosCounts[pos] >= xiPosQuotas[pos]) return false;
-            const team = p.teamName || '';
-            if ((xiTeamCounts[team] || 0) >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
-            if (xiCost + p.price > xiBudget) return false;
-            return true;
-          };
-          const addToXI = (p: typeof allCandidates[0]) => {
-            xi.push(p as PlayerSnapshot);
-            const pos = normalizePosition(p.position);
-            xiPosCounts[pos]++;
-            xiTeamCounts[p.teamName || ''] = (xiTeamCounts[p.teamName || ''] || 0) + 1;
-            xiCost += p.price;
-          };
-
-          for (const p of allCandidates.filter(c => includedPlayerIds.has(c.playerId))) {
-            if (xi.length >= 11) break;
-            if (canAddXI(p)) addToXI(p);
-          }
-          for (const p of allCandidates) {
-            if (xi.length >= 11) break;
-            if (!includedPlayerIds.has(p.playerId) && canAddXI(p)) addToXI(p);
-          }
-
-          if (xi.length < 11) continue;
-
-          // Build bench (4 players) from remaining budget using existing helper.
-          const bench = buildBenchWithBudget(xi, groupedByPos, includedPlayerIds, budgetConstraint);
-          if (!bench || bench.length < 4) continue;
-
-          const xiPoints = xi.reduce((s, p) => s + getGameweekPoints(p, selectedGameweek), 0);
-          if (xiPoints > bestBudgetXIPoints) {
-            bestBudgetXIPoints = xiPoints;
-            squadPlayers = [...xi, ...bench];
-            bestXI = xi;
-            optimalFormation = f.name;
-          }
-        }
-
-        if (squadPlayers.length === 0) {
-          throw new Error(`Could not build a valid team within budget of £${budgetConstraint}m. Try increasing the budget or removing player constraints.`);
-        }
+      if (!result) {
+        throw new Error(`Could not build a valid team within budget of £${budgetConstraint}m. Try increasing the budget or removing player constraints.`);
       }
+
+      const squadPlayers: PlayerSnapshot[] = result.squad;
+      const bestXI: PlayerSnapshot[] = result.starting11;
+      const optimalFormation = result.formation;
 
       if (bestXI.length === 0) {
         throw new Error('Could not derive a valid starting XI from the selected squad.');
@@ -1109,146 +551,6 @@ export default function BestFreehitTeam() {
     } finally {
       setIsOptimizing(false);
     }
-  };
-
-  // Budget-constrained optimization function
-  const optimizeWithBudgetConstraint = (playersByPosition: any, budget: number): PlayerSnapshot[] => {
-    // Simple greedy approach: pick best value players within budget
-    const allPlayers = [
-      ...playersByPosition.Goalkeeper,
-      ...playersByPosition.Defender,
-      ...playersByPosition.Midfielder,
-      ...playersByPosition.Forward
-    ];
-
-    // Sort by points per million value 
-    const sortedByValue = allPlayers.map(player => ({
-      ...player,
-      valueScore: getGameweekPoints(player, selectedGameweek) / player.price
-    })).sort((a, b) => b.valueScore - a.valueScore);
-
-    const selectedSquad: PlayerSnapshot[] = [];
-    const positionCounts = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
-    let totalCost = 0;
-
-    for (const player of sortedByValue) {
-      const position = player.position.toLowerCase().includes('goalkeeper') || player.position === 'GKP' ? 'Goalkeeper' :
-                      player.position.toLowerCase().includes('defender') || player.position === 'DEF' ? 'Defender' :
-                      player.position.toLowerCase().includes('midfielder') || player.position === 'MID' ? 'Midfielder' : 'Forward';
-
-      const maxForPosition = position === 'Goalkeeper' ? SQUAD_CONSTRAINTS.goalkeepers :
-                            position === 'Defender' ? SQUAD_CONSTRAINTS.defenders :
-                            position === 'Midfielder' ? SQUAD_CONSTRAINTS.midfielders :
-                            SQUAD_CONSTRAINTS.forwards;
-
-      if (positionCounts[position] < maxForPosition && 
-          totalCost + player.price <= budget && 
-          selectedSquad.length < 15) {
-        selectedSquad.push(player);
-        positionCounts[position]++;
-        totalCost += player.price;
-      }
-
-      if (selectedSquad.length === 15) break;
-    }
-
-    // If we don't have a full squad, fill with cheapest remaining players
-    if (selectedSquad.length < 15) {
-      const remaining = allPlayers.filter(p => !selectedSquad.some(s => s.playerId === p.playerId))
-        .sort((a, b) => a.price - b.price);
-      
-      for (const player of remaining) {
-        const position = player.position.toLowerCase().includes('goalkeeper') || player.position === 'GKP' ? 'Goalkeeper' :
-                        player.position.toLowerCase().includes('defender') || player.position === 'DEF' ? 'Defender' :
-                        player.position.toLowerCase().includes('midfielder') || player.position === 'MID' ? 'Midfielder' : 'Forward';
-
-        const maxForPosition = position === 'Goalkeeper' ? SQUAD_CONSTRAINTS.goalkeepers :
-                              position === 'Defender' ? SQUAD_CONSTRAINTS.defenders :
-                              position === 'Midfielder' ? SQUAD_CONSTRAINTS.midfielders :
-                              SQUAD_CONSTRAINTS.forwards;
-
-        if (positionCounts[position] < maxForPosition && selectedSquad.length < 15) {
-          selectedSquad.push(player);
-          positionCounts[position]++;
-        }
-
-        if (selectedSquad.length === 15) break;
-      }
-    }
-
-    return selectedSquad;
-  };
-
-  // Find optimal starting 11 from 15-player squad
-  const findOptimalStarting11 = (squad: PlayerSnapshot[]): PlayerSnapshot[] => {
-    const squadByPosition = {
-      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP'),
-      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF'),
-      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID'),
-      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD')
-    };
-
-    // Try different formation combinations (1 GK + 10 outfield players = 11 total)
-    const formations = [
-      { def: 3, mid: 5, fwd: 2 }, // 3-5-2 (1+3+5+2=11)
-      { def: 3, mid: 4, fwd: 3 }, // 3-4-3 (1+3+4+3=11)
-      { def: 4, mid: 5, fwd: 1 }, // 4-5-1 (1+4+5+1=11)
-      { def: 4, mid: 4, fwd: 2 }, // 4-4-2 (1+4+4+2=11)
-      { def: 4, mid: 3, fwd: 3 }, // 4-3-3 (1+4+3+3=11)
-      { def: 5, mid: 4, fwd: 1 }, // 5-4-1 (1+5+4+1=11)
-      { def: 5, mid: 3, fwd: 2 }, // 5-3-2 (1+5+3+2=11)
-      { def: 3, mid: 3, fwd: 4 }  // 3-3-4 (1+3+3+4=11)
-    ];
-
-    let bestTeam: PlayerSnapshot[] = [];
-    let bestPoints = 0;
-
-    for (const formation of formations) {
-      if (formation.def > squadByPosition.Defender.length ||
-          formation.mid > squadByPosition.Midfielder.length ||
-          formation.fwd > squadByPosition.Forward.length) {
-        continue;
-      }
-
-      const team = [
-        ...(squadByPosition.Goalkeeper.length > 0 ? [squadByPosition.Goalkeeper[0]] : []), // Best goalkeeper
-        ...squadByPosition.Defender.slice(0, formation.def).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-        ...squadByPosition.Midfielder.slice(0, formation.mid).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
-        ...squadByPosition.Forward.slice(0, formation.fwd).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
-      ];
-
-      // Ensure exactly 11 players
-      if (team.length !== 11) {
-        console.warn(`Formation ${formation.def}-${formation.mid}-${formation.fwd} resulted in ${team.length} players, skipping`);
-        continue;
-      }
-
-      const teamPoints = team.reduce((total, player) => total + getGameweekPoints(player, selectedGameweek), 0);
-
-      if (teamPoints > bestPoints) {
-        bestPoints = teamPoints;
-        bestTeam = team;
-      }
-    }
-
-    return bestTeam;
-  };
-
-  // Get formation string
-  const getFormation = (starting11: PlayerSnapshot[]): string => {
-    const positions = starting11.reduce((acc, player) => {
-      // Normalize position names
-      if (player.position.toLowerCase().includes('defender') || player.position === 'DEF') {
-        acc.Defender = (acc.Defender || 0) + 1;
-      } else if (player.position.toLowerCase().includes('midfielder') || player.position === 'MID') {
-        acc.Midfielder = (acc.Midfielder || 0) + 1;
-      } else if (player.position.toLowerCase().includes('forward') || player.position === 'FWD') {
-        acc.Forward = (acc.Forward || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-
-    return `${positions.Defender || 0}-${positions.Midfielder || 0}-${positions.Forward || 0}`;
   };
 
   // Get position icon
