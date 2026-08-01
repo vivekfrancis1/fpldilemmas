@@ -65,16 +65,24 @@ export default function PlayerStats() {
   const { data: historicalData, isLoading: historicalLoading, error: historicalError } = useQuery<any[]>({
     queryKey: ["/api/players/historical", selectedSeason],
     staleTime: 30 * 60 * 1000, // 30 minutes
-    enabled: selectedSeason !== "current",
+    enabled: selectedSeason !== "current" && selectedSeason !== "blended",
     retry: 1,
   });
 
-  const isLoading = selectedSeason === "current" 
-    ? (currentLoading || (endGameweek !== null && filteredLoading)) 
-    : historicalLoading;
-  const error = selectedSeason === "current" 
-    ? (filteredError || currentError) 
-    : historicalError;
+  // Get blended season data: live 2026/27 price/ownership + real 2025/26 season totals
+  const { data: blendedData, isLoading: blendedLoading, error: blendedError } = useQuery<any[]>({
+    queryKey: ["/api/players/blended"],
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    enabled: selectedSeason === "blended",
+    retry: 1,
+  });
+
+  const isLoading = selectedSeason === "current"
+    ? (currentLoading || (endGameweek !== null && filteredLoading))
+    : selectedSeason === "blended" ? blendedLoading : historicalLoading;
+  const error = selectedSeason === "current"
+    ? (filteredError || currentError)
+    : selectedSeason === "blended" ? blendedError : historicalError;
 
   // Calculate current gameweek from bootstrap data (0 pre-season, before any gameweek starts)
   const currentGameweek = useMemo(() => {
@@ -225,6 +233,14 @@ export default function PlayerStats() {
                   </Badge>
                 </div>
               </SelectItem>
+              <SelectItem value="blended">
+                <div className="flex items-center space-x-2">
+                  <span>Blended (25/26 + 26/27)</span>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                    Blend
+                  </Badge>
+                </div>
+              </SelectItem>
               {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
                 <SelectItem key={season} value={season}>
                   {season}
@@ -275,7 +291,7 @@ export default function PlayerStats() {
           <CardContent className="p-0">
             <PlayerStatsTable 
               data={selectedSeason === "current" ? bootstrapData : undefined}
-              historicalData={selectedSeason !== "current" ? (historicalData || []) : undefined}
+              historicalData={selectedSeason === "blended" ? (blendedData || []) : selectedSeason !== "current" ? (historicalData || []) : undefined}
               filteredPlayers={selectedSeason === "current" && filteredStatsData?.players ? filteredStatsData.players : undefined}
               filters={filters}
               sort={sort}

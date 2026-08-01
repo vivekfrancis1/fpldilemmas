@@ -282,8 +282,9 @@ export default function PlayerStatsTable({
   // "currentSeasonOnly" columns (DC, xG, save/minutes points, ownership, form, etc.) are also
   // enriched for 2025/26 specifically (see server/storage.ts getHistoricalPlayers) — other
   // historical seasons don't have a reliable player-ID crosswalk for that enrichment, so they
-  // keep showing the older placeholder-only columns.
-  const hideEnrichedOnlyColumns = isHistoricalSeason && season !== "2025/26";
+  // keep showing the older placeholder-only columns. "Blended" reuses that same 2025/26
+  // enrichment (plus live 2026/27 price/ownership), so it keeps these columns too.
+  const hideEnrichedOnlyColumns = isHistoricalSeason && season !== "2025/26" && season !== "blended";
 
   // Get available columns based on current mode (filtered but not reordered - for the selector UI)
   const availableColumns = useMemo(() => {
@@ -419,7 +420,7 @@ export default function PlayerStatsTable({
   // field; other historical seasons have no reliable per-GW source for this, so they
   // fall back to 0 same as before.
   const getCbitPoints = (player: any): number => {
-    if (season === "2025/26") return player?.defensive_contribution_points || 0;
+    if (season === "2025/26" || season === "blended") return player?.defensive_contribution_points || 0;
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
@@ -428,7 +429,7 @@ export default function PlayerStatsTable({
 
   // Helper function to get Save points for a player
   const getSavePoints = (player: any): number => {
-    if (season === "2025/26") return player?.save_points || 0;
+    if (season === "2025/26" || season === "blended") return player?.save_points || 0;
     if (isHistoricalSeason || !savePointsData || isSavePointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }
@@ -437,7 +438,7 @@ export default function PlayerStatsTable({
 
   // Helper function to get Minutes points for a player
   const getMinutesPoints = (player: any): number => {
-    if (season === "2025/26") return player?.minutes_points || 0;
+    if (season === "2025/26" || season === "blended") return player?.minutes_points || 0;
     if (isHistoricalSeason || !minutesPointsData || isMinutesPointsError) {
       return 0; // Fallback for historical seasons or when data is unavailable
     }

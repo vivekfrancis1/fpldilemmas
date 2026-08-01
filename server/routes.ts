@@ -1839,6 +1839,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Blended player data: live 2026/27 price/ownership + real 2025/26 season totals for
+  // everything else, since the current season has barely started and most stats are still 0.
+  // historical_players (source of getHistoricalPlayers) already shares the current-bootstrap
+  // element-ID scheme, so no name-based crosswalk is needed here — a direct ID lookup suffices.
+  app.get("/api/players/blended", async (req, res) => {
+    try {
+      const now = Date.now();
+      const cached = historicalCache.get("blended");
+      if (cached && (now - cached.timestamp) < HISTORICAL_CACHE_DURATION) {
+        return res.json(cached.data);
+      }
+
+      const [historical202526, bootstrapResponse] = await Promise.all([
+        storage.getHistoricalPlayers("2025/26"),
+        internalFetch("api/bootstrap-static"),
+      ]);
+      const bootstrapData = await bootstrapResponse.json();
+
+      const historicalById = new Map<number, any>();
+      for (const p of historical202526) historicalById.set(p.playerId, p);
+
+      const teamsById = new Map<number, any>();
+      for (const t of bootstrapData.teams || []) teamsById.set(t.id, t);
+
+      const positionNameByElementType: Record<number, string> = {
+        1: "Goalkeeper", 2: "Defender", 3: "Midfielder", 4: "Forward",
+      };
+
+      const blended = (bootstrapData.elements || []).map((current: any) => {
+        const hist = historicalById.get(current.id);
+        const nowCost = current.now_cost ?? 0;
+        const priceInMillions = nowCost / 10;
+        const totalPoints2526 = hist?.total_points || 0;
+        const form2526 = parseFloat(hist?.form) || 0;
+        const team = teamsById.get(current.team);
+        const positionName = positionNameByElementType[current.element_type] || null;
+
+        const base = hist ?? {
+          total_points: 0, minutes: 0, goals_scored: 0, assists: 0, clean_sheets: 0,
+          goals_conceded: 0, own_goals: 0, penalties_saved: 0, penalties_missed: 0,
+          yellow_cards: 0, red_cards: 0, saves: 0, bonus: 0, bps: 0,
+          influence: "0.0", creativity: "0.0", threat: "0.0", ict_index: "0.0",
+          form: "0.0", points_per_game: "0.0",
+          defensive_contribution: 0, defensive_contribution_points: 0,
+          expected_goals: "0.00", expected_assists: "0.00", expected_goal_involvements: "0.00", expected_goals_conceded: "0.00",
+          tackles: 0, recoveries: 0, clearances_blocks_interceptions: 0, starts: 0,
+          save_points: 0, minutes_points: 0,
+          transfers_in: 0, transfers_out: 0, transfers_in_event: 0, transfers_out_event: 0,
+          dreamteam_count: 0, event_points: 0,
+        };
+
+        return {
+          ...base,
+          id: current.id,
+          playerId: current.id,
+          first_name: current.first_name,
+          second_name: current.second_name,
+          web_name: current.web_name,
+          team: current.team,
+          team_name: team?.name ?? base.team_name,
+          team_short_name: team?.short_name ?? base.team_short_name,
+          element_type: current.element_type,
+          position: positionName ?? base.position,
+          now_cost: nowCost,
+          selected_by_percent: current.selected_by_percent ?? "0.0",
+          value_season: priceInMillions > 0 ? (totalPoints2526 / priceInMillions).toFixed(1) : "0.0",
+          value_form: priceInMillions > 0 ? (form2526 / priceInMillions).toFixed(1) : "0.0",
+          cost_change_event: current.cost_change_event ?? 0,
+          cost_change_event_fall: current.cost_change_event_fall ?? 0,
+          cost_change_start: current.cost_change_start ?? 0,
+          cost_change_start_fall: current.cost_change_start_fall ?? 0,
+        };
+      });
+
+      historicalCache.set("blended", { data: blended, timestamp: now });
+      res.json(blended);
+    } catch (error) {
+      console.error("Error building blended player data:", error);
+      res.status(500).json({
+        error: "Failed to fetch blended player data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Available seasons endpoint
   app.get("/api/seasons", async (req, res) => {
     try {
