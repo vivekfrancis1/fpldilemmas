@@ -1,6 +1,7 @@
 import { db, pool } from "./db";
 import { internalFetch } from "./config";
 import { FPLScoringCacheService } from "./fpl-scoring-cache-service";
+import { CURRENT_SEASON as SHARED_CURRENT_SEASON } from "@shared/schema";
 
 // Direct database queries since these are new tables
 const gameweekPlayerDataTable = "gameweek_player_data";
@@ -63,7 +64,11 @@ interface UpdateLogEntry {
 
 class GameweekCacheService {
   private readonly FPL_API_BASE = "https://fantasy.premierleague.com/api";
-  private readonly CURRENT_SEASON = "2025/26";
+  // Was hardcoded to "2025/26" and never updated at the season boundary — every gameweek this
+  // service caches going forward (via autoCacheCompletedGameweeks, which always uses this
+  // default) would have been silently mislabeled under last season's tag. Sourced from the
+  // single shared constant so it can't go stale again next season either.
+  private readonly CURRENT_SEASON = SHARED_CURRENT_SEASON;
 
   /**
    * Check if gameweek data is already cached

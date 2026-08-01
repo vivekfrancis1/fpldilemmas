@@ -1409,11 +1409,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine current gameweek from bootstrap
       const currentGW = computeCurrentGameweek(bootstrapData.events);
       
-      // Get max gameweek available in the database
+      // Get max gameweek available in the database FOR THE CURRENT SEASON specifically —
+      // gameweek_player_data also holds prior seasons' archived data (currently all of
+      // 2025/26), and without this filter every query below would silently pull in last
+      // season's numbers (joined by raw player_id, which uses a different ID scheme season to
+      // season) once that season's rows exist and there's no current-season data yet.
       const maxGWResult = await db
         .select({ maxGW: sql<number>`MAX(${gameweekPlayerDataTable.gameweek})` })
-        .from(gameweekPlayerDataTable);
-      const maxCachedGW = maxGWResult[0]?.maxGW || 18;
+        .from(gameweekPlayerDataTable)
+        .where(eq(gameweekPlayerDataTable.season, CURRENT_SEASON));
+      // 0 (not a prior-season fallback like 18) — with zero cached current-season gameweeks,
+      // nothing is genuinely cached yet, matching currentGW's own pre-season value of 0.
+      const maxCachedGW = maxGWResult[0]?.maxGW || 0;
       
       // Check if we need to derive data for gameweeks beyond cached data
       const needsCurrentGWDerivation = endGW > maxCachedGW && endGW <= currentGW;
@@ -1514,6 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(gameweekPlayerDataTable)
         .where(
           and(
+            eq(gameweekPlayerDataTable.season, CURRENT_SEASON),
             gte(gameweekPlayerDataTable.gameweek, startGW),
             lte(gameweekPlayerDataTable.gameweek, effectiveEndGW)
           )
@@ -1558,7 +1566,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfersOut: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.transfers_out}), 0)`.as('transfers_out_tot'),
           })
           .from(gameweekPlayerDataTable)
-          .where(lte(gameweekPlayerDataTable.gameweek, maxCachedGW))
+          .where(
+            and(
+              eq(gameweekPlayerDataTable.season, CURRENT_SEASON),
+              lte(gameweekPlayerDataTable.gameweek, maxCachedGW)
+            )
+          )
           .groupBy(gameweekPlayerDataTable.playerId);
         
         totalsResult.forEach(row => {
