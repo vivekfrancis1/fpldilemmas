@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, TrendingUp, Target, Award, Shield, Clock, Loader2 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -45,10 +46,24 @@ interface GameweekData {
   expected_goals_conceded?: string;
 }
 
+interface SeasonHistoryData {
+  season_name: string;
+  start_cost: number;
+  end_cost: number;
+  total_points: number;
+  minutes: number;
+  goals_scored: number;
+  assists: number;
+  clean_sheets: number;
+  bonus: number;
+  bps: number;
+  ict_index: string;
+}
+
 interface PlayerSummaryData {
   history: GameweekData[];
   fixtures: any[];
-  history_past: any[];
+  history_past: SeasonHistoryData[];
 }
 
 const teamMap: { [key: number]: string } = {
@@ -125,6 +140,27 @@ export default function PlayerDetail() {
     enabled: playerId > 0,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Last season (2025/26) gameweek-by-gameweek breakdown. FPL's live element-summary
+  // "history" field only ever covers the current season, so this is its own source
+  // (this app's own gameweek_player_data archive, name-crosswalked to the player).
+  const { data: lastSeasonData, isLoading: isLastSeasonLoading } = useQuery<{ history: GameweekData[] }>({
+    queryKey: ["/api/player-gameweek-history", playerId, "2025/26"],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-gameweek-history/${playerId}?season=2025%2F26`);
+      if (!response.ok) throw new Error('Failed to fetch 2025/26 gameweek history');
+      return response.json();
+    },
+    enabled: playerId > 0,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const sortedLastSeasonHistory = useMemo(() => {
+    if (!lastSeasonData?.history) return [];
+    return [...lastSeasonData.history].sort((a, b) => b.round - a.round);
+  }, [lastSeasonData]);
+
+  const seasonHistory = playerDetailData?.history_past || [];
 
   const teamName = useMemo(() => {
     if (!player || !bootstrapData?.teams) return 'Unknown';
@@ -328,6 +364,202 @@ export default function PlayerDetail() {
     };
   }, [sortedHistory]);
 
+  const computeGwStats = (history: GameweekData[]) => {
+    const played = history.filter(gw => gw.minutes > 0);
+    return {
+      totalPoints: history.reduce((s, gw) => s + gw.total_points, 0),
+      totalMinutes: history.reduce((s, gw) => s + gw.minutes, 0),
+      totalGoals: history.reduce((s, gw) => s + gw.goals_scored, 0),
+      totalAssists: history.reduce((s, gw) => s + gw.assists, 0),
+      totalCleanSheets: history.reduce((s, gw) => s + gw.clean_sheets, 0),
+      totalBonus: history.reduce((s, gw) => s + gw.bonus, 0),
+      totalSaves: history.reduce((s, gw) => s + gw.saves, 0),
+      gameweeksPlayed: played.length,
+    };
+  };
+
+  // Gameweek-by-gameweek card, reused for both the current-season and 2025/26 tabs
+  const renderGameweekCard = (history: GameweekData[], loading: boolean) => {
+    const stats = computeGwStats(history);
+    return (
+      <Card className="border-0 bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-0">
+          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
+              Gameweek Performance
+            </h3>
+            <p className="text-xs text-gray-600 mt-1">
+              {history.length} gameweeks • {stats.gameweeksPlayed} appearances • Latest first
+            </p>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
+                <p className="text-sm text-gray-500">Loading player data...</p>
+              </div>
+            </div>
+          ) : isMobile ? (
+            <div className="divide-y divide-gray-100">
+              {history.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">
+                  No gameweek data available for this player
+                </div>
+              ) : (
+                <>
+                <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-800">Total</span>
+                    <div className="text-lg font-bold text-purple-800">
+                      {stats.totalPoints} pts
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Min</div>
+                      <div className="font-bold text-purple-800">{stats.totalMinutes}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Goals</div>
+                      <div className="font-bold text-purple-800">{stats.totalGoals}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Assists</div>
+                      <div className="font-bold text-purple-800">{stats.totalAssists}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Bonus</div>
+                      <div className="font-bold text-purple-800">{stats.totalBonus}</div>
+                    </div>
+                    {[1, 2, 3].includes(elementType) && (
+                      <div className="text-center">
+                        <div className="text-xs text-purple-600">CS</div>
+                        <div className="font-bold text-purple-800">{stats.totalCleanSheets}</div>
+                      </div>
+                    )}
+                    {elementType === 1 && (
+                      <div className="text-center">
+                        <div className="text-xs text-purple-600">Saves</div>
+                        <div className="font-bold text-purple-800">{stats.totalSaves}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {history.map((gw) => {
+                  const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
+                  const venue = gw.was_home ? '(H)' : gw.was_home === false ? '(A)' : '';
+                  const score = gw.team_h_score != null && gw.team_a_score != null
+                    ? `${gw.team_h_score}-${gw.team_a_score}` : '';
+                  return (
+                    <div key={gw.round} className="p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">GW{gw.round}</span>
+                          <span className="text-xs text-gray-500">vs {opponent} {venue}</span>
+                          {score && <span className="text-xs text-gray-400">{score}</span>}
+                        </div>
+                        <div className={`text-lg font-bold ${getPointsColor(gw.total_points)}`}>
+                          {gw.total_points} pts
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Min</div>
+                          <div className="font-medium">{gw.minutes}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Goals</div>
+                          <div className="font-medium text-green-600">{gw.goals_scored}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Assists</div>
+                          <div className="font-medium text-blue-600">{gw.assists}</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Bonus</div>
+                          <div className="font-medium text-purple-600">{gw.bonus}</div>
+                        </div>
+                        {[1, 2, 3].includes(elementType) && (
+                          <div className="text-center">
+                            <div className="text-xs text-gray-500">CS</div>
+                            <div className="font-medium text-green-600">{gw.clean_sheets}</div>
+                          </div>
+                        )}
+                        {elementType === 1 && (
+                          <div className="text-center">
+                            <div className="text-xs text-gray-500">Saves</div>
+                            <div className="font-medium">{gw.saves}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 border-b sticky top-0">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[55px]">GW</th>
+                    {columns.map(col => (
+                      <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
+                        {col.shortLabel || col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.length === 0 ? (
+                    <tr>
+                      <td colSpan={columns.length + 1} className="px-3 py-8 text-center text-gray-500">
+                        No gameweek data available for this player
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                    <tr className="bg-purple-50 border-b-2 border-purple-200 font-bold">
+                      <td className="px-2 py-2.5 font-bold text-purple-800">Total</td>
+                      {columns.map(col => (
+                        <td key={col.key} className="px-2 py-2.5 text-center font-bold text-purple-800">
+                          {col.aggregate ? col.aggregate(history) : ''}
+                        </td>
+                      ))}
+                    </tr>
+                    {history.map((gw, index) => (
+                      <tr
+                        key={gw.round}
+                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                        }`}
+                      >
+                        <td className="px-2 py-2.5 font-medium text-gray-900">GW{gw.round}</td>
+                        {columns.map(col => (
+                          <td key={col.key} className="px-2 py-2.5 text-center">
+                            {col.render(gw)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (!player && !isLoading) {
     return (
       <div className="w-full p-4 sm:p-6">
@@ -481,176 +713,74 @@ export default function PlayerDetail() {
           <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-blue-600" />
-              Gameweek Performance
+              Season History
             </h3>
-            <p className="text-xs text-gray-600 mt-1">
-              {sortedHistory.length} gameweeks • {totalStats.gameweeksPlayed} appearances • Latest first
-            </p>
+            <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
           </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
-                <p className="text-sm text-gray-500">Loading player data...</p>
-              </div>
-            </div>
-          ) : isMobile ? (
-            <div className="divide-y divide-gray-100">
-              {sortedHistory.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-500">
-                  No gameweek data available for this player
-                </div>
-              ) : (
-                <>
-                <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-purple-800">Total</span>
-                    <div className="text-lg font-bold text-purple-800">
-                      {totalStats.totalPoints} pts
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="text-center">
-                      <div className="text-xs text-purple-600">Min</div>
-                      <div className="font-bold text-purple-800">{totalStats.totalMinutes}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xs text-purple-600">Goals</div>
-                      <div className="font-bold text-purple-800">{totalStats.totalGoals}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xs text-purple-600">Assists</div>
-                      <div className="font-bold text-purple-800">{totalStats.totalAssists}</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="text-center">
-                      <div className="text-xs text-purple-600">Bonus</div>
-                      <div className="font-bold text-purple-800">{totalStats.totalBonus}</div>
-                    </div>
-                    {[1, 2, 3].includes(elementType) && (
-                      <div className="text-center">
-                        <div className="text-xs text-purple-600">CS</div>
-                        <div className="font-bold text-purple-800">{totalStats.totalCleanSheets}</div>
-                      </div>
-                    )}
-                    {elementType === 1 && (
-                      <div className="text-center">
-                        <div className="text-xs text-purple-600">Saves</div>
-                        <div className="font-bold text-purple-800">{totalStats.totalSaves}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {sortedHistory.map((gw) => {
-                  const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
-                  const venue = gw.was_home ? '(H)' : gw.was_home === false ? '(A)' : '';
-                  const score = gw.team_h_score != null && gw.team_a_score != null
-                    ? `${gw.team_h_score}-${gw.team_a_score}` : '';
-                  return (
-                    <div key={gw.round} className="p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">GW{gw.round}</span>
-                          <span className="text-xs text-gray-500">vs {opponent} {venue}</span>
-                          {score && <span className="text-xs text-gray-400">{score}</span>}
-                        </div>
-                        <div className={`text-lg font-bold ${getPointsColor(gw.total_points)}`}>
-                          {gw.total_points} pts
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">Min</div>
-                          <div className="font-medium">{gw.minutes}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">Goals</div>
-                          <div className="font-medium text-green-600">{gw.goals_scored}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">Assists</div>
-                          <div className="font-medium text-blue-600">{gw.assists}</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">Bonus</div>
-                          <div className="font-medium text-purple-600">{gw.bonus}</div>
-                        </div>
-                        {[1, 2, 3].includes(elementType) && (
-                          <div className="text-center">
-                            <div className="text-xs text-gray-500">CS</div>
-                            <div className="font-medium text-green-600">{gw.clean_sheets}</div>
-                          </div>
-                        )}
-                        {elementType === 1 && (
-                          <div className="text-center">
-                            <div className="text-xs text-gray-500">Saves</div>
-                            <div className="font-medium">{gw.saves}</div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 border-b sticky top-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[70px]">Season</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[90px]">£ (Start→End)</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Pts</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Min</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">G</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">A</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">CS</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Bonus</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">BPS</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">ICT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seasonHistory.length === 0 ? (
                   <tr>
-                    <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[55px]">GW</th>
-                    {columns.map(col => (
-                      <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
-                        {col.shortLabel || col.label}
-                      </th>
-                    ))}
+                    <td colSpan={10} className="px-3 py-8 text-center text-gray-500">
+                      No season history available for this player
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {sortedHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={columns.length + 1} className="px-3 py-8 text-center text-gray-500">
-                        No gameweek data available for this player
+                ) : (
+                  seasonHistory.map((season, index) => (
+                    <tr
+                      key={season.season_name}
+                      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                      }`}
+                    >
+                      <td className="px-2 py-3 font-medium text-gray-900">{season.season_name}</td>
+                      <td className="px-2 py-3 text-center text-gray-700">
+                        {formatValue((season.start_cost || 0) / 10)} → {formatValue((season.end_cost || 0) / 10)}
                       </td>
+                      <td className={`px-2 py-3 text-center font-semibold ${getPointsColor(season.total_points)}`}>{season.total_points}</td>
+                      <td className="px-2 py-3 text-center text-gray-700">{season.minutes}</td>
+                      <td className="px-2 py-3 text-center font-medium text-green-600">{season.goals_scored}</td>
+                      <td className="px-2 py-3 text-center font-medium text-blue-600">{season.assists}</td>
+                      <td className="px-2 py-3 text-center text-gray-700">{season.clean_sheets}</td>
+                      <td className="px-2 py-3 text-center font-medium text-purple-600">{season.bonus}</td>
+                      <td className="px-2 py-3 text-center text-gray-700">{season.bps}</td>
+                      <td className="px-2 py-3 text-center text-gray-700">{formatValue(season.ict_index)}</td>
                     </tr>
-                  ) : (
-                    <>
-                    <tr className="bg-purple-50 border-b-2 border-purple-200 font-bold">
-                      <td className="px-2 py-2.5 font-bold text-purple-800">Total</td>
-                      {columns.map(col => (
-                        <td key={col.key} className="px-2 py-2.5 text-center font-bold text-purple-800">
-                          {col.aggregate ? col.aggregate(sortedHistory) : ''}
-                        </td>
-                      ))}
-                    </tr>
-                    {sortedHistory.map((gw, index) => (
-                      <tr
-                        key={gw.round}
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                        }`}
-                      >
-                        <td className="px-2 py-2.5 font-medium text-gray-900">GW{gw.round}</td>
-                        {columns.map(col => (
-                          <td key={col.key} className="px-2 py-2.5 text-center">
-                            {col.render(gw)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                    </>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="current" className="w-full">
+        <TabsList>
+          <TabsTrigger value="current">2026/27 (Current)</TabsTrigger>
+          <TabsTrigger value="2025/26">2025/26 Season</TabsTrigger>
+        </TabsList>
+        <TabsContent value="current" className="mt-4">
+          {renderGameweekCard(sortedHistory, isLoading)}
+        </TabsContent>
+        <TabsContent value="2025/26" className="mt-4">
+          {renderGameweekCard(sortedLastSeasonHistory, isLastSeasonLoading)}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

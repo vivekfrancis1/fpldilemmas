@@ -2286,6 +2286,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gameweek-by-gameweek breakdown for a past season. FPL's live element-summary "history"
+  // field only ever covers the CURRENT season, so the player detail modal's past-season tab
+  // needs its own source: this app's own gameweek_player_data archive. That table uses a
+  // different, native element-ID scheme than the current bootstrap (see the comment on
+  // fetchSeason202526Enrichment in storage.ts), so the current-bootstrap player is first
+  // name-matched to their native 2025/26 ID via season_player_snapshot.
+  app.get("/api/player-gameweek-history/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId, 10);
+      const season = (req.query.season as string) || "2025/26";
+
+      if (!playerId || playerId <= 0) {
+        return res.status(400).json({ message: "Invalid player ID" });
+      }
+      if (season !== "2025/26") {
+        return res.status(400).json({ message: "Only 2025/26 gameweek history is currently supported." });
+      }
+
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
+      const bootstrapData = await bootstrapResponse.json();
+      const player = (bootstrapData.elements || []).find((p: any) => p.id === playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      const snapshotRes = await pool.query(
+        `SELECT player_id, first_name, second_name, element_type FROM season_player_snapshot WHERE season = $1`,
+        [season]
+      );
+      const key = nameMatchKey(player.first_name || "", player.second_name || "", player.element_type);
+      const snapshotRow = snapshotRes.rows.find((row: any) =>
+        nameMatchKey(row.first_name || "", row.second_name || "", row.element_type) === key
+      );
+
+      if (!snapshotRow) {
+        // New to the league in 2025/26 (promoted-team player, signing from abroad, etc.) — no history.
+        return res.json({ history: [] });
+      }
+
+      const gwRes = await pool.query(
+        `SELECT gameweek, minutes, goals_scored, assists, clean_sheets, goals_conceded, own_goals,
+                penalties_saved, penalties_missed, yellow_cards, red_cards, saves, bonus, bps, total_points,
+                starts, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded,
+                influence, creativity, threat, ict_index, value, selected, transfers_in, transfers_out,
+                team_h_score, team_a_score, was_home, opponent_team, kickoff_time
+         FROM gameweek_player_data
+         WHERE season = $1 AND player_id = $2
+         ORDER BY gameweek ASC`,
+        [season, snapshotRow.player_id]
+      );
+
+      const history = gwRes.rows.map((row: any) => ({
+        round: row.gameweek,
+        total_points: row.total_points || 0,
+        minutes: row.minutes || 0,
+        goals_scored: row.goals_scored || 0,
+        assists: row.assists || 0,
+        clean_sheets: row.clean_sheets || 0,
+        goals_conceded: row.goals_conceded || 0,
+        own_goals: row.own_goals || 0,
+        penalties_saved: row.penalties_saved || 0,
+        penalties_missed: row.penalties_missed || 0,
+        yellow_cards: row.yellow_cards || 0,
+        red_cards: row.red_cards || 0,
+        saves: row.saves || 0,
+        bonus: row.bonus || 0,
+        bps: row.bps || 0,
+        influence: row.influence || "0.0",
+        creativity: row.creativity || "0.0",
+        threat: row.threat || "0.0",
+        ict_index: row.ict_index || "0.0",
+        value: row.value || 0,
+        transfers_balance: (row.transfers_in || 0) - (row.transfers_out || 0),
+        selected: row.selected || 0,
+        transfers_in: row.transfers_in || 0,
+        transfers_out: row.transfers_out || 0,
+        opponent_team: row.opponent_team ?? undefined,
+        was_home: row.was_home ?? undefined,
+        kickoff_time: row.kickoff_time ?? undefined,
+        team_h_score: row.team_h_score ?? undefined,
+        team_a_score: row.team_a_score ?? undefined,
+        starts: row.starts || 0,
+        expected_goals: row.expected_goals || "0.00",
+        expected_assists: row.expected_assists || "0.00",
+        expected_goal_involvements: row.expected_goal_involvements || "0.00",
+        expected_goals_conceded: row.expected_goals_conceded || "0.00",
+      }));
+
+      res.json({ history });
+    } catch (error) {
+      console.error(`Error fetching gameweek history for player ${req.params.playerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch player gameweek history",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Fixtures data
   app.get("/api/fixtures", async (req, res) => {
     try {
