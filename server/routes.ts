@@ -1937,6 +1937,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const playerIds: number[] = [];
       const elementTypeByPlayerId = new Map<number, number>();
+      // historical_player_stats (and the live bootstrap) only track a player's SEASON-
+      // representative club, not which club they were at for each individual gameweek — so a
+      // mid-season transfer's early-season games for their PREVIOUS club would otherwise leak
+      // into this team's totals via gameweek_player_data. Cross-checking every aggregated
+      // fixture_id against this team's real fixture list (below) filters those out.
+      const validFixtureIds = new Set<number>();
 
       if (season === CURRENT_SEASON) {
         const bootstrapResponse = await internalFetch("api/bootstrap-static");
@@ -1949,6 +1955,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               elementTypeByPlayerId.set(el.id, el.element_type);
             }
           }
+          const fixturesResponse = await internalFetch("api/fixtures");
+          const fixturesData = await fixturesResponse.json();
+          for (const fixture of fixturesData || []) {
+            if (fixture.team_h === team.id || fixture.team_a === team.id) {
+              validFixtureIds.add(fixture.id);
+            }
+          }
         }
       } else {
         const statsRes = await pool.query(
@@ -1959,14 +1972,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerIds.push(row.player_id);
           elementTypeByPlayerId.set(row.player_id, row.element_type);
         }
+        const fixturesRes = await pool.query(
+          `SELECT fixture_id FROM season_fixtures_archive WHERE season = $1 AND (team_h_name = $2 OR team_a_name = $2)`,
+          [season, teamName]
+        );
+        for (const row of fixturesRes.rows) validFixtureIds.add(row.fixture_id);
       }
 
       if (playerIds.length === 0) {
-        return res.json({ gameweeks: [] });
+        return res.json({ fixtures: [] });
       }
 
       const gwRes = await pool.query(
-        `SELECT gameweek, player_id, minutes, goals_scored, assists, yellow_cards, red_cards, saves,
+        `SELECT gameweek, fixture_id, player_id, minutes, goals_scored, assists, yellow_cards, red_cards, saves,
                 own_goals, penalties_saved, penalties_missed, bonus, bps, starts,
                 clearances_blocks_interceptions, tackles, recoveries,
                 expected_goals, expected_assists, expected_goals_conceded
@@ -1983,18 +2001,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return cbi + tackles + recoveries;
       };
 
-      const byGw = new Map<number, any>();
+      // Grouped by fixture_id, NOT gameweek number — a postponed/rescheduled fixture can share
+      // its original gameweek's number with another match (e.g. two Arsenal 2025/26 fixtures
+      // both tagged gameweek 26), so grouping by gameweek would double-count that gameweek's
+      // stats once per fixture when the client later joins this to per-fixture rows.
+      const byFixture = new Map<number, any>();
       for (const row of gwRes.rows) {
-        const gw = row.gameweek;
-        if (!byGw.has(gw)) {
-          byGw.set(gw, {
-            gameweek: gw, minutes: 0, goals_scored: 0, assists: 0, yellow_cards: 0, red_cards: 0,
-            saves: 0, own_goals: 0, penalties_saved: 0, penalties_missed: 0, bonus: 0, bps: 0, starts: 0,
-            defensive_contribution: 0, tackles: 0, recoveries: 0, clearances_blocks_interceptions: 0,
-            expected_goals: 0, expected_assists: 0, expected_goals_conceded: 0,
+        const fixtureId = row.fixture_id;
+        if (fixtureId == null) continue;
+        // Skip rows for a fixture this team didn't actually play — e.g. a mid-season signing's
+        // games for their previous club (see comment on validFixtureIds above).
+        if (!validFixtureIds.has(fixtureId)) continue;
+        if (!byFixture.has(fixtureId)) {
+          byFixture.set(fixtureId, {
+            fixture_id: fixtureId, gameweek: row.gameweek, minutes: 0, goals_scored: 0, assists: 0,
+            yellow_cards: 0, red_cards: 0, saves: 0, own_goals: 0, penalties_saved: 0, penalties_missed: 0,
+            bonus: 0, bps: 0, starts: 0, defensive_contribution: 0, tackles: 0, recoveries: 0,
+            clearances_blocks_interceptions: 0, expected_goals: 0, expected_assists: 0, expected_goals_conceded: 0,
           });
         }
-        const acc = byGw.get(gw);
+        const acc = byFixture.get(fixtureId);
         acc.minutes += row.minutes || 0;
         acc.goals_scored += row.goals_scored || 0;
         acc.assists += row.assists || 0;
@@ -2020,8 +2046,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         acc.expected_goals_conceded += parseFloat(row.expected_goals_conceded) || 0;
       }
 
-      const gameweeks = Array.from(byGw.values()).sort((a, b) => a.gameweek - b.gameweek);
-      res.json({ gameweeks });
+      const fixtures = Array.from(byFixture.values()).sort((a, b) => a.gameweek - b.gameweek);
+      res.json({ fixtures });
     } catch (error) {
       console.error(`Error fetching team gameweek stats for ${req.params.teamName}:`, error);
       res.status(500).json({

@@ -40,6 +40,7 @@ interface TeamStanding {
 }
 
 interface RawFixture {
+  id: number;
   event: number | null;
   team_h: number;
   team_a: number;
@@ -50,6 +51,7 @@ interface RawFixture {
 }
 
 interface HistoricalFixture {
+  id: number;
   event: number;
   team_h_name: string;
   team_a_name: string;
@@ -60,6 +62,7 @@ interface HistoricalFixture {
 }
 
 interface TeamGwStats {
+  fixture_id: number;
   gameweek: number;
   minutes: number;
   goals_scored: number;
@@ -226,8 +229,11 @@ export default function TeamDetail() {
     staleTime: 30 * 60 * 1000,
   });
 
-  // Team-level per-gameweek aggregated player stats (goals, cards, bonus, DC, etc.)
-  const { data: currentTeamGwStats, isLoading: isCurrentTeamGwStatsLoading } = useQuery<{ gameweeks: TeamGwStats[] }>({
+  // Team-level per-fixture aggregated player stats (goals, cards, bonus, DC, etc.). Grouped by
+  // fixture_id, not gameweek — a postponed fixture can share its gameweek number with another
+  // match (e.g. two Arsenal 2025/26 fixtures both tagged gameweek 26), so matching by gameweek
+  // would attach the same stats bundle to both fixture rows and double-count it in the total.
+  const { data: currentTeamGwStats, isLoading: isCurrentTeamGwStatsLoading } = useQuery<{ fixtures: TeamGwStats[] }>({
     queryKey: ["/api/team-gameweek-stats", teamName, CURRENT_SEASON],
     queryFn: async () => {
       const response = await fetch(`/api/team-gameweek-stats/${encodeURIComponent(teamName)}`);
@@ -238,7 +244,7 @@ export default function TeamDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: lastSeasonTeamGwStats, isLoading: isLastSeasonTeamGwStatsLoading } = useQuery<{ gameweeks: TeamGwStats[] }>({
+  const { data: lastSeasonTeamGwStats, isLoading: isLastSeasonTeamGwStatsLoading } = useQuery<{ fixtures: TeamGwStats[] }>({
     queryKey: ["/api/team-gameweek-stats", teamName, LAST_SEASON],
     queryFn: async () => {
       const response = await fetch(`/api/team-gameweek-stats/${encodeURIComponent(teamName)}?season=${encodeURIComponent(LAST_SEASON)}`);
@@ -252,8 +258,8 @@ export default function TeamDetail() {
   // Merge fixture results with aggregated player stats for the current season
   const currentGameweekRows = useMemo((): GameweekRow[] => {
     if (!currentFixtures || !bootstrapTeam) return [];
-    const statsByGw = new Map<number, TeamGwStats>();
-    (currentTeamGwStats?.gameweeks || []).forEach(gw => statsByGw.set(gw.gameweek, gw));
+    const statsByFixtureId = new Map<number, TeamGwStats>();
+    (currentTeamGwStats?.fixtures || []).forEach(f => statsByFixtureId.set(f.fixture_id, f));
 
     const rows: GameweekRow[] = [];
     for (const fixture of currentFixtures) {
@@ -279,7 +285,7 @@ export default function TeamDetail() {
         result,
         points: result === 'W' ? 3 : result === 'D' ? 1 : 0,
         kickoffTime: fixture.kickoff_time,
-        stats: statsByGw.get(fixture.event),
+        stats: statsByFixtureId.get(fixture.id),
       });
     }
     return rows.sort((a, b) => b.gameweek - a.gameweek);
@@ -288,8 +294,8 @@ export default function TeamDetail() {
   // Merge fixture results with aggregated player stats for 2025/26
   const lastSeasonGameweekRows = useMemo((): GameweekRow[] => {
     if (!lastSeasonFixtures) return [];
-    const statsByGw = new Map<number, TeamGwStats>();
-    (lastSeasonTeamGwStats?.gameweeks || []).forEach(gw => statsByGw.set(gw.gameweek, gw));
+    const statsByFixtureId = new Map<number, TeamGwStats>();
+    (lastSeasonTeamGwStats?.fixtures || []).forEach(f => statsByFixtureId.set(f.fixture_id, f));
 
     const rows: GameweekRow[] = [];
     for (const fixture of lastSeasonFixtures) {
@@ -314,7 +320,7 @@ export default function TeamDetail() {
         result,
         points: result === 'W' ? 3 : result === 'D' ? 1 : 0,
         kickoffTime: fixture.kickoff_time,
-        stats: statsByGw.get(fixture.event),
+        stats: statsByFixtureId.get(fixture.id),
       });
     }
     return rows.sort((a, b) => b.gameweek - a.gameweek);
