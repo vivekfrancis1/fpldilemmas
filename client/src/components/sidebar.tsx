@@ -52,17 +52,25 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   const navItems = [
     {
-      section: "My FPL",
+      section: "Statistics",
       items: [
-        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
-        { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
-        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
-        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
+        { path: "/current-standings", label: "Team Stats", icon: Trophy, description: "Enhanced table with clean sheets, cards, xG and venue splits", popular: false },
+        { path: "/player-statistics", label: "Player Stats", icon: BarChart3, description: "Comprehensive player data", popular: false },
+        { path: "/results-and-fixtures", label: "Match Stats", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
       ]
     },
     {
-      section: "Player Projections", 
+      section: "Team Projections",
+      items: [
+        { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
+        { path: "/team-cs-projections", label: "Clean Sheet Odds", icon: Shield, description: "Clean sheet probabilities", popular: false },
+        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: false },
+        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
+      ]
+    },
+    {
+      section: "Player Projections",
       items: [
         { path: "/player-total-points", label: "Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: false },
         { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy, description: "Individual player goal projections", popular: false },
@@ -73,24 +81,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
-      ]
-    },
-    {
-      section: "Team Projections", 
-      items: [
-        { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
-        { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/team-cs-projections", label: "Clean Sheet Odds", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: false },
-        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
-      ]
-    },
-    {
-      section: "Statistics",
-      items: [
-        { path: "/current-standings", label: "Team Stats", icon: Trophy, description: "Enhanced table with clean sheets, cards, xG and venue splits", popular: false },
-        { path: "/player-statistics", label: "Player Stats", icon: BarChart3, description: "Comprehensive player data", popular: false },
-        { path: "/results-and-fixtures", label: "Match Stats", icon: Trophy, description: "Complete Premier League schedule with results", popular: false },
       ]
     },
     {
@@ -108,6 +98,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
         { path: "/content-creators", label: "Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
+      ]
+    },
+    {
+      section: "My FPL",
+      items: [
+        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
+        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
+        { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
+        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
+        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
       ]
     },
     ];
