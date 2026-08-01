@@ -416,7 +416,7 @@ export default function PlayerDetail() {
         shortLabel: 'T In',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-green-600">{(gw.transfers_in || 0).toLocaleString()}</span>,
-        aggregate: (h) => sumField(h, 'transfers_in'),
+        aggregate: (h) => sumField(h, 'transfers_in').toLocaleString(),
       },
       {
         key: 'transfers_out',
@@ -424,7 +424,7 @@ export default function PlayerDetail() {
         shortLabel: 'T Out',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-red-600">{(gw.transfers_out || 0).toLocaleString()}</span>,
-        aggregate: (h) => sumField(h, 'transfers_out'),
+        aggregate: (h) => sumField(h, 'transfers_out').toLocaleString(),
       },
       {
         key: 'influence',

@@ -387,7 +387,28 @@ export default function TeamDetail() {
             {rows.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500">No gameweek data available for this team</div>
             ) : (
-              rows.map((r) => (
+              <>
+              <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-purple-800">Total</span>
+                  <div className="text-lg font-bold text-purple-800">
+                    {gwColumns.find(c => c.key === 'pts')?.aggregate?.(rows)} pts
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  {gwColumns.filter(col => col.aggregate && !['opponent', 'date', 'score', 'result', 'pts'].includes(col.key)).map(col => {
+                    const value = col.aggregate!(rows);
+                    if (value === '') return null;
+                    return (
+                      <div key={col.key} className="text-center">
+                        <div className="text-xs text-purple-600">{col.shortLabel || col.label}</div>
+                        <div className="font-bold text-purple-800">{value}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {rows.map((r) => (
                 <div key={r.gameweek} className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -405,7 +426,8 @@ export default function TeamDetail() {
                     ))}
                   </div>
                 </div>
-              ))
+              ))}
+              </>
             )}
           </div>
         ) : (
