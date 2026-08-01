@@ -328,7 +328,7 @@ export default function ResultsAndFixtures() {
                 <Select value={selectedGameweek.toString()} onValueChange={(value) =>
                   setSelectedGameweek(value === "all" ? "all" : parseInt(value))
                 }>
-                  <SelectTrigger data-testid="select-gameweek" className="w-32 sm:w-48">
+                  <SelectTrigger data-testid="select-gameweek" className="w-28 h-8 text-xs">
                     <SelectValue placeholder="All Gameweeks" />
                   </SelectTrigger>
                   <SelectContent>
