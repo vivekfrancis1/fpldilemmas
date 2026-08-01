@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -586,6 +586,23 @@ export default function MyDashboard() {
     enabled: !!bootstrapData,
     staleTime: 60000,
   });
+
+  // FPL now updates mini-league rank in real time during a live gameweek — auto-expand the
+  // Live Table for the user's top private league instead of requiring a click on the Activity
+  // button. Only runs once (and only once the season has actually started), and only if the
+  // user hasn't already picked a league's live table themselves.
+  const hasAutoSelectedLiveLeague = useRef(false);
+  useEffect(() => {
+    if (hasAutoSelectedLiveLeague.current) return;
+    if (!leaguesData?.classic || leaguesData.classic.length === 0) return;
+    if (!bootstrapData) return;
+    hasAutoSelectedLiveLeague.current = true;
+    if (currentGameweek === 0) return; // pre-season — no gameweek in progress yet
+    const topPrivateLeague = [...leaguesData.classic]
+      .filter(league => league.league_type === 'x' && league.id > 1000 && league.entry_rank > 0)
+      .sort((a, b) => a.entry_rank - b.entry_rank)[0];
+    if (topPrivateLeague) setSelectedLiveLeague(topPrivateLeague.id);
+  }, [leaguesData, bootstrapData, currentGameweek]);
 
   // Always use public transfers endpoint — upcoming transfers are handled via nextTeamData
   const { data: transfersData, isLoading: isLoadingTransfers, error: transfersError } = useQuery<Transfer[]>({
