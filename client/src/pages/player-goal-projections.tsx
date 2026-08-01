@@ -41,9 +41,9 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
       className: 'w-[130px] min-w-[130px]',
       render: (_, player) => (
         <div>
-          <PlayerNameCell name={player.name} />
+          <PlayerNameCell name={player.name} playerId={player.id} />
           <div className="flex items-center gap-1 mt-1">
-            <TeamBadge team={player.teamShort} compact={true} className="text-xs" />
+            <TeamBadge team={player.teamShort} teamName={player.team} compact={true} className="text-xs" />
             <PositionBadge position={player.position} compact={true} className="text-xs" />
           </div>
         </div>

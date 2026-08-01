@@ -654,12 +654,13 @@ export default function PlayerBonusPoints() {
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                             <div className="flex items-center gap-0.5 flex-wrap">
-                              <PlayerNameCell 
+                              <PlayerNameCell
                                 name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
                                 position={projection.position}
                                 team={projection.teamName}
                                 compact={true}
                                 className="text-xs md:text-sm"
+                                playerId={projection.playerId}
                               />
                               {playerAvailabilityMap && playerAvailabilityMap.get(projection.playerId) && (
                                 <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} />

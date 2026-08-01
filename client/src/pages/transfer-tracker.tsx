@@ -438,11 +438,12 @@ export default function TransferTracker() {
                             ) : (
                               <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
                             )}
-                            <PlayerNameCell 
+                            <PlayerNameCell
                               name={transfer.player_name}
                               position={transfer.position}
                               team={transfer.team_name}
                               compact={true}
+                              playerId={transfer.player_id}
                             />
                           </div>
                         </td>

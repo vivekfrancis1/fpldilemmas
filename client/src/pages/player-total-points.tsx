@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, type CSSProperties, type ReactNode } from "react";
+import { Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
@@ -684,14 +685,17 @@ function createPlayerTotalPointsColumns(
                 <Users className="h-3 w-3" />
               </span>
             )}
-            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px]">
+            <Link
+              href={`/player/${player.playerId}?from=${encodeURIComponent(window.location.pathname)}`}
+              className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px] hover:text-purple-700 hover:underline"
+            >
               {!isPastMode ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name) : (player.playerName || player.name)}
-            </span>
+            </Link>
             <PlayerAvailabilityBadge player={player} />
           </div>
           <div className="flex items-center gap-0.5 mt-0.5">
             <PositionBadge position={player.position} compact={true} />
-            <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
+            <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} teamName={player.teamName || player.team} compact={true} />
           </div>
         </div>
       )

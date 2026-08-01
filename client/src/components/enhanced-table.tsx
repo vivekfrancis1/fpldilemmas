@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'wouter';
 import { ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -274,48 +275,83 @@ export function EnhancedTable<T = any>({
 }
 
 // Enhanced utility components for common cell types
-export const PlayerNameCell = ({ 
-  name, 
-  position, 
-  team, 
-  compact = false, 
-  showOwnership = false, 
+export const PlayerNameCell = ({
+  name,
+  position,
+  team,
+  compact = false,
+  showOwnership = false,
   ownership,
-  className 
-}: { 
-  name: string; 
-  position?: string; 
-  team?: string; 
-  compact?: boolean; 
-  showOwnership?: boolean; 
+  className,
+  playerId,
+}: {
+  name: string;
+  position?: string;
+  team?: string;
+  compact?: boolean;
+  showOwnership?: boolean;
   ownership?: number;
   className?: string;
-}) => (
-  <div className={cn("flex flex-col", className)}>
-    <div className="font-semibold text-gray-900">
-      {name}
+  /** When provided, the name navigates to that player's /player/:id detail page. */
+  playerId?: number | string;
+}) => {
+  const [, navigate] = useLocation();
+  return (
+    <div className={cn("flex flex-col", className)}>
+      <div
+        className={cn(
+          "font-semibold text-gray-900",
+          playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
+        )}
+        onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
+      >
+        {name}
+      </div>
+      <div className="flex items-center gap-1 mt-1">
+        {position && (
+          <PositionBadge position={position} compact={true} />
+        )}
+        {team && (
+          <TeamBadge team={team} compact={true} />
+        )}
+        {showOwnership && ownership !== undefined && (
+          <span className="text-xs text-gray-500">
+            {ownership}% owned
+          </span>
+        )}
+      </div>
     </div>
-    <div className="flex items-center gap-1 mt-1">
-      {position && (
-        <PositionBadge position={position} compact={true} />
-      )}
-      {team && (
-        <TeamBadge team={team} compact={true} />
-      )}
-      {showOwnership && ownership !== undefined && (
-        <span className="text-xs text-gray-500">
-          {ownership}% owned
-        </span>
-      )}
-    </div>
-  </div>
-);
+  );
+};
 
-export const TeamBadge = ({ team, className, compact = false }: { team: string; className?: string; compact?: boolean }) => (
-  <Badge variant="outline" className={cn("text-xs font-medium", compact && "px-1 py-0.5", className)}>
-    {team}
-  </Badge>
-);
+export const TeamBadge = ({
+  team,
+  className,
+  compact = false,
+  teamName,
+}: {
+  team: string;
+  className?: string;
+  compact?: boolean;
+  /** When provided (the team's full name), the badge navigates to that team's /team/:name detail page. */
+  teamName?: string;
+}) => {
+  const [, navigate] = useLocation();
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "text-xs font-medium",
+        compact && "px-1 py-0.5",
+        teamName != null && "cursor-pointer hover:bg-purple-50 hover:border-purple-300",
+        className
+      )}
+      onClick={teamName != null ? () => navigate(`/team/${encodeURIComponent(teamName)}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
+    >
+      {team}
+    </Badge>
+  );
+};
 
 export const PositionBadge = ({ position, className, compact = false }: { position: string; className?: string; compact?: boolean }) => {
   const getPositionColor = (pos: string) => {

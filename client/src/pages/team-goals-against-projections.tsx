@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -763,7 +764,12 @@ export default function TeamGoalsAgainstProjections() {
                                 />
                               ) : null;
                             })()}
-                            <span className="text-xs md:text-sm font-medium text-gray-900">{team.teamShort}</span>
+                            <Link
+                              href={`/team/${encodeURIComponent(team.team)}?from=${encodeURIComponent(window.location.pathname)}`}
+                              className="text-xs md:text-sm font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                            >
+                              {team.teamShort}
+                            </Link>
                           </div>
                         </td>
                         

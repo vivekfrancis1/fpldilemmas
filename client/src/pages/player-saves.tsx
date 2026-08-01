@@ -894,6 +894,7 @@ export default function PlayerSaves() {
                                 team={projection.teamName}
                                 compact={true}
                                 className="text-xs md:text-sm"
+                                playerId={projection.playerId}
                               />
                               {playerAvailabilityMap && playerAvailabilityMap.get(projection.playerId) && (
                                 <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} />

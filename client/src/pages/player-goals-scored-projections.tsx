@@ -1066,6 +1066,7 @@ export default function PlayerGoalsScoredProjections() {
                               team={player.teamShort}
                               compact={true}
                               className="text-xs md:text-sm"
+                              playerId={player.playerId}
                             />
                             {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
                               <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
