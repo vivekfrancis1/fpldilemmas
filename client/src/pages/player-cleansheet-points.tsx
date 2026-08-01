@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { computeNextRange } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 
 interface FixtureDetail {
   opponent: string;
@@ -283,6 +284,7 @@ export default function PlayerCleanSheetPoints() {
           <p className="fpl-page-subtitle">
             Expected clean sheet points for the next 6 gameweeks: Defenders & Goalkeepers (4 pts), Midfielders (1 pt), Forwards (0 pts)
           </p>
+          <ProjectionDisclaimer />
         </div>
       </div>
 

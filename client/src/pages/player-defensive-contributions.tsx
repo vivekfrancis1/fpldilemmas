@@ -16,6 +16,7 @@ import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react"
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface BootstrapData {
@@ -622,6 +623,7 @@ export default function PlayerDefensiveContributions() {
           <p className="fpl-page-subtitle">
             Comprehensive defensive stats and FPL points projections with fixture-aware analysis
           </p>
+          {viewMode === "future" && <ProjectionDisclaimer />}
         </div>
       </div>
 

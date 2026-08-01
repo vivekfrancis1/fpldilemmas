@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProtectedRoute from "@/components/protected-route";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 
 interface FixtureDetail {
   opponent: string;
@@ -189,6 +190,7 @@ export default function PlayerYellowCards() {
           <p className="fpl-page-subtitle">
             Yellow card probability analysis and FPL point penalties for all positions
           </p>
+          <ProjectionDisclaimer />
         </div>
       </div>
 

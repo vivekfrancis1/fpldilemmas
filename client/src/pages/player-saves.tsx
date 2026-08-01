@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface FixtureDetail {
@@ -598,6 +599,7 @@ export default function PlayerSaves() {
                 ? "Goalkeeper save predictions and FPL points analysis for upcoming gameweeks"
                 : "Actual goalkeeper saves from past gameweeks"}
             </p>
+            {viewMode === "future" && <ProjectionDisclaimer />}
           </div>
         </div>
         {viewMode === "future" ? (

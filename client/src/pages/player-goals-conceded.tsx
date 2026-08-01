@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ProtectedRoute from "@/components/protected-route";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 
 interface BootstrapData {
   elements: any[];
@@ -208,6 +209,7 @@ export default function PlayerGoalsConceded() {
           <p className="fpl-page-subtitle">
             Goals conceded projections and FPL point penalties for goalkeepers and defenders
           </p>
+          <ProjectionDisclaimer />
         </div>
       </div>
 

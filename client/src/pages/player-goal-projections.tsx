@@ -11,6 +11,7 @@ import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
@@ -290,6 +291,7 @@ export default function PlayerGoalProjections() {
           <p className="fpl-page-subtitle">
             Projected goals based on team scoring potential, fixture difficulty, and individual player share with penalty taker adjustments
           </p>
+          <ProjectionDisclaimer />
         </div>
       </div>
 

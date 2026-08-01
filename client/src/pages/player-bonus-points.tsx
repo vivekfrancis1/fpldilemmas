@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 
 interface FixtureDetail {
   opponent: string;
@@ -413,6 +414,7 @@ export default function PlayerBonusPoints() {
           <p className="fpl-page-subtitle">
             Bonus Point System (BPS) projections and additional FPL rewards for top performers
           </p>
+          <ProjectionDisclaimer />
         </div>
       </div>
 

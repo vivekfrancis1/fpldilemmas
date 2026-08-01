@@ -18,6 +18,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
+import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
 interface FixtureDetail {
@@ -666,6 +667,7 @@ export default function PlayerGoalsScoredProjections() {
           <p className="fpl-page-subtitle">
             Projected and historical goals scored by players across all gameweeks
           </p>
+          {viewMode === "future" && <ProjectionDisclaimer />}
         </div>
       </div>
 
