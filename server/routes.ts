@@ -2550,7 +2550,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bootstrap = await bootstrapResponse.json();
       const fixtures = await fixturesResponse.json();
-      
+
+      // Pre-season (or early season), most/all teams have 0 current-season games — falling
+      // back to a flat neutral PPG for every team made this mode show FDR=2 across the board,
+      // indistinguishable from a broken feed. Fall back to real 2025/26 results per team
+      // instead, same "blend until the new season has data" pattern used elsewhere in the app.
+      const LAST_SEASON_FDR_FALLBACK = "2025/26";
+      const lastSeasonStatsByName: Record<string, { home: { gamesPlayed: number; points: number }; away: { gamesPlayed: number; points: number } }> = {};
+      try {
+        const archiveResult = await pool.query(
+          `SELECT team_h_name, team_a_name, team_h_score, team_a_score
+           FROM season_fixtures_archive
+           WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
+          [LAST_SEASON_FDR_FALLBACK]
+        );
+        const ensureLastSeason = (name: string) => {
+          if (!lastSeasonStatsByName[name]) {
+            lastSeasonStatsByName[name] = { home: { gamesPlayed: 0, points: 0 }, away: { gamesPlayed: 0, points: 0 } };
+          }
+          return lastSeasonStatsByName[name];
+        };
+        archiveResult.rows.forEach((row: any) => {
+          const home = ensureLastSeason(row.team_h_name);
+          const away = ensureLastSeason(row.team_a_name);
+          home.home.gamesPlayed += 1;
+          away.away.gamesPlayed += 1;
+          if (row.team_h_score > row.team_a_score) {
+            home.home.points += 3;
+          } else if (row.team_h_score < row.team_a_score) {
+            away.away.points += 3;
+          } else {
+            home.home.points += 1;
+            away.away.points += 1;
+          }
+        });
+      } catch (fallbackError) {
+        console.error("Failed to fetch 2025/26 fallback for form-based FDR:", fallbackError);
+      }
+
       // Calculate form-based FDR for each team
       const teamStats: Record<number, {
         home: { goalsScored: number; goalsConceded: number; gamesPlayed: number; points: number };
@@ -2605,16 +2642,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       bootstrap.teams.forEach((team: any) => {
         const stats = teamStats[team.id];
-        
-        // Calculate PPG for home and away
-        const homePPG = stats.home.gamesPlayed > 0 
-          ? stats.home.points / stats.home.gamesPlayed 
-          : 1.0; // Default to medium if no games
-        
-        const awayPPG = stats.away.gamesPlayed > 0 
-          ? stats.away.points / stats.away.gamesPlayed 
-          : 1.0; // Default to medium if no games
-        
+        const lastSeasonStats = lastSeasonStatsByName[team.name];
+
+        // Calculate PPG for home and away — fall back to real 2025/26 PPG when this team has no
+        // current-season games yet, rather than a flat neutral default (see comment above).
+        const homePPG = stats.home.gamesPlayed > 0
+          ? stats.home.points / stats.home.gamesPlayed
+          : (lastSeasonStats && lastSeasonStats.home.gamesPlayed > 0
+              ? lastSeasonStats.home.points / lastSeasonStats.home.gamesPlayed
+              : 1.0);
+
+        const awayPPG = stats.away.gamesPlayed > 0
+          ? stats.away.points / stats.away.gamesPlayed
+          : (lastSeasonStats && lastSeasonStats.away.gamesPlayed > 0
+              ? lastSeasonStats.away.points / lastSeasonStats.away.gamesPlayed
+              : 1.0);
+
         // Assign FDR tiers based on PPG thresholds
         fdrRatings[team.id] = {
           home: getPPGTier(homePPG),
