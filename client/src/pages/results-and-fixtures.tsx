@@ -304,55 +304,55 @@ export default function ResultsAndFixtures() {
         <p className="fpl-page-subtitle">
           Complete Premier League schedule with results and upcoming fixtures
         </p>
-        <div className="mt-2">
-          <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
-        </div>
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Gameweek Navigation */}
+        {/* Season + Gameweek Navigation */}
         <div className="fpl-filters">
           <div className="fpl-card-content">
-            <div className="flex items-center justify-center space-x-2 sm:space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePreviousGameweek()}
-                disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
-                className="px-2 sm:px-3 min-w-[44px]"
-                data-testid="button-previous-gameweek"
-              >
-                <ChevronLeft className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Previous</span>
-              </Button>
-              
-              <Select value={selectedGameweek.toString()} onValueChange={(value) => 
-                setSelectedGameweek(value === "all" ? "all" : parseInt(value))
-              }>
-                <SelectTrigger data-testid="select-gameweek" className="w-32 sm:w-48">
-                  <SelectValue placeholder="All Gameweeks" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Gameweeks</SelectItem>
-                  {availableGameweeks.map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>
-                      GW{gw} {!isHistorical && gw === currentGameweek ? "(Current)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleNextGameweek()}
-                disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
-                className="px-2 sm:px-3 min-w-[44px]"
-                data-testid="button-next-gameweek"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="h-4 w-4 sm:ml-1" />
-              </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+              <div className="flex items-center justify-center space-x-2 sm:space-x-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreviousGameweek()}
+                  disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
+                  className="px-2 sm:px-3 min-w-[44px]"
+                  data-testid="button-previous-gameweek"
+                >
+                  <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Button>
+
+                <Select value={selectedGameweek.toString()} onValueChange={(value) =>
+                  setSelectedGameweek(value === "all" ? "all" : parseInt(value))
+                }>
+                  <SelectTrigger data-testid="select-gameweek" className="w-32 sm:w-48">
+                    <SelectValue placeholder="All Gameweeks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Gameweeks</SelectItem>
+                    {availableGameweeks.map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>
+                        GW{gw} {!isHistorical && gw === currentGameweek ? "(Current)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleNextGameweek()}
+                  disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
+                  className="px-2 sm:px-3 min-w-[44px]"
+                  data-testid="button-next-gameweek"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4 sm:ml-1" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
