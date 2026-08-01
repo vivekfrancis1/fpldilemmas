@@ -85,12 +85,18 @@ export default function ResultsAndFixtures() {
     }
   }, [bootstrapData]);
 
-  // Historical seasons have no single "current" gameweek to jump to — show the full season.
+  // Historical seasons have no live "current" gameweek — default to the latest gameweek in
+  // that season's archive (e.g. GW38) once its fixtures load, so the page opens on the most
+  // recent action instead of the full 38-gameweek list.
   useEffect(() => {
-    if (isHistorical) {
+    if (!isHistorical) return;
+    if (!historicalFixturesData || historicalFixturesData.length === 0) {
       setSelectedGameweek("all");
+      return;
     }
-  }, [isHistorical]);
+    const latestGameweek = Math.max(...historicalFixturesData.map(f => f.event));
+    setSelectedGameweek(latestGameweek);
+  }, [isHistorical, historicalFixturesData]);
 
   // Get available gameweeks
   const availableGameweeks = useMemo(() => {
