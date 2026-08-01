@@ -1234,6 +1234,11 @@ export default function PlayerStatsTable({
               const position = getPositionName(player);
               const teamName = getTeamName(player);
               const netTransfers = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
+              // Historical/blended rows use a composite string id like "411_2025/26" (see
+              // historicalPlayers schema) — the literal "/" breaks /player/:id navigation by
+              // splitting into extra path segments. playerId is always the clean numeric
+              // current-bootstrap-scheme id; current-season bootstrap rows only have `id`.
+              const detailPlayerId = player.playerId ?? player.id;
               
               return (
                 <tr key={player.id} className="hover:bg-gray-50" data-testid={`row-player-${player.id}`}>
@@ -1242,7 +1247,7 @@ export default function PlayerStatsTable({
                       <div>
                         <div 
                           className="text-sm font-medium text-gray-900 hover:text-purple-700 cursor-pointer hover:underline"
-                          onClick={() => navigate(`/player/${player.id}?from=${encodeURIComponent(window.location.pathname)}`)}
+                          onClick={() => navigate(`/player/${detailPlayerId}?from=${encodeURIComponent(window.location.pathname)}`)}
                         >
                           {player.web_name}
                         </div>
@@ -1266,7 +1271,7 @@ export default function PlayerStatsTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/player/${player.id}?from=${encodeURIComponent(window.location.pathname)}`)}
+                      onClick={() => navigate(`/player/${detailPlayerId}?from=${encodeURIComponent(window.location.pathname)}`)}
                       className="h-4 w-4 p-0 hover:bg-blue-50 hover:border-blue-300"
                       title="View detailed gameweek statistics"
                       data-testid={`button-player-details-${player.id}`}
