@@ -87,8 +87,8 @@ const navSections: NavSection[] = [
   {
     section: "Top Managers",
     items: [
-      { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown },
-      { path: "/content-creators", label: "Content Creators", icon: Users },
+      { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, adminOnly: true },
+      { path: "/content-creators", label: "Content Creators", icon: Users, adminOnly: true },
     ],
   },
   {
@@ -239,10 +239,12 @@ export default function TopNav() {
     }
   };
 
-  const visibleSections = navSections.map((s) => ({
-    ...s,
-    items: s.items.filter((item) => !item.adminOnly || isAdmin),
-  }));
+  const visibleSections = navSections
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((item) => !item.adminOnly || isAdmin),
+    }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">

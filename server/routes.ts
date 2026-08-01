@@ -2818,6 +2818,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Archived match stats for a completed fixture from a prior season — lets the UI compare a
+  // 2026/27 fixture's live stats against the same two teams' equivalent meeting from 2025/26.
+  // Reconstructed from gameweek_player_data (raw per-fixture player stats, has fixture_id and
+  // was_home) joined with historical_player_stats (name/team/position metadata), since FPL's
+  // live API has no visibility into prior seasons. teamH/teamA must match the exact home/away
+  // orientation of the fixture being compared — PL fixtures are a round-robin, so at most one
+  // archived match exists per (season, teamH, teamA) triple; a promoted team with no equivalent
+  // fixture last season simply returns found:false.
+  app.get("/api/archived-match-stats", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || PREVIOUS_SEASON;
+      const teamH = req.query.teamH as string;
+      const teamA = req.query.teamA as string;
+      if (!teamH || !teamA) {
+        return res.status(400).json({ error: "teamH and teamA query params are required" });
+      }
+
+      const fixtureResult = await pool.query(
+        `SELECT fixture_id, gameweek, team_h_name, team_a_name, team_h_score, team_a_score,
+                kickoff_time, finished
+         FROM season_fixtures_archive
+         WHERE season = $1 AND team_h_name = $2 AND team_a_name = $3
+         LIMIT 1`,
+        [season, teamH, teamA]
+      );
+
+      if (fixtureResult.rows.length === 0) {
+        return res.json({ found: false });
+      }
+
+      const fixtureRow = fixtureResult.rows[0];
+
+      const [statsResult, metaResult] = await Promise.all([
+        pool.query(
+          `SELECT player_id, was_home, minutes, goals_scored, assists, clean_sheets, goals_conceded,
+                  own_goals, penalties_saved, penalties_missed, yellow_cards, red_cards, saves, bonus,
+                  bps, total_points, defensive_contribution, influence, creativity, threat, ict_index
+           FROM gameweek_player_data
+           WHERE season = $1 AND fixture_id = $2`,
+          [season, fixtureRow.fixture_id]
+        ),
+        pool.query(
+          `SELECT player_id, player_name, team_name, position FROM historical_player_stats WHERE season = $1`,
+          [season]
+        ),
+      ]);
+
+      const metaById = new Map(metaResult.rows.map((r: any) => [r.player_id, r]));
+
+      const homeTeamStats: any[] = [];
+      const awayTeamStats: any[] = [];
+      for (const row of statsResult.rows) {
+        const meta = metaById.get(row.player_id);
+        if (!meta) continue; // no season-level record for this player (e.g. never actually appeared)
+
+        const stat = {
+          playerId: row.player_id,
+          playerName: meta.player_name,
+          teamName: meta.team_name,
+          position: POSITION_SHORT_BY_NAME[meta.position] || meta.position,
+          minutes: row.minutes || 0,
+          goals_scored: row.goals_scored || 0,
+          assists: row.assists || 0,
+          clean_sheets: row.clean_sheets || 0,
+          goals_conceded: row.goals_conceded || 0,
+          own_goals: row.own_goals || 0,
+          penalties_saved: row.penalties_saved || 0,
+          penalties_missed: row.penalties_missed || 0,
+          yellow_cards: row.yellow_cards || 0,
+          red_cards: row.red_cards || 0,
+          saves: row.saves || 0,
+          bonus: row.bonus || 0,
+          bps: row.bps || 0,
+          influence: parseFloat(row.influence) || 0,
+          creativity: parseFloat(row.creativity) || 0,
+          threat: parseFloat(row.threat) || 0,
+          ict_index: parseFloat(row.ict_index) || 0,
+          total_points: row.total_points || 0,
+          defensive_contribution: row.defensive_contribution || 0,
+        };
+
+        if (row.was_home) homeTeamStats.push(stat);
+        else awayTeamStats.push(stat);
+      }
+
+      homeTeamStats.sort((a, b) => b.total_points - a.total_points);
+      awayTeamStats.sort((a, b) => b.total_points - a.total_points);
+
+      res.json({
+        found: true,
+        fixture: {
+          event: fixtureRow.gameweek,
+          team_h_score: fixtureRow.team_h_score,
+          team_a_score: fixtureRow.team_a_score,
+          kickoff_time: fixtureRow.kickoff_time,
+          finished: fixtureRow.finished,
+        },
+        homeTeamName: fixtureRow.team_h_name,
+        awayTeamName: fixtureRow.team_a_name,
+        homeTeamStats,
+        awayTeamStats,
+      });
+    } catch (error) {
+      console.error("Error fetching archived match stats:", error);
+      res.status(500).json({
+        error: "Failed to fetch archived match stats",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Live FPL entry data (for league analysis)
   app.get("/api/entry/:entryId", async (req, res) => {
     try {

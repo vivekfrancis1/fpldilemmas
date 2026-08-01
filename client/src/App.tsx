@@ -176,11 +176,41 @@ function Router() {
         <Route path="/admin-data-population" component={AdminDataPopulation} />
         <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
         <Route path="/admin-projection-window" component={AdminProjectionWindow} />
-        <Route path="/content-creators" component={ContentCreators} />
-        <Route path="/content-creators/:id/team" component={CreatorTeam} />
-        <Route path="/top25-managers" component={Top25Managers} />
-        <Route path="/top25-managers/:rank/team" component={Top25ManagerTeam} />
-        <Route path="/top25-team-analysis" component={Top25TeamAnalysis} />
+        <Route path="/content-creators">
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<PageLoader />}>
+              <ContentCreators />
+            </Suspense>
+          </ProtectedRoute>
+        </Route>
+        <Route path="/content-creators/:id/team">
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<PageLoader />}>
+              <CreatorTeam />
+            </Suspense>
+          </ProtectedRoute>
+        </Route>
+        <Route path="/top25-managers">
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<PageLoader />}>
+              <Top25Managers />
+            </Suspense>
+          </ProtectedRoute>
+        </Route>
+        <Route path="/top25-managers/:rank/team">
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<PageLoader />}>
+              <Top25ManagerTeam />
+            </Suspense>
+          </ProtectedRoute>
+        </Route>
+        <Route path="/top25-team-analysis">
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<PageLoader />}>
+              <Top25TeamAnalysis />
+            </Suspense>
+          </ProtectedRoute>
+        </Route>
         <Route path="/manager-team/:managerId" component={ManagerTeam} />
         <Route path="/projection-documentation" component={ProjectionDocumentation} />
         <Route path="/login" component={Login} />

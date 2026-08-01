@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Trophy, Calendar } from "lucide-react";
+
+const PREVIOUS_SEASON = "2025/26";
+const CURRENT_SEASON_LABEL = "2026/27";
 
 interface PlayerStats {
   playerId: number;
@@ -41,6 +45,21 @@ interface MatchData {
   awayTeamStats: PlayerStats[];
 }
 
+interface ArchivedMatchStats {
+  found: boolean;
+  fixture?: {
+    event: number;
+    team_h_score: number;
+    team_a_score: number;
+    kickoff_time: string;
+    finished: boolean;
+  };
+  homeTeamName?: string;
+  awayTeamName?: string;
+  homeTeamStats?: PlayerStats[];
+  awayTeamStats?: PlayerStats[];
+}
+
 export default function MatchStats() {
   const { fixtureId } = useParams<{ fixtureId: string }>();
   const [matchData, setMatchData] = useState<MatchData | null>(null);
@@ -59,6 +78,21 @@ export default function MatchStats() {
 
   const homeTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_h);
   const awayTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_a);
+
+  const { data: archivedMatch, isLoading: isArchivedLoading } = useQuery<ArchivedMatchStats>({
+    queryKey: ['/api/archived-match-stats', homeTeam?.name, awayTeam?.name],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        season: PREVIOUS_SEASON,
+        teamH: homeTeam.name,
+        teamA: awayTeam.name,
+      });
+      const response = await fetch(`/api/archived-match-stats?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch archived match stats');
+      return response.json();
+    },
+    enabled: !!homeTeam?.name && !!awayTeam?.name,
+  });
 
   const isLive = fixture?.started && !fixture?.finished && !fixture?.finished_provisional;
   const isFinished = fixture?.finished || fixture?.finished_provisional;
@@ -285,6 +319,163 @@ export default function MatchStats() {
     );
   };
 
+  const renderAllStatSections = (homeStats: PlayerStats[], awayStats: PlayerStats[]) => (
+    <div className="space-y-3 sm:space-y-4">
+      {renderStatSection(
+        "Goals Scored",
+        homeStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored),
+        awayStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored),
+        (player) => ({ value: `+${getGoalPoints(player.goals_scored, player.position)}`, color: 'bg-green-500' }),
+        (player) => `${player.playerName}${player.goals_scored > 1 ? ` (${player.goals_scored})` : ''}`
+      )}
+
+      {renderStatSection(
+        "Assists",
+        homeStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists),
+        awayStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists),
+        (player) => ({ value: `+${player.assists * 3}`, color: 'bg-green-500' }),
+        (player) => `${player.playerName}${player.assists > 1 ? ` (${player.assists})` : ''}`
+      )}
+
+      {renderStatSection(
+        "Clean Sheets",
+        homeStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
+        awayStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
+        (player) => {
+          const pts = player.position === 'GKP' || player.position === 'DEF' ? 4 : player.position === 'MID' ? 1 : 0;
+          return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
+        },
+        (player) => `${player.playerName} (${player.position})`
+      )}
+
+      {renderStatSection(
+        "Yellow Cards",
+        homeStats.filter(p => p.yellow_cards > 0),
+        awayStats.filter(p => p.yellow_cards > 0),
+        () => ({ value: '-1', color: 'bg-red-500' }),
+        (player) => player.playerName
+      )}
+
+      {renderStatSection(
+        "Red Cards",
+        homeStats.filter(p => p.red_cards > 0),
+        awayStats.filter(p => p.red_cards > 0),
+        () => ({ value: '-3', color: 'bg-red-500' }),
+        (player) => player.playerName
+      )}
+
+      {renderStatSection(
+        "Own Goals",
+        homeStats.filter(p => p.own_goals > 0),
+        awayStats.filter(p => p.own_goals > 0),
+        (player) => ({ value: `-${player.own_goals * 2}`, color: 'bg-red-500' }),
+        (player) => `${player.playerName}${player.own_goals > 1 ? ` (${player.own_goals})` : ''}`
+      )}
+
+      {renderStatSection(
+        "Penalties Saved",
+        homeStats.filter(p => p.penalties_saved > 0),
+        awayStats.filter(p => p.penalties_saved > 0),
+        (player) => ({ value: `+${player.penalties_saved * 5}`, color: 'bg-green-500' }),
+        (player) => `${player.playerName}${player.penalties_saved > 1 ? ` (${player.penalties_saved})` : ''}`
+      )}
+
+      {renderStatSection(
+        "Penalties Missed",
+        homeStats.filter(p => p.penalties_missed > 0),
+        awayStats.filter(p => p.penalties_missed > 0),
+        (player) => ({ value: `-${player.penalties_missed * 2}`, color: 'bg-red-500' }),
+        (player) => `${player.playerName}${player.penalties_missed > 1 ? ` (${player.penalties_missed})` : ''}`
+      )}
+
+      {renderStatSection(
+        "Saves",
+        homeStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves),
+        awayStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves),
+        (player) => {
+          const pts = Math.floor(player.saves / 3);
+          return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
+        },
+        (player) => `${player.playerName} (${player.saves})`
+      )}
+
+      {renderStatSection(
+        "Bonus Points System",
+        homeStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10),
+        awayStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10),
+        (player) => player.bonus > 0 ? { value: `+${player.bonus}`, color: 'bg-green-500' } : null,
+        (player) => `${player.playerName} (${player.bps})`
+      )}
+
+      {(() => {
+        const homeDC = homeStats.filter(p => (p.defensive_contribution || 0) > 0).sort((a, b) => (b.defensive_contribution || 0) - (a.defensive_contribution || 0)).slice(0, 10);
+        const awayDC = awayStats.filter(p => (p.defensive_contribution || 0) > 0).sort((a, b) => (b.defensive_contribution || 0) - (a.defensive_contribution || 0)).slice(0, 10);
+        if (homeDC.length === 0 && awayDC.length === 0) return null;
+
+        return renderStatSection(
+          "Defensive Contributions",
+          homeDC,
+          awayDC,
+          (player) => {
+            const dc = player.defensive_contribution || 0;
+            const pts = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
+            return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
+          },
+          (player) => `${player.playerName} (${player.defensive_contribution || 0})`
+        );
+      })()}
+    </div>
+  );
+
+  const renderScoreCard = (props: {
+    homeName: string;
+    awayName: string;
+    homeScore: number | null | undefined;
+    awayScore: number | null | undefined;
+    gwLabel: number | undefined;
+    dateLabel: string | null;
+    live: boolean;
+    finished: boolean;
+  }) => (
+    <div className="rounded-2xl overflow-hidden shadow-lg">
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-3 sm:px-6 py-5 sm:py-8">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-center flex-1 min-w-0">
+            <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{props.homeName}</div>
+          </div>
+          <div className="text-center shrink-0 px-2">
+            <div className="text-3xl sm:text-5xl font-black tracking-tight tabular-nums">
+              {props.homeScore ?? '-'} <span className="text-gray-500 mx-1">-</span> {props.awayScore ?? '-'}
+            </div>
+            <div className="mt-2 flex items-center justify-center gap-1.5 flex-wrap">
+              {props.live && (
+                <Badge className="bg-red-600 text-white animate-pulse text-[10px] sm:text-xs px-2">
+                  LIVE
+                </Badge>
+              )}
+              {props.finished && (
+                <Badge className="bg-emerald-600 text-white text-[10px] sm:text-xs px-2">
+                  Full Time
+                </Badge>
+              )}
+              <span className="text-[10px] sm:text-xs text-gray-400">
+                GW{props.gwLabel}{props.dateLabel ? ` · ${props.dateLabel}` : ''}
+              </span>
+            </div>
+          </div>
+          <div className="text-center flex-1 min-w-0">
+            <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{props.awayName}</div>
+          </div>
+        </div>
+      </div>
+      {props.live && (
+        <div className="bg-red-500/10 text-red-600 text-center py-1 text-[10px] sm:text-xs font-medium">
+          Auto-updating every 30s
+        </div>
+      )}
+    </div>
+  );
+
   if (!fixture && !isLoading && fixturesData) {
     return (
       <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -324,6 +515,8 @@ export default function MatchStats() {
   }
 
   const dateTime = fixture?.kickoff_time ? formatDateTime(fixture.kickoff_time) : null;
+  const archivedDateTime = archivedMatch?.fixture?.kickoff_time ? formatDateTime(archivedMatch.fixture.kickoff_time) : null;
+  const hasArchivedMatch = !!archivedMatch?.found;
 
   return (
     <div className="w-full py-3 sm:py-6 space-y-3 sm:space-y-5">
@@ -332,160 +525,67 @@ export default function MatchStats() {
         <span className="text-sm">Back to Results</span>
       </Button>
 
-      <div className="rounded-2xl overflow-hidden shadow-lg">
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-3 sm:px-6 py-5 sm:py-8">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-center flex-1 min-w-0">
-              <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{homeTeam?.name}</div>
-            </div>
-            <div className="text-center shrink-0 px-2">
-              <div className="text-3xl sm:text-5xl font-black tracking-tight tabular-nums">
-                {fixture?.team_h_score ?? '-'} <span className="text-gray-500 mx-1">-</span> {fixture?.team_a_score ?? '-'}
-              </div>
-              <div className="mt-2 flex items-center justify-center gap-1.5 flex-wrap">
-                {isLive && (
-                  <Badge className="bg-red-600 text-white animate-pulse text-[10px] sm:text-xs px-2">
-                    LIVE
-                  </Badge>
-                )}
-                {isFinished && (
-                  <Badge className="bg-emerald-600 text-white text-[10px] sm:text-xs px-2">
-                    Full Time
-                  </Badge>
-                )}
-                <span className="text-[10px] sm:text-xs text-gray-400">
-                  GW{fixture?.event}{dateTime ? ` \u00B7 ${dateTime.date}` : ''}
-                </span>
-              </div>
-            </div>
-            <div className="text-center flex-1 min-w-0">
-              <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{awayTeam?.name}</div>
-            </div>
-          </div>
-        </div>
-        {isLive && (
-          <div className="bg-red-500/10 text-red-600 text-center py-1 text-[10px] sm:text-xs font-medium">
-            Auto-updating every 30s
-          </div>
-        )}
-      </div>
+      <Tabs defaultValue="current" className="space-y-3 sm:space-y-5">
+        <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid">
+          <TabsTrigger value="current">{CURRENT_SEASON_LABEL}</TabsTrigger>
+          <TabsTrigger value="previous" disabled={!isArchivedLoading && !hasArchivedMatch}>
+            {PREVIOUS_SEASON}
+          </TabsTrigger>
+        </TabsList>
 
-      {!matchData && !isLoading ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
-            <p className="text-gray-600">Match statistics will be available once the match has started.</p>
-          </CardContent>
-        </Card>
-      ) : matchData ? (
-        <div className="space-y-3 sm:space-y-4">
-          {renderStatSection(
-            "Goals Scored",
-            matchData.homeTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored),
-            matchData.awayTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored),
-            (player) => ({ value: `+${getGoalPoints(player.goals_scored, player.position)}`, color: 'bg-green-500' }),
-            (player) => `${player.playerName}${player.goals_scored > 1 ? ` (${player.goals_scored})` : ''}`
+        <TabsContent value="current" className="space-y-3 sm:space-y-5 mt-0">
+          {renderScoreCard({
+            homeName: homeTeam?.name,
+            awayName: awayTeam?.name,
+            homeScore: fixture?.team_h_score,
+            awayScore: fixture?.team_a_score,
+            gwLabel: fixture?.event,
+            dateLabel: dateTime?.date ?? null,
+            live: !!isLive,
+            finished: !!isFinished,
+          })}
+
+          {!matchData && !isLoading ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
+                <p className="text-gray-600">Match statistics will be available once the match has started.</p>
+              </CardContent>
+            </Card>
+          ) : matchData ? (
+            renderAllStatSections(matchData.homeTeamStats, matchData.awayTeamStats)
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="previous" className="space-y-3 sm:space-y-5 mt-0">
+          {isArchivedLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : hasArchivedMatch ? (
+            <>
+              {renderScoreCard({
+                homeName: archivedMatch!.homeTeamName!,
+                awayName: archivedMatch!.awayTeamName!,
+                homeScore: archivedMatch!.fixture!.team_h_score,
+                awayScore: archivedMatch!.fixture!.team_a_score,
+                gwLabel: archivedMatch!.fixture!.event,
+                dateLabel: archivedDateTime?.date ?? null,
+                live: false,
+                finished: true,
+              })}
+              {renderAllStatSections(archivedMatch!.homeTeamStats || [], archivedMatch!.awayTeamStats || [])}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No {PREVIOUS_SEASON} meeting</h3>
+                <p className="text-gray-600">These two teams didn't play each other last season.</p>
+              </CardContent>
+            </Card>
           )}
-
-          {renderStatSection(
-            "Assists",
-            matchData.homeTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists),
-            matchData.awayTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists),
-            (player) => ({ value: `+${player.assists * 3}`, color: 'bg-green-500' }),
-            (player) => `${player.playerName}${player.assists > 1 ? ` (${player.assists})` : ''}`
-          )}
-
-          {renderStatSection(
-            "Clean Sheets",
-            matchData.homeTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
-            matchData.awayTeamStats.filter(p => p.clean_sheets > 0 && p.minutes >= 60 && p.position !== 'FWD').sort((a, b) => b.total_points - a.total_points),
-            (player) => {
-              const pts = player.position === 'GKP' || player.position === 'DEF' ? 4 : player.position === 'MID' ? 1 : 0;
-              return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
-            },
-            (player) => `${player.playerName} (${player.position})`
-          )}
-
-          {renderStatSection(
-            "Yellow Cards",
-            matchData.homeTeamStats.filter(p => p.yellow_cards > 0),
-            matchData.awayTeamStats.filter(p => p.yellow_cards > 0),
-            () => ({ value: '-1', color: 'bg-red-500' }),
-            (player) => player.playerName
-          )}
-
-          {renderStatSection(
-            "Red Cards",
-            matchData.homeTeamStats.filter(p => p.red_cards > 0),
-            matchData.awayTeamStats.filter(p => p.red_cards > 0),
-            () => ({ value: '-3', color: 'bg-red-500' }),
-            (player) => player.playerName
-          )}
-
-          {renderStatSection(
-            "Own Goals",
-            matchData.homeTeamStats.filter(p => p.own_goals > 0),
-            matchData.awayTeamStats.filter(p => p.own_goals > 0),
-            (player) => ({ value: `-${player.own_goals * 2}`, color: 'bg-red-500' }),
-            (player) => `${player.playerName}${player.own_goals > 1 ? ` (${player.own_goals})` : ''}`
-          )}
-
-          {renderStatSection(
-            "Penalties Saved",
-            matchData.homeTeamStats.filter(p => p.penalties_saved > 0),
-            matchData.awayTeamStats.filter(p => p.penalties_saved > 0),
-            (player) => ({ value: `+${player.penalties_saved * 5}`, color: 'bg-green-500' }),
-            (player) => `${player.playerName}${player.penalties_saved > 1 ? ` (${player.penalties_saved})` : ''}`
-          )}
-
-          {renderStatSection(
-            "Penalties Missed",
-            matchData.homeTeamStats.filter(p => p.penalties_missed > 0),
-            matchData.awayTeamStats.filter(p => p.penalties_missed > 0),
-            (player) => ({ value: `-${player.penalties_missed * 2}`, color: 'bg-red-500' }),
-            (player) => `${player.playerName}${player.penalties_missed > 1 ? ` (${player.penalties_missed})` : ''}`
-          )}
-
-          {renderStatSection(
-            "Saves",
-            matchData.homeTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves),
-            matchData.awayTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves),
-            (player) => {
-              const pts = Math.floor(player.saves / 3);
-              return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
-            },
-            (player) => `${player.playerName} (${player.saves})`
-          )}
-
-          {renderStatSection(
-            "Bonus Points System",
-            matchData.homeTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10),
-            matchData.awayTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10),
-            (player) => player.bonus > 0 ? { value: `+${player.bonus}`, color: 'bg-green-500' } : null,
-            (player) => `${player.playerName} (${player.bps})`
-          )}
-
-          {(() => {
-            const homeDC = matchData.homeTeamStats.filter(p => (p.defensive_contribution || 0) > 0).sort((a, b) => (b.defensive_contribution || 0) - (a.defensive_contribution || 0)).slice(0, 10);
-            const awayDC = matchData.awayTeamStats.filter(p => (p.defensive_contribution || 0) > 0).sort((a, b) => (b.defensive_contribution || 0) - (a.defensive_contribution || 0)).slice(0, 10);
-            if (homeDC.length === 0 && awayDC.length === 0) return null;
-
-            return renderStatSection(
-              "Defensive Contributions",
-              homeDC,
-              awayDC,
-              (player) => {
-                const dc = player.defensive_contribution || 0;
-                const pts = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
-                return pts > 0 ? { value: `+${pts}`, color: 'bg-green-500' } : null;
-              },
-              (player) => `${player.playerName} (${player.defensive_contribution || 0})`
-            );
-          })()}
-
-        </div>
-      ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
