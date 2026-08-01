@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SeasonBadge } from "@/components/season-badge";
 
@@ -149,16 +150,20 @@ export default function ProjectedGoalsCS() {
     }
   }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture, tbcEffectiveGW]);
 
+  // Pre-season: nothing has finished yet, so "Match Results" has no real data to fetch or
+  // show (see the early-return notice below) — skip these fetches entirely in that case.
+  const pastModeHasNoData = viewMode === "past" && lastFinishedGW === 0;
+
   // Fetch team goal projections with gameweek range
   const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
     queryKey: [`/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
-    enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
+    enabled: !!bootstrapData?.events && !pastModeHasNoData,
   });
 
   // Fetch team clean sheet projections with gameweek range
   const { data: teamCSData, isLoading: csLoading } = useQuery<any[]>({
     queryKey: [`/api/team-cs-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
-    enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
+    enabled: !!bootstrapData?.events && !pastModeHasNoData,
   });
 
   // Fetch fixtures data to get actual match information (only for selected gameweek range)
@@ -432,6 +437,37 @@ export default function ProjectedGoalsCS() {
       <div className="fpl-page-container">
         {pageHeaderAndTabs}
         <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Match Results" />
+      </div>
+    );
+  }
+
+  // Pre-season: no gameweek has finished yet, so there's nothing for "Match Results" to show.
+  // Without this, the page silently kept whatever gameweek range "Match Predictions" last used
+  // and rendered those (unfinished) fixtures' projected — not actual — figures, making the two
+  // tabs look identical.
+  if (viewMode === "past" && lastFinishedGW === 0) {
+    return (
+      <div className="fpl-page-container">
+        {pageHeaderAndTabs}
+        <div className="min-h-[50vh] flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-fpl-purple/10">
+                <History className="h-6 w-6 text-fpl-purple" />
+              </div>
+              <CardTitle className="text-lg">No Results Yet</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-sm text-gray-600">
+                The 2026-27 season hasn't kicked off yet, so there are no completed gameweeks to
+                show results for. Check back once Gameweek 1 finishes.
+              </p>
+              <Button onClick={() => setViewMode("future")} variant="outline" className="w-full">
+                View Match Predictions instead
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
