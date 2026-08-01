@@ -8592,6 +8592,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resolvedSeasonAssists = await resolveHistorySeason(requestedSeasonAssists);
 
       if (resolvedSeasonAssists !== CURRENT_SEASON) {
+        // A completed season's data never changes — cache it rather than re-running the
+        // archive queries (and the client's own historySeason-resolution refetch) on every
+        // request, which was making this endpoint visibly slow to load.
+        const cacheKey = `assists-history-${resolvedSeasonAssists}`;
+        const cached = historicalCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < HISTORICAL_CACHE_DURATION) {
+          return res.json(cached.data);
+        }
+
         const { lastFinishedGW, players: archivedPlayers } = await getArchivedPlayerGameweekHistory(resolvedSeasonAssists, 1, 38);
         const players = Array.from(archivedPlayers.values())
           .map((p) => {
@@ -8601,7 +8610,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekAssists, totalAssists };
           })
           .filter((p) => p.totalAssists > 0);
-        return res.json({ season: resolvedSeasonAssists, lastFinishedGW, players });
+        const responseData = { season: resolvedSeasonAssists, lastFinishedGW, players };
+        historicalCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+        return res.json(responseData);
       }
 
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
