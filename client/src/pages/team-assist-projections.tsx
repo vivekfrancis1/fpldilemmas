@@ -149,6 +149,14 @@ export default function TeamAssistProjections() {
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
     queryKey: ["/api/team-assist-projections"],
+    // /api/team-assist-projections returns teamId/teamName (not id/team), which left
+    // team.team undefined here — rendered as a blank team name in the desktop column.
+    select: (data: any[]) => data.map((team, index) => ({
+      ...team,
+      id: team.teamId,
+      team: team.teamName,
+      position: index + 1,
+    })),
   });
 
   // Model-based TBC goal projections for assist derivation
