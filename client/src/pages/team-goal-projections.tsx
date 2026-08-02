@@ -372,7 +372,22 @@ export default function TeamGoalProjections() {
         position: team.position
       }));
     }
-    return projectionsData || [];
+    // /api/team-goal-projections returns teamId/teamName/totalGoals (not id/team/
+    // totalProjectedGoals like the history/xG-history endpoints above) — without this
+    // remap, team.team and team.id are undefined for every row, which silently broke
+    // the team-name link (rendered as /team/undefined) and the React row key.
+    return (projectionsData || []).map((team: any, index) => ({
+      id: team.teamId,
+      team: team.teamName,
+      teamShort: team.teamShort,
+      teamBadge: team.teamBadge,
+      gameweekProjections: team.gameweekProjections,
+      fixtureDetails: team.fixtureDetails,
+      totalProjectedGoals: team.totalGoals,
+      averageGoalsPerGame: team.averageGoalsPerGame,
+      confidence: team.confidence,
+      position: index + 1,
+    }));
   }, [viewMode, historyData, xgHistoryData, projectionsData]);
 
   // Merge TBC goals into assigned GW columns based on fixtureMode.
