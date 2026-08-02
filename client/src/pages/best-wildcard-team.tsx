@@ -1058,14 +1058,40 @@ export default function BestWildcardTeam() {
 
       // Filter out excluded players from all positions
       const excludedIds = new Set(excludedPlayers.map(p => p.playerId));
-      const filteredPositionGroups = {
+      const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
+      const excludedFilteredGroups = {
         Goalkeeper: positionGroups.Goalkeeper?.filter(p => !excludedIds.has(p.playerId)) || [],
         Defender: positionGroups.Defender?.filter(p => !excludedIds.has(p.playerId)) || [],
         Midfielder: positionGroups.Midfielder?.filter(p => !excludedIds.has(p.playerId)) || [],
         Forward: positionGroups.Forward?.filter(p => !excludedIds.has(p.playerId)) || []
       };
 
-      const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
+      // Per-real-world-team depth cap: only a club's clear top options at each position are
+      // ever considered, so the optimizer can't suggest e.g. a team's backup goalkeeper over
+      // their starter just because of price/fixtures. Each position array is already sorted
+      // by totalProjectedPoints descending, so the Nth-ranked player for a given team is
+      // exactly the Nth one encountered per team as we walk the array. Explicitly included
+      // players are exempt (a manual include should never be silently dropped) and don't
+      // consume a rank slot, so they never bump a legitimately-ranked teammate out.
+      const TEAM_POSITION_DEPTH: Record<string, number> = {
+        Goalkeeper: 1,
+        Defender: 5,
+        Midfielder: 5,
+        Forward: 2,
+      };
+      const filteredPositionGroups = Object.fromEntries(
+        Object.entries(excludedFilteredGroups).map(([position, players]) => {
+          const depth = TEAM_POSITION_DEPTH[position];
+          if (!depth) return [position, players];
+          const rankSoFarByTeam: Record<string, number> = {};
+          return [position, players.filter(player => {
+            if (includedPlayerIds.has(player.playerId)) return true;
+            const team = player.teamName || '';
+            rankSoFarByTeam[team] = (rankSoFarByTeam[team] || 0) + 1;
+            return rankSoFarByTeam[team] <= depth;
+          })];
+        })
+      ) as Record<string, PlayerSnapshot[]>;
 
       // Use new budget-aware optimization
       const result = buildOptimalTeamWithBudget(

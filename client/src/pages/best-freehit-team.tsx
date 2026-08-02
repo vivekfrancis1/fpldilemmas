@@ -454,11 +454,33 @@ export default function BestFreehitTeam() {
         throw new Error(`No players found with points for gameweek ${selectedGameweek}`);
       }
 
+      // Per-real-world-team depth cap: only a club's clear top options at each position are
+      // ever considered, so the optimizer can't suggest e.g. a team's backup goalkeeper over
+      // their starter just because of price/fixtures (Meslier-behind-Raya style scenarios).
+      // allCandidates is already sorted by gameweekPoints descending, so the Nth-ranked
+      // player for a given team is exactly the Nth one encountered per team while walking the
+      // array. Explicitly included players are exempt and don't consume a rank slot, so a
+      // manual include never silently bumps a legitimately-ranked teammate out.
+      const TEAM_POSITION_DEPTH: Record<string, number> = {
+        Goalkeeper: 1,
+        Defender: 5,
+        Midfielder: 5,
+        Forward: 2,
+      };
+      const rankSoFarByTeamPos: Record<string, number> = {};
+      const depthFilteredCandidates = allCandidates.filter(player => {
+        if (includedPlayerIds.has(player.playerId)) return true;
+        const pos = normalizePosition(player.position);
+        const key = `${player.teamName || ''}|${pos}`;
+        rankSoFarByTeamPos[key] = (rankSoFarByTeamPos[key] || 0) + 1;
+        return rankSoFarByTeamPos[key] <= TEAM_POSITION_DEPTH[pos];
+      });
+
       const groupedByPos: Record<string, PlayerSnapshot[]> = {
-        Goalkeeper: allCandidates.filter(p => normalizePosition(p.position) === 'Goalkeeper'),
-        Defender:   allCandidates.filter(p => normalizePosition(p.position) === 'Defender'),
-        Midfielder: allCandidates.filter(p => normalizePosition(p.position) === 'Midfielder'),
-        Forward:    allCandidates.filter(p => normalizePosition(p.position) === 'Forward'),
+        Goalkeeper: depthFilteredCandidates.filter(p => normalizePosition(p.position) === 'Goalkeeper'),
+        Defender:   depthFilteredCandidates.filter(p => normalizePosition(p.position) === 'Defender'),
+        Midfielder: depthFilteredCandidates.filter(p => normalizePosition(p.position) === 'Midfielder'),
+        Forward:    depthFilteredCandidates.filter(p => normalizePosition(p.position) === 'Forward'),
       };
 
       const result = buildOptimalTeamWithBudget(
