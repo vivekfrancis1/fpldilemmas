@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,14 @@ interface ArchivedMatchStats {
 
 export default function MatchStats() {
   const { fixtureId } = useParams<{ fixtureId: string }>();
+  const search = useSearch();
+  const seasonParam = new URLSearchParams(search).get('season');
+  // A season query param means fixtureId refers to season_fixtures_archive's id space —
+  // entirely separate from (and not comparable to) live FPL fixture ids, which can collide
+  // with archived ones (e.g. id 4 is a different match in each). Never do an ID-based live
+  // lookup in this mode.
+  const isArchivedEntry = !!seasonParam && seasonParam !== CURRENT_SEASON_LABEL;
+
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -74,11 +82,13 @@ export default function MatchStats() {
     queryKey: ['/api/fixtures'],
   });
 
-  const fixture = fixturesData?.find((f: any) => f.id === parseInt(fixtureId || '0'));
+  const fixture = isArchivedEntry ? undefined : fixturesData?.find((f: any) => f.id === parseInt(fixtureId || '0'));
 
   const homeTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_h);
   const awayTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_a);
 
+  // Compare-mode: reached from a CURRENT-season fixture, looks up the same two teams' meeting
+  // from last season by name.
   const { data: archivedMatch, isLoading: isArchivedLoading } = useQuery<ArchivedMatchStats>({
     queryKey: ['/api/archived-match-stats', homeTeam?.name, awayTeam?.name],
     queryFn: async () => {
@@ -91,8 +101,24 @@ export default function MatchStats() {
       if (!response.ok) throw new Error('Failed to fetch archived match stats');
       return response.json();
     },
-    enabled: !!homeTeam?.name && !!awayTeam?.name,
+    enabled: !isArchivedEntry && !!homeTeam?.name && !!awayTeam?.name,
   });
+
+  // Direct-entry mode: reached by clicking a fixture while browsing an archived season's own
+  // schedule, so fixtureId + season fully identify the match already.
+  const { data: archivedByIdMatch, isLoading: isArchivedByIdLoading } = useQuery<ArchivedMatchStats>({
+    queryKey: ['/api/archived-match-stats', 'byId', seasonParam, fixtureId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ season: seasonParam!, fixtureId: fixtureId! });
+      const response = await fetch(`/api/archived-match-stats?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch archived match stats');
+      return response.json();
+    },
+    enabled: isArchivedEntry && !!fixtureId,
+  });
+
+  const effectiveArchivedMatch = isArchivedEntry ? archivedByIdMatch : archivedMatch;
+  const effectiveArchivedLoading = isArchivedEntry ? isArchivedByIdLoading : isArchivedLoading;
 
   const isLive = fixture?.started && !fixture?.finished && !fixture?.finished_provisional;
   const isFinished = fixture?.finished || fixture?.finished_provisional;
@@ -228,10 +254,15 @@ export default function MatchStats() {
   };
 
   useEffect(() => {
-    if (fixture && bootstrapData) {
+    if (!fixturesData || !bootstrapData) return; // base data still loading
+    if (fixture) {
       fetchMatchStats();
+    } else {
+      // No live fixture to fetch (archived-direct entry, or an unresolvable id) — nothing more
+      // to load on this branch.
+      setIsLoading(false);
     }
-  }, [fixture, bootstrapData]);
+  }, [fixture, bootstrapData, fixturesData]);
 
   useEffect(() => {
     if (autoRefreshIntervalRef.current) {
@@ -476,7 +507,7 @@ export default function MatchStats() {
     </div>
   );
 
-  if (!fixture && !isLoading && fixturesData) {
+  if (!isArchivedEntry && !fixture && !isLoading && fixturesData) {
     return (
       <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
         <Button variant="outline" size="sm" onClick={() => window.history.back()}>
@@ -515,8 +546,34 @@ export default function MatchStats() {
   }
 
   const dateTime = fixture?.kickoff_time ? formatDateTime(fixture.kickoff_time) : null;
-  const archivedDateTime = archivedMatch?.fixture?.kickoff_time ? formatDateTime(archivedMatch.fixture.kickoff_time) : null;
-  const hasArchivedMatch = !!archivedMatch?.found;
+  const archivedDateTime = effectiveArchivedMatch?.fixture?.kickoff_time ? formatDateTime(effectiveArchivedMatch.fixture.kickoff_time) : null;
+  const hasArchivedMatch = !!effectiveArchivedMatch?.found;
+
+  const previousSeasonContent = effectiveArchivedLoading ? (
+    <Skeleton className="h-24 w-full" />
+  ) : hasArchivedMatch ? (
+    <>
+      {renderScoreCard({
+        homeName: effectiveArchivedMatch!.homeTeamName!,
+        awayName: effectiveArchivedMatch!.awayTeamName!,
+        homeScore: effectiveArchivedMatch!.fixture!.team_h_score,
+        awayScore: effectiveArchivedMatch!.fixture!.team_a_score,
+        gwLabel: effectiveArchivedMatch!.fixture!.event,
+        dateLabel: archivedDateTime?.date ?? null,
+        live: false,
+        finished: true,
+      })}
+      {renderAllStatSections(effectiveArchivedMatch!.homeTeamStats || [], effectiveArchivedMatch!.awayTeamStats || [])}
+    </>
+  ) : (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12">
+        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No {PREVIOUS_SEASON} meeting</h3>
+        <p className="text-gray-600">These two teams didn't play each other last season.</p>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="w-full py-3 sm:py-6 space-y-3 sm:space-y-5">
@@ -525,67 +582,48 @@ export default function MatchStats() {
         <span className="text-sm">Back to Results</span>
       </Button>
 
-      <Tabs defaultValue="current" className="space-y-3 sm:space-y-5">
-        <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid">
-          <TabsTrigger value="current">{CURRENT_SEASON_LABEL}</TabsTrigger>
-          <TabsTrigger value="previous" disabled={!isArchivedLoading && !hasArchivedMatch}>
-            {PREVIOUS_SEASON}
-          </TabsTrigger>
-        </TabsList>
+      {isArchivedEntry ? (
+        // Browsing a past season's own schedule — show just that season, no current-season tab.
+        <div className="space-y-3 sm:space-y-5">{previousSeasonContent}</div>
+      ) : (
+        <Tabs defaultValue="current" className="space-y-3 sm:space-y-5">
+          <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid">
+            <TabsTrigger value="current">{CURRENT_SEASON_LABEL}</TabsTrigger>
+            <TabsTrigger value="previous" disabled={!effectiveArchivedLoading && !hasArchivedMatch}>
+              {PREVIOUS_SEASON}
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="current" className="space-y-3 sm:space-y-5 mt-0">
-          {renderScoreCard({
-            homeName: homeTeam?.name,
-            awayName: awayTeam?.name,
-            homeScore: fixture?.team_h_score,
-            awayScore: fixture?.team_a_score,
-            gwLabel: fixture?.event,
-            dateLabel: dateTime?.date ?? null,
-            live: !!isLive,
-            finished: !!isFinished,
-          })}
+          <TabsContent value="current" className="space-y-3 sm:space-y-5 mt-0">
+            {renderScoreCard({
+              homeName: homeTeam?.name,
+              awayName: awayTeam?.name,
+              homeScore: fixture?.team_h_score,
+              awayScore: fixture?.team_a_score,
+              gwLabel: fixture?.event,
+              dateLabel: dateTime?.date ?? null,
+              live: !!isLive,
+              finished: !!isFinished,
+            })}
 
-          {!matchData && !isLoading ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
-                <p className="text-gray-600">Match statistics will be available once the match has started.</p>
-              </CardContent>
-            </Card>
-          ) : matchData ? (
-            renderAllStatSections(matchData.homeTeamStats, matchData.awayTeamStats)
-          ) : null}
-        </TabsContent>
+            {!matchData && !isLoading ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
+                  <p className="text-gray-600">Match statistics will be available once the match has started.</p>
+                </CardContent>
+              </Card>
+            ) : matchData ? (
+              renderAllStatSections(matchData.homeTeamStats, matchData.awayTeamStats)
+            ) : null}
+          </TabsContent>
 
-        <TabsContent value="previous" className="space-y-3 sm:space-y-5 mt-0">
-          {isArchivedLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : hasArchivedMatch ? (
-            <>
-              {renderScoreCard({
-                homeName: archivedMatch!.homeTeamName!,
-                awayName: archivedMatch!.awayTeamName!,
-                homeScore: archivedMatch!.fixture!.team_h_score,
-                awayScore: archivedMatch!.fixture!.team_a_score,
-                gwLabel: archivedMatch!.fixture!.event,
-                dateLabel: archivedDateTime?.date ?? null,
-                live: false,
-                finished: true,
-              })}
-              {renderAllStatSections(archivedMatch!.homeTeamStats || [], archivedMatch!.awayTeamStats || [])}
-            </>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No {PREVIOUS_SEASON} meeting</h3>
-                <p className="text-gray-600">These two teams didn't play each other last season.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="previous" className="space-y-3 sm:space-y-5 mt-0">
+            {previousSeasonContent}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

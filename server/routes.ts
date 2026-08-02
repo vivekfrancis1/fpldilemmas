@@ -2819,30 +2819,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Archived match stats for a completed fixture from a prior season — lets the UI compare a
-  // 2026/27 fixture's live stats against the same two teams' equivalent meeting from 2025/26.
+  // 2026/27 fixture's live stats against the same two teams' equivalent meeting from 2025/26,
+  // and also serves direct clicks on a fixture while browsing an archived season's schedule.
   // Reconstructed from gameweek_player_data (raw per-fixture player stats, has fixture_id and
   // was_home) joined with historical_player_stats (name/team/position metadata), since FPL's
-  // live API has no visibility into prior seasons. teamH/teamA must match the exact home/away
-  // orientation of the fixture being compared — PL fixtures are a round-robin, so at most one
-  // archived match exists per (season, teamH, teamA) triple; a promoted team with no equivalent
-  // fixture last season simply returns found:false.
+  // live API has no visibility into prior seasons. Looked up either by fixtureId directly (the
+  // season_fixtures_archive id, used when browsing that season's own fixture list) or by
+  // teamH/teamA in their exact home/away orientation (used when comparing from a current-season
+  // fixture) — PL fixtures are a round-robin, so at most one archived match exists per (season,
+  // teamH, teamA) triple; a promoted team with no equivalent fixture last season, or an unknown
+  // fixtureId, simply returns found:false.
   app.get("/api/archived-match-stats", async (req, res) => {
     try {
       const season = (req.query.season as string) || PREVIOUS_SEASON;
+      const fixtureId = req.query.fixtureId ? parseInt(req.query.fixtureId as string) : null;
       const teamH = req.query.teamH as string;
       const teamA = req.query.teamA as string;
-      if (!teamH || !teamA) {
-        return res.status(400).json({ error: "teamH and teamA query params are required" });
+      if (!fixtureId && (!teamH || !teamA)) {
+        return res.status(400).json({ error: "Either fixtureId, or both teamH and teamA, query params are required" });
       }
 
-      const fixtureResult = await pool.query(
-        `SELECT fixture_id, gameweek, team_h_name, team_a_name, team_h_score, team_a_score,
-                kickoff_time, finished
-         FROM season_fixtures_archive
-         WHERE season = $1 AND team_h_name = $2 AND team_a_name = $3
-         LIMIT 1`,
-        [season, teamH, teamA]
-      );
+      const fixtureResult = fixtureId
+        ? await pool.query(
+            `SELECT fixture_id, gameweek, team_h_name, team_a_name, team_h_score, team_a_score,
+                    kickoff_time, finished
+             FROM season_fixtures_archive
+             WHERE season = $1 AND fixture_id = $2
+             LIMIT 1`,
+            [season, fixtureId]
+          )
+        : await pool.query(
+            `SELECT fixture_id, gameweek, team_h_name, team_a_name, team_h_score, team_a_score,
+                    kickoff_time, finished
+             FROM season_fixtures_archive
+             WHERE season = $1 AND team_h_name = $2 AND team_a_name = $3
+             LIMIT 1`,
+            [season, teamH, teamA]
+          );
 
       if (fixtureResult.rows.length === 0) {
         return res.json({ found: false });

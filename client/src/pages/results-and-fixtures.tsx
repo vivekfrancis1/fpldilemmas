@@ -234,12 +234,15 @@ export default function ResultsAndFixtures() {
     };
   };
 
+  // Historical fixture IDs come from season_fixtures_archive, a separate ID space from FPL's
+  // live fixture IDs — the season query param tells /match-stats/:id which one it's looking at.
+  const isClickableFixture = (fixture: any) =>
+    isHistorical ? !!fixture.isResult : (fixture.isResult || fixture.isLive);
+
   const handleMatchClick = (fixture: any) => {
-    // Historical fixture IDs come from season_fixtures_archive, not FPL's live fixture IDs
-    // that /match-stats/:id expects — there's no per-match detail page for archived seasons.
-    if (isHistorical) return;
-    if (!fixture.isResult && !fixture.isLive) return;
-    navigate(`/match-stats/${fixture.id}`);
+    if (!isClickableFixture(fixture)) return;
+    const query = isHistorical ? `?season=${encodeURIComponent(selectedSeason)}` : '';
+    navigate(`/match-stats/${fixture.id}${query}`);
   };
 
 
@@ -391,12 +394,12 @@ export default function ResultsAndFixtures() {
                         <div 
                           key={fixture.id} 
                           className={`p-3 bg-gray-50 rounded-lg transition-colors ${
-                            (!isHistorical && (fixture.isResult || fixture.isLive))
+                            isClickableFixture(fixture)
                               ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
                               : 'hover:bg-gray-100'
                           }`}
-                          onClick={() => (!isHistorical && (fixture.isResult || fixture.isLive)) && handleMatchClick(fixture)}
-                          title={(!isHistorical && (fixture.isResult || fixture.isLive)) ? 'Click to view match statistics' : ''}
+                          onClick={() => isClickableFixture(fixture) && handleMatchClick(fixture)}
+                          title={isClickableFixture(fixture) ? 'Click to view match statistics' : ''}
                         >
                           {/* Mobile layout: stacked */}
                           <div className="flex flex-col space-y-2 md:hidden">
@@ -527,7 +530,7 @@ export default function ResultsAndFixtures() {
                               {getStatusBadge(fixture)}
                               
                               {/* Click indicator for completed and live matches */}
-                              {(!isHistorical && (fixture.isResult || fixture.isLive)) && (
+                              {isClickableFixture(fixture) && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                                   Player Stats
                                 </Badge>
@@ -547,12 +550,12 @@ export default function ResultsAndFixtures() {
                   <div 
                     key={fixture.id} 
                     className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
-                      (!isHistorical && (fixture.isResult || fixture.isLive))
+                      isClickableFixture(fixture)
                         ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
                         : 'hover:shadow-sm'
                     }`}
-                    onClick={() => (!isHistorical && (fixture.isResult || fixture.isLive)) && handleMatchClick(fixture)}
-                    title={(!isHistorical && (fixture.isResult || fixture.isLive)) ? 'Click to view match statistics' : ''}
+                    onClick={() => isClickableFixture(fixture) && handleMatchClick(fixture)}
+                    title={isClickableFixture(fixture) ? 'Click to view match statistics' : ''}
                   >
                     {/* Mobile layout: stacked */}
                     <div className="flex flex-col space-y-2 md:hidden">
@@ -685,7 +688,7 @@ export default function ResultsAndFixtures() {
                         {getStatusBadge(fixture)}
                         
                         {/* Click indicator for completed and live matches */}
-                        {(!isHistorical && (fixture.isResult || fixture.isLive)) && (
+                        {isClickableFixture(fixture) && (
                           <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                             Player Stats
                           </Badge>
