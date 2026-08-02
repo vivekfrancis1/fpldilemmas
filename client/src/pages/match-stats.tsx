@@ -586,7 +586,7 @@ export default function MatchStats() {
         // Browsing a past season's own schedule — show just that season, no current-season tab.
         <div className="space-y-3 sm:space-y-5">{previousSeasonContent}</div>
       ) : (
-        <Tabs defaultValue="current" className="space-y-3 sm:space-y-5">
+        <Tabs defaultValue={(!isLive && !isFinished) ? "previous" : "current"} className="space-y-3 sm:space-y-5">
           <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid">
             <TabsTrigger value="current">{CURRENT_SEASON_LABEL}</TabsTrigger>
             <TabsTrigger value="previous" disabled={!effectiveArchivedLoading && !hasArchivedMatch}>

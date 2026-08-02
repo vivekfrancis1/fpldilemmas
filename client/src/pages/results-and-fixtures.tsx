@@ -236,8 +236,11 @@ export default function ResultsAndFixtures() {
 
   // Historical fixture IDs come from season_fixtures_archive, a separate ID space from FPL's
   // live fixture IDs — the season query param tells /match-stats/:id which one it's looking at.
+  // Current-season fixtures are clickable even before kickoff so the 2025/26 comparison (which
+  // doesn't depend on this season's match having been played) is reachable ahead of time —
+  // match-stats.tsx shows a "not started yet" placeholder for the current-season side until then.
   const isClickableFixture = (fixture: any) =>
-    isHistorical ? !!fixture.isResult : (fixture.isResult || fixture.isLive);
+    isHistorical ? !!fixture.isResult : (fixture.isResult || fixture.isLive || fixture.isUpcoming);
 
   const handleMatchClick = (fixture: any) => {
     if (!isClickableFixture(fixture)) return;
