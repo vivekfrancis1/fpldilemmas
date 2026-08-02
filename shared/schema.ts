@@ -1583,3 +1583,31 @@ export const adminPromotedTeamCleanSheets = pgTable("admin_promoted_team_clean_s
 
 export type AdminPromotedTeamCleanSheets = typeof adminPromotedTeamCleanSheets.$inferSelect;
 export type InsertAdminPromotedTeamCleanSheets = typeof adminPromotedTeamCleanSheets.$inferInsert;
+
+// Consensus fixture odds fetched from The Odds API (see server/odds-service.ts), de-vigged and
+// averaged across bookmakers by shared/odds-utils.ts. One row per upstream event; refreshed by
+// re-fetching and upserting on oddsApiEventId, so re-running a refresh updates existing rows
+// (odds move as kickoff approaches) rather than duplicating them. Not yet wired into any
+// projection calculation — this is the raw data layer only.
+export const fixtureOdds = pgTable("fixture_odds", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  oddsApiEventId: varchar("odds_api_event_id", { length: 64 }).notNull(),
+  homeTeam: varchar("home_team", { length: 100 }).notNull(),
+  awayTeam: varchar("away_team", { length: 100 }).notNull(),
+  commenceTime: timestamp("commence_time").notNull(),
+  bookmakerCount: integer("bookmaker_count").notNull(),
+  homeWinProb: decimal("home_win_prob", { precision: 6, scale: 5 }),
+  drawProb: decimal("draw_prob", { precision: 6, scale: 5 }),
+  awayWinProb: decimal("away_win_prob", { precision: 6, scale: 5 }),
+  over25Prob: decimal("over_2_5_prob", { precision: 6, scale: 5 }),
+  under25Prob: decimal("under_2_5_prob", { precision: 6, scale: 5 }),
+  fetchedAt: timestamp("fetched_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("fixture_odds_event_unique").on(table.oddsApiEventId),
+  index("idx_fixture_odds_season_commence").on(table.season, table.commenceTime),
+]);
+
+export type FixtureOdds = typeof fixtureOdds.$inferSelect;
+export type InsertFixtureOdds = typeof fixtureOdds.$inferInsert;

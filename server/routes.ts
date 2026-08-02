@@ -8020,6 +8020,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== FIXTURE ODDS ADMIN ENDPOINTS ====================
+  // Raw data layer for The Odds API integration (see server/odds-service.ts) — de-vigged,
+  // cross-bookmaker consensus probabilities per fixture. Admin-only for now since this isn't
+  // wired into any projection calculation yet, just a way to fetch/inspect the data.
+  // POST costs real API quota (free tier: 500 requests/month, 2 credits per call here), so it's
+  // a deliberate manual action, never triggered automatically or from tests.
+
+  app.post("/api/admin/refresh-odds", isAuthenticated, requireAdmin, async (_req, res) => {
+    try {
+      const { refreshFixtureOdds } = await import('./odds-service');
+      const result = await refreshFixtureOdds(CURRENT_SEASON);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error refreshing fixture odds:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to refresh fixture odds" });
+    }
+  });
+
+  app.get("/api/admin/fixture-odds", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const { getFixtureOdds } = await import('./odds-service');
+      const odds = await getFixtureOdds(season);
+      res.json({ season, odds });
+    } catch (error) {
+      console.error("Error fetching fixture odds:", error);
+      res.status(500).json({ error: "Failed to fetch fixture odds" });
+    }
+  });
+
   // ==================== CLEAN SHEET ADMIN ENDPOINTS ====================
 
   // GET clean sheet admin settings endpoint
