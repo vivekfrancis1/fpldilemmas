@@ -48,10 +48,38 @@ type TeamRef = { id: number; name?: string; short_name?: string; code?: number }
 
 
 export default function ResultsAndFixtures() {
-  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(5);
-  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
+  // Captured once at mount so a "Back" navigation from match-stats (which pops back to this
+  // page's last history entry) restores exactly the season/gameweek the user was viewing,
+  // instead of losing it to a fresh-mount default. Synced back out via replaceState below.
+  const initialParams = useRef<URLSearchParams | null>(null);
+  if (!initialParams.current) {
+    initialParams.current = new URLSearchParams(window.location.search);
+  }
+  const initialSeason = initialParams.current.get('season');
+  const initialGwParam = initialParams.current.get('gw');
+  const skipSeasonAutoDefault = useRef(!!initialSeason);
+  const skipGwAutoDefault = useRef(!!initialGwParam);
+
+  const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(() => {
+    if (initialGwParam === 'all') return 'all';
+    if (initialGwParam) {
+      const parsed = parseInt(initialGwParam, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 5;
+  });
+  const [selectedSeason, setSelectedSeason] = useState<string>(initialSeason || CURRENT_SEASON);
   const isHistorical = selectedSeason !== CURRENT_SEASON;
   const [, navigate] = useLocation();
+
+  // Keep the URL in sync with the current view (replace, not push, so every gameweek click
+  // doesn't grow browser history) so returning here via the back button restores this exact view.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('season', selectedSeason);
+    params.set('gw', String(selectedGameweek));
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  }, [selectedSeason, selectedGameweek]);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -74,12 +102,13 @@ export default function ResultsAndFixtures() {
 
   // Current (2026/27) season has zero real fixtures until kickoff — default to the last
   // completed season so the page isn't just empty. Only runs once, and only if the user
-  // hasn't already picked a season themselves.
+  // hasn't already picked a season themselves (including via a restored season query param).
   const hasAutoDefaulted = useRef(false);
   useEffect(() => {
     if (hasAutoDefaulted.current) return;
     if (!bootstrapData?.events) return;
     hasAutoDefaulted.current = true;
+    if (skipSeasonAutoDefault.current) return;
     if (computeCurrentGameweek(bootstrapData.events as any) === 0) {
       setSelectedSeason(PREVIOUS_SEASON);
     }
@@ -87,10 +116,13 @@ export default function ResultsAndFixtures() {
 
   // Historical seasons have no live "current" gameweek — default to the latest gameweek in
   // that season's archive (e.g. GW38) once its fixtures load, so the page opens on the most
-  // recent action instead of the full 38-gameweek list.
+  // recent action instead of the full 38-gameweek list. Skipped once if a gw was restored from
+  // the URL (e.g. returning from match-stats), so that selection isn't immediately overwritten.
   useEffect(() => {
     if (!isHistorical) return;
-    if (!historicalFixturesData || historicalFixturesData.length === 0) {
+    if (!historicalFixturesData) return; // still loading — nothing to decide yet, don't consume the skip below
+    if (skipGwAutoDefault.current) { skipGwAutoDefault.current = false; return; }
+    if (historicalFixturesData.length === 0) {
       setSelectedGameweek("all");
       return;
     }
@@ -130,12 +162,13 @@ export default function ResultsAndFixtures() {
     return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   }, [bootstrapData]);
 
-  // Update selected gameweek to current gameweek when data loads
+  // Update selected gameweek to current gameweek when data loads. Skipped once if a gw was
+  // restored from the URL (e.g. returning from match-stats), so it isn't immediately overwritten.
   useEffect(() => {
     if (isHistorical) return;
-    if (bootstrapData?.events && currentGameweek) {
-      setSelectedGameweek(currentGameweek);
-    }
+    if (!bootstrapData?.events || !currentGameweek) return; // still loading — don't consume the skip below
+    if (skipGwAutoDefault.current) { skipGwAutoDefault.current = false; return; }
+    setSelectedGameweek(currentGameweek);
   }, [bootstrapData, currentGameweek, isHistorical]);
 
   // Process fixtures data. Historical fixtures embed their own team name/short name/crest
