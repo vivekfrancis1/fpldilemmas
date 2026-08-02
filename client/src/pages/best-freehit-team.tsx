@@ -705,20 +705,25 @@ export default function BestFreehitTeam() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
-                  {unlimitedBudget ? 'Unlimited Budget (Default)' : 'Budget Optimization Mode'}
+                  Set a Budget Limit
                 </Label>
                 <Switch
                   id="unlimited-budget"
-                  checked={unlimitedBudget}
-                  onCheckedChange={setUnlimitedBudget}
+                  checked={!unlimitedBudget}
+                  onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
                   data-testid="switch-unlimited-budget"
                 />
+                <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                  {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {unlimitedBudget ? 'Select top players by projected points (no budget limit)' : 'Optimize within budget using unlimited team as reference'}
+                {unlimitedBudget
+                  ? 'Off (default): picks the best players by projected points, regardless of price.'
+                  : 'On: builds the best squad that fits within the budget you set below.'}
               </p>
             </div>
-            
+
             {!unlimitedBudget && (
               <div className="space-y-2">
                 <Label htmlFor="budget" className="text-sm font-medium">
