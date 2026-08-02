@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { SeasonSelector } from "@/components/season-selector";
 import { SeasonBadge } from "@/components/season-badge";
 
 interface Fixture {
@@ -57,7 +57,6 @@ export default function ResultsAndFixtures() {
   }
   const initialSeason = initialParams.current.get('season');
   const initialGwParam = initialParams.current.get('gw');
-  const skipSeasonAutoDefault = useRef(!!initialSeason);
   const skipGwAutoDefault = useRef(!!initialGwParam);
 
   const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(() => {
@@ -99,20 +98,6 @@ export default function ResultsAndFixtures() {
   });
 
   const fixturesData = isHistorical ? historicalFixturesData : liveFixturesData;
-
-  // Current (2026/27) season has zero real fixtures until kickoff — default to the last
-  // completed season so the page isn't just empty. Only runs once, and only if the user
-  // hasn't already picked a season themselves (including via a restored season query param).
-  const hasAutoDefaulted = useRef(false);
-  useEffect(() => {
-    if (hasAutoDefaulted.current) return;
-    if (!bootstrapData?.events) return;
-    hasAutoDefaulted.current = true;
-    if (skipSeasonAutoDefault.current) return;
-    if (computeCurrentGameweek(bootstrapData.events as any) === 0) {
-      setSelectedSeason(PREVIOUS_SEASON);
-    }
-  }, [bootstrapData]);
 
   // Historical seasons have no live "current" gameweek — default to the latest gameweek in
   // that season's archive (e.g. GW38) once its fixtures load, so the page opens on the most
