@@ -38,7 +38,7 @@ import { FPLScoringCacheService, computeCbitPoints } from './fpl-scoring-cache-s
 import { nameMatchKey } from './player-history-blend-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
 import { calculateAvailabilityProbability, parseReturnDate, getGameweekFromDate, BootstrapEvent } from './availability-adjustments';
-import { setupAuth, isAuthenticated } from './replitAuth';
+import { isAuthenticated } from './replitAuth';
 import { totalPointsCache } from './total-points-cache';
 import { getGoalShareCache, setGoalShareCache, getAssistShareCache, setAssistShareCache } from './goal-share-cache';
 
@@ -426,10 +426,14 @@ function requireReadiness(requiredComponents: string[], endpoint: string) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize team configuration to avoid circular dependency
   const { setAdminGoalSettings, setCreateTeamService } = await import('./team-config');
-  
-  // Set up Replit Auth with OpenID Connect (includes session middleware)
-  await setupAuth(app);
-  
+
+  // NOTE: setupAuth(app) is NOT called here — server/index.ts already calls it once before
+  // registerRoutes(app), which is this function's only call site. Calling it a second time here
+  // used to double-register the session middleware (two independent express-session instances,
+  // each with their own connect-pg-simple store, stacked on every request), which caused
+  // intermittent 401s on requests using a cookie from a just-completed login — the "admin-auth
+  // session contention" flakiness documented across several test files.
+
   // Unified auth user endpoint - handles both Google OAuth and local login
   app.get('/api/auth/user', async (req: any, res) => {
     try {

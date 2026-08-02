@@ -1,29 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { loginAsAdmin } from './admin-auth-helper';
 
 const BASE_URL = 'http://localhost:5050';
-// Matches the seeded admin account in server/seed-admin-user.ts — not imported directly
-// because these tests are plain HTTP clients against a running server (no @shared/* path
-// alias is configured for the vitest 'unit' project, so importing server-side modules here
-// doesn't resolve), same reasoning as every other file in tests/.
-const ADMIN_EMAIL = 'fpldilemmas@gmail.com';
-const ADMIN_PASSWORD = 'fpldilemmas2024';
-
-async function loginAsAdmin(): Promise<string> {
-  const res = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  expect(res.status).toBe(200);
-  const setCookie = res.headers.get('set-cookie');
-  expect(setCookie).toBeTruthy();
-  return setCookie!.split(';')[0];
-}
 
 let adminCookie: string;
 
 beforeAll(async () => {
-  adminCookie = await loginAsAdmin();
+  adminCookie = await loginAsAdmin(BASE_URL);
 }, 30000);
 
 // ─────────────────────────────────────────────────────────────────────────────

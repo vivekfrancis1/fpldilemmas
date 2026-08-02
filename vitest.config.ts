@@ -18,6 +18,12 @@ export default defineConfig({
           hookTimeout: 120000,
           environment: 'node',
           setupFiles: ['tests/setup-env.ts'],
+          // These tests share one live dev server with one in-memory adminGoalSettings object
+          // (not per-request state). Files that PUT/reset admin settings (goal-calculation-mode,
+          // promoted-team-admin-settings) can transiently flip that shared state mid-test; running
+          // files in parallel let other files' "cached vs live" comparisons observe that transient
+          // state and fail non-deterministically. Sequential execution removes the race entirely.
+          fileParallelism: false,
         },
       },
       {
