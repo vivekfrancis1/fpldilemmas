@@ -32,6 +32,7 @@ import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
+import { extractBearerTokenFromCurl } from "./fpl-token-utils";
 import { resultCache } from "./result-cache-service";
 import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-utils';
 import { FPLScoringCacheService, computeCbitPoints } from './fpl-scoring-cache-service';
@@ -645,17 +646,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (cleanToken.toLowerCase().includes('curl') || cleanToken.includes('-H') || cleanToken.includes('--header')) {
         console.log('📋 Detected cURL command, extracting Bearer token...');
         
-        // Extract Bearer token from cURL command
-        // Look for patterns like: -H 'x-api-authorization: Bearer TOKEN' or --header "x-api-authorization: Bearer TOKEN"
-        const bearerMatch = cleanToken.match(/(?:-H|--header)\s+['"]?x-api-authorization:\s*Bearer\s+([^'"}\s]+)['"]?/i);
-        
-        if (bearerMatch && bearerMatch[1]) {
-          cleanToken = bearerMatch[1];
+        // Extract Bearer token from cURL command. Browsers format "Copy as cURL" differently
+        // (single- vs double-quoted headers, --header vs -H, Safari/Firefox spacing quirks), so
+        // extractBearerTokenFromCurl tries several patterns in order rather than one strict
+        // regex — see tests/fpl-token-extraction.test.ts.
+        const extractedToken = extractBearerTokenFromCurl(cleanToken);
+
+        if (extractedToken) {
+          cleanToken = extractedToken;
           console.log('✅ Successfully extracted Bearer token from cURL');
         } else {
           console.error('❌ Could not find Bearer token in cURL command');
-          return res.status(400).json({ 
-            error: 'Could not find Bearer token in cURL command. Please make sure the cURL includes the x-api-authorization header.' 
+          return res.status(400).json({
+            error: 'Could not find a Bearer token in that cURL command. Make sure you copied a request to fantasy.premierleague.com/api/... (e.g. one named "me", "my-team", or "event") — most other requests in the Network tab (images, scripts, analytics) won\'t have the x-api-authorization header at all.'
           });
         }
         

@@ -212,8 +212,8 @@ export function FplConnectDialog() {
                     </ul>
                   </li>
                   <li>
-                    <strong>Right-click</strong> any request in the list → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below
-                    <span className="block text-xs mt-1 text-muted-foreground">(Older Safari versions don't have "Copy as cURL" — if you don't see it, click the request, open its <strong>Headers</strong> pane, and copy the value next to <strong>Authorization</strong> instead)</span>
+                    Type <strong>"me"</strong> in the Network tab's filter box → <strong>right-click</strong> the <code>me</code> request → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below
+                    <span className="block text-xs mt-1 text-muted-foreground">Most other requests (images, scripts, analytics) won't carry your login token, so filtering to "me" avoids picking the wrong one. Older Safari versions don't have "Copy as cURL" — if you don't see it, click the request, open its <strong>Headers</strong> pane, and copy the value next to <strong>Authorization</strong> instead.</span>
                   </li>
                 </ol>
                 <p className="mt-2 text-xs font-semibold text-green-600">
