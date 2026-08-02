@@ -30,23 +30,26 @@ async function resetSettings() {
   return response.json();
 }
 
-// calculationMode toggles between the default 'dynamic' formula (live performance data only)
-// and the restored 'tiered' formula (base xG x venue x attack/defense tier x context
-// multipliers) in TeamGoalsService.calculateFixtureGoals. These tests confirm: dynamic mode
-// is the untouched default, switching to tiered actually changes projections and applies the
-// tier multiplier correctly, the switch is fully reversible, and reset restores both.
+// calculationMode toggles between the default 'odds' formula (live betting-market consensus,
+// falling back to 'dynamic' per-fixture wherever no market has been posted), the plain
+// 'dynamic' formula (live performance data only), and the restored 'tiered' formula (base xG x
+// venue x attack/defense tier x context multipliers) in TeamGoalsService.calculateFixtureGoals.
+// These tests confirm: odds mode is the untouched default, switching to tiered actually changes
+// projections and applies the tier multiplier correctly, the switch is fully reversible, and
+// reset restores both.
 describe('Goal projection calculation mode (dynamic vs tiered)', () => {
   afterAll(async () => {
     // Always leave the shared dev server back in the default state for other tests.
     await resetSettings();
   });
 
-  it('defaults to dynamic mode', async () => {
+  it('defaults to odds mode', async () => {
     const settings = await fetchJSON('/api/admin/goal-scored-settings');
-    expect(settings.calculationMode).toBe('dynamic');
+    expect(settings.calculationMode).toBe('odds');
   });
 
   it('switching to tiered mode changes team goal projections', async () => {
+    await putSettings({ calculationMode: 'dynamic' });
     const before = await fetchJSON('/api/team-goal-projections');
     const beforeMap = new Map(before.map((t: any) => [t.teamId, t.averageGoalsPerGame]));
 
@@ -88,14 +91,14 @@ describe('Goal projection calculation mode (dynamic vs tiered)', () => {
     expect(manCity.averageGoalsPerGame).toBeGreaterThan(1);
   });
 
-  it('reset restores calculationMode to dynamic and refreshes tier defaults', async () => {
+  it('reset restores calculationMode to odds and refreshes tier defaults', async () => {
     await putSettings({ calculationMode: 'tiered' });
     const resetResult = await resetSettings();
-    expect(resetResult.settings.calculationMode).toBe('dynamic');
+    expect(resetResult.settings.calculationMode).toBe('odds');
     expect(resetResult.settings.eliteAttackTeams).toBeDefined();
 
     const settings = await fetchJSON('/api/admin/goal-scored-settings');
-    expect(settings.calculationMode).toBe('dynamic');
+    expect(settings.calculationMode).toBe('odds');
     // Hull City / Ipswich Town / Coventry City (11, 12, 7) are this season's promoted teams —
     // confirms the refreshed defaults, not the stale Burnley/Leeds/Sunderland roster.
     const promotedAttackTeams = Array.isArray(settings.promotedAttackTeams)

@@ -7602,11 +7602,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { MASTER_TEAM_DEFAULTS } = await import('./team-config');
   
   let adminGoalSettings = {
-    // Which formula calculateFixtureGoals uses: 'dynamic' (default, live performance data
-    // only), 'tiered' (base xG x venue x tier/context multipliers below), or 'odds' (live
-    // betting-market consensus where available, falling back to dynamic elsewhere — see
-    // server/odds-service.ts and shared/odds-utils.ts).
-    calculationMode: 'dynamic' as 'dynamic' | 'tiered' | 'odds',
+    // Which formula calculateFixtureGoals uses: 'odds' (default — live betting-market
+    // consensus for whichever fixtures a market has been posted for, falling back to
+    // 'dynamic' per-fixture wherever it hasn't — see server/odds-service.ts and
+    // shared/odds-utils.ts), 'dynamic' (live performance data only, no market data), or
+    // 'tiered' (base xG x venue x tier/context multipliers below).
+    calculationMode: 'odds' as 'dynamic' | 'tiered' | 'odds',
 
     // Base Calculation Parameters - Using team-config.ts as single source of truth
     averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,
@@ -7793,7 +7794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Reset to default values using MASTER_TEAM_DEFAULTS as single source of truth
       adminGoalSettings = {
-        calculationMode: 'dynamic' as 'dynamic' | 'tiered' | 'odds',
+        calculationMode: 'odds' as 'dynamic' | 'tiered' | 'odds',
 
         // Base Calculation Parameters
         averageBaseXGPerTeamPerGame: MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame,

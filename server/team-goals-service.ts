@@ -490,7 +490,7 @@ export class TeamGoalsService {
     // 'odds' mode derives expected goals from live betting-market consensus (see
     // shared/odds-utils.ts) for whichever fixtures a market has actually been posted for —
     // bookmakers only open lines ~1-2 gameweeks out, so this transparently falls back to the
-    // dynamic formula for anything further out. Not the default; opt-in "near-term market view".
+    // dynamic formula for anything further out. This is the default mode.
     if (adminGoalSettings.calculationMode === 'odds') {
       return TeamGoalsService.calculateFixtureGoalsOdds(
         team, opponent, fixture, isHome, bootstrapData, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS

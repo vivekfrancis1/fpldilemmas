@@ -75,14 +75,14 @@ export default function ProjectionDocumentation() {
                       <Target className="h-5 w-5 text-blue-600" />
                       <h3 className="font-semibold text-blue-900">Team Goals</h3>
                     </div>
-                    <p className="text-sm text-blue-700 mb-2">Weighted 4-component formula (Dynamic mode, the default)</p>
+                    <p className="text-sm text-blue-700 mb-2">Weighted 4-component formula (Dynamic fallback; Odds mode is the default)</p>
                     <div className="space-y-1 text-xs text-blue-600">
+                      <div>✓ Odds mode (default): live market consensus ~1-2 GW out</div>
                       <div>✓ GF × 0.25 (50/50 this + last season)</div>
                       <div>✓ xGF × 0.25 (this season only)</div>
                       <div>✓ Opp GC × 0.25 (50/50 this + last season)</div>
                       <div>✓ Opp xGA × 0.25 (this season only)</div>
                       <div>✓ Dynamic venue multiplier</div>
-                      <div>✓ Odds mode overrides ~1-2 GW out; Dynamic underneath</div>
                     </div>
                   </div>
 
@@ -370,13 +370,13 @@ export default function ProjectionDocumentation() {
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded border text-sm">
-                        <strong>Calculation modes:</strong> the formula above is the default ("Dynamic") mode.
-                        Admin → Goal Projections also offers <strong>Odds</strong> mode, which derives expected
-                        goals from live betting-market consensus (The Odds API's match-winner and over/under 2.5
-                        goals markets) for whichever fixtures a market has actually been posted for — bookmakers
-                        only open lines ~1-2 gameweeks out, so every other gameweek transparently falls back to
-                        the Dynamic formula above. A third <strong>Tiered</strong> mode (legacy tier + context
-                        multiplier system) is also available. None of this affects goal share, assist share,
+                        <strong>Calculation modes:</strong> <strong>Odds</strong> mode is the default — it derives
+                        expected goals from live betting-market consensus (The Odds API's match-winner and
+                        over/under 2.5 goals markets) for whichever fixtures a market has actually been posted for.
+                        Bookmakers only open lines ~1-2 gameweeks out, so every other gameweek transparently falls
+                        back to the plain <strong>Dynamic</strong> formula above (also selectable on its own). A
+                        third <strong>Tiered</strong> mode (legacy tier + context multiplier system) is also
+                        available. None of this affects goal share, assist share,
                         minutes, or bonus/saves projections — those are separate models.
                       </div>
                     </div>
@@ -595,7 +595,7 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-3">The formula (server/team-goals-service.ts, "Dynamic" mode — the default)</h4>
+                    <h4 className="font-semibold text-green-900 mb-3">The formula (server/team-goals-service.ts, "Dynamic" mode — the fallback under "Odds", the default)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
                       <div>teamGoals = GF × <strong>0.25</strong></div>
                       <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ xGF × <strong>0.25</strong></div>
@@ -1124,7 +1124,7 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">Weighted 4-Component Formula (server/team-goals-service.ts, "Dynamic" mode — the default)</h4>
+                    <h4 className="font-semibold text-green-900 mb-2">Weighted 4-Component Formula (server/team-goals-service.ts, "Dynamic" mode — the fallback under "Odds", the default)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm mb-3 space-y-1">
                       <div>teamGoals = GF×0.25 + xGF×0.25 + oppGC×0.25 + oppxGA×0.25</div>
                       <div>finalGoals = teamGoals × venueMultiplier</div>
@@ -1152,15 +1152,17 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
                   <div className="bg-amber-50 p-3 rounded text-sm text-amber-900">
-                    <strong>Alternative modes (Admin → Goal Projections):</strong> <strong>Odds</strong> mode
-                    replaces this formula, per-fixture, with expected goals solved from live betting-market
-                    consensus — but only for fixtures where The Odds API (match-winner + over/under 2.5 goals
-                    markets) has a line posted, which bookmakers only do ~1-2 gameweeks before kickoff. Every
-                    other gameweek in the projection window transparently uses the Dynamic formula above, so
-                    "Odds mode" is really "Dynamic mode with near-term market overrides." A <strong>Tiered</strong> mode
-                    (legacy tier + context multiplier system) is also available. None of the three modes change
-                    how goal share, assist share, minutes, or bonus/saves projections are calculated — those
-                    are separate models downstream of whichever team-goals number this step produces.
+                    <strong>Odds mode (Admin → Goal Projections) is the default:</strong> it replaces this formula,
+                    per-fixture, with expected goals solved from live betting-market consensus — but only for
+                    fixtures where The Odds API (match-winner + over/under 2.5 goals markets) has a line posted,
+                    which bookmakers only do ~1-2 gameweeks before kickoff. Every other gameweek in the projection
+                    window transparently uses the Dynamic formula above, so in practice most of a 6+ gameweek
+                    window is still the Dynamic formula, with the nearest 1-2 gameweeks pulled from the market
+                    where available. A plain <strong>Dynamic</strong> mode (the formula above, with no market
+                    overrides at all) and a legacy <strong>Tiered</strong> mode (tier + context multiplier system)
+                    are also selectable. None of the three modes change how goal share, assist share, minutes, or
+                    bonus/saves projections are calculated — those are separate models downstream of whichever
+                    team-goals number this step produces.
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">API: /api/team-goal-projections · Cache: 30 min</div>
                 </CardContent>
