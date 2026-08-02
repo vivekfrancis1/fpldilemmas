@@ -422,6 +422,19 @@ export default function MyDashboard() {
     retry: false,
   });
 
+  // Once a connected FPL account resolves, show that manager's own team by default —
+  // otherwise the dashboard keeps showing whatever (possibly unrelated, or empty)
+  // Manager ID happened to be cached from an earlier manual search, even after the
+  // user successfully connects their account via the FPL connect dialog.
+  useEffect(() => {
+    if (fplStatus?.connected && fplStatus.fplManagerId) {
+      const idStr = String(fplStatus.fplManagerId);
+      setManagerId(idStr);
+      setSearchedId(idStr);
+      saveManagerIdToCache(idStr);
+    }
+  }, [fplStatus?.connected, fplStatus?.fplManagerId]);
+
   const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery<ManagerData>({
     queryKey: ["/api/manager", searchedId],
     enabled: !!searchedId,

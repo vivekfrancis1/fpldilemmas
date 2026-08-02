@@ -223,3 +223,15 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
   return res.status(401).json({ message: "Unauthorized" });
 };
+
+/**
+ * Resolves the authenticated user's id from whichever of the two auth shapes isAuthenticated
+ * just accepted: Passport/Google OAuth populates req.user; the local email/password login path
+ * (the /api/auth/login handler below) sets req.session.user directly instead and never touches
+ * req.user at all. Route handlers that read req.user.id unconditionally throw for every
+ * session-based login — this was happening on /api/fpl/status, /api/fpl/my-team, and several
+ * other endpoints, silently breaking "connect your FPL account" for anyone not using Google.
+ */
+export function getAuthenticatedUserId(req: any): string | undefined {
+  return req.user?.id || (req.session as any)?.user?.id;
+}

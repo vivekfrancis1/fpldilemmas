@@ -39,7 +39,7 @@ import { FPLScoringCacheService, computeCbitPoints } from './fpl-scoring-cache-s
 import { nameMatchKey } from './player-history-blend-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
 import { calculateAvailabilityProbability, parseReturnDate, getGameweekFromDate, BootstrapEvent } from './availability-adjustments';
-import { isAuthenticated } from './replitAuth';
+import { isAuthenticated, getAuthenticatedUserId } from './replitAuth';
 import { totalPointsCache } from './total-points-cache';
 import { getGoalShareCache, setGoalShareCache, getAssistShareCache, setAssistShareCache } from './goal-share-cache';
 
@@ -631,7 +631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let { fplToken, fplManagerId } = req.body;
       // Get user ID from either passport (Google OAuth) or session (local login)
-      const userId = (req.user as any)?.id || (req.session as any)?.user?.id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       if (!fplToken) {
         return res.status(400).json({ error: 'FPL Bearer token or cURL command is required' });
@@ -751,8 +754,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/fpl/status", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
-      
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
       const [user] = await db.select({
         fplManagerId: users.fplManagerId,
         fplEmail: users.fplEmail,
@@ -781,7 +787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Per-user TBC fixture assignments (persisted per account)
   app.get("/api/user/tbc-assignments", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
       const assignments = await storage.getUserTbcAssignments(userId);
       res.json(assignments);
     } catch (error) {
@@ -792,7 +801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/user/tbc-assignments", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
       const assignments = req.body;
       if (typeof assignments !== "object" || Array.isArray(assignments)) {
         return res.status(400).json({ error: "Invalid assignments format" });
@@ -807,7 +819,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/fpl/disconnect", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       await db.update(users)
         .set({
@@ -827,7 +842,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/fpl/my-team", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       // Get user's FPL token
       const [user] = await db.select({
@@ -901,7 +919,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
 
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       // Get user's FPL credentials
       const [user] = await db.select({
@@ -987,7 +1008,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get recommended transfers using authenticated FPL session (shows GW 13 unconfirmed team)
   app.get("/api/fpl/recommended-transfers", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       // Get user's FPL credentials
       const [user] = await db.select({
