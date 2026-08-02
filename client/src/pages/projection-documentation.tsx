@@ -38,9 +38,9 @@ export default function ProjectionDocumentation() {
             <Alert className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <AlertDescription>
-                <strong className="text-lg">Real FPL Data · Set Piece Bonuses · AFCON / Injury Blend Correction</strong>
+                <strong className="text-lg">Real FPL Data · Set Piece Bonuses · Minutes Blend Correction</strong>
                 <p className="mt-2">
-                  All projections are built on <strong>verified full-season FPL API data</strong>. Set piece specialists receive goal/assist share bonuses from official FPL set piece order fields. Players who missed games through AFCON, injury, or a late transfer receive a <strong>time-weighted blend correction</strong> so their absence does not deflate their season rates.
+                  All projections are built on <strong>verified full-season FPL API data</strong>. Set piece specialists receive goal/assist share bonuses from official FPL set piece order fields. Goal/assist share itself blends each player's this-season and last-season (2025/26) rates — see Player Tools. Separately, players who missed a block of games through AFCON, injury, or a late transfer get a <strong>time-weighted blend correction</strong> to their <strong>minutes projection</strong> (recentP60/confidenceFactor) so the absence doesn't wrongly read as a permanent drop in playing time — this correction does not touch goal share or assist share.
                 </p>
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                   <div className="bg-white/50 p-2 rounded">
@@ -50,7 +50,7 @@ export default function ProjectionDocumentation() {
                     <strong>Assist Share:</strong> Season assists + Corner/Indirect FK bonus
                   </div>
                   <div className="bg-white/50 p-2 rounded">
-                    <strong>Blend Logic:</strong> ~50 players corrected for structural absences
+                    <strong>Minutes Blend:</strong> AFCON/injury returnees, recomputed live each request
                   </div>
                 </div>
               </AlertDescription>
@@ -105,9 +105,9 @@ export default function ProjectionDocumentation() {
                       <Activity className="h-5 w-5 text-orange-600" />
                       <h3 className="font-semibold text-orange-900">Blend Correction</h3>
                     </div>
-                    <p className="text-sm text-orange-700 mb-2">AFCON / injury / transfer returnees</p>
+                    <p className="text-sm text-orange-700 mb-2">Minutes projections only — AFCON / injury / transfer returnees</p>
                     <div className="space-y-1 text-xs text-orange-600">
-                      <div>✓ ~50 of 515 players</div>
+                      <div>✓ Recomputed live each request (0 pre-season, grows as GWs are played)</div>
                       <div>✓ Time-weighted normalisation</div>
                       <div>✓ recentP60 from active games</div>
                       <div>✓ confidenceFactor = 1.0</div>
@@ -142,8 +142,8 @@ export default function ProjectionDocumentation() {
                       Each player's season contribution (goals + xG, assists) as a % of their current club's pool, boosted for set piece takers.
                     </div>
                     <div className="bg-white p-3 rounded border-l-4 border-orange-400">
-                      <div className="font-bold text-orange-700 mb-1">③ Blend Correction</div>
-                      For ~50 AFCON/injury returnees, the raw total is normalised to their per-game rate × team games so absence zeros don't drag shares down.
+                      <div className="font-bold text-orange-700 mb-1">③ Minutes Blend Correction</div>
+                      For AFCON/injury/transfer returnees, minutes history is normalised to their per-game rate × team games so absence zeros don't drag recentP60/confidenceFactor down — goal/assist share is unaffected.
                     </div>
                     <div className="bg-white p-3 rounded border-l-4 border-purple-400">
                       <div className="font-bold text-purple-700 mb-1">④ Points Compilation</div>
@@ -201,14 +201,15 @@ export default function ProjectionDocumentation() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Activity className="h-4 w-4 text-orange-600" />
-                      AFCON / Injury / Transfer Blend Logic
+                      AFCON / Injury / Transfer Blend Logic (minutes only)
                     </h4>
                     <div className="bg-orange-50 p-3 rounded text-sm">
                       <ul className="space-y-1 text-orange-700">
                         <li>✓ Qualifies if ≥3 active games, ≥4 consec DNP, ≥70% start rate, played last 4</li>
                         <li>✓ blendWeight = activeGames / teamGames</li>
                         <li>✓ blended = raw×weight + (raw/active × teamGames)×(1−weight)</li>
-                        <li>✓ Corrects goalShare, assistShare, recentP60, confidenceFactor</li>
+                        <li>✓ Corrects recentP60 and confidenceFactor in minutes projections only</li>
+                        <li>✓ Does NOT touch goalShare or assistShare — those use a separate this-season/last-season blend (see Player Tools)</li>
                       </ul>
                     </div>
                   </div>
@@ -263,9 +264,9 @@ export default function ProjectionDocumentation() {
                     <div className="text-xs text-orange-500 mt-1">Complete point system</div>
                   </div>
                   <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-cyan-700">~50</div>
-                    <div className="text-sm text-cyan-600 mt-1">Blend-Eligible</div>
-                    <div className="text-xs text-cyan-500 mt-1">AFCON / injury returnees</div>
+                    <div className="text-3xl font-bold text-cyan-700">Live</div>
+                    <div className="text-sm text-cyan-600 mt-1">Minutes Blend-Eligible</div>
+                    <div className="text-xs text-cyan-500 mt-1">AFCON/injury returnees, recomputed each request</div>
                   </div>
                   <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg text-center">
                     <div className="text-3xl font-bold text-indigo-700">15 min</div>
@@ -661,7 +662,7 @@ export default function ProjectionDocumentation() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="h-5 w-5 text-orange-600" />
-                    3. Goal & Assist Share with Blend Correction
+                    3. Goal & Assist Share with Season Blend
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -675,15 +676,15 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-amber-900 mb-3">Blend correction (AFCON / injury / transfer returnees)</h4>
+                    <h4 className="font-semibold text-amber-900 mb-3">This-season / last-season blend (server/routes.ts buildProjectedGoalShare)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
-                      <div>{"// Eligibility: activeGames≥3, maxConsecDNP≥4, startRate≥0.70, playedLast4"}</div>
-                      <div className="mt-1">blendWeight = activeClubGames / teamTotalGames</div>
-                      <div>rateNormalized = (rawTotal / activeGames) × teamTotalGames</div>
-                      <div>blended = rawTotal × blendWeight + rateNormalized × (1 − blendWeight)</div>
+                      <div>share2526 = player's (goals+xG) share of team total, 2025/26</div>
+                      <div>share2627 = same, 2026/27 so far (undefined pre-season)</div>
+                      <div className="mt-1">finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526</div>
+                      <div>projectedGoals = finalShare × teamGoalProjections</div>
                     </div>
                     <p className="text-sm text-amber-800 mt-2">
-                      Example: Semenyo active in 7 of 27 team games (blendWeight = 0.259). His raw season goals are normalised to what he would have accumulated at his per-game rate across all 27 games, then blended 26%/74% between raw and normalised.
+                      Applies to every player uniformly, all season — not an eligibility-gated correction for a specific subset. This is a different mechanism from the AFCON/injury/transfer <strong>minutes</strong> blend (Player Tools → Minutes, or Algorithms → Minutes Projections): that one only kicks in for the ~50-or-so players who meet the four-condition absence gate, and only corrects recentP60/confidenceFactor — it has no effect on goal or assist share.
                     </p>
                   </div>
                 </CardContent>
@@ -779,7 +780,7 @@ export default function ProjectionDocumentation() {
                     <div className="font-mono text-xs mt-2 space-y-1">
                       <div>baseShare% = (goals + xG, current club) / teamPool × 100</div>
                       <div>goalShare% = baseShare + penaltyBonus + directFKBonus</div>
-                      <div>blended if AFCON/injury eligible (see Algorithms)</div>
+                      <div>blended 50/50 with 2025/26 rate (see Algorithms)</div>
                       <div>playerGoals = (goalShare/100) × teamGoals × availability</div>
                     </div>
                   </div>
@@ -817,7 +818,7 @@ export default function ProjectionDocumentation() {
                     <div className="font-mono text-xs mt-2 space-y-1">
                       <div>baseShare% = assists (current club) / teamTotal × 100</div>
                       <div>assistShare% = baseShare + cornerBonus + indirectFKBonus</div>
-                      <div>blended if AFCON/injury eligible</div>
+                      <div>blended 50/50 with 2025/26 rate</div>
                       <div>playerAssists = (assistShare/100) × teamAssists × availability</div>
                     </div>
                   </div>
