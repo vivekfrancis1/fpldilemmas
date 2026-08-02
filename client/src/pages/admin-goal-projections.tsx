@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, RotateCcw, Save, AlertTriangle, Users, Shield, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PREMIER_LEAGUE_TEAMS } from "@shared/schema";
+import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import ProtectedRoute from "@/components/protected-route";
 
 interface Team {
@@ -159,6 +160,7 @@ export default function AdminGoalProjections() {
         title: "Odds Refreshed",
         description: `Fetched ${data.fetched} fixtures with live betting odds from The Odds API.`,
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/fixture-odds'] });
     },
     onError: () => {
       toast({
@@ -168,6 +170,56 @@ export default function AdminGoalProjections() {
       });
     },
   });
+
+  // Live odds coverage: which gameweeks currently have stored fixture_odds rows, computed
+  // from real data rather than hardcoded, since bookmakers only post lines ~1-2 gameweeks out
+  // and coverage shifts every time an admin hits "Refresh Odds Now". Only fetched while the
+  // Odds panel is open.
+  const oddsPanelOpen = formData.calculationMode === 'odds';
+  const { data: fixtureOddsData } = useQuery<{ season: string; odds: Array<{ homeTeam: string; awayTeam: string; commenceTime: string; fetchedAt: string }> }>({
+    queryKey: ['/api/admin/fixture-odds'],
+    enabled: oddsPanelOpen,
+  });
+  const { data: allFixtures } = useQuery<Array<{ event: number | null; team_h: number; team_a: number }>>({
+    queryKey: ['/api/fixtures'],
+    enabled: oddsPanelOpen,
+  });
+
+  const oddsCoverage = useMemo(() => {
+    if (!fixtureOddsData?.odds?.length || !allFixtures?.length) return null;
+
+    const coveredFixtureKeys = new Set<string>();
+    let lastFetchedAt: string | null = null;
+    for (const row of fixtureOddsData.odds) {
+      const homeId = oddsApiTeamNameToFplId(row.homeTeam);
+      const awayId = oddsApiTeamNameToFplId(row.awayTeam);
+      if (homeId !== null && awayId !== null) coveredFixtureKeys.add(`${homeId}-${awayId}`);
+      if (!lastFetchedAt || row.fetchedAt > lastFetchedAt) lastFetchedAt = row.fetchedAt;
+    }
+
+    const byEvent = new Map<number, { total: number; covered: number }>();
+    for (const fx of allFixtures) {
+      if (!fx.event) continue;
+      const entry = byEvent.get(fx.event) || { total: 0, covered: 0 };
+      entry.total++;
+      if (coveredFixtureKeys.has(`${fx.team_h}-${fx.team_a}`)) entry.covered++;
+      byEvent.set(fx.event, entry);
+    }
+
+    const coveredEvents = Array.from(byEvent.entries())
+      .filter(([, v]) => v.covered > 0)
+      .sort((a, b) => a[0] - b[0])
+      .map(([event, v]) => ({ event, ...v }));
+    const nextUncovered = Array.from(byEvent.entries())
+      .filter(([, v]) => v.covered < v.total)
+      .sort((a, b) => a[0] - b[0])[0];
+
+    return {
+      coveredEvents,
+      nextUncoveredEvent: nextUncovered ? nextUncovered[0] : null,
+      lastFetchedAt,
+    };
+  }, [fixtureOddsData, allFixtures]);
 
   // Reset settings mutation using goals scored settings
   const resetSettingsMutation = useMutation({
@@ -836,8 +888,30 @@ export default function AdminGoalProjections() {
                         post Premier League odds ~1-2 gameweeks before kickoff, so this mode only
                         differs from Dynamic for fixtures with live odds coverage — every other
                         gameweek in the projection window transparently uses the Dynamic formula
-                        underneath.
+                        underneath. Sourced from The Odds API's match-winner (h2h) and over/under 2.5
+                        goals (totals) markets only — no player-level data, so this has no effect on
+                        goal share, assist share, minutes, bonus, or saves projections.
                       </p>
+                      <div className="text-xs p-2 rounded border bg-muted/40" data-testid="text-odds-coverage">
+                        {!fixtureOddsData || !allFixtures ? (
+                          <span className="text-muted-foreground">Loading live coverage…</span>
+                        ) : oddsCoverage && oddsCoverage.coveredEvents.length > 0 ? (
+                          <>
+                            <strong>Live coverage right now:</strong>{' '}
+                            {oddsCoverage.coveredEvents.map(e => `GW${e.event} (${e.covered}/${e.total} fixtures)`).join(', ')}
+                            {oddsCoverage.nextUncoveredEvent !== null && (
+                              <> — GW{oddsCoverage.nextUncoveredEvent} onward uses the Dynamic formula until odds are refreshed closer to kickoff.</>
+                            )}
+                            {oddsCoverage.lastFetchedAt && (
+                              <div className="text-muted-foreground mt-1">Last refreshed {new Date(oddsCoverage.lastFetchedAt).toLocaleString()}</div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            No odds stored yet for any upcoming fixture — every gameweek is currently using the Dynamic formula. Click "Refresh Odds Now" once bookmakers have posted lines.
+                          </span>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         variant="outline"
@@ -857,9 +931,10 @@ export default function AdminGoalProjections() {
                     <div className={`p-3 border rounded-lg ${formData.calculationMode === 'tiered' ? 'opacity-60' : ''}`}>
                       <h4 className="font-semibold text-sm mb-2">Phase 1: Hybrid Foundation</h4>
                       <p className="text-sm text-muted-foreground">
-                        <strong>Formula:</strong> (Team Avg Goals + Real Team xGF + Opponent Avg GC + Real Opponent xGA) × 0.25<br/>
-                        <strong>Data Sources:</strong> Real FPL API performance + Live expected goals statistics<br/>
-                        <strong>Note:</strong> No longer uses synthetic base xG - now exclusively real data
+                        <strong>Formula:</strong> GF×0.25 + xGF×0.25 + oppGC×0.25 + oppxGA×0.25<br/>
+                        <strong>GF/GC:</strong> 50% this season + 50% last season (2025/26 archive) — real match data, not estimates<br/>
+                        <strong>xGF/xGA:</strong> this season only (no last-season xG archive); before the current season has any games, this weight shifts fully onto GF/GC<br/>
+                        <strong>Used by:</strong> Dynamic mode directly, and as the fallback for any fixture Odds mode doesn't have live market coverage for
                       </p>
                     </div>
 

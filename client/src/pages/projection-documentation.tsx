@@ -75,13 +75,14 @@ export default function ProjectionDocumentation() {
                       <Target className="h-5 w-5 text-blue-600" />
                       <h3 className="font-semibold text-blue-900">Team Goals</h3>
                     </div>
-                    <p className="text-sm text-blue-700 mb-2">Weighted 4-component formula</p>
+                    <p className="text-sm text-blue-700 mb-2">Weighted 4-component formula (Dynamic mode, the default)</p>
                     <div className="space-y-1 text-xs text-blue-600">
-                      <div>✓ GF × 0.36</div>
-                      <div>✓ xGF × 0.24</div>
-                      <div>✓ Opp GC × 0.24</div>
-                      <div>✓ Opp xGC × 0.16</div>
+                      <div>✓ GF × 0.25 (50/50 this + last season)</div>
+                      <div>✓ xGF × 0.25 (this season only)</div>
+                      <div>✓ Opp GC × 0.25 (50/50 this + last season)</div>
+                      <div>✓ Opp xGA × 0.25 (this season only)</div>
                       <div>✓ Dynamic venue multiplier</div>
+                      <div>✓ Odds mode overrides ~1-2 GW out; Dynamic underneath</div>
                     </div>
                   </div>
 
@@ -344,18 +345,19 @@ export default function ProjectionDocumentation() {
                     </div>
                     <div className="bg-green-50 p-4 rounded space-y-3">
                       <div className="bg-white p-3 rounded border font-mono text-sm">
-                        teamGoals = GF×0.36 + xGF×0.24 + oppGC×0.24 + oppxGC×0.16<br/>
+                        teamGoals = GF×0.25 + xGF×0.25 + oppGC×0.25 + oppxGA×0.25<br/>
                         finalGoals = teamGoals × venueMultiplier
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <strong>Inputs (all per-game season averages):</strong>
                           <ul className="list-disc ml-5 mt-1">
-                            <li>GF — team's actual goals per game (0.36 weight)</li>
-                            <li>xGF — team's expected goals per game (0.24 weight)</li>
-                            <li>oppGC — opponent goals conceded per game (0.24 weight)</li>
-                            <li>oppxGC — opponent xGA per game (0.16 weight)</li>
+                            <li>GF — 50% this season + 50% last season (2025/26) actual goals per game</li>
+                            <li>xGF — team's expected goals per game, this season only (0.25 weight)</li>
+                            <li>oppGC — opponent's goals conceded, same 50/50 season blend as GF</li>
+                            <li>oppxGA — opponent's xGA per game, this season only (0.25 weight)</li>
                           </ul>
+                          <p className="mt-1 text-xs text-muted-foreground">Before the current season has any games, xGF/xGA have nothing to blend from — their 0.25+0.25 weight shifts fully onto GF/oppGC instead of a flat guess.</p>
                         </div>
                         <div>
                           <strong>Venue multiplier (dynamic):</strong>
@@ -366,6 +368,16 @@ export default function ProjectionDocumentation() {
                             <li>Admin floor 0.0, ceiling 7.0; DGW sums; BGW = 0.0</li>
                           </ul>
                         </div>
+                      </div>
+                      <div className="bg-white p-3 rounded border text-sm">
+                        <strong>Calculation modes:</strong> the formula above is the default ("Dynamic") mode.
+                        Admin → Goal Projections also offers <strong>Odds</strong> mode, which derives expected
+                        goals from live betting-market consensus (The Odds API's match-winner and over/under 2.5
+                        goals markets) for whichever fixtures a market has actually been posted for — bookmakers
+                        only open lines ~1-2 gameweeks out, so every other gameweek transparently falls back to
+                        the Dynamic formula above. A third <strong>Tiered</strong> mode (legacy tier + context
+                        multiplier system) is also available. None of this affects goal share, assist share,
+                        minutes, or bonus/saves projections — those are separate models.
                       </div>
                     </div>
                   </div>
@@ -379,7 +391,7 @@ export default function ProjectionDocumentation() {
                     <div className="bg-red-50 p-4 rounded space-y-3">
                       <div className="bg-white p-3 rounded border font-mono text-sm">
                         teamGC = same formula as Step 2, applied from opponent's perspective<br/>
-                        (oppGF×0.36 + oppxGF×0.24 + teamGC×0.24 + teamxGC×0.16) × venueMultiplier
+                        (oppGF×0.25 + oppxGF×0.25 + teamGC×0.25 + teamxGC×0.25) × venueMultiplier
                       </div>
                       <p className="text-sm text-red-800">
                         A team's projected goals conceded equals the opponent's projected goals scored. The venue multiplier is inverted (opponent is at home = they get the home boost). Used for clean sheet probability and GC penalty calculations.
@@ -583,26 +595,38 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-3">The formula (server/team-goals-service.ts)</h4>
+                    <h4 className="font-semibold text-green-900 mb-3">The formula (server/team-goals-service.ts, "Dynamic" mode — the default)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
-                      <div>teamGoals = GF × <strong>0.36</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ xGF × <strong>0.24</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppGC × <strong>0.24</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppxGC × <strong>0.16</strong></div>
+                      <div>teamGoals = GF × <strong>0.25</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ xGF × <strong>0.25</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppGC × <strong>0.25</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppxGA × <strong>0.25</strong></div>
                       <div className="mt-2 text-gray-500">// weights sum to 1.0</div>
                     </div>
                     <div className="mt-3 text-sm text-green-800">
-                      <strong>Weight derivation:</strong> 60% weight to the attacking team's performance, 40% to the opponent's defensive concession record. Within each side, 60% actual results / 40% expected goals:
+                      <strong>Weight derivation:</strong> 50% weight to the attacking team's performance, 50% to the opponent's defensive concession record. Within each side, 50% actual results / 50% expected goals:
                       <ul className="list-disc ml-5 mt-1">
-                        <li>GF = 0.60 (attack) × 0.60 (actual) = 0.36</li>
-                        <li>xGF = 0.60 (attack) × 0.40 (expected) = 0.24</li>
-                        <li>oppGC = 0.40 (defence) × 0.60 (actual) = 0.24</li>
-                        <li>oppxGC = 0.40 (defence) × 0.40 (expected) = 0.16</li>
+                        <li>GF = 0.50 (attack) × 0.50 (actual) = 0.25 — itself a 50/50 blend of this season's per-game rate and last season's (2025/26 archive), so it isn't distorted by a small early-season sample</li>
+                        <li>xGF = 0.50 (attack) × 0.50 (expected) = 0.25 — this season only; no last-season xG archive exists to blend in</li>
+                        <li>oppGC = 0.50 (defence) × 0.50 (actual) = 0.25 — same this/last-season blend as GF</li>
+                        <li>oppxGA = 0.50 (defence) × 0.50 (expected) = 0.25 — this season only, same as xGF</li>
                       </ul>
+                      Before the current season has any games, xGF and oppxGA have no data at all — their combined 0.50 weight shifts fully onto GF and oppGC instead of guessing with a flat league-average constant.
                     </div>
                   </div>
                   <div className="bg-yellow-50 p-3 rounded text-sm">
                     <strong>All four inputs are season averages per game played</strong> — this avoids distortion from teams who have played different numbers of games. Default fallback if no data: 1.3 GPG scored, 1.5 GPG conceded.
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded text-sm text-blue-900">
+                    <strong>Two alternative modes exist</strong> (Admin → Goal Projections → Projection Model tab): <strong>Odds</strong> mode
+                    replaces this formula, fixture-by-fixture, with expected goals solved from live betting-market
+                    consensus (The Odds API's match-winner + over/under 2.5 goals markets, de-vigged and aggregated
+                    across ~20 UK bookmakers) — but bookmakers only post lines ~1-2 gameweeks before kickoff, so
+                    every fixture without a posted line silently falls back to the Dynamic formula above. Odds are
+                    refreshed manually via an admin action, not on a schedule. A <strong>Tiered</strong> mode (the
+                    pre-2025 tier + context-multiplier system) is also available. All three modes only change how
+                    <em> team</em> goals/goals-conceded are projected — goal share, assist share, minutes, bonus,
+                    and saves projections are separate models and are unaffected by this choice.
                   </div>
                 </CardContent>
               </Card>
@@ -1100,12 +1124,12 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">Weighted 4-Component Formula (server/team-goals-service.ts)</h4>
+                    <h4 className="font-semibold text-green-900 mb-2">Weighted 4-Component Formula (server/team-goals-service.ts, "Dynamic" mode — the default)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm mb-3 space-y-1">
-                      <div>teamGoals = GF×0.36 + xGF×0.24 + oppGC×0.24 + oppxGC×0.16</div>
+                      <div>teamGoals = GF×0.25 + xGF×0.25 + oppGC×0.25 + oppxGA×0.25</div>
                       <div>finalGoals = teamGoals × venueMultiplier</div>
                     </div>
-                    <p className="text-sm text-green-800">60% weight to attacking team's performance, 40% to opponent's defensive record. Within each, 60% actual / 40% expected. All inputs are season averages per game played.</p>
+                    <p className="text-sm text-green-800">50% weight to the attacking team's performance, 50% to the opponent's defensive record. GF/oppGC blend 50% this season + 50% last season (2025/26 archive); xGF/oppxGA are this-season-only and reweight fully onto GF/oppGC before the season has any games. All inputs are per-game averages.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-3 rounded">
@@ -1126,6 +1150,17 @@ export default function ProjectionDocumentation() {
                         <li>• BGW: explicitly returns 0.0</li>
                       </ul>
                     </div>
+                  </div>
+                  <div className="bg-amber-50 p-3 rounded text-sm text-amber-900">
+                    <strong>Alternative modes (Admin → Goal Projections):</strong> <strong>Odds</strong> mode
+                    replaces this formula, per-fixture, with expected goals solved from live betting-market
+                    consensus — but only for fixtures where The Odds API (match-winner + over/under 2.5 goals
+                    markets) has a line posted, which bookmakers only do ~1-2 gameweeks before kickoff. Every
+                    other gameweek in the projection window transparently uses the Dynamic formula above, so
+                    "Odds mode" is really "Dynamic mode with near-term market overrides." A <strong>Tiered</strong> mode
+                    (legacy tier + context multiplier system) is also available. None of the three modes change
+                    how goal share, assist share, minutes, or bonus/saves projections are calculated — those
+                    are separate models downstream of whichever team-goals number this step produces.
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">API: /api/team-goal-projections · Cache: 30 min</div>
                 </CardContent>
