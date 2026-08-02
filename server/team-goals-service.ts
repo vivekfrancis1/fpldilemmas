@@ -4,6 +4,10 @@
  */
 
 import { pool } from "./db";
+import { CURRENT_SEASON } from "@shared/schema";
+import { solveExpectedGoalsFromOdds } from "@shared/odds-utils";
+import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
+import type { StoredFixtureOdds } from "./odds-service";
 
 // Season archived in season_fixtures_archive that GF/GC blending uses as "last season".
 const LAST_SEASON = "2025/26";
@@ -66,6 +70,12 @@ let promotedTeamCleanSheetsOverrideCache: Map<string, { cleanSheets: number; pla
 // keyed by team name — reconstructed from gameweek_player_data, see fetchLastSeasonTeamDCC.
 let lastSeasonDCCCache: Map<string, number> | null = null;
 let lastSeasonDCCInFlight: Promise<Map<string, number>> | null = null;
+
+// Fixture-odds rows indexed by "homeTeamId-awayTeamId" (FPL ids, via the Odds API team-name
+// crosswalk) for 'odds' calculationMode. Short TTL so a manual /api/admin/refresh-odds is
+// picked up promptly without needing a server restart.
+const FIXTURE_ODDS_INDEX_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+let fixtureOddsIndexCache: { season: string; index: Map<string, StoredFixtureOdds>; timestamp: number } | null = null;
 
 // 2025/26 Championship goals/assists for the promoted clubs' current-squad players, keyed by
 // team name -> FPL web_name (matched against the live 2026/27 squad, since these are real
@@ -477,6 +487,30 @@ export class TeamGoalsService {
         team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
       );
     }
+    // 'odds' mode derives expected goals from live betting-market consensus (see
+    // shared/odds-utils.ts) for whichever fixtures a market has actually been posted for —
+    // bookmakers only open lines ~1-2 gameweeks out, so this transparently falls back to the
+    // dynamic formula for anything further out. Not the default; opt-in "near-term market view".
+    if (adminGoalSettings.calculationMode === 'odds') {
+      return TeamGoalsService.calculateFixtureGoalsOdds(
+        team, opponent, fixture, isHome, bootstrapData, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+      );
+    }
+    return TeamGoalsService.calculateFixtureGoalsDynamic(
+      team, opponent, fixture, isHome, bootstrapData, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+    );
+  }
+
+  private static async calculateFixtureGoalsDynamic(
+    team: any,
+    opponent: any,
+    fixture: any,
+    isHome: boolean,
+    bootstrapData: any,
+    fixturesData: any[],
+    adminGoalSettings: any,
+    MASTER_TEAM_DEFAULTS: any
+  ): Promise<number> {
     try {
       // SEASON DATA ONLY: Uses verified data from current standings API
       // Formula: GF×0.25 + xGF×0.25 + GC×0.25 + xGC×0.25
@@ -522,6 +556,75 @@ export class TeamGoalsService {
     } catch (error) {
       console.error(`❌ CALCULATION ERROR: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}`);
       throw error;
+    }
+  }
+
+  /**
+   * Builds (and caches) a lookup of stored fixture_odds rows keyed by "homeTeamId-awayTeamId"
+   * (FPL ids), via the Odds API team-name crosswalk. Rows whose team names don't resolve
+   * (e.g. a future season's promoted club not yet in the crosswalk) are silently skipped —
+   * 'odds' mode just falls back to the dynamic formula for that fixture.
+   */
+  private static async getFixtureOddsIndex(season: string): Promise<Map<string, StoredFixtureOdds>> {
+    if (fixtureOddsIndexCache && fixtureOddsIndexCache.season === season &&
+        Date.now() - fixtureOddsIndexCache.timestamp < FIXTURE_ODDS_INDEX_CACHE_DURATION) {
+      return fixtureOddsIndexCache.index;
+    }
+
+    const { getFixtureOdds } = await import('./odds-service');
+    const rows = await getFixtureOdds(season);
+
+    const index = new Map<string, StoredFixtureOdds>();
+    for (const row of rows) {
+      const homeId = oddsApiTeamNameToFplId(row.homeTeam);
+      const awayId = oddsApiTeamNameToFplId(row.awayTeam);
+      if (homeId === null || awayId === null) continue;
+      index.set(`${homeId}-${awayId}`, row);
+    }
+
+    fixtureOddsIndexCache = { season, index, timestamp: Date.now() };
+    return index;
+  }
+
+  /**
+   * 'odds' calculationMode: looks up this fixture's consensus betting odds, solves for
+   * per-team expected goals via the independent-Poisson model in shared/odds-utils.ts, and
+   * returns the requesting team's side of that. Falls back to the dynamic formula whenever no
+   * usable odds exist for this fixture (bookmakers only post lines ~1-2 gameweeks out, or a
+   * promoted team the crosswalk doesn't yet cover) — every fixture always gets a number.
+   */
+  private static async calculateFixtureGoalsOdds(
+    team: any,
+    opponent: any,
+    fixture: any,
+    isHome: boolean,
+    bootstrapData: any,
+    fixturesData: any[],
+    adminGoalSettings: any,
+    MASTER_TEAM_DEFAULTS: any
+  ): Promise<number> {
+    const fallback = () => TeamGoalsService.calculateFixtureGoalsDynamic(
+      team, opponent, fixture, isHome, bootstrapData, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+    );
+
+    try {
+      const index = await TeamGoalsService.getFixtureOddsIndex(CURRENT_SEASON);
+      const oddsRow = index.get(`${fixture.team_h}-${fixture.team_a}`);
+      if (!oddsRow || oddsRow.homeWinProb === null || oddsRow.drawProb === null ||
+          oddsRow.awayWinProb === null || oddsRow.over25Prob === null) {
+        return fallback();
+      }
+
+      const solved = solveExpectedGoalsFromOdds(oddsRow.homeWinProb, oddsRow.drawProb, oddsRow.awayWinProb, oddsRow.over25Prob);
+      if (!solved) return fallback();
+
+      const expectedGoals = isHome ? solved.lambdaHome : solved.lambdaAway;
+      const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
+      const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
+      return Math.max(absoluteMin, Math.min(absoluteMax, expectedGoals));
+    } catch (error) {
+      console.error(`⚠️ Odds-mode lookup failed for Team ${team.name} vs ${opponent.name} GW${fixture.event}, falling back to dynamic - ${error}`);
+      return fallback();
     }
   }
 

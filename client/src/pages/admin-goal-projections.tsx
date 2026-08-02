@@ -24,7 +24,7 @@ interface Team {
 
 interface AdminSettings {
   // Which formula calculateFixtureGoals uses for team goal projections
-  calculationMode: 'dynamic' | 'tiered';
+  calculationMode: 'dynamic' | 'tiered' | 'odds';
   // Base Calculation Parameters - Previously Hardcoded
   averageBaseXGPerTeamPerGame: number;
   defaultTeamVariance: number;
@@ -143,6 +143,27 @@ export default function AdminGoalProjections() {
       toast({
         title: "Update Failed",
         description: "Failed to update settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const refreshOddsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/refresh-odds', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to refresh odds');
+      return response.json();
+    },
+    onSuccess: (data: { fetched: number; stored: number }) => {
+      toast({
+        title: "Odds Refreshed",
+        description: `Fetched ${data.fetched} fixtures with live betting odds from The Odds API.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh odds data. Please try again.",
         variant: "destructive",
       });
     },
@@ -286,7 +307,7 @@ export default function AdminGoalProjections() {
     setHasChanges(true);
   };
 
-  const handleCalculationModeChange = (mode: 'dynamic' | 'tiered') => {
+  const handleCalculationModeChange = (mode: 'dynamic' | 'tiered' | 'odds') => {
     setFormData(prev => ({ ...prev, calculationMode: mode }));
     setHasChanges(true);
     updateSettingsMutation.mutate({ calculationMode: mode });
@@ -779,10 +800,10 @@ export default function AdminGoalProjections() {
                   <p className="text-xs text-muted-foreground mb-3">
                     Choose which formula team goal projections use. Switching takes effect immediately.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       type="button"
-                      variant={formData.calculationMode !== 'tiered' ? 'default' : 'outline'}
+                      variant={formData.calculationMode === 'dynamic' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleCalculationModeChange('dynamic')}
                       data-testid="button-mode-dynamic"
@@ -798,7 +819,37 @@ export default function AdminGoalProjections() {
                     >
                       Tiered (tier + context multipliers)
                     </Button>
+                    <Button
+                      type="button"
+                      variant={formData.calculationMode === 'odds' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleCalculationModeChange('odds')}
+                      data-testid="button-mode-odds"
+                    >
+                      Odds (live market view)
+                    </Button>
                   </div>
+                  {formData.calculationMode === 'odds' && (
+                    <div className="mt-3 p-2 bg-background rounded border space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        <strong>Near-term market view, not a full alternative:</strong> bookmakers only
+                        post Premier League odds ~1-2 gameweeks before kickoff, so this mode only
+                        differs from Dynamic for fixtures with live odds coverage — every other
+                        gameweek in the projection window transparently uses the Dynamic formula
+                        underneath.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => refreshOddsMutation.mutate()}
+                        disabled={refreshOddsMutation.isPending}
+                        data-testid="button-refresh-odds"
+                      >
+                        {refreshOddsMutation.isPending ? 'Refreshing…' : 'Refresh Odds Now'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

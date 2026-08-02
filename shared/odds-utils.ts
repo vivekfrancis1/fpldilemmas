@@ -99,3 +99,113 @@ export function aggregateEventOdds(event: OddsApiEvent): AggregatedFixtureOdds {
     under25Prob: average(totalsResults.map((r) => r.under)),
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Match odds → per-team expected goals. The odds we store are match-level (home/draw/away win,
+// over 2.5 goals), but projections need a per-team expected-goals number. Standard technique:
+// model each team's goals as independent Poisson(lambdaHome)/Poisson(lambdaAway), then search
+// for the (lambdaHome, lambdaAway) pair whose implied match probabilities best match the
+// observed consensus odds.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MatchProbabilities {
+  homeWinProb: number;
+  drawProb: number;
+  awayWinProb: number;
+  over25Prob: number;
+}
+
+const MAX_GOALS = 15; // Poisson tail beyond this is negligible for realistic football lambdas
+
+function poissonPmf(k: number, lambda: number): number {
+  // e^-lambda * lambda^k / k!, computed iteratively to avoid overflow from lambda^k or k!
+  let pmf = Math.exp(-lambda);
+  for (let i = 1; i <= k; i++) {
+    pmf *= lambda / i;
+  }
+  return pmf;
+}
+
+/**
+ * Forward model: given independent Poisson expected goals for each side, compute the implied
+ * match outcome and over-2.5 probabilities.
+ */
+export function computeMatchProbabilities(lambdaHome: number, lambdaAway: number): MatchProbabilities {
+  const homeProbs = Array.from({ length: MAX_GOALS + 1 }, (_, k) => poissonPmf(k, lambdaHome));
+  const awayProbs = Array.from({ length: MAX_GOALS + 1 }, (_, k) => poissonPmf(k, lambdaAway));
+
+  let homeWinProb = 0;
+  let drawProb = 0;
+  let awayWinProb = 0;
+  let under25Prob = 0;
+
+  for (let h = 0; h <= MAX_GOALS; h++) {
+    for (let a = 0; a <= MAX_GOALS; a++) {
+      const p = homeProbs[h] * awayProbs[a];
+      if (h > a) homeWinProb += p;
+      else if (h === a) drawProb += p;
+      else awayWinProb += p;
+      if (h + a <= 2) under25Prob += p;
+    }
+  }
+
+  return { homeWinProb, drawProb, awayWinProb, over25Prob: 1 - under25Prob };
+}
+
+function probabilityError(target: MatchProbabilities, candidate: MatchProbabilities): number {
+  return (
+    (target.homeWinProb - candidate.homeWinProb) ** 2 +
+    (target.drawProb - candidate.drawProb) ** 2 +
+    (target.awayWinProb - candidate.awayWinProb) ** 2 +
+    (target.over25Prob - candidate.over25Prob) ** 2
+  );
+}
+
+const LAMBDA_MIN = 0.1;
+const LAMBDA_MAX = 4.5;
+
+function gridSearch(target: MatchProbabilities, center: { home: number; away: number } | null, radius: number, step: number) {
+  const homeLo = center ? Math.max(LAMBDA_MIN, center.home - radius) : LAMBDA_MIN;
+  const homeHi = center ? Math.min(LAMBDA_MAX, center.home + radius) : LAMBDA_MAX;
+  const awayLo = center ? Math.max(LAMBDA_MIN, center.away - radius) : LAMBDA_MIN;
+  const awayHi = center ? Math.min(LAMBDA_MAX, center.away + radius) : LAMBDA_MAX;
+
+  let best = { home: homeLo, away: awayLo };
+  let bestError = Infinity;
+
+  for (let home = homeLo; home <= homeHi; home += step) {
+    for (let away = awayLo; away <= awayHi; away += step) {
+      const error = probabilityError(target, computeMatchProbabilities(home, away));
+      if (error < bestError) {
+        bestError = error;
+        best = { home, away };
+      }
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Inverse solve: given observed (de-vigged, consensus) match odds, find the (lambdaHome,
+ * lambdaAway) pair that best reproduces them under the independent-Poisson model above.
+ * Two-pass grid search (coarse, then refine around the coarse best) — fast enough to run
+ * per-fixture on demand, deterministic, no external optimization library needed.
+ */
+export function solveExpectedGoalsFromOdds(
+  homeWinProb: number,
+  drawProb: number,
+  awayWinProb: number,
+  over25Prob: number
+): { lambdaHome: number; lambdaAway: number } | null {
+  if ([homeWinProb, drawProb, awayWinProb, over25Prob].some((p) => p === null || p === undefined || Number.isNaN(p))) {
+    return null;
+  }
+
+  const target: MatchProbabilities = { homeWinProb, drawProb, awayWinProb, over25Prob };
+
+  const coarse = gridSearch(target, null, 0, 0.1);
+  const refined = gridSearch(target, coarse, 0.15, 0.01);
+
+  return { lambdaHome: refined.home, lambdaAway: refined.away };
+}

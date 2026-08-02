@@ -104,3 +104,55 @@ describe('Goal projection calculation mode (dynamic vs tiered)', () => {
     expect(promotedAttackTeams.sort((a: number, b: number) => a - b)).toEqual([7, 11, 12]);
   });
 });
+
+// 'odds' mode derives expected goals from live betting-market consensus (see
+// shared/odds-utils.ts, server/team-goals-service.ts:calculateFixtureGoalsOdds) for whichever
+// fixtures a market has been posted for, falling back to the dynamic formula elsewhere. These
+// tests rely on GW1 fixture_odds already being populated from an earlier manual
+// /api/admin/refresh-odds call this session — they don't trigger a live refresh themselves, to
+// avoid spending Odds API quota on every test run.
+describe('Goal projection calculation mode (odds)', () => {
+  afterAll(async () => {
+    await resetSettings();
+  });
+
+  it('accepts and round-trips the odds mode setting', async () => {
+    await putSettings({ calculationMode: 'odds' });
+    const settings = await fetchJSON('/api/admin/goal-scored-settings');
+    expect(settings.calculationMode).toBe('odds');
+  });
+
+  it('odds mode changes at least one team\'s projection versus dynamic (GW1 has stored odds)', async () => {
+    await putSettings({ calculationMode: 'dynamic' });
+    const before = await fetchJSON('/api/team-goal-projections');
+    const beforeMap = new Map(before.map((t: any) => [t.teamId, t.averageGoalsPerGame]));
+
+    await putSettings({ calculationMode: 'odds' });
+    const afterOdds = await fetchJSON('/api/team-goal-projections');
+    const afterMap = new Map(afterOdds.map((t: any) => [t.teamId, t.averageGoalsPerGame]));
+
+    let changedCount = 0;
+    for (const [teamId, beforeVal] of beforeMap) {
+      if (Math.abs((afterMap.get(teamId) as number) - (beforeVal as number)) > 0.01) changedCount++;
+    }
+    expect(changedCount).toBeGreaterThan(0);
+  });
+
+  it('every team still gets a finite, in-range projection in odds mode (fallback covers gaps)', async () => {
+    await putSettings({ calculationMode: 'odds' });
+    const projections = await fetchJSON('/api/team-goal-projections');
+    expect(projections.length).toBeGreaterThan(0);
+    for (const team of projections) {
+      expect(Number.isFinite(team.averageGoalsPerGame)).toBe(true);
+      expect(team.averageGoalsPerGame).toBeGreaterThanOrEqual(0);
+      expect(team.averageGoalsPerGame).toBeLessThanOrEqual(7);
+    }
+  });
+
+  it('switching back to dynamic mode is fully reversible', async () => {
+    await putSettings({ calculationMode: 'odds' });
+    await putSettings({ calculationMode: 'dynamic' });
+    const settings = await fetchJSON('/api/admin/goal-scored-settings');
+    expect(settings.calculationMode).toBe('dynamic');
+  });
+});
