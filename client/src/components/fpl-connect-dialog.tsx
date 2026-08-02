@@ -203,8 +203,18 @@ export function FplConnectDialog() {
                 <ol className="list-decimal list-inside mt-2 space-y-2">
                   <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a>, <strong>sign in</strong>, and <strong>click on the Points tab</strong></li>
                   <li><strong>Copy the browser URL</strong> from the address bar → Paste in "Manager ID" field below</li>
-                  <li>Press <strong>F12</strong> → <strong>Network tab</strong> → <strong>F5</strong> to refresh</li>
-                  <li><strong>Right-click</strong> any request → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below</li>
+                  <li>
+                    Open Developer Tools and switch to the <strong>Network tab</strong>, then refresh the page:
+                    <ul className="list-disc list-inside mt-1 ml-4 space-y-1 text-xs">
+                      <li><strong>Windows/Linux</strong> (Chrome, Edge, Firefox): press <strong>F12</strong>, then <strong>F5</strong> to refresh</li>
+                      <li><strong>Mac</strong> (Chrome, Edge, Firefox): press <strong>⌘ + Option + I</strong>, then <strong>⌘ + R</strong> to refresh</li>
+                      <li><strong>Mac Safari</strong>: first enable it once via <strong>Safari → Settings → Advanced → "Show Develop menu in menu bar"</strong>, then press <strong>⌘ + Option + I</strong> and <strong>⌘ + R</strong> to refresh</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong>Right-click</strong> any request in the list → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below
+                    <span className="block text-xs mt-1 text-muted-foreground">(Older Safari versions don't have "Copy as cURL" — if you don't see it, click the request, open its <strong>Headers</strong> pane, and copy the value next to <strong>Authorization</strong> instead)</span>
+                  </li>
                 </ol>
                 <p className="mt-2 text-xs font-semibold text-green-600">
                   ✅ That's it! We'll extract everything automatically.
