@@ -1,0 +1,1797 @@
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, Calendar, RefreshCw } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadingExperience } from "@/components/loading-experience";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
+import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { SeasonBadge } from "@/components/season-badge";
+import { useToast } from "@/hooks/use-toast";
+
+interface PlayerSnapshot {
+  playerId: number;
+  playerName: string;
+  teamName: string;
+  position: string;
+  price: number;
+  ownership: number;
+  totalProjectedPoints: number;
+  averagePointsPerGameweek: number;
+  averageValue: number;
+  averageMinutes: number;
+  gameweekBreakdown: Record<string, number>;
+  windowId: string;
+  startGameweek: number;
+  endGameweek: number;
+}
+
+interface GameweekTeam {
+  gameweek: number;
+  starting11: PlayerSnapshot[];
+  captain: PlayerSnapshot;
+  viceCaptain: PlayerSnapshot;
+  totalPoints: number;
+  gameweekPoints: number;
+  formation: string;
+}
+
+interface OptimalTeam {
+  squad: PlayerSnapshot[];
+  starting11: PlayerSnapshot[];
+  captain: PlayerSnapshot;
+  viceCaptain: PlayerSnapshot;
+  formation: string;
+  totalPoints: number;
+  totalValue: number;
+  gameweekBreakdown: GameweekTeam[];
+}
+
+interface TeamConstraints {
+  goalkeepers: number;
+  defenders: number;
+  midfielders: number;
+  forwards: number;
+  minDefenders: number;
+  maxPlayersPerTeam: number;
+}
+
+const SQUAD_CONSTRAINTS: TeamConstraints = {
+  goalkeepers: 2,
+  defenders: 5,
+  midfielders: 5,
+  forwards: 3,
+  minDefenders: 3,
+  maxPlayersPerTeam: 3
+};
+
+// Valid FPL formations (DEF-MID-FWD, always 1 GK)
+const VALID_FORMATIONS = [
+  { def: 3, mid: 4, fwd: 3, name: '3-4-3' },
+  { def: 3, mid: 5, fwd: 2, name: '3-5-2' },
+  { def: 4, mid: 3, fwd: 3, name: '4-3-3' },
+  { def: 4, mid: 4, fwd: 2, name: '4-4-2' },
+  { def: 4, mid: 5, fwd: 1, name: '4-5-1' },
+  { def: 5, mid: 3, fwd: 2, name: '5-3-2' },
+  { def: 5, mid: 4, fwd: 1, name: '5-4-1' }
+];
+
+interface WildcardOptimizerProps {
+  /** "page" renders the full fpl-page-header banner; "embedded" skips it for use inside another page's card. */
+  variant?: 'page' | 'embedded';
+  defaultUnlimitedBudget?: boolean;
+  defaultBudget?: number;
+  defaultHorizon?: number;
+}
+
+export function WildcardOptimizer({
+  variant = 'page',
+  defaultUnlimitedBudget = true,
+  defaultBudget = 100,
+  defaultHorizon = 5,
+}: WildcardOptimizerProps = {}) {
+  const { toast } = useToast();
+
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery({
+    queryKey: ['/api/bootstrap-static'],
+    queryFn: async () => {
+      const response = await fetch('/api/bootstrap-static');
+      if (!response.ok) throw new Error('Failed to fetch bootstrap data');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach((player: any) => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
+
+  // Team name -> { code, short_name } for pitch-view jersey images / badges
+  const teamInfoByName = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, { code: number; short_name: string }>();
+    const map = new Map<string, { code: number; short_name: string }>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, { code: team.code, short_name: team.short_name });
+    });
+    return map;
+  }, [bootstrapData]);
+
+  const POSITION_TO_ELEMENT_TYPE: Record<string, number> = {
+    Goalkeeper: 1, GKP: 1,
+    Defender: 2, DEF: 2,
+    Midfielder: 3, MID: 3,
+    Forward: 4, FWD: 4,
+  };
+
+  const toPitchPlayer = (player: PlayerSnapshot, slot: number, isCaptain: boolean, isViceCaptain: boolean, points: number): PitchPlayer => {
+    const teamInfo = teamInfoByName.get(player.teamName);
+    return {
+      element: player.playerId,
+      element_type: POSITION_TO_ELEMENT_TYPE[player.position] || 4,
+      position: slot,
+      is_captain: isCaptain,
+      is_vice_captain: isViceCaptain,
+      web_name: playerIdToWebName.get(player.playerId) || player.playerName,
+      team_short_name: teamInfo?.short_name,
+      team_code: teamInfo?.code,
+      custom_badge_text: points.toFixed(1),
+      custom_badge_color: isCaptain ? 'bg-yellow-500' : 'bg-purple-600',
+    };
+  };
+
+  // Combined search key (web name + full first/last name) so searching "Bruno" finds
+  // "B.Fernandes" — the include/exclude search filters on CommandItem's value, which
+  // otherwise defaults to just the displayed web_name and misses a player's first name.
+  const playerIdToSearchKey = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach((player: any) => {
+      map.set(player.id, `${player.web_name} ${player.first_name} ${player.second_name}`);
+    });
+    return map;
+  }, [bootstrapData]);
+
+  // State for gameweek horizon selection
+  const [gameweekHorizon, setGameweekHorizon] = useState<number>(defaultHorizon);
+
+  // Calculate dynamic gameweek range based on selected horizon
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
+  const startGameweek = currentGameweek + 1;
+  const maxGameweekHorizon = Math.max(1, 38 - startGameweek + 1); // Can't optimize past GW38
+  const endGameweek = Math.min(startGameweek + gameweekHorizon - 1, 38); // Based on selected horizon, max GW38
+
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
+  const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(defaultUnlimitedBudget);
+  const [budgetConstraint, setBudgetConstraint] = useState<number>(defaultBudget);
+  const [includedPlayers, setIncludedPlayers] = useState<PlayerSnapshot[]>([]);
+  const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
+  const [includePopoverOpen, setIncludePopoverOpen] = useState(false);
+  const [excludePopoverOpen, setExcludePopoverOpen] = useState(false);
+  const includeListRef = useRef<HTMLDivElement>(null);
+  const excludeListRef = useRef<HTMLDivElement>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Full 12-GW range for the query — horizon filter applied client-side via liveData
+  const fullMaxGW = Math.min(38, startGameweek + 11);
+
+  // Fetch player projection data from cached endpoint (pre-computed at startup, all future GWs)
+  // Stable query key — horizon filter applied client-side, no refetch on GW change
+  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ["/api/cached/player-total-points"],
+    enabled: !!bootstrapData && startGameweek > 0,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const response = await fetch(`/api/cached/player-total-points`);
+      if (!response.ok) throw new Error('Failed to fetch player total points');
+      return response.json();
+    },
+  });
+
+  // Filter cached data to selected gameweek horizon (client-side filtering is instant)
+  const liveData = useMemo(() => {
+    if (!allCachedData || !Array.isArray(allCachedData)) return allCachedData;
+    
+    // Filter each player's gameweek projections to only include selected range
+    return (allCachedData as any[]).map((player: any) => {
+      const filteredProjections: Record<string, number> = {};
+      const originalProjections = player.gameweekProjections || {};
+      
+      // Calculate total points for selected range
+      // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
+      let totalPoints = 0;
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const numericKey = gw.toString();
+        const prefixedKey = `gw${gw}`;
+        // Try both key formats
+        const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
+        filteredProjections[numericKey] = points;
+        totalPoints += points;
+      }
+      
+      return {
+        ...player,
+        gameweekProjections: filteredProjections,
+        totalExpectedPoints: totalPoints
+      };
+    });
+  }, [allCachedData, startGameweek, endGameweek]);
+
+  const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
+    playerId: player.playerId || 0,
+    playerName: player.name || player.playerName || '',
+    teamName: player.team || '',
+    position: player.position || '',
+    price: player.price || 0,
+    ownership: player.ownership || 0,
+    totalProjectedPoints: player.totalExpectedPoints || 0,
+    averagePointsPerGameweek: 0,
+    averageValue: 0,
+    averageMinutes: 0,
+    gameweekBreakdown: player.gameweekProjections || {},
+    windowId: '',
+    startGameweek: startGameweek,
+    endGameweek: endGameweek
+  })) : [];
+  const gameweekRange = `GW${startGameweek}-${endGameweek}`;
+
+  // Clear optimal team when gameweek horizon changes
+  useEffect(() => {
+    setOptimalTeam(null);
+  }, [gameweekHorizon]);
+
+  // Refresh data handler
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await refetchProjections();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Get points for specific gameweek
+  const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
+    return player.gameweekBreakdown[gameweek.toString()] || player.gameweekBreakdown[`gw${gameweek}`] || 0;
+  };
+
+  // Normalize position to standard format
+  const normalizePosition = (position: string): 'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forward' => {
+    const pos = position.toLowerCase();
+    if (pos.includes('goalkeeper') || pos === 'gkp') return 'Goalkeeper';
+    if (pos.includes('defender') || pos === 'def') return 'Defender';
+    if (pos.includes('midfielder') || pos === 'mid') return 'Midfielder';
+    return 'Forward';
+  };
+
+  // Value = projected points per £m — the ranking metric for steps (b)/(c) below.
+  const playerValue = (player: PlayerSnapshot): number => player.totalProjectedPoints / Math.max(player.price, 0.1);
+
+  /**
+   * Build a full 15-player squad for a given formation. The starting XI is solved completely
+   * first — fill, then upgrade to convergence — before the bench is even considered, so an
+   * included player (e.g. Haaland) is locked into an XI slot the moment one is available and
+   * can never later be bumped out by bench-side decisions. Before either phase, a cushion of
+   * near-minimum-price players per position is reserved for the bench so the XI's value-fill
+   * can't spend away the cheap enablers the bench needs to survive:
+   *   Phase 1 (XI):    a) force in must-includes that fit an XI slot, capped at 82% of budget
+   *                    b) fill remaining XI slots by highest value (points per £m)
+   *                    c) upgrade pass: replace weakest non-included XI player with the
+   *                       highest-points affordable alternative, repeat until no upgrade fits
+   *   Phase 2 (Bench):  a) any must-include that didn't fit the XI goes here instead
+   *                    b) fill remaining bench slots by highest value, capped at 18% of budget
+   *                       (falls back to whatever's left of the total budget if the strict 18%
+   *                       pool can't be filled — a tight bench cap failing the entire formation
+   *                       is worse than slightly exceeding it)
+   *                    c) upgrade pass, same cap rule
+   */
+  const buildSquadForFormation = (
+    formation: typeof VALID_FORMATIONS[0],
+    playersByPosition: Record<string, PlayerSnapshot[]>,
+    includedPlayerIds: Set<number>,
+    budget?: number
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], totalCost: number } | null => {
+    const hasBudget = budget !== undefined;
+    const benchBudgetCap = hasBudget ? budget! * 0.18 : Infinity;
+    const positions: Array<'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forward'> = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+
+    const totalNeeds = {
+      Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers,
+      Defender: SQUAD_CONSTRAINTS.defenders,
+      Midfielder: SQUAD_CONSTRAINTS.midfielders,
+      Forward: SQUAD_CONSTRAINTS.forwards,
+    };
+    const xiNeeds = { Goalkeeper: 1, Defender: formation.def, Midfielder: formation.mid, Forward: formation.fwd };
+    const benchNeeds = {
+      Goalkeeper: totalNeeds.Goalkeeper - xiNeeds.Goalkeeper,
+      Defender: totalNeeds.Defender - xiNeeds.Defender,
+      Midfielder: totalNeeds.Midfielder - xiNeeds.Midfielder,
+      Forward: totalNeeds.Forward - xiNeeds.Forward,
+    };
+
+    const teamCounts: Record<string, number> = {};
+    const canAddTeam = (player: PlayerSnapshot) => (teamCounts[player.teamName || ''] || 0) < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+    const usedIds = new Set<number>();
+
+    // Reserve a cushion of near-minimum-price players at each position for the bench BEFORE the
+    // XI is built, so the XI's greedy value-fill can never hoard the very cheap "enabler"
+    // players the bench needs — without this, the XI phase (which deliberately spends up to its
+    // full cap for maximum points) can leave the bench unable to afford its own minimum-price
+    // players, making the whole formation infeasible even though a cheaper valid bench exists.
+    const reservedForBench = new Set<number>();
+    let benchMinCostEstimate = 0;
+    for (const pos of positions) {
+      if (benchNeeds[pos] <= 0) continue;
+      const eligible = playersByPosition[pos].filter(p => !includedPlayerIds.has(p.playerId));
+      if (eligible.length === 0) continue;
+      const cheapestSorted = [...eligible].sort((a, b) => a.price - b.price);
+      const minPrice = cheapestSorted[0].price;
+      cheapestSorted.filter(p => p.price <= minPrice + 0.5).forEach(p => reservedForBench.add(p.playerId));
+      benchMinCostEstimate += cheapestSorted.slice(0, benchNeeds[pos]).reduce((sum, p) => sum + p.price, 0);
+    }
+    // Shrink the XI's 82% cap if the flat 18% bench pool would be too tight for the bench's
+    // actual minimum cost (a hard 18% ceiling is sometimes just below what 4 real players cost).
+    const xiBudgetCap = hasBudget ? Math.min(budget! * 0.82, budget! - benchMinCostEstimate) : Infinity;
+
+    const runUpgradePass = (
+      group: PlayerSnapshot[],
+      cap: number,
+      groupCost: () => number,
+      addCost: (delta: number) => void,
+    ) => {
+      let upgraded = true;
+      while (upgraded) {
+        upgraded = false;
+        const swappable = group
+          .filter(p => !includedPlayerIds.has(p.playerId))
+          .sort((a, b) => playerValue(a) - playerValue(b));
+
+        for (const weakest of swappable) {
+          const pos = normalizePosition(weakest.position);
+          const candidates = playersByPosition[pos]
+            .filter(p => !usedIds.has(p.playerId))
+            .filter(p => p.totalProjectedPoints > weakest.totalProjectedPoints)
+            .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+
+          let swappedThisPlayer = false;
+          for (const candidate of candidates) {
+            const newCost = groupCost() - weakest.price + candidate.price;
+            if (newCost > cap) continue;
+
+            const weakestTeam = weakest.teamName || '';
+            const candidateTeam = candidate.teamName || '';
+            const newCandidateTeamCount = (teamCounts[candidateTeam] || 0) + (candidateTeam === weakestTeam ? -1 : 0) + 1;
+            if (newCandidateTeamCount > SQUAD_CONSTRAINTS.maxPlayersPerTeam) continue;
+
+            const groupIdx = group.findIndex(p => p.playerId === weakest.playerId);
+            group[groupIdx] = candidate;
+            usedIds.delete(weakest.playerId);
+            usedIds.add(candidate.playerId);
+            teamCounts[weakestTeam] = (teamCounts[weakestTeam] || 0) - 1;
+            teamCounts[candidateTeam] = (teamCounts[candidateTeam] || 0) + 1;
+            addCost(candidate.price - weakest.price);
+            upgraded = true;
+            swappedThisPlayer = true;
+            break;
+          }
+          if (swappedThisPlayer) break; // squad/budget changed — restart the pass from scratch
+        }
+      }
+    };
+
+    // ---------- Phase 1: Starting XI (fully solved before the bench is considered) ----------
+    const startingXI: PlayerSnapshot[] = [];
+    const xiFilled: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
+    let xiCost = 0;
+
+    const addToXI = (player: PlayerSnapshot) => {
+      startingXI.push(player);
+      usedIds.add(player.playerId);
+      xiCost += player.price;
+      teamCounts[player.teamName || ''] = (teamCounts[player.teamName || ''] || 0) + 1;
+      xiFilled[normalizePosition(player.position)]++;
+    };
+
+    // (a) Force in must-include players that fit an XI slot — bypasses the XI budget cap.
+    for (const pos of positions) {
+      for (const player of playersByPosition[pos]) {
+        if (!includedPlayerIds.has(player.playerId) || usedIds.has(player.playerId)) continue;
+        if (xiFilled[pos] >= xiNeeds[pos]) continue;
+        if (!canAddTeam(player)) continue;
+        addToXI(player);
+      }
+    }
+
+    // (b) Fill the rest of the XI by highest value, capped at 82% of the budget. Excludes the
+    // bench-reserved cushion so the XI can't spend away the bench's cheap enablers.
+    for (const pos of positions) {
+      const candidates = playersByPosition[pos]
+        .filter(p => !usedIds.has(p.playerId) && !reservedForBench.has(p.playerId))
+        .sort((a, b) => playerValue(b) - playerValue(a));
+      for (const player of candidates) {
+        if (xiFilled[pos] >= xiNeeds[pos]) break;
+        if (!canAddTeam(player)) continue;
+        if (xiCost + player.price > xiBudgetCap) continue;
+        addToXI(player);
+      }
+      if (xiFilled[pos] < xiNeeds[pos]) return null; // formation infeasible within budget/constraints
+    }
+
+    // (c) Upgrade pass on the XI only.
+    runUpgradePass(startingXI, xiBudgetCap, () => xiCost, (delta) => { xiCost += delta; });
+
+    // ---------- Phase 2: Bench (only starts once the XI above is fully finalized) ----------
+    const bench: PlayerSnapshot[] = [];
+    const benchFilled: Record<string, number> = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
+    let benchCost = 0;
+
+    const addToBench = (player: PlayerSnapshot) => {
+      bench.push(player);
+      usedIds.add(player.playerId);
+      benchCost += player.price;
+      teamCounts[player.teamName || ''] = (teamCounts[player.teamName || ''] || 0) + 1;
+      benchFilled[normalizePosition(player.position)]++;
+    };
+
+    // (a) Any must-include that didn't fit into the XI (formation had no room) goes to the bench
+    // instead — bypasses the bench budget cap.
+    for (const pos of positions) {
+      for (const player of playersByPosition[pos]) {
+        if (!includedPlayerIds.has(player.playerId) || usedIds.has(player.playerId)) continue;
+        if (benchFilled[pos] >= benchNeeds[pos]) continue;
+        if (!canAddTeam(player)) continue;
+        addToBench(player);
+      }
+    }
+
+    // (b) Fill the rest of the bench by highest value: the reserved cheap cushion first (ranked
+    // by points, since these are all near-minimum-price already), then the general pool for
+    // anything the cushion didn't cover. Try the strict 18% cap first; if that can't fill every
+    // slot (team-of-3 exhaustion etc.), fall back to whatever's left of the total budget rather
+    // than failing the whole formation over a tight bench pool.
+    const fillBench = (cap: number) => {
+      for (const pos of positions) {
+        const pool = playersByPosition[pos].filter(p => !usedIds.has(p.playerId));
+        const reserved = pool
+          .filter(p => reservedForBench.has(p.playerId))
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+        const rest = pool
+          .filter(p => !reservedForBench.has(p.playerId))
+          .sort((a, b) => playerValue(b) - playerValue(a));
+        for (const player of [...reserved, ...rest]) {
+          if (benchFilled[pos] >= benchNeeds[pos]) break;
+          if (!canAddTeam(player)) continue;
+          if (benchCost + player.price > cap) continue;
+          addToBench(player);
+        }
+      }
+    };
+    let benchCap = benchBudgetCap;
+    fillBench(benchCap);
+    if (positions.some(pos => benchFilled[pos] < benchNeeds[pos]) && hasBudget) {
+      benchCap = Math.max(benchBudgetCap, budget! - xiCost);
+      fillBench(benchCap);
+    }
+    for (const pos of positions) {
+      if (benchFilled[pos] < benchNeeds[pos]) return null; // formation infeasible within constraints
+    }
+
+    // (c) Upgrade pass on the bench only, same cap (including the fallback if it was used above).
+    runUpgradePass(bench, benchCap, () => benchCost, (delta) => { benchCost += delta; });
+
+    const squad = [...startingXI, ...bench];
+    return { squad, starting11: startingXI, totalCost: xiCost + benchCost };
+  };
+
+  // Enforce team constraint: max 3 players per team (safety net — buildSquadForFormation already
+  // enforces this throughout construction, so this should rarely find anything to fix)
+  const enforceTeamConstraint = (
+    squad: PlayerSnapshot[],
+    starting11: PlayerSnapshot[],
+    allPlayersByPosition: Record<string, PlayerSnapshot[]>,
+    includedPlayerIds: Set<number>
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[] } => {
+    const teamCounts: Record<string, number> = {};
+    squad.forEach(p => {
+      const team = p.teamName || '';
+      teamCounts[team] = (teamCounts[team] || 0) + 1;
+    });
+    const violations = Object.entries(teamCounts).filter(([, count]) => count > SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+    if (violations.length === 0) return { squad, starting11 };
+    console.warn(`⚠️ Team constraint violations found, fixing:`, violations);
+    let fixedSquad = [...squad];
+    let fixedStarting11 = [...starting11];
+    for (const [teamName, count] of violations) {
+      let excess = count - SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+      const teamPlayers = fixedSquad
+        .filter(p => (p.teamName || '') === teamName)
+        .sort((a, b) => {
+          if (includedPlayerIds.has(a.playerId) && !includedPlayerIds.has(b.playerId)) return -1;
+          if (!includedPlayerIds.has(a.playerId) && includedPlayerIds.has(b.playerId)) return 1;
+          const aInXI = fixedStarting11.some(s => s.playerId === a.playerId);
+          const bInXI = fixedStarting11.some(s => s.playerId === b.playerId);
+          if (aInXI && !bInXI) return -1;
+          if (!aInXI && bInXI) return 1;
+          return b.totalProjectedPoints - a.totalProjectedPoints;
+        });
+      const toRemove = teamPlayers.slice(SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+      for (const removePlayer of toRemove) {
+        if (excess <= 0) break;
+        const position = normalizePosition(removePlayer.position);
+        const usedIds = new Set(fixedSquad.map(p => p.playerId));
+        const currentTeamCounts: Record<string, number> = {};
+        fixedSquad.forEach(p => {
+          if (p.playerId !== removePlayer.playerId) {
+            const t = p.teamName || '';
+            currentTeamCounts[t] = (currentTeamCounts[t] || 0) + 1;
+          }
+        });
+        const replacement = allPlayersByPosition[position]
+          ?.filter(p => {
+            if (usedIds.has(p.playerId)) return false;
+            const t = p.teamName || '';
+            const tc = currentTeamCounts[t] || 0;
+            return tc < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+          })
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints)[0];
+        if (replacement) {
+          fixedSquad = fixedSquad.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          fixedStarting11 = fixedStarting11.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          console.log(`🔄 Replaced ${removePlayer.playerName} (${teamName}) with ${replacement.playerName} (${replacement.teamName})`);
+          excess--;
+        }
+      }
+    }
+    return { squad: fixedSquad, starting11: fixedStarting11 };
+  };
+
+  // Main optimization function: tries every valid formation and keeps whichever produces the
+  // highest-scoring starting XI within budget.
+  const buildOptimalTeamWithBudget = (
+    playersByPosition: Record<string, PlayerSnapshot[]>,
+    includedPlayerIds: Set<number>,
+    budget?: number
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], formation: string } | null => {
+    console.log(`Building optimal wildcard team with budget: ${budget ? `£${budget}m` : 'unlimited'}`);
+
+    let best: { squad: PlayerSnapshot[], starting11: PlayerSnapshot[], formation: string, totalCost: number, xiPoints: number, includedInXI: number } | null = null;
+
+    for (const formation of VALID_FORMATIONS) {
+      const result = buildSquadForFormation(formation, playersByPosition, includedPlayerIds, budget);
+      if (!result) continue;
+      const xiPoints = result.starting11.reduce((sum, p) => sum + p.totalProjectedPoints, 0);
+      const includedInXI = result.starting11.filter(p => includedPlayerIds.has(p.playerId)).length;
+      console.log(`✅ Formation ${formation.name}: squad £${result.totalCost.toFixed(1)}m, XI points ${xiPoints.toFixed(1)}, included-in-XI ${includedInXI}`);
+      // Prefer whichever formation seats the most must-include players in the XI first — a
+      // formation with fewer slots at an included player's position (e.g. a 1-forward 4-5-1)
+      // can otherwise "win" on raw points while bumping an included player to the bench.
+      if (!best || includedInXI > best.includedInXI || (includedInXI === best.includedInXI && xiPoints > best.xiPoints)) {
+        best = { squad: result.squad, starting11: result.starting11, formation: formation.name, totalCost: result.totalCost, xiPoints, includedInXI };
+      }
+    }
+
+    if (!best) {
+      console.log('❌ Could not build a valid wildcard team within budget');
+      return null;
+    }
+
+    const { squad, starting11 } = enforceTeamConstraint(best.squad, best.starting11, playersByPosition, includedPlayerIds);
+    console.log(`✅ Built wildcard team with formation ${best.formation}, Total: £${best.totalCost.toFixed(1)}m, XI Points: ${best.xiPoints.toFixed(1)}`);
+    return { squad, starting11, formation: best.formation };
+  };
+
+
+  // Helper function to optimize starting XI for a specific gameweek
+  const optimizeStartingXIForGameweek = (squad: PlayerSnapshot[], gameweek: number): { starting11: PlayerSnapshot[], captain: PlayerSnapshot, viceCaptain: PlayerSnapshot, gameweekPoints: number, formation: string } => {
+    // Group squad by position and sort by gameweek-specific points
+    const squadByPosition = {
+      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek))
+    };
+
+    // Try all valid formations and pick the one with highest gameweek points
+    let bestFormation = null;
+    let bestStarting11: PlayerSnapshot[] = [];
+    let bestPoints = 0;
+
+    for (const formation of VALID_FORMATIONS) {
+      // Check if we have enough players in each position
+      if (squadByPosition.Goalkeeper.length < 1 ||
+          squadByPosition.Defender.length < formation.def ||
+          squadByPosition.Midfielder.length < formation.mid ||
+          squadByPosition.Forward.length < formation.fwd) {
+        continue;
+      }
+
+      // Build starting 11 for this formation
+      const starting11 = [
+        squadByPosition.Goalkeeper[0],
+        ...squadByPosition.Defender.slice(0, formation.def),
+        ...squadByPosition.Midfielder.slice(0, formation.mid),
+        ...squadByPosition.Forward.slice(0, formation.fwd)
+      ].filter(Boolean);
+
+      // Calculate total points for this formation (without captain)
+      const formationPoints = starting11.reduce((sum, player) => 
+        sum + getGameweekPoints(player, gameweek), 0
+      );
+
+      if (formationPoints > bestPoints) {
+        bestPoints = formationPoints;
+        bestStarting11 = starting11;
+        bestFormation = formation;
+      }
+    }
+
+    // If no valid formation found, fallback to default
+    if (bestStarting11.length === 0) {
+      bestStarting11 = [
+        squadByPosition.Goalkeeper[0],
+        ...squadByPosition.Defender.slice(0, 4),
+        ...squadByPosition.Midfielder.slice(0, 5),
+        squadByPosition.Forward[0]
+      ].filter(Boolean);
+      bestFormation = { name: '4-5-1', def: 4, mid: 5, fwd: 1 };
+    }
+
+    // Captain should be the player with the highest points for this specific gameweek
+    const captain = bestStarting11.reduce((best, player) => 
+      getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
+    );
+
+    // Vice-captain should be the second-highest scoring player for this gameweek
+    const viceCaptain = bestStarting11
+      .filter(player => player.playerId !== captain.playerId)
+      .reduce((best, player) => 
+        getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
+      );
+
+    const gameweekPoints = bestStarting11.reduce((sum, player) => {
+      const playerPoints = getGameweekPoints(player, gameweek);
+      // Double captain points
+      if (player.playerId === captain.playerId) {
+        return sum + (playerPoints * 2);
+      }
+      return sum + playerPoints;
+    }, 0);
+
+    return { starting11: bestStarting11, captain, viceCaptain, gameweekPoints, formation: bestFormation?.name || '4-5-1' };
+  };
+
+  // Helper function to build unlimited budget team with inclusion/exclusion constraints
+  const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
+    console.log(`UNLIMITED BUDGET MODE - Top players by total projected points (${gameweekRange}):`);
+    console.log('Included players:', includedPlayers.map(p => p.playerName));
+    console.log('Excluded players:', excludedPlayers.map(p => p.playerName));
+
+    // Filter out excluded players from all positions
+    const excludedIds = new Set(excludedPlayers.map(p => p.playerId));
+    const filteredPlayersByPosition = {
+      Goalkeeper: playersByPosition.Goalkeeper.filter((p: any) => !excludedIds.has(p.playerId)),
+      Defender: playersByPosition.Defender.filter((p: any) => !excludedIds.has(p.playerId)),
+      Midfielder: playersByPosition.Midfielder.filter((p: any) => !excludedIds.has(p.playerId)),
+      Forward: playersByPosition.Forward.filter((p: any) => !excludedIds.has(p.playerId))
+    };
+
+    console.log('Top 2 GKP:', filteredPlayersByPosition.Goalkeeper.slice(0, 2).map((p: any) => `${p.playerName} (${p.totalProjectedPoints.toFixed(2)} pts total)`));
+    console.log('Top 5 DEF:', filteredPlayersByPosition.Defender.slice(0, 5).map((p: any) => `${p.playerName} (${p.totalProjectedPoints.toFixed(2)} pts total)`));
+    console.log('Top 5 MID:', filteredPlayersByPosition.Midfielder.slice(0, 5).map((p: any) => `${p.playerName} (${p.totalProjectedPoints.toFixed(2)} pts total)`));
+    console.log('Top 3 FWD:', filteredPlayersByPosition.Forward.slice(0, 3).map((p: any) => `${p.playerName} (${p.totalProjectedPoints.toFixed(2)} pts total)`));
+
+    // Start with included players
+    let squad: PlayerSnapshot[] = [...includedPlayers];
+    const positionCounts = {
+      Goalkeeper: includedPlayers.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').length,
+      Defender: includedPlayers.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').length,
+      Midfielder: includedPlayers.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').length,
+      Forward: includedPlayers.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').length
+    };
+
+    // Helper function to count players by team in current squad
+    const getTeamCounts = () => {
+      const teamCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const teamName = player.teamName || '';
+        teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+      });
+      return teamCounts;
+    };
+
+    // Helper function to count attackers (forwards + midfielders) by team
+    const getAttackerCounts = () => {
+      const attackerCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                          player.position.toLowerCase().includes('forward') || 
+                          player.position === 'MID' || 
+                          player.position === 'FWD';
+        if (isAttacker) {
+          const teamName = player.teamName || '';
+          attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+        }
+      });
+      return attackerCounts;
+    };
+
+    // Helper function to count defenders (defenders + goalkeepers) by team
+    const getDefenderCounts = () => {
+      const defenderCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const isDefender = player.position.toLowerCase().includes('defender') || 
+                          player.position.toLowerCase().includes('goalkeeper') || 
+                          player.position === 'DEF' || 
+                          player.position === 'GKP';
+        if (isDefender) {
+          const teamName = player.teamName || '';
+          defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+        }
+      });
+      return defenderCounts;
+    };
+
+    // Fill remaining spots with best available players (enforcing team balance constraints)
+    const fillPosition = (position: keyof typeof filteredPlayersByPosition, maxCount: number) => {
+      const needed = maxCount - positionCounts[position];
+      if (needed > 0) {
+        const availablePlayers = filteredPlayersByPosition[position]
+          .filter((p: any) => !squad.some(sp => sp.playerId === p.playerId));
+        
+        const toAdd: PlayerSnapshot[] = [];
+        
+        // Calculate initial counts once before the loop
+        let teamCounts = getTeamCounts();
+        let attackerCounts = getAttackerCounts();
+        let defenderCounts = getDefenderCounts();
+        
+        for (const player of availablePlayers) {
+          if (toAdd.length >= needed) break;
+          
+          const playerTeam = player.teamName || '';
+          const currentTeamCount = teamCounts[playerTeam] || 0;
+          
+          // Check all constraints before adding player
+          let canAddPlayer = true;
+          
+          // 1. General team constraint (max 3 players per team)
+          if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) {
+            canAddPlayer = false;
+          }
+          
+          // 2. Attacker constraint (max 2 attackers per team)
+          const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                            player.position.toLowerCase().includes('forward') || 
+                            player.position === 'MID' || 
+                            player.position === 'FWD';
+          if (isAttacker && (attackerCounts[playerTeam] || 0) >= 2) {
+            canAddPlayer = false;
+          }
+          
+          // 3. Defender constraint (max 2 defenders per team)
+          const isDefender = player.position.toLowerCase().includes('defender') || 
+                            player.position.toLowerCase().includes('goalkeeper') || 
+                            player.position === 'DEF' || 
+                            player.position === 'GKP';
+          if (isDefender && (defenderCounts[playerTeam] || 0) >= 2) {
+            canAddPlayer = false;
+          }
+          
+          if (canAddPlayer) {
+            toAdd.push(player);
+            squad.push(player);
+            
+            // Incrementally update counts for next iteration
+            teamCounts[playerTeam] = (teamCounts[playerTeam] || 0) + 1;
+            if (isAttacker) {
+              attackerCounts[playerTeam] = (attackerCounts[playerTeam] || 0) + 1;
+            }
+            if (isDefender) {
+              defenderCounts[playerTeam] = (defenderCounts[playerTeam] || 0) + 1;
+            }
+          }
+        }
+        
+        return toAdd.length;
+      }
+      return 0;
+    };
+
+    fillPosition('Goalkeeper', SQUAD_CONSTRAINTS.goalkeepers);
+    fillPosition('Defender', SQUAD_CONSTRAINTS.defenders);
+    fillPosition('Midfielder', SQUAD_CONSTRAINTS.midfielders);
+    fillPosition('Forward', SQUAD_CONSTRAINTS.forwards);
+
+    // Select starting 11: prioritize included players, then best performers by total points
+    const squadByPosition = {
+      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints),
+      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints),
+      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints),
+      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints)
+    };
+
+    const starting11 = [
+      squadByPosition.Goalkeeper[0], // 1 GK
+      ...squadByPosition.Defender.slice(0, 4), // 4 DEF (minimum)
+      ...squadByPosition.Midfielder.slice(0, 5), // 5 MID
+      squadByPosition.Forward[0] // 1 FWD
+    ].filter(Boolean);
+
+    return { squad, starting11 };
+  };
+
+  // Helper function to adjust team for budget constraints while respecting inclusion/exclusion constraints
+  const adjustTeamForBudget = (unlimitedSquad: PlayerSnapshot[], unlimitedStarting11: PlayerSnapshot[], budget: number) => {
+    const currentValue = unlimitedSquad.reduce((total, player) => total + player.price, 0);
+    
+    if (budget >= currentValue) {
+      // Budget is sufficient for unlimited team
+      console.log(`Budget ${budget}m >= unlimited team value ${currentValue.toFixed(1)}m - using unlimited team`);
+      return { squad: unlimitedSquad, starting11: unlimitedStarting11 };
+    }
+
+    console.log(`Budget ${budget}m < unlimited team value ${currentValue.toFixed(1)}m - making adjustments`);
+    
+    let adjustedSquad = [...unlimitedSquad];
+    let adjustedStarting11 = [...unlimitedStarting11];
+    let savings = currentValue - budget;
+
+    // Create sets for quick lookup of constraint players
+    const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
+    const excludedPlayerIds = new Set(excludedPlayers.map(p => p.playerId));
+
+    // Step 1: Replace bench players with cheaper alternatives (prioritize bench changes)
+    // Only consider players that are NOT in the included list
+    const benchPlayers = adjustedSquad.filter(player => 
+      !adjustedStarting11.some(starter => starter.playerId === player.playerId) &&
+      !includedPlayerIds.has(player.playerId) // NEVER replace included players
+    );
+
+    // Sort bench by price (most expensive first for replacement)
+    const expensiveBench = benchPlayers.sort((a, b) => b.price - a.price);
+
+    for (const expensivePlayer of expensiveBench) {
+      if (savings <= 0) break;
+
+      const position = expensivePlayer.position;
+      const allInPosition = snapshots.filter(p => 
+        p.position === position &&
+        !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
+        !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
+      );
+      const cheaperAlternatives = allInPosition
+        .filter(p => {
+          if (p.price >= expensivePlayer.price) return false;
+          if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
+          
+          // Count current team members (excluding the player being replaced)
+          const teamCounts: { [teamName: string]: number } = {};
+          const attackerCounts: { [teamName: string]: number } = {};
+          const defenderCounts: { [teamName: string]: number } = {};
+          
+          adjustedSquad.forEach(player => {
+            if (player.playerId !== expensivePlayer.playerId) {
+              const teamName = player.teamName || '';
+              teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+              
+              const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                                player.position.toLowerCase().includes('forward') || 
+                                player.position === 'MID' || 
+                                player.position === 'FWD';
+              if (isAttacker) {
+                attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+              }
+              
+              const isDefender = player.position.toLowerCase().includes('defender') || 
+                                player.position.toLowerCase().includes('goalkeeper') || 
+                                player.position === 'DEF' || 
+                                player.position === 'GKP';
+              if (isDefender) {
+                defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+              }
+            }
+          });
+          
+          const replacementTeam = p.teamName || '';
+          const currentTeamCount = teamCounts[replacementTeam] || 0;
+          
+          // Check all constraints
+          if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
+          
+          // Check attacker constraint for attacking positions
+          const isReplacementAttacker = p.position.toLowerCase().includes('midfielder') || 
+                                        p.position.toLowerCase().includes('forward') || 
+                                        p.position === 'MID' || 
+                                        p.position === 'FWD';
+          if (isReplacementAttacker && (attackerCounts[replacementTeam] || 0) >= 2) return false;
+          
+          // Check defender constraint for defensive positions
+          const isReplacementDefender = p.position.toLowerCase().includes('defender') || 
+                                        p.position.toLowerCase().includes('goalkeeper') || 
+                                        p.position === 'DEF' || 
+                                        p.position === 'GKP';
+          if (isReplacementDefender && (defenderCounts[replacementTeam] || 0) >= 2) return false;
+          
+          return true;
+        })
+        .sort((a, b) => a.price - b.price);
+
+      if (cheaperAlternatives.length > 0) {
+        const replacement = cheaperAlternatives[0];
+        const savedAmount = expensivePlayer.price - replacement.price;
+        
+        if (savedAmount > 0) {
+          // Replace the expensive player
+          adjustedSquad = adjustedSquad.map(p => p.playerId === expensivePlayer.playerId ? replacement : p);
+          savings -= savedAmount;
+          console.log(`Replaced bench ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
+        }
+      }
+    }
+
+    // Step 2: If still over budget, replace starting 11 players (most expensive first)
+    // Only consider players that are NOT in the included list
+    if (savings > 0) {
+      const expensiveStarters = adjustedStarting11
+        .filter(player => !includedPlayerIds.has(player.playerId)) // NEVER replace included players
+        .sort((a, b) => b.price - a.price);
+      
+      for (const expensivePlayer of expensiveStarters) {
+        if (savings <= 0) break;
+
+        const position = expensivePlayer.position;
+        const allInPosition = snapshots.filter(p => 
+          p.position === position &&
+          !excludedPlayerIds.has(p.playerId) && // NEVER pick excluded players
+          !includedPlayerIds.has(p.playerId) // Don't pick included players (they're already in squad)
+        );
+        const cheaperAlternatives = allInPosition
+          .filter(p => {
+            if (p.price >= expensivePlayer.price) return false;
+            if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
+            
+            // Count current team members (excluding the player being replaced)
+            const teamCounts: { [teamName: string]: number } = {};
+            const attackerCounts: { [teamName: string]: number } = {};
+            const defenderCounts: { [teamName: string]: number } = {};
+            
+            adjustedSquad.forEach(player => {
+              if (player.playerId !== expensivePlayer.playerId) {
+                const teamName = player.teamName || '';
+                teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+                
+                const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                                  player.position.toLowerCase().includes('forward') || 
+                                  player.position === 'MID' || 
+                                  player.position === 'FWD';
+                if (isAttacker) {
+                  attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+                }
+                
+                const isDefender = player.position.toLowerCase().includes('defender') || 
+                                  player.position.toLowerCase().includes('goalkeeper') || 
+                                  player.position === 'DEF' || 
+                                  player.position === 'GKP';
+                if (isDefender) {
+                  defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+                }
+              }
+            });
+            
+            const replacementTeam = p.teamName || '';
+            const currentTeamCount = teamCounts[replacementTeam] || 0;
+            
+            // Check all constraints
+            if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
+            
+            // Check attacker constraint for attacking positions
+            const isReplacementAttacker = p.position.toLowerCase().includes('midfielder') || 
+                                          p.position.toLowerCase().includes('forward') || 
+                                          p.position === 'MID' || 
+                                          p.position === 'FWD';
+            if (isReplacementAttacker && (attackerCounts[replacementTeam] || 0) >= 2) return false;
+            
+            // Check defender constraint for defensive positions
+            const isReplacementDefender = p.position.toLowerCase().includes('defender') || 
+                                          p.position.toLowerCase().includes('goalkeeper') || 
+                                          p.position === 'DEF' || 
+                                          p.position === 'GKP';
+            if (isReplacementDefender && (defenderCounts[replacementTeam] || 0) >= 2) return false;
+            
+            return true;
+          })
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints); // Best performers first
+
+        if (cheaperAlternatives.length > 0) {
+          const replacement = cheaperAlternatives[0];
+          const savedAmount = expensivePlayer.price - replacement.price;
+          
+          if (savedAmount > 0) {
+            // Replace in both squad and starting 11
+            adjustedSquad = adjustedSquad.map(p => p.playerId === expensivePlayer.playerId ? replacement : p);
+            adjustedStarting11 = adjustedStarting11.map(p => p.playerId === expensivePlayer.playerId ? replacement : p);
+            savings -= savedAmount;
+            console.log(`Replaced starter ${expensivePlayer.playerName} (£${expensivePlayer.price}m) with ${replacement.playerName} (£${replacement.price}m) - saved £${savedAmount.toFixed(1)}m`);
+          }
+        }
+      }
+    }
+
+    return { squad: adjustedSquad, starting11: adjustedStarting11 };
+  };
+
+  const optimizeTeam = async () => {
+    console.log(`Starting WILDCARD optimization for next ${gameweekHorizon} gameweeks:`, gameweekRange);
+    console.log('Total snapshots:', snapshots.length);
+    if (snapshots.length > 0) {
+      console.log('Sample snapshot:', snapshots[0]);
+    }
+    console.log('Unlimited budget mode:', unlimitedBudget);
+
+    setIsOptimizing(true);
+
+    try {
+      const unavailablePlayerIds = new Set<number>();
+      if (bootstrapData?.elements) {
+        bootstrapData.elements.forEach((el: any) => {
+          const status = el.status;
+          const chance = el.chance_of_playing_next_round;
+          if (status === 'i' || status === 'u' || status === 's' || status === 'n' || chance === 0) {
+            unavailablePlayerIds.add(el.id);
+          }
+        });
+        console.log(`Filtered out ${unavailablePlayerIds.size} unavailable/injured/suspended players`);
+      }
+
+      const playersWithPoints = snapshots.filter(player => player.totalProjectedPoints > 0 && !unavailablePlayerIds.has(player.playerId));
+      console.log('Players with points:', playersWithPoints.length);
+
+      if (playersWithPoints.length === 0) {
+        throw new Error('No players with projected points are available right now. Please try again shortly.');
+      }
+
+      // Group players by position
+      const positionGroups = playersWithPoints.reduce((groups, player) => {
+        let position = player.position;
+        
+        // Normalize positions
+        if (position.toLowerCase().includes('goalkeeper') || position === 'GKP') {
+          position = 'Goalkeeper';
+        } else if (position.toLowerCase().includes('defender') || position === 'DEF') {
+          position = 'Defender';
+        } else if (position.toLowerCase().includes('midfielder') || position === 'MID') {
+          position = 'Midfielder';
+        } else if (position.toLowerCase().includes('forward') || position === 'FWD') {
+          position = 'Forward';
+        }
+
+        if (!groups[position]) {
+          groups[position] = [];
+        }
+        groups[position].push(player);
+        return groups;
+      }, {} as Record<string, PlayerSnapshot[]>);
+
+      console.log('Unique positions in data:', Object.keys(positionGroups));
+      console.log('Players by position:', Object.fromEntries(
+        Object.entries(positionGroups).map(([pos, players]) => [pos, players.length])
+      ));
+
+      // Sort players by total projected points (best first)
+      Object.keys(positionGroups).forEach(position => {
+        positionGroups[position].sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+      });
+
+      // Filter out excluded players from all positions
+      const excludedIds = new Set(excludedPlayers.map(p => p.playerId));
+      const includedPlayerIds = new Set(includedPlayers.map(p => p.playerId));
+      const excludedFilteredGroups = {
+        Goalkeeper: positionGroups.Goalkeeper?.filter(p => !excludedIds.has(p.playerId)) || [],
+        Defender: positionGroups.Defender?.filter(p => !excludedIds.has(p.playerId)) || [],
+        Midfielder: positionGroups.Midfielder?.filter(p => !excludedIds.has(p.playerId)) || [],
+        Forward: positionGroups.Forward?.filter(p => !excludedIds.has(p.playerId)) || []
+      };
+
+      // Per-real-world-team depth cap: only a club's clear top options at each position are
+      // ever considered, so the optimizer can't suggest e.g. a team's backup goalkeeper over
+      // their starter just because of price/fixtures. Each position array is already sorted
+      // by totalProjectedPoints descending, so the Nth-ranked player for a given team is
+      // exactly the Nth one encountered per team as we walk the array. Explicitly included
+      // players are exempt (a manual include should never be silently dropped) and don't
+      // consume a rank slot, so they never bump a legitimately-ranked teammate out.
+      const TEAM_POSITION_DEPTH: Record<string, number> = {
+        Goalkeeper: 1,
+        Defender: 5,
+        Midfielder: 5,
+        Forward: 2,
+      };
+      const filteredPositionGroups = Object.fromEntries(
+        Object.entries(excludedFilteredGroups).map(([position, players]) => {
+          const depth = TEAM_POSITION_DEPTH[position];
+          if (!depth) return [position, players];
+          const rankSoFarByTeam: Record<string, number> = {};
+          return [position, players.filter(player => {
+            if (includedPlayerIds.has(player.playerId)) return true;
+            const team = player.teamName || '';
+            rankSoFarByTeam[team] = (rankSoFarByTeam[team] || 0) + 1;
+            return rankSoFarByTeam[team] <= depth;
+          })];
+        })
+      ) as Record<string, PlayerSnapshot[]>;
+
+      // Use new budget-aware optimization
+      const result = buildOptimalTeamWithBudget(
+        filteredPositionGroups,
+        includedPlayerIds,
+        unlimitedBudget ? undefined : budgetConstraint
+      );
+
+      if (!result) {
+        throw new Error(`Could not build a valid wildcard team within budget of £${budgetConstraint}m. Try increasing the budget or removing player constraints.`);
+      }
+
+      const finalSquad = result.squad;
+      const finalStarting11 = result.starting11;
+
+      // Generate gameweek-by-gameweek breakdown
+      const gameweekBreakdown: GameweekTeam[] = [];
+      let totalOptimizedPoints = 0;
+
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const gameweekOptimization = optimizeStartingXIForGameweek(finalSquad, gw);
+        gameweekBreakdown.push({
+          gameweek: gw,
+          starting11: gameweekOptimization.starting11,
+          captain: gameweekOptimization.captain,
+          viceCaptain: gameweekOptimization.viceCaptain,
+          totalPoints: gameweekOptimization.gameweekPoints, // Points for this specific gameweek
+          gameweekPoints: gameweekOptimization.gameweekPoints,
+          formation: gameweekOptimization.formation
+        });
+        totalOptimizedPoints += gameweekOptimization.gameweekPoints;
+      }
+
+      // For display purposes, also calculate the "overall best" starting XI across all gameweeks
+      const overallCaptain = finalSquad.reduce((best, player) => 
+        player.totalProjectedPoints > best.totalProjectedPoints ? player : best
+      );
+
+      const overallViceCaptain = finalSquad
+        .filter(player => player.playerId !== overallCaptain.playerId)
+        .reduce((best, player) => 
+          player.totalProjectedPoints > best.totalProjectedPoints ? player : best
+        );
+
+      const totalValue = finalSquad.reduce((sum, player) => sum + player.price, 0);
+
+      console.log('Selected squad size:', finalSquad.length);
+      console.log('Starting 11 size:', finalStarting11.length);
+      console.log('Gameweek-optimized total points:', totalOptimizedPoints);
+
+      setOptimalTeam({
+        squad: finalSquad,
+        starting11: finalStarting11,
+        captain: overallCaptain,
+        viceCaptain: overallViceCaptain,
+        formation: '4-5-1',
+        totalPoints: totalOptimizedPoints, // Use optimized points from gameweek breakdown
+        totalValue,
+        gameweekBreakdown
+      });
+
+      console.log('Optimization successful:', {
+        squadSize: finalSquad.length,
+        starting11Size: finalStarting11.length,
+        formation: '4-5-1',
+        totalPoints: totalOptimizedPoints,
+        captainName: overallCaptain.playerName
+      });
+
+    } catch (error) {
+      console.error('Optimization failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Couldn't build a wildcard team",
+        description: error instanceof Error ? error.message : "Something went wrong while optimizing. Please try again.",
+      });
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  // Show loading state while bootstrap data or cached data is loading
+  if (!bootstrapData || isLoading) {
+    return (
+      <div className="w-full py-4 sm:py-8">
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading player data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
+    return (
+      <div className="space-y-6">
+        {variant === 'page' && (
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
+                <h1>Best Wildcard Team</h1>
+              </div>
+              <p className="fpl-page-subtitle">
+                Optimal 15-player squad considering total points across next 6 gameweeks
+              </p>
+            </div>
+          </div>
+        )}
+        <SeasonEndedNotice />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Optimization Loading Screen */}
+      {isOptimizing && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          data-testid="overlay-optimizing-wildcard"
+        >
+          <LoadingExperience
+            variant="simulation"
+            title="Optimizing Wildcard Team"
+            description="Running advanced algorithms to find the best possible squad across multiple gameweeks..."
+            steps={[
+              { text: "Analyzing player projections for all gameweeks", delay: "0s" },
+              { text: "Testing formation combinations", delay: "0.2s" },
+              { text: "Optimizing captain and vice-captain selections", delay: "0.4s" },
+            ]}
+          />
+        </div>
+      )}
+
+      {/* Header - Compact */}
+      {variant === 'page' && (
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>Best Wildcard Team</h1><SeasonBadge />
+            </div>
+            <p className="fpl-page-subtitle">
+              Optimize your wildcard team across {gameweekRange} • {snapshots.length} players analyzed
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <LoadingExperience
+          variant="analysis"
+          title="Loading Player Projections"
+          description="Fetching projected points data for all players..."
+          steps={[
+            { text: "Connecting to projection service", delay: "0s" },
+            { text: "Calculating player expected points", delay: "0.3s" },
+            { text: "Preparing optimization data", delay: "0.6s" },
+          ]}
+        />
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center text-red-600">
+              <p>Failed to load player data. Please try again.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Wildcard Optimization</CardTitle>
+              <CardDescription>
+                Optimize your wildcard team for maximum points across the next {gameweekHorizon} gameweeks
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshData}
+                disabled={isRefreshing || isLoading}
+                className="shrink-0"
+                data-testid="button-refresh-wildcard-data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="ml-2 hidden sm:inline">Refresh</span>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Gameweek Horizon Selection */}
+          <div className="space-y-2 p-3 md:p-4 bg-muted/20 rounded-lg border">
+            <Label htmlFor="gameweek-horizon" className="text-sm font-medium">
+              Optimization Horizon
+            </Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Enter how many gameweeks ahead to optimize your wildcard team (1-{maxGameweekHorizon}, default 5)
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                id="gameweek-horizon"
+                type="number"
+                min={1}
+                max={maxGameweekHorizon}
+                value={gameweekHorizon}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value);
+                  if (Number.isNaN(parsed)) return;
+                  setGameweekHorizon(Math.min(maxGameweekHorizon, Math.max(1, parsed)));
+                }}
+                className="w-full sm:w-32"
+                data-testid="input-gameweek-horizon"
+              />
+              <span className="text-sm text-muted-foreground">gameweeks (GW{startGameweek}-{endGameweek})</span>
+            </div>
+          </div>
+
+          {/* Optimization Mode - Mobile Optimized */}
+          <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="unlimited-budget" className="text-sm font-medium">
+                  Set a Budget Limit
+                </Label>
+                <Switch
+                  id="unlimited-budget"
+                  checked={!unlimitedBudget}
+                  onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
+                  data-testid="switch-unlimited-budget"
+                />
+                <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                  {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {unlimitedBudget
+                  ? 'Off (default): picks the best players by projected points, regardless of price.'
+                  : 'On: builds the best squad that fits within the budget you set below.'}
+              </p>
+            </div>
+
+            {!unlimitedBudget && (
+              <div className="space-y-2">
+                <Label htmlFor="budget" className="text-sm font-medium">
+                  Budget Constraint (£m)
+                </Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={budgetConstraint}
+                  onChange={(e) => setBudgetConstraint(parseFloat(e.target.value) || 100)}
+                  min="50"
+                  max="200"
+                  step="0.1"
+                  className="w-full sm:w-32"
+                  data-testid="input-budget"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Player Inclusion/Exclusion - Mobile Optimized */}
+          <div className="space-y-4 p-3 md:p-4 bg-muted/20 rounded-lg border">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4" />
+              <h3 className="text-sm font-medium">Player Constraints</h3>
+            </div>
+
+            {/* Players to Include */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-green-700 dark:text-green-400">
+                Players to Include (Must Have)
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {includedPlayers.map((player) => (
+                  <Badge
+                    key={player.playerId}
+                    variant="secondary"
+                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                  >
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-green-600" 
+                      onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add players to include
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => {
+                        if (includeListRef.current) {
+                          includeListRef.current.scrollTop = 0;
+                        }
+                      }}
+                    />
+                    <CommandList ref={includeListRef} className="max-h-[300px] overflow-auto">
+                      <CommandEmpty>No players found.</CommandEmpty>
+                      <CommandGroup>
+                        {snapshots
+                          .filter(player => 
+                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                          )
+                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
+                          .map((player) => (
+                            <CommandItem
+                              key={player.playerId}
+                              value={playerIdToSearchKey.get(player.playerId) || player.playerName}
+                              onSelect={() => {
+                                setIncludedPlayers(prev => [...prev, player]);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {player.teamName} - {player.position}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  £{player.price}m
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                These players will definitely be included in your squad
+              </p>
+            </div>
+
+            {/* Players to Exclude */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-red-700 dark:text-red-400">
+                Players to Exclude (Avoid)
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {excludedPlayers.map((player) => (
+                  <Badge
+                    key={player.playerId}
+                    variant="secondary"
+                    className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
+                  >
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-red-600" 
+                      onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                    />
+                  </Badge>
+                ))}
+              </div>
+              <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <X className="h-4 w-4 mr-2" />
+                    Add players to exclude
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => {
+                        if (excludeListRef.current) {
+                          excludeListRef.current.scrollTop = 0;
+                        }
+                      }}
+                    />
+                    <CommandList ref={excludeListRef} className="max-h-[300px] overflow-auto">
+                      <CommandEmpty>No players found.</CommandEmpty>
+                      <CommandGroup>
+                        {snapshots
+                          .filter(player => 
+                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                          )
+                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
+                          .map((player) => (
+                            <CommandItem
+                              key={player.playerId}
+                              value={playerIdToSearchKey.get(player.playerId) || player.playerName}
+                              onSelect={() => {
+                                setExcludedPlayers(prev => [...prev, player]);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    {player.teamName} - {player.position}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  £{player.price}m
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                These players will never be included in your squad
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+            <Button 
+              onClick={optimizeTeam} 
+              disabled={isOptimizing || isLoading || snapshots.length === 0}
+              className="flex items-center gap-2"
+              data-testid="button-optimize-team"
+            >
+              {isOptimizing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Optimizing...
+                </>
+              ) : isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Loading Data...
+                </>
+              ) : (
+                <>
+                  <Star className="h-4 w-4" />
+                  Optimize Wildcard Team
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {optimalTeam && (
+        <div className="space-y-6">
+          {/* Full Squad - First */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Set & Forget Squad (15 Players)
+              </CardTitle>
+              <CardDescription>
+                Your best wildcard squad for the entire {gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Summary Stats - Single line on mobile */}
+              <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+                <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="text-sm font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">pts</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-orange-600">{optimalTeam.squad.length}</span>
+                      <span className="text-xs text-muted-foreground ml-1">players</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="hidden md:block text-center">
+                  <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
+                  <div className="text-sm text-muted-foreground">Total Points</div>
+                </div>
+                <div className="hidden md:block text-center">
+                  <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
+                  <div className="text-sm text-muted-foreground">Team Value</div>
+                </div>
+                <div className="hidden md:block text-center">
+                  <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
+                  <div className="text-sm text-muted-foreground">Squad Size</div>
+                </div>
+              </div>
+              <Separator className="mb-4" />
+
+              <div className="grid gap-3 md:gap-4">
+                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
+                  const positionPlayers = optimalTeam.squad.filter(player => {
+                    const pos = player.position;
+                    if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
+                    if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
+                    if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
+                    if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
+                    return false;
+                  });
+
+                  return (
+                    <div key={position}>
+                      <div className="flex items-center gap-2 mb-2 md:mb-3">
+                        <Badge variant="secondary" className="text-xs md:text-sm">{position}s ({positionPlayers.length})</Badge>
+                      </div>
+                      <div className="grid gap-1 md:gap-2">
+                        {positionPlayers.map((player) => {
+                          const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
+                          return (
+                            <div
+                              key={player.playerId}
+                              className={`flex items-center justify-between p-2 md:p-3 rounded-lg border ${
+                                isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                                    <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                    {isStarter && (
+                                      <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-xs md:text-sm text-muted-foreground">
+                                    {player.teamName} • {player.position}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div className="font-medium text-sm md:text-base">£{player.price}m</div>
+                                <div className="text-xs md:text-sm text-muted-foreground">
+                                  {player.totalProjectedPoints.toFixed(1)} xPts
+                                </div>
+                                <div className="text-xs text-purple-600">
+                                  ({endGameweek - startGameweek + 1} GWs)
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gameweek-by-Gameweek Breakdown */}
+          {optimalTeam && optimalTeam.gameweekBreakdown && optimalTeam.gameweekBreakdown.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Weekly Lineup Optimization
+                </CardTitle>
+                <CardDescription>
+                  Using the 15-player squad above, this shows the best starting XI and captain pick for each gameweek based on fixtures and form.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="6" className="w-full">
+                  <TabsList className="grid w-full grid-cols-6">
+                    {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                      <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                        GW{gameweekTeam.gameweek}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  
+                  {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                    <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                      <div className="space-y-4">
+                    {/* Summary - Uniform styling */}
+                    <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="font-medium text-purple-600 dark:text-purple-400">{gameweekTeam.formation}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="font-medium">{gameweekTeam.gameweekPoints.toFixed(1)} pts</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Crown className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
+                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Shield className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {(() => {
+                      const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                      const starting = [...gameweekTeam.starting11].sort((a, b) => {
+                        const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+                        return order !== 0 ? order : getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek);
+                      });
+                      const bench = optimalTeam.squad.filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId));
+                      const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+                      const benchOutfield = bench
+                        .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+                        .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
+                      const orderedBench = [...benchGK, ...benchOutfield];
+
+                      const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+                        toPitchPlayer(player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId, getGameweekPoints(player, gameweekTeam.gameweek))
+                      );
+                      const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+                        toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, gameweekTeam.gameweek))
+                      );
+
+                      return (
+                        <div className="-mx-4 md:-mx-6">
+                          <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
+                        </div>
+                      );
+                    })()}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+          </Card>
+          )}
+
+        </div>
+      )}
+    </div>
+  );
+}

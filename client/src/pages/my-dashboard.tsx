@@ -59,6 +59,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
+import { WildcardOptimizer } from "@/components/wildcard-optimizer";
 
 
 
@@ -348,6 +349,10 @@ export default function MyDashboard() {
 
   // Chip simulation state for GW Projections tab
   const [dashboardChip, setDashboardChip] = useState<string | null>(null);
+
+  // Pre-season "Create Optimised Team" panel — collapsed by default so the (fairly heavy)
+  // optimizer data/logic only mounts once a user actually opts in.
+  const [showPreseasonOptimizer, setShowPreseasonOptimizer] = useState(false);
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -1496,14 +1501,45 @@ export default function MyDashboard() {
           </CardContent>
         </Card>
 
+        {/* Pre-season "Create Optimised Team" — only relevant before GW1 kicks off */}
+        {bootstrapData && currentGameweek === 0 && (
+          <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
+            <CardHeader className="cursor-pointer" onClick={() => setShowPreseasonOptimizer(prev => !prev)}>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    Create Your Optimised Team
+                  </CardTitle>
+                  <CardDescription>
+                    GW1 hasn't started yet — build your ideal £100m squad for the new season, choosing how many gameweeks to optimise for and which players to include or exclude.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  {showPreseasonOptimizer ? (
+                    <>Hide <ChevronUp className="h-4 w-4 ml-1" /></>
+                  ) : (
+                    <>Build My Team <ChevronDown className="h-4 w-4 ml-1" /></>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            {showPreseasonOptimizer && (
+              <CardContent>
+                <WildcardOptimizer variant="embedded" defaultUnlimitedBudget={false} defaultBudget={100} defaultHorizon={5} />
+              </CardContent>
+            )}
+          </Card>
+        )}
+
         {/* Error State */}
         {error && (
           <Alert className="max-w-2xl mx-auto mb-6 sm:mb-8 border-red-200 bg-red-50">
             <AlertDescription className="text-red-700 text-sm sm:text-base">
               {error instanceof Error && error.message.includes('session expired')
                 ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team.`
-                : error instanceof Error 
-                  ? error.message 
+                : error instanceof Error
+                  ? error.message
                   : "Failed to load manager data. Please check the Manager ID and try again."
               }
             </AlertDescription>
