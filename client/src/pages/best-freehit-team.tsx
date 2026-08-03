@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
@@ -83,6 +84,39 @@ export default function BestFreehitTeam() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Team name -> { code, short_name } for pitch-view jersey images / badges
+  const teamInfoByName = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, { code: number; short_name: string }>();
+    const map = new Map<string, { code: number; short_name: string }>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, { code: team.code, short_name: team.short_name });
+    });
+    return map;
+  }, [bootstrapData]);
+
+  const POSITION_TO_ELEMENT_TYPE: Record<string, number> = {
+    Goalkeeper: 1, GKP: 1,
+    Defender: 2, DEF: 2,
+    Midfielder: 3, MID: 3,
+    Forward: 4, FWD: 4,
+  };
+
+  const toPitchPlayer = (player: PlayerSnapshot, slot: number, isCaptain: boolean, isViceCaptain: boolean, points: number): PitchPlayer => {
+    const teamInfo = teamInfoByName.get(player.teamName);
+    return {
+      element: player.playerId,
+      element_type: POSITION_TO_ELEMENT_TYPE[player.position] || 4,
+      position: slot,
+      is_captain: isCaptain,
+      is_vice_captain: isViceCaptain,
+      web_name: playerIdToWebName.get(player.playerId) || player.playerName,
+      team_short_name: teamInfo?.short_name,
+      team_code: teamInfo?.code,
+      custom_badge_text: points.toFixed(1),
+      custom_badge_color: isCaptain ? 'bg-yellow-500' : 'bg-purple-600',
+    };
+  };
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -1044,190 +1078,95 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
 
-          {/* Starting 11 - Ordered by Position */}
-          <Card>
+          {/* Pitch View */}
+          <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle>Starting XI</CardTitle>
+              <CardTitle>Your Squad</CardTitle>
               <CardDescription>
-                Your optimal 11 players for GW{selectedGameweek} (ordered by position)
+                GW{selectedGameweek} — captain doubled, bench in substitution priority order
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {optimalTeam.starting11
-                  .sort((a, b) => {
-                    // Position order: Goalkeeper -> Defender -> Midfielder -> Forward
-                    const positionOrder: Record<string, number> = {
-                      'Goalkeeper': 1,
-                      'Defender': 2,
-                      'Midfielder': 3,
-                      'Forward': 4,
-                      'GKP': 1,
-                      'DEF': 2,
-                      'MID': 3,
-                      'FWD': 4
-                    };
-                    
-                    const aOrder = positionOrder[a.position] || 5;
-                    const bOrder = positionOrder[b.position] || 5;
-                    
-                    if (aOrder !== bOrder) {
-                      return aOrder - bOrder;
-                    }
-                    
-                    // Within same position, sort by points (highest first)
-                    return getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
-                  })
-                  .map((player, index) => (
-                    <div
-                      key={player.playerId}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        player.playerId === optimalTeam.captain.playerId 
-                          ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' 
-                          : player.playerId === optimalTeam.viceCaptain?.playerId
-                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
-                          : 'bg-muted/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium w-6">{index + 1}.</span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
-                            {player.playerId === optimalTeam.captain.playerId && (
-                              <Crown className="h-4 w-4 text-yellow-500" />
-                            )}
-                            {player.playerId === optimalTeam.viceCaptain?.playerId && (
-                              <Star className="h-4 w-4 text-blue-500" />
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{player.teamName}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge className={getPositionColor(player.position)} variant="secondary">
-                          {getPositionShortForm(player.position)}
-                        </Badge>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1">
-                            {player.playerId === optimalTeam.captain.playerId ? (
-                              <p className="font-medium text-yellow-600">
-                                {getGameweekPoints(player, selectedGameweek).toFixed(1)}pt × 2 = {(getGameweekPoints(player, selectedGameweek) * 2).toFixed(1)}pts
-                              </p>
-                            ) : (
-                              <p className="font-medium">
-                                {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                              </p>
-                            )}
-                            {player.playerId === optimalTeam.captain.playerId && (
-                              <span className="text-yellow-600 font-medium">(C)</span>
-                            )}
-                            {player.playerId === optimalTeam.viceCaptain?.playerId && (
-                              <span className="text-blue-600 font-medium">(V)</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+            <CardContent className="p-0">
+              {(() => {
+                const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                const starting = [...optimalTeam.starting11].sort((a, b) => {
+                  const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+                  return order !== 0 ? order : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+                });
+                const bench = optimalTeam.squad.filter(p => !optimalTeam.starting11.some(s => s.playerId === p.playerId));
+                const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+                const benchOutfield = bench
+                  .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek));
+                const orderedBench = [...benchGK, ...benchOutfield];
+
+                const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+                  toPitchPlayer(player, i + 1, player.playerId === optimalTeam.captain.playerId, player.playerId === optimalTeam.viceCaptain?.playerId, getGameweekPoints(player, selectedGameweek))
+                );
+                const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+                  toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, selectedGameweek))
+                );
+
+                return (
+                  <div className="p-2 sm:p-4">
+                    <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
-          {/* Bench Players - Organized by Position */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Substitute Goalkeeper */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Substitute Goalkeeper</CardTitle>
-                <CardDescription>
-                  Only replaces starting goalkeeper
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const benchGK = optimalTeam.squad
-                    .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
-                    .filter(player => player.position.toLowerCase().includes('goalkeeper') || player.position === 'Goalkeeper');
-                  
-                  return benchGK.map(player => (
-                    <div
-                      key={player.playerId}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Shield className="h-4 w-4 text-yellow-600" />
-                        <div>
-                          <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
-                          <p className="text-sm text-muted-foreground">{player.teamName}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge className={getPositionColor(player.position)} variant="secondary">
-                          GKP
-                        </Badge>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                          </p>
-                          <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                        </div>
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </CardContent>
-            </Card>
-
-            {/* Outfield Substitutes */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Outfield Substitutes (3 players)</CardTitle>
-                <CardDescription>
-                  Substitution priority order (1st, 2nd, 3rd choice)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {optimalTeam.squad
-                    .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
-                    .filter(player => !player.position.toLowerCase().includes('goalkeeper') && player.position !== 'Goalkeeper')
-                    .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
-                    .map((player, index) => (
+          {/* Full Squad — price/points reference list */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Full Squad (15)</CardTitle>
+              <CardDescription>Price and GW{selectedGameweek} projected points for every player</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {optimalTeam.squad
+                  .slice()
+                  .sort((a, b) => {
+                    const order: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                    const d = (order[a.position] || 5) - (order[b.position] || 5);
+                    return d !== 0 ? d : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+                  })
+                  .map(player => {
+                    const isStarting = optimalTeam.starting11.some(s => s.playerId === player.playerId);
+                    const isCaptain = player.playerId === optimalTeam.captain.playerId;
+                    const isVice = player.playerId === optimalTeam.viceCaptain?.playerId;
+                    return (
                       <div
                         key={player.playerId}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800"
+                        className={`flex items-center justify-between px-3 py-2 rounded-md border text-sm ${
+                          isCaptain ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800'
+                          : isVice ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
+                          : isStarting ? 'bg-muted/40' : 'bg-muted/10 opacity-75'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center">
-                            {index + 1}
-                          </span>
-                          <div>
-                            <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
-                            <p className="text-sm text-muted-foreground">{player.teamName}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge 
-                            className={getPositionColor(player.position)} 
-                            variant="secondary"
-                          >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge className={getPositionColor(player.position)} variant="secondary">
                             {getPositionShortForm(player.position)}
                           </Badge>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                            </p>
-                            <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                          </div>
+                          <span className="font-medium truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                          {isCaptain && <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />}
+                          {isVice && <Star className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
+                          <span className="text-muted-foreground truncate">{player.teamName}</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-medium">
+                            {isCaptain
+                              ? `${(getGameweekPoints(player, selectedGameweek) * 2).toFixed(1)} pts (×2)`
+                              : `${getGameweekPoints(player, selectedGameweek).toFixed(1)} pts`}
+                          </span>
+                          <span className="text-muted-foreground">£{player.price}m</span>
                         </div>
                       </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

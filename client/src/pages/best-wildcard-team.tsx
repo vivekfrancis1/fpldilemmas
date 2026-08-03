@@ -12,6 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingExperience } from "@/components/loading-experience";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
@@ -107,6 +108,39 @@ export default function BestWildcardTeam() {
     });
     return map;
   }, [bootstrapData]);
+
+  // Team name -> { code, short_name } for pitch-view jersey images / badges
+  const teamInfoByName = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, { code: number; short_name: string }>();
+    const map = new Map<string, { code: number; short_name: string }>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, { code: team.code, short_name: team.short_name });
+    });
+    return map;
+  }, [bootstrapData]);
+
+  const POSITION_TO_ELEMENT_TYPE: Record<string, number> = {
+    Goalkeeper: 1, GKP: 1,
+    Defender: 2, DEF: 2,
+    Midfielder: 3, MID: 3,
+    Forward: 4, FWD: 4,
+  };
+
+  const toPitchPlayer = (player: PlayerSnapshot, slot: number, isCaptain: boolean, isViceCaptain: boolean, points: number): PitchPlayer => {
+    const teamInfo = teamInfoByName.get(player.teamName);
+    return {
+      element: player.playerId,
+      element_type: POSITION_TO_ELEMENT_TYPE[player.position] || 4,
+      position: slot,
+      is_captain: isCaptain,
+      is_vice_captain: isViceCaptain,
+      web_name: playerIdToWebName.get(player.playerId) || player.playerName,
+      team_short_name: teamInfo?.short_name,
+      team_code: teamInfo?.code,
+      custom_badge_text: points.toFixed(1),
+      custom_badge_color: isCaptain ? 'bg-yellow-500' : 'bg-purple-600',
+    };
+  };
 
   // Combined search key (web name + full first/last name) so searching "Bruno" finds
   // "B.Fernandes" — the include/exclude search filters on CommandItem's value, which
@@ -1705,136 +1739,32 @@ export default function BestWildcardTeam() {
                       </div>
                     </div>
                     
-                    <div className="grid gap-1 md:gap-2">
-                      {gameweekTeam.starting11.map((player, index) => {
-                        const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
-                        const isCaptain = player.playerId === gameweekTeam.captain.playerId;
-                        const isViceCaptain = player.playerId === gameweekTeam.viceCaptain.playerId;
-                        
-                        return (
-                          <div
-                            key={player.playerId}
-                            className={`flex items-center justify-between p-2 md:p-3 rounded ${
-                              isCaptain 
-                                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700'
-                                : isViceCaptain
-                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
-                                : 'bg-muted/30'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                              <div className="text-xs text-muted-foreground w-5 md:w-6 flex-shrink-0">
-                                {index + 1}.
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
-                                  <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                                  {isCaptain && (
-                                    <Crown className="h-3 w-3 text-yellow-600 flex-shrink-0" />
-                                  )}
-                                  {isViceCaptain && (
-                                    <Shield className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {player.teamName} - {player.position}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="font-medium text-sm md:text-base">
-                                {isCaptain ? (gameweekPoints * 2).toFixed(1) : gameweekPoints.toFixed(1)} pts
-                              </div>
-                              {isCaptain && (
-                                <div className="text-xs text-yellow-600">
-                                  {gameweekPoints.toFixed(1)} × 2
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {(() => {
+                      const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                      const starting = [...gameweekTeam.starting11].sort((a, b) => {
+                        const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+                        return order !== 0 ? order : getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek);
+                      });
+                      const bench = optimalTeam.squad.filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId));
+                      const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+                      const benchOutfield = bench
+                        .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+                        .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
+                      const orderedBench = [...benchGK, ...benchOutfield];
 
-                    {/* Bench Players for this Gameweek */}
-                    <div className="mt-4 md:mt-6">
-                      <h4 className="font-semibold mb-2 md:mb-3 text-xs md:text-sm text-muted-foreground">Substitutes</h4>
-                      
-                      {/* Substitute Goalkeeper */}
-                      <div className="mb-2 md:mb-3">
-                        <div className="text-xs font-medium text-muted-foreground mb-1 md:mb-2">Substitute Goalkeeper</div>
-                        {(() => {
-                          const benchGK = optimalTeam.squad
-                            .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
-                            .filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP');
-                          
-                          return benchGK.map(player => {
-                            const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
-                            return (
-                              <div
-                                key={player.playerId}
-                                className="flex items-center justify-between p-2 rounded bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700"
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <Shield className="h-3 w-3 text-yellow-600 flex-shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-sm font-medium truncate">
-                                      {playerIdToWebName.get(player.playerId) || player.playerName}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground truncate">
-                                      {player.teamName} - GKP
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-sm font-medium flex-shrink-0">
-                                  {gameweekPoints.toFixed(1)} pts
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
+                      const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+                        toPitchPlayer(player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId, getGameweekPoints(player, gameweekTeam.gameweek))
+                      );
+                      const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+                        toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, gameweekTeam.gameweek))
+                      );
 
-                      {/* Outfield Substitutes */}
-                      <div>
-                        <div className="text-xs font-medium text-muted-foreground mb-1 md:mb-2">Outfield Substitutes</div>
-                        <div className="space-y-1 md:space-y-2">
-                          {(() => {
-                            const benchOutfield = optimalTeam.squad
-                              .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
-                              .filter(p => !p.position.toLowerCase().includes('goalkeeper') && p.position !== 'GKP')
-                              .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
-                            
-                            return benchOutfield.map((player, index) => {
-                              const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
-                              return (
-                                <div
-                                  key={player.playerId}
-                                  className="flex items-center justify-between p-2 rounded bg-muted/30 border"
-                                >
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="text-xs font-bold w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                                      {index + 1}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="text-sm font-medium truncate">
-                                        {playerIdToWebName.get(player.playerId) || player.playerName}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground truncate">
-                                        {player.teamName} - {player.position}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-sm font-medium flex-shrink-0">
-                                    {gameweekPoints.toFixed(1)} pts
-                                  </div>
-                                </div>
-                              );
-                            });
-                          })()}
+                      return (
+                        <div className="-mx-4 md:-mx-6">
+                          <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                       </div>
                     </TabsContent>
                   ))}
