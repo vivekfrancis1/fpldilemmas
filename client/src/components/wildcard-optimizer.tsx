@@ -251,6 +251,10 @@ export function WildcardOptimizer({
   })) : [];
   const gameweekRange = `GW${startGameweek}-${endGameweek}`;
 
+  // "embedded" (e.g. My Dashboard's pre-season panel) drops all "wildcard" wording since it's a
+  // general team-builder there, not specifically the wildcard chip.
+  const teamNoun = variant === 'embedded' ? 'team' : 'wildcard team';
+
   // Clear optimal team when gameweek horizon changes
   useEffect(() => {
     setOptimalTeam(null);
@@ -1148,7 +1152,7 @@ export function WildcardOptimizer({
       );
 
       if (!result) {
-        throw new Error(`Could not build a valid wildcard team within budget of £${budgetConstraint}m. Try increasing the budget or removing player constraints.`);
+        throw new Error(`Could not build a valid ${teamNoun} within budget of £${budgetConstraint}m. Try increasing the budget or removing player constraints.`);
       }
 
       const finalSquad = result.squad;
@@ -1212,7 +1216,7 @@ export function WildcardOptimizer({
       console.error('Optimization failed:', error);
       toast({
         variant: "destructive",
-        title: "Couldn't build a wildcard team",
+        title: `Couldn't build a ${teamNoun}`,
         description: error instanceof Error ? error.message : "Something went wrong while optimizing. Please try again.",
       });
     } finally {
@@ -1265,7 +1269,7 @@ export function WildcardOptimizer({
         >
           <LoadingExperience
             variant="simulation"
-            title="Optimizing Wildcard Team"
+            title={variant === 'embedded' ? "Optimizing Team" : "Optimizing Wildcard Team"}
             description="Running advanced algorithms to find the best possible squad across multiple gameweeks..."
             steps={[
               { text: "Analyzing player projections for all gameweeks", delay: "0s" },
@@ -1321,9 +1325,9 @@ export function WildcardOptimizer({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Wildcard Optimization</CardTitle>
+              <CardTitle className="text-lg">{variant === 'embedded' ? 'Team Optimization' : 'Wildcard Optimization'}</CardTitle>
               <CardDescription>
-                Optimize your wildcard team for maximum points across the next {gameweekHorizon} gameweeks
+                Optimize your {teamNoun} for maximum points across the next {gameweekHorizon} gameweeks
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -1348,7 +1352,7 @@ export function WildcardOptimizer({
               Optimization Horizon
             </Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Enter how many gameweeks ahead to optimize your wildcard team (1-{maxGameweekHorizon}, default 5)
+              Enter how many gameweeks ahead to optimize your {teamNoun} (1-{maxGameweekHorizon}, default 5)
             </p>
             <div className="flex items-center gap-2">
               <Input
@@ -1597,7 +1601,7 @@ export function WildcardOptimizer({
               ) : (
                 <>
                   <Star className="h-4 w-4" />
-                  Optimize Wildcard Team
+                  {variant === 'embedded' ? 'Optimize My Team' : 'Optimize Wildcard Team'}
                 </>
               )}
             </Button>
@@ -1616,7 +1620,9 @@ export function WildcardOptimizer({
                 Set & Forget Squad (15 Players)
               </CardTitle>
               <CardDescription>
-                Your best wildcard squad for the entire {gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.
+                {variant === 'embedded'
+                  ? `Your best squad for the entire ${gameweekRange} horizon — the optimal 15-player squad to start the season with and keep unchanged.`
+                  : `Your best wildcard squad for the entire ${gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1653,6 +1659,34 @@ export function WildcardOptimizer({
               </div>
               <Separator className="mb-4" />
 
+              {variant === 'embedded' ? (
+                (() => {
+                  const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                  const starting = [...optimalTeam.starting11].sort((a, b) => {
+                    const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+                    return order !== 0 ? order : b.totalProjectedPoints - a.totalProjectedPoints;
+                  });
+                  const bench = optimalTeam.squad.filter(p => !optimalTeam.starting11.some(s => s.playerId === p.playerId));
+                  const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+                  const benchOutfield = bench
+                    .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+                    .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+                  const orderedBench = [...benchGK, ...benchOutfield];
+
+                  const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+                    toPitchPlayer(player, i + 1, player.playerId === optimalTeam.captain.playerId, player.playerId === optimalTeam.viceCaptain.playerId, player.totalProjectedPoints)
+                  );
+                  const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+                    toPitchPlayer(player, 12 + i, false, false, player.totalProjectedPoints)
+                  );
+
+                  return (
+                    <div className="-mx-4 md:-mx-6">
+                      <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
+                    </div>
+                  );
+                })()
+              ) : (
               <div className="grid gap-3 md:gap-4">
                 {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
                   const positionPlayers = optimalTeam.squad.filter(player => {
@@ -1709,6 +1743,7 @@ export function WildcardOptimizer({
                   );
                 })}
               </div>
+              )}
             </CardContent>
           </Card>
 
