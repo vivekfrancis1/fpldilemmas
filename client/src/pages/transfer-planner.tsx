@@ -24,6 +24,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
+import { getPreseasonDraft } from "@/lib/preseason-draft-cache";
+import { draftToFplPicks } from "@/lib/draft-to-fpl-picks";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -1269,14 +1271,34 @@ export default function TransferPlanner() {
   // Determine which endpoint to use (with fallback for expired sessions)
   const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
 
+  // Pre-season "GW1 draft" fallback — used only when this Manager ID's real squad isn't
+  // available from FPL yet (SEASON_NOT_STARTED). Read once; re-run the optimizer + re-save on
+  // My Dashboard to update it.
+  const [cachedDraft] = useState(() => getPreseasonDraft());
+  const [usingDraftFallback, setUsingDraftFallback] = useState(false);
+
   // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
-  // Fall back to public picks endpoint if session expired (GW 12 confirmed team)
+  // Fall back to public picks endpoint if session expired (GW 12 confirmed team), then to the
+  // saved pre-season draft if the real squad isn't available yet at all.
   const { data: teamData, isLoading: isLoadingTeam, error: teamDataError } = useQuery<TeamData>({
-    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
+    queryKey: usingDraftFallback
+      ? ["/api/manager", searchedId, "team", "draft-fallback"]
+      : (shouldUseAuthenticatedEndpoint ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"]),
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
     retry: false, // Don't auto-retry if FPL session expired
+    queryFn: async () => {
+      if (usingDraftFallback && cachedDraft && bootstrapData) {
+        const res = await apiRequest('POST', `/api/manager/${searchedId}/team`, {
+          draftPicks: draftToFplPicks(cachedDraft, bootstrapData),
+        });
+        return res.json();
+      }
+      const url = shouldUseAuthenticatedEndpoint ? '/api/fpl/my-team' : `/api/manager/${searchedId}/team`;
+      const res = await apiRequest('GET', url);
+      return res.json();
+    },
   });
 
   // Handle FPL session expiry - fall back to public endpoint
@@ -1286,6 +1308,15 @@ export default function TransferPlanner() {
       setUseFallbackEndpoint(true);
     }
   }, [teamDataError, shouldUseAuthenticatedEndpoint, searchedId]);
+
+  // Fall back to the saved pre-season draft when this Manager ID's real squad isn't available
+  // yet (pre-season) and a draft has been saved via My Dashboard's "Create Your Optimised Team".
+  useEffect(() => {
+    if (!usingDraftFallback && searchedId && cachedDraft && isTeamNotAvailableError(teamDataError)) {
+      console.log("📦 Real GW1 squad not available yet — falling back to saved pre-season draft");
+      setUsingDraftFallback(true);
+    }
+  }, [teamDataError, searchedId, cachedDraft, usingDraftFallback]);
 
   // Debug: log teamData.transfers when using authenticated endpoint
   useEffect(() => {
@@ -6100,6 +6131,17 @@ export default function TransferPlanner() {
           </Alert>
         );
       })()}
+
+      {/* Using the saved pre-season draft instead of a real (not-yet-available) squad */}
+      {usingDraftFallback && !teamDataError && teamData && (
+        <Alert className="bg-purple-50 border-purple-200">
+          <AlertCircle className="h-4 w-4 text-purple-700" />
+          <AlertDescription className="text-purple-800">
+            Manager {searchedId}'s GW1 squad isn't available from FPL yet — planning from your
+            saved "Create Your Optimised Team" draft instead.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Error state — teamDataError was previously captured but never rendered, so a failed
           team fetch (e.g. pre-season, before a gameweek's deadline has passed) left the whole

@@ -4282,11 +4282,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get manager team picks for current gameweek
-  app.get("/api/manager/:managerId/team", async (req, res) => {
+  app.all("/api/manager/:managerId/team", async (req, res) => {
     try {
       const { managerId } = req.params;
       const gameweek = req.query.gameweek;
-      
+      // A saved pre-season "GW1 draft" (client/src/lib/preseason-draft-cache.ts), POSTed as a
+      // fallback when this manager's real picks aren't available from FPL yet — same bypass
+      // pattern as `authenticatedPicks` on the recommended-transfers route.
+      const draftPicks = req.method === 'POST' && req.body?.draftPicks;
+
       if (!managerId || isNaN(Number(managerId))) {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
@@ -4294,7 +4298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current or most recent completed gameweek if not specified
       let currentGameweek = gameweek ? Number(gameweek) : null;
       let bootstrapData: any = null;
-      
+
       if (!currentGameweek) {
         // Use internal cached endpoint for better performance
         const bootstrapResponse = await internalFetch("api/bootstrap-static");
@@ -4313,33 +4317,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // checker the same guarantee already true at runtime.
       currentGameweek = currentGameweek ?? 1;
 
-      // Fetch initial picks for current gameweek. fetchWithRetry throws rather than returning a
-      // non-ok response, so a 404 (picks not locked yet — pre-season, or before this gameweek's
-      // deadline) needs to be caught here, not checked via response.ok afterward.
       let response: Response;
       let resolvedPicksGW = currentGameweek;
-      try {
-        response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
-      } catch (fetchError) {
-        const is404 = fetchError instanceof Error && /\b404\b/.test(fetchError.message);
-        if (!is404) throw fetchError;
+      if (draftPicks) {
+        // Skip the real FPL fetch entirely — the caller already knows it 404s pre-season and is
+        // supplying a stand-in squad. `data` below just needs the shape the rest of this handler
+        // (entry/history enrichment) already expects.
+        response = new Response(JSON.stringify({ picks: draftPicks, active_chip: null }), { status: 200 });
+      } else {
+        // Fetch initial picks for current gameweek. fetchWithRetry throws rather than returning a
+        // non-ok response, so a 404 (picks not locked yet — pre-season, or before this gameweek's
+        // deadline) needs to be caught here, not checked via response.ok afterward.
+        try {
+          response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+        } catch (fetchError) {
+          const is404 = fetchError instanceof Error && /\b404\b/.test(fetchError.message);
+          if (!is404) throw fetchError;
 
-        // If the requested GW picks are not yet available (future GW), fall back to the previous GW
-        if (currentGameweek > 1) {
-          console.log(`DEBUG: GW${currentGameweek} picks not available (404), falling back to GW${currentGameweek - 1}`);
-          resolvedPicksGW = currentGameweek - 1;
-          try {
-            response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${resolvedPicksGW}/picks/`);
-          } catch (fallbackError) {
-            const fallbackIs404 = fallbackError instanceof Error && /\b404\b/.test(fallbackError.message);
-            if (!fallbackIs404) throw fallbackError;
-            return res.status(404).json({ message: "SEASON_NOT_STARTED: Manager team not found for this gameweek", code: 'TEAM_NOT_AVAILABLE' });
+          // If the requested GW picks are not yet available (future GW), fall back to the previous GW
+          if (currentGameweek > 1) {
+            console.log(`DEBUG: GW${currentGameweek} picks not available (404), falling back to GW${currentGameweek - 1}`);
+            resolvedPicksGW = currentGameweek - 1;
+            try {
+              response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${resolvedPicksGW}/picks/`);
+            } catch (fallbackError) {
+              const fallbackIs404 = fallbackError instanceof Error && /\b404\b/.test(fallbackError.message);
+              if (!fallbackIs404) throw fallbackError;
+              return res.status(404).json({ message: "SEASON_NOT_STARTED: Manager team not found for this gameweek", code: 'TEAM_NOT_AVAILABLE' });
+            }
+          } else {
+            return res.status(404).json({
+              message: "SEASON_NOT_STARTED: Your team isn't available yet — check back after the gameweek deadline has passed.",
+              code: 'TEAM_NOT_AVAILABLE',
+            });
           }
-        } else {
-          return res.status(404).json({
-            message: "SEASON_NOT_STARTED: Your team isn't available yet — check back after the gameweek deadline has passed.",
-            code: 'TEAM_NOT_AVAILABLE',
-          });
         }
       }
 
