@@ -730,6 +730,9 @@ export default function BestFreehitTeam() {
         </div>
       </div>
 
+      {/* Config on the left third, results on the right two-thirds */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="lg:col-span-1">
       {/* Controls */}
       <Card>
         <CardHeader>
@@ -1010,10 +1013,11 @@ export default function BestFreehitTeam() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Optimal Team Results */}
       {optimalTeam && (
-        <div className="space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Team Summary */}
           <Card>
             <CardHeader>
@@ -1169,6 +1173,7 @@ export default function BestFreehitTeam() {
           </Card>
         </div>
       )}
+      </div>
     </div>
   );
 }

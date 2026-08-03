@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, Calendar, RefreshCw } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1719,158 +1718,10 @@ export function WildcardOptimizer({
           </Card>
         );
 
-        if (variant === 'page') {
-          return (
-            <>
-              {/* Controls */}
-              {controlsCard}
-
-              {/* Results */}
-              {optimalTeam && (
-                <div className="space-y-6">
-                  {/* Full Squad - First */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Zap className="h-5 w-5" />
-                        Set & Forget Squad (15 Players)
-                      </CardTitle>
-                      <CardDescription>
-                        Your best wildcard squad for the entire {gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {/* Summary Stats - Single line on mobile */}
-                      <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
-                        <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
-                          <div className="flex items-center gap-4">
-                            <div>
-                              <span className="text-sm font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</span>
-                              <span className="text-xs text-muted-foreground ml-1">pts</span>
-                            </div>
-                            <div>
-                              <span className="text-sm font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</span>
-                            </div>
-                            <div>
-                              <span className="text-sm font-bold text-orange-600">{optimalTeam.squad.length}</span>
-                              <span className="text-xs text-muted-foreground ml-1">players</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="hidden md:block text-center">
-                          <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
-                          <div className="text-sm text-muted-foreground">Total Points</div>
-                        </div>
-                        <div className="hidden md:block text-center">
-                          <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
-                          <div className="text-sm text-muted-foreground">Team Value</div>
-                        </div>
-                        <div className="hidden md:block text-center">
-                          <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
-                          <div className="text-sm text-muted-foreground">Squad Size</div>
-                        </div>
-                      </div>
-                      <Separator className="mb-4" />
-
-                      <div className="grid gap-3 md:gap-4">
-                        {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
-                          const positionPlayers = optimalTeam.squad.filter(player => {
-                            const pos = player.position;
-                            if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
-                            if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
-                            if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
-                            if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
-                            return false;
-                          });
-
-                          return (
-                            <div key={position}>
-                              <div className="flex items-center gap-2 mb-2 md:mb-3">
-                                <Badge variant="secondary" className="text-xs md:text-sm">{position}s ({positionPlayers.length})</Badge>
-                              </div>
-                              <div className="grid gap-1 md:gap-2">
-                                {positionPlayers.map((player) => {
-                                  const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
-                                  return (
-                                    <div
-                                      key={player.playerId}
-                                      className={`flex items-center justify-between p-2 md:p-3 rounded-lg border ${
-                                        isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                                        <div className="min-w-0 flex-1">
-                                          <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
-                                            <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                                            {isStarter && (
-                                              <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
-                                            )}
-                                          </div>
-                                          <div className="text-xs md:text-sm text-muted-foreground">
-                                            {player.teamName} • {player.position}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="text-right flex-shrink-0">
-                                        <div className="font-medium text-sm md:text-base">£{player.price}m</div>
-                                        <div className="text-xs md:text-sm text-muted-foreground">
-                                          {player.totalProjectedPoints.toFixed(1)} xPts
-                                        </div>
-                                        <div className="text-xs text-purple-600">
-                                          ({endGameweek - startGameweek + 1} GWs)
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Gameweek-by-Gameweek Breakdown */}
-                  {optimalTeam.gameweekBreakdown && optimalTeam.gameweekBreakdown.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5" />
-                          Weekly Lineup Optimization
-                        </CardTitle>
-                        <CardDescription>
-                          Using the 15-player squad above, this shows the best starting XI and captain pick for each gameweek based on fixtures and form.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Tabs defaultValue={optimalTeam.gameweekBreakdown[0]?.gameweek.toString()} className="w-full">
-                          <TabsList className="grid w-full grid-cols-6">
-                            {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                              <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
-                                GW{gameweekTeam.gameweek}
-                              </TabsTrigger>
-                            ))}
-                          </TabsList>
-                          {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                            <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
-                              {renderGameweekPitch(gameweekTeam, optimalTeam.squad)}
-                            </TabsContent>
-                          ))}
-                        </Tabs>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </>
-          );
-        }
-
-        // Embedded variant: config on the left third, squad tabs (Set & Forget + one per
-        // gameweek) on the right two-thirds — the "Set & Forget" tab reuses the same aggregate
-        // squad view the page variant shows as its own Card.
+        // Both variants share this layout: config on the left third, squad tabs (Set & Forget +
+        // one per gameweek) on the right two-thirds. Only the wording ("wildcard" vs generic)
+        // differs between variants.
+        const squadNoun = variant === 'embedded' ? 'squad' : 'wildcard squad';
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-1">
@@ -1885,7 +1736,7 @@ export function WildcardOptimizer({
                       Your Squad
                     </CardTitle>
                     <CardDescription>
-                      "Set & Forget" is your best squad for the entire {gameweekRange} horizon. Each GW tab shows the best starting XI and captain pick for that specific gameweek.
+                      "Set & Forget" is your best {squadNoun} for the entire {gameweekRange} horizon. Each GW tab shows the best starting XI and captain pick for that specific gameweek.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
