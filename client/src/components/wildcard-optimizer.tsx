@@ -1320,513 +1320,600 @@ export function WildcardOptimizer({
         </Card>
       )}
 
-      {/* Controls */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">{variant === 'embedded' ? 'Team Optimization' : 'Wildcard Optimization'}</CardTitle>
-              <CardDescription>
-                Optimize your {teamNoun} for maximum points across the next {gameweekHorizon} gameweeks
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshData}
-                disabled={isRefreshing || isLoading}
-                className="shrink-0"
-                data-testid="button-refresh-wildcard-data"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span className="ml-2 hidden sm:inline">Refresh</span>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Gameweek Horizon Selection */}
-          <div className="space-y-2 p-3 md:p-4 bg-muted/20 rounded-lg border">
-            <Label htmlFor="gameweek-horizon" className="text-sm font-medium">
-              Optimization Horizon
-            </Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              Enter how many gameweeks ahead to optimize your {teamNoun} (1-{maxGameweekHorizon}, default 5)
-            </p>
-            <div className="flex items-center gap-2">
-              <Input
-                id="gameweek-horizon"
-                type="number"
-                min={1}
-                max={maxGameweekHorizon}
-                value={gameweekHorizon}
-                onChange={(e) => {
-                  const parsed = parseInt(e.target.value);
-                  if (Number.isNaN(parsed)) return;
-                  setGameweekHorizon(Math.min(maxGameweekHorizon, Math.max(1, parsed)));
-                }}
-                className="w-full sm:w-32"
-                data-testid="input-gameweek-horizon"
-              />
-              <span className="text-sm text-muted-foreground">gameweeks (GW{startGameweek}-{endGameweek})</span>
-            </div>
-          </div>
+      {/* Renders one gameweek's summary + pitch view — shared by both the page-variant Weekly
+          Lineup tabs and the embedded variant's merged tabs. */}
+      {(() => {
+        const renderGameweekPitch = (gameweekTeam: GameweekTeam, squad: PlayerSnapshot[]) => {
+          const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+          const starting = [...gameweekTeam.starting11].sort((a, b) => {
+            const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+            return order !== 0 ? order : getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek);
+          });
+          const bench = squad.filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId));
+          const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+          const benchOutfield = bench
+            .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+            .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
+          const orderedBench = [...benchGK, ...benchOutfield];
 
-          {/* Optimization Mode - Mobile Optimized */}
-          <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <Label htmlFor="unlimited-budget" className="text-sm font-medium">
-                  Set a Budget Limit
-                </Label>
-                <Switch
-                  id="unlimited-budget"
-                  checked={!unlimitedBudget}
-                  onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
-                  data-testid="switch-unlimited-budget"
-                />
-                <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
-                  {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
-                </Badge>
+          const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+            toPitchPlayer(player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId, getGameweekPoints(player, gameweekTeam.gameweek))
+          );
+          const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+            toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, gameweekTeam.gameweek))
+          );
+
+          return (
+            <div className="space-y-4">
+              <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-purple-600 dark:text-purple-400">{gameweekTeam.formation}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="font-medium">{gameweekTeam.gameweekPoints.toFixed(1)} pts</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Crown className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
+                    <span className="font-medium">{playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                    <span className="font-medium">{playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}</span>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {unlimitedBudget
-                  ? 'Off (default): picks the best players by projected points, regardless of price.'
-                  : 'On: builds the best squad that fits within the budget you set below.'}
-              </p>
-            </div>
-
-            {!unlimitedBudget && (
-              <div className="space-y-2">
-                <Label htmlFor="budget" className="text-sm font-medium">
-                  Budget Constraint (£m)
-                </Label>
-                <Input
-                  id="budget"
-                  type="number"
-                  value={budgetConstraint}
-                  onChange={(e) => setBudgetConstraint(parseFloat(e.target.value) || 100)}
-                  min="50"
-                  max="200"
-                  step="0.1"
-                  className="w-full sm:w-32"
-                  data-testid="input-budget"
-                />
+              <div className="-mx-4 md:-mx-6">
+                <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
               </div>
-            )}
-          </div>
-
-          {/* Player Inclusion/Exclusion - Mobile Optimized */}
-          <div className="space-y-4 p-3 md:p-4 bg-muted/20 rounded-lg border">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="h-4 w-4" />
-              <h3 className="text-sm font-medium">Player Constraints</h3>
             </div>
+          );
+        };
 
-            {/* Players to Include */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-green-700 dark:text-green-400">
-                Players to Include (Must Have)
-              </Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {includedPlayers.map((player) => (
-                  <Badge
-                    key={player.playerId}
-                    variant="secondary"
-                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
-                  >
-                    {playerIdToWebName.get(player.playerId) || player.playerName}
-                    <X 
-                      className="h-3 w-3 cursor-pointer hover:text-green-600" 
-                      onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
-                    />
-                  </Badge>
-                ))}
-              </div>
-              <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add players to include
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
-                  <Command>
-                    <CommandInput 
-                      placeholder="Search players..." 
-                      onValueChange={() => {
-                        if (includeListRef.current) {
-                          includeListRef.current.scrollTop = 0;
-                        }
-                      }}
-                    />
-                    <CommandList ref={includeListRef} className="max-h-[300px] overflow-auto">
-                      <CommandEmpty>No players found.</CommandEmpty>
-                      <CommandGroup>
-                        {snapshots
-                          .filter(player => 
-                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
-                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
-                          )
-                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
-                          .map((player) => (
-                            <CommandItem
-                              key={player.playerId}
-                              value={playerIdToSearchKey.get(player.playerId) || player.playerName}
-                              onSelect={() => {
-                                setIncludedPlayers(prev => [...prev, player]);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <div>
-                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                                  <span className="text-sm text-muted-foreground ml-2">
-                                    {player.teamName} - {player.position}
-                                  </span>
-                                </div>
-                                <span className="text-sm text-muted-foreground">
-                                  £{player.price}m
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-muted-foreground">
-                These players will definitely be included in your squad
-              </p>
-            </div>
+        // Aggregate "Set & Forget" squad content (summary stats + pitch view) — used both by the
+        // page variant's own Card and the embedded variant's merged "Set & Forget" tab.
+        const renderAggregateSquad = (team: OptimalTeam) => {
+          const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+          const starting = [...team.starting11].sort((a, b) => {
+            const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+            return order !== 0 ? order : b.totalProjectedPoints - a.totalProjectedPoints;
+          });
+          const bench = team.squad.filter(p => !team.starting11.some(s => s.playerId === p.playerId));
+          const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+          const benchOutfield = bench
+            .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+            .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
+          const orderedBench = [...benchGK, ...benchOutfield];
 
-            {/* Players to Exclude */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-red-700 dark:text-red-400">
-                Players to Exclude (Avoid)
-              </Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {excludedPlayers.map((player) => (
-                  <Badge
-                    key={player.playerId}
-                    variant="secondary"
-                    className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
-                  >
-                    {playerIdToWebName.get(player.playerId) || player.playerName}
-                    <X 
-                      className="h-3 w-3 cursor-pointer hover:text-red-600" 
-                      onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
-                    />
-                  </Badge>
-                ))}
-              </div>
-              <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <X className="h-4 w-4 mr-2" />
-                    Add players to exclude
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
-                  <Command>
-                    <CommandInput 
-                      placeholder="Search players..." 
-                      onValueChange={() => {
-                        if (excludeListRef.current) {
-                          excludeListRef.current.scrollTop = 0;
-                        }
-                      }}
-                    />
-                    <CommandList ref={excludeListRef} className="max-h-[300px] overflow-auto">
-                      <CommandEmpty>No players found.</CommandEmpty>
-                      <CommandGroup>
-                        {snapshots
-                          .filter(player => 
-                            !includedPlayers.some(ip => ip.playerId === player.playerId) &&
-                            !excludedPlayers.some(ep => ep.playerId === player.playerId)
-                          )
-                          .sort((a, b) => a.playerName.localeCompare(b.playerName))
-                          .map((player) => (
-                            <CommandItem
-                              key={player.playerId}
-                              value={playerIdToSearchKey.get(player.playerId) || player.playerName}
-                              onSelect={() => {
-                                setExcludedPlayers(prev => [...prev, player]);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <div>
-                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                                  <span className="text-sm text-muted-foreground ml-2">
-                                    {player.teamName} - {player.position}
-                                  </span>
-                                </div>
-                                <span className="text-sm text-muted-foreground">
-                                  £{player.price}m
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-muted-foreground">
-                These players will never be included in your squad
-              </p>
-            </div>
-          </div>
+          const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+            toPitchPlayer(player, i + 1, player.playerId === team.captain.playerId, player.playerId === team.viceCaptain.playerId, player.totalProjectedPoints)
+          );
+          const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+            toPitchPlayer(player, 12 + i, false, false, player.totalProjectedPoints)
+          );
 
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-            <Button 
-              onClick={optimizeTeam} 
-              disabled={isOptimizing || isLoading || snapshots.length === 0}
-              className="flex items-center gap-2"
-              data-testid="button-optimize-team"
-            >
-              {isOptimizing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Optimizing...
-                </>
-              ) : isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Loading Data...
-                </>
-              ) : (
-                <>
-                  <Star className="h-4 w-4" />
-                  {variant === 'embedded' ? 'Optimize My Team' : 'Optimize Wildcard Team'}
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      {optimalTeam && (
-        <div className="space-y-6">
-          {/* Full Squad - First */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Set & Forget Squad (15 Players)
-              </CardTitle>
-              <CardDescription>
-                {variant === 'embedded'
-                  ? `Your best squad for the entire ${gameweekRange} horizon — the optimal 15-player squad to start the season with and keep unchanged.`
-                  : `Your best wildcard squad for the entire ${gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Summary Stats - Single line on mobile */}
-              <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+          return (
+            <div className="space-y-4">
+              <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4">
                 <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
                   <div className="flex items-center gap-4">
                     <div>
-                      <span className="text-sm font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</span>
+                      <span className="text-sm font-bold text-green-600">{team.totalPoints.toFixed(1)}</span>
                       <span className="text-xs text-muted-foreground ml-1">pts</span>
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</span>
+                      <span className="text-sm font-bold text-blue-600">£{team.totalValue.toFixed(1)}m</span>
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-orange-600">{optimalTeam.squad.length}</span>
+                      <span className="text-sm font-bold text-orange-600">{team.squad.length}</span>
                       <span className="text-xs text-muted-foreground ml-1">players</span>
                     </div>
                   </div>
                 </div>
-                
                 <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
+                  <div className="text-2xl font-bold text-green-600">{team.totalPoints.toFixed(1)}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
                 </div>
                 <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
+                  <div className="text-2xl font-bold text-blue-600">£{team.totalValue.toFixed(1)}m</div>
                   <div className="text-sm text-muted-foreground">Team Value</div>
                 </div>
                 <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
+                  <div className="text-2xl font-bold text-orange-600">{team.squad.length}</div>
                   <div className="text-sm text-muted-foreground">Squad Size</div>
                 </div>
               </div>
-              <Separator className="mb-4" />
+              <div className="-mx-4 md:-mx-6">
+                <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
+              </div>
+            </div>
+          );
+        };
 
-              {variant === 'embedded' ? (
-                (() => {
-                  const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
-                  const starting = [...optimalTeam.starting11].sort((a, b) => {
-                    const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
-                    return order !== 0 ? order : b.totalProjectedPoints - a.totalProjectedPoints;
-                  });
-                  const bench = optimalTeam.squad.filter(p => !optimalTeam.starting11.some(s => s.playerId === p.playerId));
-                  const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
-                  const benchOutfield = bench
-                    .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
-                    .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
-                  const orderedBench = [...benchGK, ...benchOutfield];
+        const controlsCard = (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">{variant === 'embedded' ? 'Team Optimization' : 'Wildcard Optimization'}</CardTitle>
+                  <CardDescription>
+                    Optimize your {teamNoun} for maximum points across the next {gameweekHorizon} gameweeks
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefreshData}
+                    disabled={isRefreshing || isLoading}
+                    className="shrink-0"
+                    data-testid="button-refresh-wildcard-data"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span className="ml-2 hidden sm:inline">Refresh</span>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Gameweek Horizon Selection */}
+              <div className="space-y-2 p-3 md:p-4 bg-muted/20 rounded-lg border">
+                <Label htmlFor="gameweek-horizon" className="text-sm font-medium">
+                  Optimization Horizon
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Enter how many gameweeks ahead to optimize your {teamNoun} (1-{maxGameweekHorizon}, default 5)
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="gameweek-horizon"
+                    type="number"
+                    min={1}
+                    max={maxGameweekHorizon}
+                    value={gameweekHorizon}
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value);
+                      if (Number.isNaN(parsed)) return;
+                      setGameweekHorizon(Math.min(maxGameweekHorizon, Math.max(1, parsed)));
+                    }}
+                    className="w-full sm:w-32"
+                    data-testid="input-gameweek-horizon"
+                  />
+                  <span className="text-sm text-muted-foreground">gameweeks (GW{startGameweek}-{endGameweek})</span>
+                </div>
+              </div>
 
-                  const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
-                    toPitchPlayer(player, i + 1, player.playerId === optimalTeam.captain.playerId, player.playerId === optimalTeam.viceCaptain.playerId, player.totalProjectedPoints)
-                  );
-                  const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
-                    toPitchPlayer(player, 12 + i, false, false, player.totalProjectedPoints)
-                  );
+              {/* Optimization Mode - Mobile Optimized */}
+              <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="unlimited-budget" className="text-sm font-medium">
+                      Set a Budget Limit
+                    </Label>
+                    <Switch
+                      id="unlimited-budget"
+                      checked={!unlimitedBudget}
+                      onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
+                      data-testid="switch-unlimited-budget"
+                    />
+                    <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                      {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {unlimitedBudget
+                      ? 'Off (default): picks the best players by projected points, regardless of price.'
+                      : 'On: builds the best squad that fits within the budget you set below.'}
+                  </p>
+                </div>
 
-                  return (
-                    <div className="-mx-4 md:-mx-6">
-                      <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
-                    </div>
-                  );
-                })()
-              ) : (
-              <div className="grid gap-3 md:gap-4">
-                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
-                  const positionPlayers = optimalTeam.squad.filter(player => {
-                    const pos = player.position;
-                    if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
-                    if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
-                    if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
-                    if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
-                    return false;
-                  });
+                {!unlimitedBudget && (
+                  <div className="space-y-2">
+                    <Label htmlFor="budget" className="text-sm font-medium">
+                      Budget Constraint (£m)
+                    </Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      value={budgetConstraint}
+                      onChange={(e) => setBudgetConstraint(parseFloat(e.target.value) || 100)}
+                      min="50"
+                      max="200"
+                      step="0.1"
+                      className="w-full sm:w-32"
+                      data-testid="input-budget"
+                    />
+                  </div>
+                )}
+              </div>
 
-                  return (
-                    <div key={position}>
-                      <div className="flex items-center gap-2 mb-2 md:mb-3">
-                        <Badge variant="secondary" className="text-xs md:text-sm">{position}s ({positionPlayers.length})</Badge>
+              {/* Player Inclusion/Exclusion - Mobile Optimized */}
+              <div className="space-y-4 p-3 md:p-4 bg-muted/20 rounded-lg border">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="h-4 w-4" />
+                  <h3 className="text-sm font-medium">Player Constraints</h3>
+                </div>
+
+                {/* Players to Include */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-green-700 dark:text-green-400">
+                    Players to Include (Must Have)
+                  </Label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {includedPlayers.map((player) => (
+                      <Badge
+                        key={player.playerId}
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                      >
+                        {playerIdToWebName.get(player.playerId) || player.playerName}
+                        <X
+                          className="h-3 w-3 cursor-pointer hover:text-green-600"
+                          onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-start">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add players to include
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search players..."
+                          onValueChange={() => {
+                            if (includeListRef.current) {
+                              includeListRef.current.scrollTop = 0;
+                            }
+                          }}
+                        />
+                        <CommandList ref={includeListRef} className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No players found.</CommandEmpty>
+                          <CommandGroup>
+                            {snapshots
+                              .filter(player =>
+                                !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                                !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                              )
+                              .sort((a, b) => a.playerName.localeCompare(b.playerName))
+                              .map((player) => (
+                                <CommandItem
+                                  key={player.playerId}
+                                  value={playerIdToSearchKey.get(player.playerId) || player.playerName}
+                                  onSelect={() => {
+                                    setIncludedPlayers(prev => [...prev, player]);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div>
+                                      <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                      <span className="text-sm text-muted-foreground ml-2">
+                                        {player.teamName} - {player.position}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">
+                                      £{player.price}m
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    These players will definitely be included in your squad
+                  </p>
+                </div>
+
+                {/* Players to Exclude */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-red-700 dark:text-red-400">
+                    Players to Exclude (Avoid)
+                  </Label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {excludedPlayers.map((player) => (
+                      <Badge
+                        key={player.playerId}
+                        variant="secondary"
+                        className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
+                      >
+                        {playerIdToWebName.get(player.playerId) || player.playerName}
+                        <X
+                          className="h-3 w-3 cursor-pointer hover:text-red-600"
+                          onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-start">
+                        <X className="h-4 w-4 mr-2" />
+                        Add players to exclude
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search players..."
+                          onValueChange={() => {
+                            if (excludeListRef.current) {
+                              excludeListRef.current.scrollTop = 0;
+                            }
+                          }}
+                        />
+                        <CommandList ref={excludeListRef} className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No players found.</CommandEmpty>
+                          <CommandGroup>
+                            {snapshots
+                              .filter(player =>
+                                !includedPlayers.some(ip => ip.playerId === player.playerId) &&
+                                !excludedPlayers.some(ep => ep.playerId === player.playerId)
+                              )
+                              .sort((a, b) => a.playerName.localeCompare(b.playerName))
+                              .map((player) => (
+                                <CommandItem
+                                  key={player.playerId}
+                                  value={playerIdToSearchKey.get(player.playerId) || player.playerName}
+                                  onSelect={() => {
+                                    setExcludedPlayers(prev => [...prev, player]);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div>
+                                      <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                      <span className="text-sm text-muted-foreground ml-2">
+                                        {player.teamName} - {player.position}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">
+                                      £{player.price}m
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    These players will never be included in your squad
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                <Button
+                  onClick={optimizeTeam}
+                  disabled={isOptimizing || isLoading || snapshots.length === 0}
+                  className="flex items-center gap-2"
+                  data-testid="button-optimize-team"
+                >
+                  {isOptimizing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Optimizing...
+                    </>
+                  ) : isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Loading Data...
+                    </>
+                  ) : (
+                    <>
+                      <Star className="h-4 w-4" />
+                      {variant === 'embedded' ? 'Optimize My Team' : 'Optimize Wildcard Team'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+        if (variant === 'page') {
+          return (
+            <>
+              {/* Controls */}
+              {controlsCard}
+
+              {/* Results */}
+              {optimalTeam && (
+                <div className="space-y-6">
+                  {/* Full Squad - First */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Zap className="h-5 w-5" />
+                        Set & Forget Squad (15 Players)
+                      </CardTitle>
+                      <CardDescription>
+                        Your best wildcard squad for the entire {gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Summary Stats - Single line on mobile */}
+                      <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+                        <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <span className="text-sm font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</span>
+                              <span className="text-xs text-muted-foreground ml-1">pts</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-bold text-orange-600">{optimalTeam.squad.length}</span>
+                              <span className="text-xs text-muted-foreground ml-1">players</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="hidden md:block text-center">
+                          <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
+                          <div className="text-sm text-muted-foreground">Total Points</div>
+                        </div>
+                        <div className="hidden md:block text-center">
+                          <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
+                          <div className="text-sm text-muted-foreground">Team Value</div>
+                        </div>
+                        <div className="hidden md:block text-center">
+                          <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
+                          <div className="text-sm text-muted-foreground">Squad Size</div>
+                        </div>
                       </div>
-                      <div className="grid gap-1 md:gap-2">
-                        {positionPlayers.map((player) => {
-                          const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
+                      <Separator className="mb-4" />
+
+                      <div className="grid gap-3 md:gap-4">
+                        {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
+                          const positionPlayers = optimalTeam.squad.filter(player => {
+                            const pos = player.position;
+                            if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
+                            if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
+                            if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
+                            if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
+                            return false;
+                          });
+
                           return (
-                            <div
-                              key={player.playerId}
-                              className={`flex items-center justify-between p-2 md:p-3 rounded-lg border ${
-                                isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                                <div className="min-w-0 flex-1">
-                                  <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
-                                    <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                                    {isStarter && (
-                                      <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
-                                    )}
-                                  </div>
-                                  <div className="text-xs md:text-sm text-muted-foreground">
-                                    {player.teamName} • {player.position}
-                                  </div>
-                                </div>
+                            <div key={position}>
+                              <div className="flex items-center gap-2 mb-2 md:mb-3">
+                                <Badge variant="secondary" className="text-xs md:text-sm">{position}s ({positionPlayers.length})</Badge>
                               </div>
-                              <div className="text-right flex-shrink-0">
-                                <div className="font-medium text-sm md:text-base">£{player.price}m</div>
-                                <div className="text-xs md:text-sm text-muted-foreground">
-                                  {player.totalProjectedPoints.toFixed(1)} xPts
-                                </div>
-                                <div className="text-xs text-purple-600">
-                                  ({endGameweek - startGameweek + 1} GWs)
-                                </div>
+                              <div className="grid gap-1 md:gap-2">
+                                {positionPlayers.map((player) => {
+                                  const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
+                                  return (
+                                    <div
+                                      key={player.playerId}
+                                      className={`flex items-center justify-between p-2 md:p-3 rounded-lg border ${
+                                        isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                                            <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                                            {isStarter && (
+                                              <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
+                                            )}
+                                          </div>
+                                          <div className="text-xs md:text-sm text-muted-foreground">
+                                            {player.teamName} • {player.position}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                        <div className="font-medium text-sm md:text-base">£{player.price}m</div>
+                                        <div className="text-xs md:text-sm text-muted-foreground">
+                                          {player.totalProjectedPoints.toFixed(1)} xPts
+                                        </div>
+                                        <div className="text-xs text-purple-600">
+                                          ({endGameweek - startGameweek + 1} GWs)
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Gameweek-by-Gameweek Breakdown */}
+                  {optimalTeam.gameweekBreakdown && optimalTeam.gameweekBreakdown.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Weekly Lineup Optimization
+                        </CardTitle>
+                        <CardDescription>
+                          Using the 15-player squad above, this shows the best starting XI and captain pick for each gameweek based on fixtures and form.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Tabs defaultValue={optimalTeam.gameweekBreakdown[0]?.gameweek.toString()} className="w-full">
+                          <TabsList className="grid w-full grid-cols-6">
+                            {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                              <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                                GW{gameweekTeam.gameweek}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                          {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                            <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                              {renderGameweekPitch(gameweekTeam, optimalTeam.squad)}
+                            </TabsContent>
+                          ))}
+                        </Tabs>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </>
+          );
+        }
 
-          {/* Gameweek-by-Gameweek Breakdown */}
-          {optimalTeam && optimalTeam.gameweekBreakdown && optimalTeam.gameweekBreakdown.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Weekly Lineup Optimization
-                </CardTitle>
-                <CardDescription>
-                  Using the 15-player squad above, this shows the best starting XI and captain pick for each gameweek based on fixtures and form.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="6" className="w-full">
-                  <TabsList className="grid w-full grid-cols-6">
-                    {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                      <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
-                        GW{gameweekTeam.gameweek}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  
-                  {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                    <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
-                      <div className="space-y-4">
-                    {/* Summary - Uniform styling */}
-                    <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className="font-medium text-purple-600 dark:text-purple-400">{gameweekTeam.formation}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="font-medium">{gameweekTeam.gameweekPoints.toFixed(1)} pts</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Crown className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
-                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Shield className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
-                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {(() => {
-                      const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
-                      const starting = [...gameweekTeam.starting11].sort((a, b) => {
-                        const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
-                        return order !== 0 ? order : getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek);
-                      });
-                      const bench = optimalTeam.squad.filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId));
-                      const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
-                      const benchOutfield = bench
-                        .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
-                        .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
-                      const orderedBench = [...benchGK, ...benchOutfield];
-
-                      const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
-                        toPitchPlayer(player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId, getGameweekPoints(player, gameweekTeam.gameweek))
-                      );
-                      const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
-                        toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, gameweekTeam.gameweek))
-                      );
-
-                      return (
-                        <div className="-mx-4 md:-mx-6">
-                          <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
-                        </div>
-                      );
-                    })()}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </CardContent>
-          </Card>
-          )}
-
-        </div>
-      )}
+        // Embedded variant: config on the left third, squad tabs (Set & Forget + one per
+        // gameweek) on the right two-thirds — the "Set & Forget" tab reuses the same aggregate
+        // squad view the page variant shows as its own Card.
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-1">
+              {controlsCard}
+            </div>
+            {optimalTeam && (
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5" />
+                      Your Squad
+                    </CardTitle>
+                    <CardDescription>
+                      "Set & Forget" is your best squad for the entire {gameweekRange} horizon. Each GW tab shows the best starting XI and captain pick for that specific gameweek.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="set-forget" className="w-full">
+                      <TabsList className="flex w-full flex-wrap h-auto">
+                        <TabsTrigger value="set-forget">Set & Forget</TabsTrigger>
+                        {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                          <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                            GW{gameweekTeam.gameweek}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      <TabsContent value="set-forget">
+                        {renderAggregateSquad(optimalTeam)}
+                      </TabsContent>
+                      {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                        <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                          {renderGameweekPitch(gameweekTeam, optimalTeam.squad)}
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
