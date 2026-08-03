@@ -12651,6 +12651,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const { getLastSeasonPlayerRow, lastSeasonMinutesPerStart, getLeagueAverageRates } = await import('./player-history-blend-service');
         const leagueAverageMinutes = await getLeagueAverageRates();
+        const { PROMOTED_TEAM_PLAYER_LAST_SEASON } = await import('./team-goals-service');
+        const promotedTeamNamesForMinutes = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
         // Bulk-load player histories from DB cache (set at startup; avoids 515 external API calls)
         const { getBulkPlayerHistories, computeRecentMetrics } = await import('./player-history-service');
@@ -12713,15 +12715,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // New to the league this season (promoted-team squads, new signings, academy
               // graduates) — player.minutes/starts are genuinely 0, so there's no history to
               // fetch. Blend their 2025/26 minutes-per-start rate (matched by name+position
-              // across the season's id reassignment), falling back to the position
-              // league-average for anyone with no PL history at all — instead of silently
-              // projecting 0 expected minutes (which previously zeroed out clean sheets and
-              // goals-conceded points downstream too).
+              // across the season's id reassignment), falling back to a league-average rate for
+              // anyone with no PL history at all — instead of silently projecting 0 expected
+              // minutes (which previously zeroed out clean sheets and goals-conceded points
+              // downstream too). The league-average fallback itself depends on whether the
+              // player's current club was promoted: a promoted club's whole squad is equally
+              // new to the top flight and most of them do feature at some point, so we use the
+              // average minutes per actual appearance (>=1 min) — "when they play, how long do
+              // they last." A name-unmatched player at an established club is much more likely a
+              // genuine fringe/reserve signing who may never feature at all, so we use the average
+              // across every registered player at that position, played or not — correctly
+              // reflecting that most such players contribute nothing.
               if (totalMinutes === 0 && playerStarts === 0) {
                 const positionCode = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
                 const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
                 const lastSeasonRate = lastSeasonRow ? lastSeasonMinutesPerStart(lastSeasonRow) : undefined;
-                avgMinutesPerGame = lastSeasonRate ?? leagueAverageMinutes.minutesPerStartByPosition[positionCode] ?? 75;
+                const isPromotedTeam = promotedTeamNamesForMinutes.has(team?.name || '');
+                const leagueFallback = isPromotedTeam
+                  ? leagueAverageMinutes.minutesPerGamePlayedByPosition[positionCode]
+                  : leagueAverageMinutes.minutesAllPlayersByPosition[positionCode];
+                avgMinutesPerGame = lastSeasonRate ?? leagueFallback ?? 75;
                 // Use the full confidence-threshold appearance count — this is a deliberate
                 // estimate (last-season rate or position average), not noisy small-sample data,
                 // so it shouldn't also get dampened by the low-appearances confidence factor below.

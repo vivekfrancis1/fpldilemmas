@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingExperience } from "@/components/loading-experience";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
@@ -122,11 +121,12 @@ export default function BestWildcardTeam() {
   }, [bootstrapData]);
 
   // State for gameweek horizon selection
-  const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
-  
+  const [gameweekHorizon, setGameweekHorizon] = useState<number>(5);
+
   // Calculate dynamic gameweek range based on selected horizon
   const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
   const startGameweek = currentGameweek + 1;
+  const maxGameweekHorizon = Math.max(1, 38 - startGameweek + 1); // Can't optimize past GW38
   const endGameweek = Math.min(startGameweek + gameweekHorizon - 1, 38); // Based on selected horizon, max GW38
 
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -1297,24 +1297,25 @@ export default function BestWildcardTeam() {
               Optimization Horizon
             </Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Select how many gameweeks ahead to optimize your wildcard team
+              Enter how many gameweeks ahead to optimize your wildcard team (1-{maxGameweekHorizon}, default 5)
             </p>
-            <Select 
-              value={gameweekHorizon.toString()} 
-              onValueChange={(value) => setGameweekHorizon(parseInt(value))}
-            >
-              <SelectTrigger id="gameweek-horizon" className="w-full sm:w-48" data-testid="select-gameweek-horizon">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="6">Next 6 Gameweeks</SelectItem>
-                <SelectItem value="8">Next 8 Gameweeks</SelectItem>
-                <SelectItem value="10">Next 10 Gameweeks</SelectItem>
-                <SelectItem value="12">Next 12 Gameweeks</SelectItem>
-                <SelectItem value="20">Next 20 Gameweeks</SelectItem>
-                <SelectItem value="38">Rest of Season (up to GW38)</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Input
+                id="gameweek-horizon"
+                type="number"
+                min={1}
+                max={maxGameweekHorizon}
+                value={gameweekHorizon}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value);
+                  if (Number.isNaN(parsed)) return;
+                  setGameweekHorizon(Math.min(maxGameweekHorizon, Math.max(1, parsed)));
+                }}
+                className="w-full sm:w-32"
+                data-testid="input-gameweek-horizon"
+              />
+              <span className="text-sm text-muted-foreground">gameweeks (GW{startGameweek}-{endGameweek})</span>
+            </div>
           </div>
 
           {/* Optimization Mode - Mobile Optimized */}

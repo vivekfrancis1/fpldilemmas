@@ -91,6 +91,57 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
   }
 }
 
+interface GameweekAppearance {
+  elementType: number;
+  minutes: number;
+  starts: number;
+}
+
+let lastSeasonGameweeksCache: GameweekAppearance[] | null = null;
+let lastSeasonGameweeksInFlight: Promise<GameweekAppearance[]> | null = null;
+
+/**
+ * Every 2025/26 gameweek row (one per player per gameweek they were in the matchday squad
+ * for), joined to season_player_snapshot for element_type. Unlike fetchLastSeasonPlayers'
+ * season totals, this preserves per-appearance granularity — needed to tell "minutes earned
+ * while starting" apart from "minutes earned as a substitute," which a season-total minutes/
+ * starts ratio conflates (a squad player's occasional late-sub cameos inflate their apparent
+ * per-start average, since those sub minutes count toward total minutes but not toward starts).
+ */
+async function fetchLastSeasonGameweeks(): Promise<GameweekAppearance[]> {
+  if (lastSeasonGameweeksCache) return lastSeasonGameweeksCache;
+  if (lastSeasonGameweeksInFlight) return lastSeasonGameweeksInFlight;
+
+  lastSeasonGameweeksInFlight = (async () => {
+    try {
+      const result = await pool.query(
+        `SELECT sps.element_type, gpd.minutes, gpd.starts
+         FROM gameweek_player_data gpd
+         JOIN season_player_snapshot sps ON sps.season = gpd.season AND sps.player_id = gpd.player_id
+         WHERE gpd.season = $1`,
+        [LAST_SEASON]
+      );
+      const rows: GameweekAppearance[] = result.rows.map((r: any) => ({
+        elementType: r.element_type,
+        minutes: r.minutes || 0,
+        starts: r.starts || 0,
+      }));
+      lastSeasonGameweeksCache = rows;
+      return rows;
+    } catch (error) {
+      console.error("Failed to fetch last-season gameweek appearances for blending:", error);
+      lastSeasonGameweeksCache = [];
+      return [];
+    }
+  })();
+
+  try {
+    return await lastSeasonGameweeksInFlight;
+  } finally {
+    lastSeasonGameweeksInFlight = null;
+  }
+}
+
 let nameLookupCache: Map<string, LastSeasonPlayerRow> | null = null;
 
 async function getNameLookup(): Promise<Map<string, LastSeasonPlayerRow>> {
@@ -176,6 +227,8 @@ let leagueAveragesCache: {
   assistsPer90ByPosition: Record<string, number>;
   xaPer90ByPosition: Record<string, number>;
   minutesPerStartByPosition: Record<string, number>;
+  minutesPerGamePlayedByPosition: Record<string, number>;
+  minutesAllPlayersByPosition: Record<string, number>;
 } | null = null;
 
 /**
@@ -187,8 +240,30 @@ let leagueAveragesCache: {
 export async function getLeagueAverageRates() {
   if (leagueAveragesCache) return leagueAveragesCache;
   const rows = await fetchLastSeasonPlayers();
+  const gameweeks = await fetchLastSeasonGameweeks();
 
   const withMinutes = rows.filter(r => r.minutes > 0);
+
+  // Average minutes/game across every registered player at a position, whether they ever
+  // played or not (season-total minutes / 38 games, averaged per player) — the fallback for
+  // "new" players at an established (non-promoted) club, where most name-unmatched players
+  // really are fringe squad members who may never feature at all, not surprise starters.
+  const avgMinutesAllPlayers = (filtered: LastSeasonPlayerRow[]) => {
+    if (filtered.length === 0) return 0;
+    const total = filtered.reduce((sum, r) => sum + r.minutes / 38, 0);
+    return total / filtered.length;
+  };
+
+  // Average minutes per actual appearance (start or sub) with >=1 minute, computed from
+  // per-gameweek rows rather than season totals — the fallback for "new" players at a
+  // promoted club, where the whole squad is equally new to the top flight and most of them
+  // do feature at some point; this answers "when they play, how long do they typically last"
+  // without assuming a guaranteed full 90 (the old, buggy season-total-based per-start figure).
+  const avgMinutesPerGamePlayed = (elementType: number) => {
+    const appeared = gameweeks.filter(g => g.elementType === elementType && g.minutes >= 1);
+    if (appeared.length === 0) return 0;
+    return appeared.reduce((sum, g) => sum + g.minutes, 0) / appeared.length;
+  };
   const avgPer90 = (filtered: LastSeasonPlayerRow[], statTotal: (r: LastSeasonPlayerRow) => number) => {
     const totalMinutes = filtered.reduce((sum, r) => sum + r.minutes, 0);
     const totalStat = filtered.reduce((sum, r) => sum + statTotal(r), 0);
@@ -260,6 +335,18 @@ export async function getLeagueAverageRates() {
       DEF: avgMinutesPerStart(defs),
       MID: avgMinutesPerStart(mids),
       FWD: avgMinutesPerStart(fwds),
+    },
+    minutesPerGamePlayedByPosition: {
+      GKP: avgMinutesPerGamePlayed(1),
+      DEF: avgMinutesPerGamePlayed(2),
+      MID: avgMinutesPerGamePlayed(3),
+      FWD: avgMinutesPerGamePlayed(4),
+    },
+    minutesAllPlayersByPosition: {
+      GKP: avgMinutesAllPlayers(rows.filter(r => r.elementType === 1)),
+      DEF: avgMinutesAllPlayers(rows.filter(r => r.elementType === 2)),
+      MID: avgMinutesAllPlayers(rows.filter(r => r.elementType === 3)),
+      FWD: avgMinutesAllPlayers(rows.filter(r => r.elementType === 4)),
     },
   };
   return leagueAveragesCache;
