@@ -18,6 +18,9 @@ import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonBadge } from "@/components/season-badge";
+import { getPreseasonDraft } from "@/lib/preseason-draft-cache";
+import { draftToFplPicks } from "@/lib/draft-to-fpl-picks";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TeamPick {
   element: number;
@@ -39,6 +42,12 @@ export default function TransferRecommendations() {
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Pre-season "GW1 draft" fallback — used only when this Manager ID's real squad isn't
+  // available from FPL yet (SEASON_NOT_STARTED). Read once; re-run the optimizer + re-save to
+  // update it.
+  const [cachedDraft] = useState(() => getPreseasonDraft());
+  const [usingDraftFallback, setUsingDraftFallback] = useState(false);
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -73,14 +82,39 @@ export default function TransferRecommendations() {
   // Determine which endpoint to use (with fallback for expired sessions)
   const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
 
+  // Fetch bootstrap data
+  const { data: bootstrapData, isLoading: isLoadingBootstrap, error: bootstrapError } = useQuery<any>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 15 * 60 * 1000,
+  });
+
   // Fetch recommended transfers - use authenticated endpoint for own team (shows GW 13 unconfirmed data)
-  // Fall back to public endpoint if session expired (GW 12 confirmed data)
+  // Fall back to public endpoint if session expired (GW 12 confirmed data). When this Manager ID's
+  // real squad isn't available yet (pre-season) and a saved GW1 draft exists, fall back further to
+  // that draft — POSTing it as `authenticatedPicks`, the same bypass the public endpoint already
+  // supports for the "own team via FPL Connect" flow.
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
-    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/recommended-transfers"] : ["/api/manager", searchedId, "recommended-transfers"],
+    queryKey: usingDraftFallback
+      ? ["/api/manager", searchedId, "recommended-transfers", "draft-fallback"]
+      : (shouldUseAuthenticatedEndpoint ? ["/api/fpl/recommended-transfers"] : ["/api/manager", searchedId, "recommended-transfers"]),
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false, // Don't auto-retry if FPL session expired
+    queryFn: async () => {
+      if (usingDraftFallback && cachedDraft && bootstrapData) {
+        const picks = draftToFplPicks(cachedDraft, bootstrapData);
+        const bank = 1000 - Math.round(cachedDraft.totalValue * 10);
+        const res = await apiRequest('POST', `/api/manager/${searchedId}/recommended-transfers`, {
+          authenticatedPicks: picks,
+          authenticatedBank: bank,
+        });
+        return res.json();
+      }
+      const url = shouldUseAuthenticatedEndpoint ? '/api/fpl/recommended-transfers' : `/api/manager/${searchedId}/recommended-transfers`;
+      const res = await apiRequest('GET', url);
+      return res.json();
+    },
   });
 
   // Handle FPL session expiry - fall back to public endpoint
@@ -91,11 +125,14 @@ export default function TransferRecommendations() {
     }
   }, [recommendationsError, shouldUseAuthenticatedEndpoint, searchedId]);
 
-  // Fetch bootstrap data
-  const { data: bootstrapData, isLoading: isLoadingBootstrap, error: bootstrapError } = useQuery<any>({
-    queryKey: ["/api/bootstrap-static"],
-    staleTime: 15 * 60 * 1000,
-  });
+  // Fall back to the saved pre-season draft when this Manager ID's real squad isn't available
+  // yet (pre-season) and a draft has been saved via My Dashboard's "Create Your Optimised Team".
+  useEffect(() => {
+    if (!usingDraftFallback && searchedId && cachedDraft && isTeamNotAvailableError(recommendationsError)) {
+      console.log("📦 Real GW1 squad not available yet — falling back to saved pre-season draft");
+      setUsingDraftFallback(true);
+    }
+  }, [recommendationsError, searchedId, cachedDraft, usingDraftFallback]);
   
   // Debug bootstrap loading
   useEffect(() => {
@@ -107,10 +144,11 @@ export default function TransferRecommendations() {
     });
   }, [bootstrapData, isLoadingBootstrap, bootstrapError]);
 
-  // Fetch team data for current squad
+  // Fetch team data for current squad. Not needed once the draft fallback is active — the
+  // draft's own picks are used directly for display (see effectiveTeamPicks below).
   const { data: teamData } = useQuery<any>({
     queryKey: ["/api/manager", searchedId, "team"],
-    enabled: !!searchedId,
+    enabled: !!searchedId && !usingDraftFallback,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -142,8 +180,11 @@ export default function TransferRecommendations() {
   // Backend now applies availability adjustments, so we just use the data as-is
   const adjustedRecommendations = recommendedTransfers;
   
-  // Use authenticated team picks if available (includes pending transfers), otherwise fall back to public team data
-  const effectiveTeamPicks = adjustedRecommendations?.authenticatedTeamPicks || teamData?.picks;
+  // Use authenticated team picks if available (includes pending transfers), otherwise fall back to
+  // public team data — or, pre-season with no real squad yet, the saved GW1 draft.
+  const effectiveTeamPicks = (usingDraftFallback && cachedDraft && bootstrapData)
+    ? draftToFplPicks(cachedDraft, bootstrapData)
+    : (adjustedRecommendations?.authenticatedTeamPicks || teamData?.picks);
 
   // Helper function to get opponent info for a player in a given gameweek
   const getOpponentInfo = (playerTeamId: number, gameweek: number): string => {
@@ -801,6 +842,17 @@ export default function TransferRecommendations() {
             </Alert>
           );
         })()}
+
+        {/* Using the saved pre-season draft instead of a real (not-yet-available) squad */}
+        {usingDraftFallback && !recommendationsError && (
+          <Alert className="bg-purple-50 border-purple-200">
+            <AlertCircle className="h-4 w-4 text-purple-700" />
+            <AlertDescription className="text-purple-800">
+              Manager {searchedId}'s GW1 squad isn't available from FPL yet — showing recommendations
+              based on your saved "Create Your Optimised Team" draft instead.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Error state — covers both the authenticated-endpoint-with-failed-fallback case and
             plain public Manager ID lookups (which never set useFallbackEndpoint, so without this

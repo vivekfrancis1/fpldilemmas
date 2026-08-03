@@ -1365,6 +1365,37 @@ export default function MyDashboard() {
           </div>
         </div>
 
+        {/* Pre-season "Create Optimised Team" — only relevant before GW1 kicks off */}
+        {bootstrapData && currentGameweek === 0 && (
+          <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
+            <CardHeader className="cursor-pointer" onClick={() => setShowPreseasonOptimizer(prev => !prev)}>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    Create Your Optimised Team
+                  </CardTitle>
+                  <CardDescription>
+                    GW1 hasn't started yet — build your ideal £100m squad for the new season, choosing how many gameweeks to optimise for and which players to include or exclude.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  {showPreseasonOptimizer ? (
+                    <>Hide <ChevronUp className="h-4 w-4 ml-1" /></>
+                  ) : (
+                    <>Build My Team <ChevronDown className="h-4 w-4 ml-1" /></>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            {showPreseasonOptimizer && (
+              <CardContent>
+                <WildcardOptimizer variant="embedded" defaultUnlimitedBudget={false} defaultBudget={100} defaultHorizon={5} allowSaveAsDraft />
+              </CardContent>
+            )}
+          </Card>
+        )}
+
         {/* Manager Search Section - Compact */}
         <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
           <CardContent className="p-2 sm:p-3 space-y-2">
@@ -1500,37 +1531,6 @@ export default function MyDashboard() {
             )}
           </CardContent>
         </Card>
-
-        {/* Pre-season "Create Optimised Team" — only relevant before GW1 kicks off */}
-        {bootstrapData && currentGameweek === 0 && (
-          <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
-            <CardHeader className="cursor-pointer" onClick={() => setShowPreseasonOptimizer(prev => !prev)}>
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
-                    Create Your Optimised Team
-                  </CardTitle>
-                  <CardDescription>
-                    GW1 hasn't started yet — build your ideal £100m squad for the new season, choosing how many gameweeks to optimise for and which players to include or exclude.
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {showPreseasonOptimizer ? (
-                    <>Hide <ChevronUp className="h-4 w-4 ml-1" /></>
-                  ) : (
-                    <>Build My Team <ChevronDown className="h-4 w-4 ml-1" /></>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            {showPreseasonOptimizer && (
-              <CardContent>
-                <WildcardOptimizer variant="embedded" defaultUnlimitedBudget={false} defaultBudget={100} defaultHorizon={5} />
-              </CardContent>
-            )}
-          </Card>
-        )}
 
         {/* Error State */}
         {error && (

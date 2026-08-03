@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw } from "lucide-react";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw, Save, CheckCircle2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
 import { useToast } from "@/hooks/use-toast";
+import { savePreseasonDraft, getPreseasonDraft } from "@/lib/preseason-draft-cache";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -90,6 +91,8 @@ interface WildcardOptimizerProps {
   defaultUnlimitedBudget?: boolean;
   defaultBudget?: number;
   defaultHorizon?: number;
+  /** Shows a "Save as My GW1 Team" button on the Set & Forget squad — only meaningful pre-season. */
+  allowSaveAsDraft?: boolean;
 }
 
 export function WildcardOptimizer({
@@ -97,8 +100,10 @@ export function WildcardOptimizer({
   defaultUnlimitedBudget = true,
   defaultBudget = 100,
   defaultHorizon = 5,
+  allowSaveAsDraft = false,
 }: WildcardOptimizerProps = {}) {
   const { toast } = useToast();
+  const [savedDraftAt, setSavedDraftAt] = useState<string | null>(() => getPreseasonDraft()?.savedAt ?? null);
 
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery({
@@ -1421,6 +1426,44 @@ export function WildcardOptimizer({
                   <div className="text-sm text-muted-foreground">Squad Size</div>
                 </div>
               </div>
+
+              {allowSaveAsDraft && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="text-sm text-purple-900 dark:text-purple-200">
+                    {savedDraftAt
+                      ? <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-600" /> Saved as your GW1 team {new Date(savedDraftAt).toLocaleString()}</span>
+                      : "Ready to use this squad as your GW1 team?"}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={savedDraftAt ? "outline" : "default"}
+                    onClick={() => {
+                      if (team.totalValue > 100) {
+                        toast({
+                          variant: "destructive",
+                          title: "Squad exceeds £100m",
+                          description: "A real FPL squad can never cost more than £100m. Turn on the budget limit and re-optimize before saving.",
+                        });
+                        return;
+                      }
+                      const players = [...starting, ...orderedBench].map(player => ({
+                        playerId: player.playerId,
+                        isStarting: starting.some(s => s.playerId === player.playerId),
+                        isCaptain: player.playerId === team.captain.playerId,
+                        isViceCaptain: player.playerId === team.viceCaptain.playerId,
+                      }));
+                      savePreseasonDraft({ players, totalValue: team.totalValue });
+                      setSavedDraftAt(new Date().toISOString());
+                      toast({ title: "Saved as your GW1 team!", description: "Recommended Transfers and Transfer Planner will use this squad until your real GW1 team is available." });
+                    }}
+                    data-testid="button-save-preseason-draft"
+                  >
+                    <Save className="h-4 w-4 mr-1.5" />
+                    {savedDraftAt ? "Update My GW1 Team" : "Save as My GW1 Team"}
+                  </Button>
+                </div>
+              )}
+
               <div className="-mx-4 md:-mx-6">
                 <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
               </div>
