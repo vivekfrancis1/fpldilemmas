@@ -900,8 +900,15 @@ export class DatabaseStorage implements IStorage {
           ict_index: player.ictIndex,
           // Add commonly needed fields with calculated values for historical data
           form: enriched?.form ?? this.calculateHistoricalForm(player.totalPoints || 0, player.minutes || 0),
-          points_per_game: player.totalPoints && player.minutes ?
-            ((player.totalPoints / (player.minutes / 90)) || 0).toFixed(1) : "0.0",
+          // Real games-played (starts) is only available for 2025/26 via the enrichment above —
+          // older historical seasons have no reliable per-player appearance count, so this used
+          // to fall back to (minutes / 90) as a fake "games played" proxy, which is actually
+          // "points per 90 minutes" and collapses to ~90 for any low-minute player whose points
+          // roughly equal their minutes (e.g. a 2-minute sub who earns the 2-point appearance
+          // bonus). Showing "—" for those seasons is more honest than a wrong number.
+          points_per_game: enriched?.starts
+            ? ((player.totalPoints || 0) / enriched.starts).toFixed(1)
+            : "—",
           selected_by_percent: enriched?.selectedByPercent ?? "0.0", // Only available for 2025/26
           now_cost: player.endCost || player.startCost || 0,
           value_form: enriched?.valueForm ?? "0.0", // Only available for 2025/26

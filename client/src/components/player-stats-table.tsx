@@ -502,8 +502,14 @@ export default function PlayerStatsTable({
         return <span className="text-yellow-600">{calculateStat(player, getCbitPoints(player)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
       case 'value_season':
         return <span className="text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</span>;
-      case 'points_per_game':
+      case 'points_per_game': {
+        // Older historical seasons have no reliable per-player appearances count, so the server
+        // returns "—" instead of a number for those (see server/storage.ts getHistoricalPlayers).
+        if (player.points_per_game === '—') {
+          return <span className="text-gray-400">—</span>;
+        }
         return <span className="text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</span>;
+      }
       case 'form':
         return <span className="text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</span>;
       case 'selected_by_percent':
@@ -968,9 +974,9 @@ export default function PlayerStatsTable({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="totals">Totals</SelectItem>
-                <SelectItem value="per_match">Average per match</SelectItem>
+                <SelectItem value="per_match">Average per appearance</SelectItem>
                 <SelectItem value="per_start">Average per start</SelectItem>
-                <SelectItem value="per_90">Average per 90 mins</SelectItem>
+                <SelectItem value="per_90">Average per 90 mins played</SelectItem>
               </SelectContent>
             </Select>
             <Select value={venueFilter} onValueChange={(value: any) => setVenueFilter(value)}>
