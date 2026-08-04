@@ -133,6 +133,14 @@ export default function TransferRecommendations() {
       setUsingDraftFallback(true);
     }
   }, [recommendationsError, searchedId, cachedDraft, usingDraftFallback]);
+
+  // While a saved draft exists and hasn't been tried yet, the team-fetch can pass through 2-3
+  // intermediate failed attempts (authenticated endpoint, then public endpoint) before the
+  // effect above switches to the draft — each of those produces a real (but transient) error
+  // that would otherwise flash a session/error banner on screen for a moment. Treat that whole
+  // window as "still loading" instead, so only one stable state change is visible: loading ->
+  // (draft success or a real final failure).
+  const pendingDraftFallback = !!cachedDraft && !usingDraftFallback && !!recommendationsError;
   
   // Debug bootstrap loading
   useEffect(() => {
@@ -806,7 +814,7 @@ export default function TransferRecommendations() {
         </Card>
 
         {/* Session expiry notification for logged-in users */}
-        {useFallbackEndpoint && isOwnTeam && (() => {
+        {useFallbackEndpoint && isOwnTeam && !pendingDraftFallback && (() => {
           const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
           const upcomingGW = currentGW + 1;
           
@@ -856,8 +864,10 @@ export default function TransferRecommendations() {
 
         {/* Error state — covers both the authenticated-endpoint-with-failed-fallback case and
             plain public Manager ID lookups (which never set useFallbackEndpoint, so without this
-            the page previously rendered nothing at all when the request failed). */}
-        {recommendationsError && !isLoadingRecommendations && (
+            the page previously rendered nothing at all when the request failed). Suppressed while
+            a saved draft still needs to be tried (see pendingDraftFallback above) so a transient
+            intermediate failure doesn't flash on screen. */}
+        {recommendationsError && !isLoadingRecommendations && !pendingDraftFallback && (
           <Alert variant={isTeamNotAvailableError(recommendationsError) ? "default" : "destructive"}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -869,7 +879,7 @@ export default function TransferRecommendations() {
         )}
 
         {/* Loading state */}
-        {isLoadingRecommendations && searchedId && (
+        {(isLoadingRecommendations || pendingDraftFallback) && searchedId && (
           <LoadingExperience
             variant="analysis"
             title="Analyzing Your Team"

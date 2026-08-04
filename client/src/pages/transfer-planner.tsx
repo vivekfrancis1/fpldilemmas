@@ -1318,6 +1318,14 @@ export default function TransferPlanner() {
     }
   }, [teamDataError, searchedId, cachedDraft, usingDraftFallback]);
 
+  // While a saved draft exists and hasn't been tried yet, the team-fetch can pass through 2-3
+  // intermediate failed attempts (authenticated endpoint, then public endpoint) before the
+  // effect above switches to the draft — each of those produces a real (but transient) error
+  // that would otherwise flash a session/error banner on screen for a moment. Treat that whole
+  // window as "still loading" instead, so only one stable state change is visible: loading ->
+  // (draft success or a real final failure).
+  const pendingDraftFallback = !!cachedDraft && !usingDraftFallback && !!teamDataError;
+
   // Debug: log teamData.transfers when using authenticated endpoint
   useEffect(() => {
     if (isOwnTeam && teamData) {
@@ -6095,7 +6103,7 @@ export default function TransferPlanner() {
       </Card>
 
       {/* Session expiry notification for logged-in users */}
-      {useFallbackEndpoint && isOwnTeam && (() => {
+      {useFallbackEndpoint && isOwnTeam && !pendingDraftFallback && (() => {
         const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
         const upcomingGW = currentGW + 1;
         
@@ -6145,8 +6153,10 @@ export default function TransferPlanner() {
 
       {/* Error state — teamDataError was previously captured but never rendered, so a failed
           team fetch (e.g. pre-season, before a gameweek's deadline has passed) left the whole
-          page silently blank below the search bar. */}
-      {searchedId && !isLoadingTeam && teamDataError && (
+          page silently blank below the search bar. Suppressed while a saved draft still needs
+          to be tried (see pendingDraftFallback above) so a transient intermediate failure
+          doesn't flash on screen. */}
+      {searchedId && !isLoadingTeam && teamDataError && !pendingDraftFallback && (
         <Alert variant={isTeamNotAvailableError(teamDataError) ? "default" : "destructive"}>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
