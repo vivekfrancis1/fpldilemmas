@@ -24,6 +24,7 @@ import {
   LogOut,
   LogIn,
   User,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,6 +100,7 @@ const navSections: NavSection[] = [
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
       { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
       { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
+      { path: "/pick-team", label: "Pick Team", icon: UserPlus },
     ],
   },
 ];

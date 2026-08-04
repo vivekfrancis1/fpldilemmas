@@ -67,6 +67,7 @@ const PlayerBonusPoints = lazy(() => import("./pages/player-bonus-points"));
 const Login = lazy(() => import("./pages/login"));
 const CurrentStandings = lazy(() => import("./pages/current-standings"));
 const TransferPlanner = lazy(() => import("./pages/transfer-planner"));
+const PickTeam = lazy(() => import("./pages/pick-team"));
 const ProjectedPoints = lazy(() => import("./pages/projected-points"));
 const TeamOptimizer = lazy(() => import("./pages/team-optimizer"));
 const TransferRecommendations = lazy(() => import("./pages/transfer-recommendations"));
@@ -101,6 +102,7 @@ function Router() {
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/transfer-planner" component={TransferPlanner} />
+        <Route path="/pick-team" component={PickTeam} />
         <Route path="/league-analysis/:leagueId/:leagueName/:managerId" component={LeagueAnalysisPage} />
         <Route path="/recent-price-changes" component={RecentPriceChanges} />
         <Route path="/transfer-tracker" component={TransferTracker} />

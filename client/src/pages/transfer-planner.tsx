@@ -6146,7 +6146,7 @@ export default function TransferPlanner() {
           <AlertCircle className="h-4 w-4 text-purple-700" />
           <AlertDescription className="text-purple-800">
             Manager {searchedId}'s GW1 squad isn't available from FPL yet — planning from your
-            saved "Create Your Optimised Team" draft instead.
+            saved GW1 draft instead (from My Dashboard or Pick Team).
           </AlertDescription>
         </Alert>
       )}

@@ -23,7 +23,8 @@ import {
   UserCog,
   FileText,
   Activity,
-  CalendarRange
+  CalendarRange,
+  UserPlus
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
         { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
-        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
+        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false },
+        { path: "/pick-team", label: "Pick Team", icon: UserPlus, description: "Build a squad from scratch — no login or Manager ID needed", popular: false, mobileHidden: false }
       ]
     },
     ];
