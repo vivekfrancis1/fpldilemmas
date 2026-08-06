@@ -641,7 +641,7 @@ export class DatabaseStorage implements IStorage {
     defensiveContribution: number; defensiveContributionPoints: number;
     expectedGoals: string; expectedAssists: string; expectedGoalInvolvements: string; expectedGoalsConceded: string;
     tackles: number; recoveries: number; clearancesBlocksInterceptions: number; starts: number;
-    selectedByPercent: string; form: string; valueForm: string;
+    selectedByPercent: string; form: string; valueForm: string; pointsPerGame: string | null;
     savePoints: number; minutesPoints: number;
   }>> {
     const SEASON = "2025/26";
@@ -664,7 +664,7 @@ export class DatabaseStorage implements IStorage {
         [SEASON]
       ),
       pool.query(
-        `SELECT player_id, first_name, second_name, element_type, selected_by_percent, form, value_form
+        `SELECT player_id, first_name, second_name, element_type, selected_by_percent, form, value_form, points_per_game
          FROM season_player_snapshot WHERE season = $1`,
         [SEASON]
       ),
@@ -717,6 +717,7 @@ export class DatabaseStorage implements IStorage {
         selectedByPercent: snapshotRow?.selected_by_percent ?? "0.0",
         form: snapshotRow?.form ?? "0.0",
         valueForm: snapshotRow?.value_form ?? "0.0",
+        pointsPerGame: snapshotRow?.points_per_game ?? null,
         savePoints: 0,
         minutesPoints: 0,
       });
@@ -900,15 +901,18 @@ export class DatabaseStorage implements IStorage {
           ict_index: player.ictIndex,
           // Add commonly needed fields with calculated values for historical data
           form: enriched?.form ?? this.calculateHistoricalForm(player.totalPoints || 0, player.minutes || 0),
-          // Real games-played (starts) is only available for 2025/26 via the enrichment above —
-          // older historical seasons have no reliable per-player appearance count, so this used
-          // to fall back to (minutes / 90) as a fake "games played" proxy, which is actually
-          // "points per 90 minutes" and collapses to ~90 for any low-minute player whose points
-          // roughly equal their minutes (e.g. a 2-minute sub who earns the 2-point appearance
-          // bonus). Showing "—" for those seasons is more honest than a wrong number.
-          points_per_game: enriched?.starts
-            ? ((player.totalPoints || 0) / enriched.starts).toFixed(1)
-            : "—",
+          // FPL's own points_per_game (captured for 2025/26 via the holdover reconciliation) is
+          // preferred because its implicit denominator is true appearances (starts + sub
+          // cameos) — dividing by our own "starts" count instead would undercount anyone who
+          // came off the bench, and understate "matches played" downstream (that field is
+          // back-calculated from points_per_game). Older historical seasons have no reliable
+          // per-player appearance count at all — this used to fall back to (minutes / 90) as a
+          // fake "games played" proxy, which is actually "points per 90 minutes" and collapses
+          // to ~90 for any low-minute player whose points roughly equal their minutes (e.g. a
+          // 2-minute sub who earns the 2-point appearance bonus). Showing "—" for those seasons
+          // is more honest than a wrong number.
+          points_per_game: enriched?.pointsPerGame
+            ?? (enriched?.starts ? ((player.totalPoints || 0) / enriched.starts).toFixed(1) : "—"),
           selected_by_percent: enriched?.selectedByPercent ?? "0.0", // Only available for 2025/26
           now_cost: player.endCost || player.startCost || 0,
           value_form: enriched?.valueForm ?? "0.0", // Only available for 2025/26

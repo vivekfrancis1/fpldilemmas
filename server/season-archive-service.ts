@@ -1,6 +1,8 @@
 import { pool } from "./db";
 import { internalFetch } from "./config";
 import { FPLScoringCacheService } from "./fpl-scoring-cache-service";
+import { nameMatchKey } from "./player-history-blend-service";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 const CURRENT_SEASON = "2025/26";
 
@@ -30,6 +32,17 @@ export interface FixtureArchiveResult {
 export interface HistoricalStatsArchiveResult {
   season: string;
   playersArchived: number;
+  errors: string[];
+  durationMs: number;
+}
+
+export interface HoldoverReconciliationResult {
+  season: string;
+  playersUpdated: number;
+  playersUnmatched: number;
+  aborted: boolean;
+  abortReason?: string;
+  sample: Array<{ webName: string; before: { defensiveContribution: number; starts: number; minutes: number }; after: { defensiveContribution: number; starts: number; minutes: number } }>;
   errors: string[];
   durationMs: number;
 }
@@ -513,6 +526,177 @@ export class SeasonArchiveService {
     result.durationMs = Date.now() - start;
     console.log(`[SeasonArchive] Historical stats archive done: ${result.playersArchived} players for ${season}, ${result.errors.length} errors in ${result.durationMs}ms`);
     return result;
+  }
+
+  /**
+   * One-time correction: while a just-finished season's stats are still being held over by the
+   * live bootstrap-static endpoint (pre-season, before the new season's first gameweek goes
+   * live), FPL's own season-cumulative totals are authoritative and gap-free. Our own
+   * historical_player_stats rows for that season are instead SUMmed from gameweek_player_data,
+   * which can have incomplete weeks (a partial scrape gap, a postponed/rearranged fixture that
+   * didn't get re-collected, etc.) — this reconciles those SUM-derived columns against FPL's
+   * live holdover values via the same name-based crosswalk used elsewhere for this season, while
+   * that holdover window is still open. Only usable for the most recently completed season —
+   * once the new season's first gameweek goes live, bootstrap-static stops holding last season's
+   * data and this can no longer run (guarded by the currentGameweek/points-agreement checks below).
+   */
+  async reconcileFromLiveHoldover(season: string = CURRENT_SEASON): Promise<HoldoverReconciliationResult> {
+    const start = Date.now();
+    const result: HoldoverReconciliationResult = {
+      season, playersUpdated: 0, playersUnmatched: 0, aborted: false, sample: [], errors: [], durationMs: 0,
+    };
+
+    try {
+      const bsRes = await internalFetch("api/bootstrap-static");
+      if (!bsRes.ok) throw new Error(`bootstrap-static returned ${bsRes.status}`);
+      const bootstrap = await bsRes.json();
+
+      const currentGameweek = computeCurrentGameweek(bootstrap.events || []);
+      if (currentGameweek !== 0) {
+        result.aborted = true;
+        result.abortReason = `bootstrap-static is no longer pre-season (currentGameweek=${currentGameweek}) — it no longer holds ${season}'s holdover totals.`;
+        result.durationMs = Date.now() - start;
+        return result;
+      }
+
+      const snapshotRows = await pool.query(
+        `SELECT player_id, first_name, second_name, element_type FROM season_player_snapshot WHERE season = $1`,
+        [season]
+      );
+      const nativeIdByNameKey = new Map<string, number>();
+      for (const row of snapshotRows.rows) {
+        nativeIdByNameKey.set(nameMatchKey(row.first_name || "", row.second_name || "", row.element_type), row.player_id);
+      }
+
+      const existingRows = await pool.query(
+        `SELECT player_id, player_name, defensive_contribution, starts, minutes, total_points FROM historical_player_stats WHERE season = $1`,
+        [season]
+      );
+      const existingByNativeId = new Map<number, any>();
+      for (const row of existingRows.rows) existingByNativeId.set(row.player_id, row);
+
+      // Sanity check: confirm bootstrap really is still holding THIS season's totals (not some
+      // other season that also happens to be pre-season) by requiring most matched players'
+      // total_points to agree with what we already have archived.
+      let matched = 0, agree = 0;
+      const matches: Array<{ nativeId: number; element: any }> = [];
+      for (const element of bootstrap.elements || []) {
+        const key = nameMatchKey(element.first_name || "", element.second_name || "", element.element_type);
+        const nativeId = nativeIdByNameKey.get(key);
+        if (nativeId == null) continue;
+        const existing = existingByNativeId.get(nativeId);
+        if (!existing) continue;
+        matched++;
+        matches.push({ nativeId, element });
+        if ((existing.total_points || 0) === (element.total_points || 0)) agree++;
+      }
+      if (matched === 0 || agree / matched < 0.9) {
+        result.aborted = true;
+        result.abortReason = `Only ${agree}/${matched} matched players agree on total_points with the existing ${season} archive — bootstrap-static likely isn't holding ${season}'s data anymore. Refusing to overwrite.`;
+        result.durationMs = Date.now() - start;
+        return result;
+      }
+
+      for (const { nativeId, element } of matches) {
+        try {
+          const minutes = element.minutes || 0;
+          const goalsScored = element.goals_scored || 0;
+          const assists = element.assists || 0;
+          const cleanSheets = element.clean_sheets || 0;
+          const tackles = element.tackles || 0;
+          const recoveries = element.recoveries || 0;
+          const cbi = element.clearances_blocks_interceptions || 0;
+          const defensiveContribution = element.defensive_contribution || 0;
+
+          const before = existingByNativeId.get(nativeId);
+          await pool.query(
+            `UPDATE historical_player_stats SET
+              goals_scored = $1, assists = $2, clearances_blocks_interceptions = $3, tackles = $4, recoveries = $5,
+              defensive_contribution = $6, clean_sheets = $7, goals_conceded = $8, saves = $9, penalties_saved = $10,
+              yellow_cards = $11, red_cards = $12, minutes = $13, starts = $14, total_points = $15, bonus = $16, bps = $17,
+              expected_goals = $18, expected_assists = $19, expected_goals_conceded = $20,
+              influence = $21, creativity = $22, threat = $23, ict_index = $24,
+              goals_per_90 = $25, assists_per_90 = $26, defensive_contribution_per_90 = $27,
+              tackles_per_90 = $28, recoveries_per_90 = $29, cbi_per_90 = $30, clean_sheets_per_90 = $31,
+              updated_at = now()
+             WHERE player_id = $32 AND season = $33`,
+            [
+              goalsScored, assists, cbi, tackles, recoveries,
+              defensiveContribution, cleanSheets, element.goals_conceded || 0, element.saves || 0, element.penalties_saved || 0,
+              element.yellow_cards || 0, element.red_cards || 0, minutes, element.starts || 0, element.total_points || 0, element.bonus || 0, element.bps || 0,
+              parseFloat(element.expected_goals) || 0, parseFloat(element.expected_assists) || 0, parseFloat(element.expected_goals_conceded) || 0,
+              parseFloat(element.influence) || 0, parseFloat(element.creativity) || 0, parseFloat(element.threat) || 0, parseFloat(element.ict_index) || 0,
+              calculatePer90(goalsScored, minutes), calculatePer90(assists, minutes), calculatePer90(defensiveContribution, minutes),
+              calculatePer90(tackles, minutes), calculatePer90(recoveries, minutes), calculatePer90(cbi, minutes), calculatePer90(cleanSheets, minutes),
+              nativeId, season,
+            ]
+          );
+          // points_per_game isn't SUM-derived like the historical_player_stats columns above —
+          // it's FPL's own season-end PPG, needed so "matches played" (back-calculated elsewhere
+          // as total_points ÷ points_per_game) reflects true appearances (starts + sub cameos)
+          // rather than the starts-only count historical_player_stats tracks.
+          if (element.points_per_game != null) {
+            await pool.query(
+              `UPDATE season_player_snapshot SET points_per_game = $1 WHERE player_id = $2 AND season = $3`,
+              [element.points_per_game, nativeId, season]
+            );
+          }
+
+          result.playersUpdated++;
+
+          if (result.sample.length < 10 && before && before.defensive_contribution !== defensiveContribution) {
+            result.sample.push({
+              webName: before.player_name,
+              before: { defensiveContribution: before.defensive_contribution, starts: before.starts, minutes: before.minutes },
+              after: { defensiveContribution, starts: element.starts || 0, minutes },
+            });
+          }
+        } catch (e) {
+          result.errors.push(`player ${nativeId}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      result.playersUnmatched = existingRows.rows.length - result.playersUpdated;
+    } catch (e) {
+      result.errors.push(`Fatal: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    result.durationMs = Date.now() - start;
+    return result;
+  }
+
+  /**
+   * FPL resets the live `form` field to 0.0 the moment a new season is created, even though
+   * every other stat on bootstrap-static is still holding over the just-finished season's real
+   * totals (see reconcileFromLiveHoldover above). A blanket 0.0 is never useful pre-season, so
+   * while that holdover window is open, fill it back in with the just-finished season's real
+   * form via the same name-based crosswalk used elsewhere for this season. Mutates `bootstrapData`
+   * in place. No-ops once the new season's first gameweek goes live (form becomes real again).
+   */
+  async applyPreSeasonFormFallback(bootstrapData: any, lastSeason: string = CURRENT_SEASON): Promise<{ patched: number }> {
+    const currentGameweek = computeCurrentGameweek(bootstrapData.events || []);
+    if (currentGameweek !== 0) return { patched: 0 };
+
+    const snapshotRows = await pool.query(
+      `SELECT first_name, second_name, element_type, form FROM season_player_snapshot WHERE season = $1`,
+      [lastSeason]
+    );
+    const formByNameKey = new Map<string, string>();
+    for (const row of snapshotRows.rows) {
+      if (row.form != null) {
+        formByNameKey.set(nameMatchKey(row.first_name || "", row.second_name || "", row.element_type), row.form);
+      }
+    }
+
+    let patched = 0;
+    for (const element of bootstrapData.elements || []) {
+      if ((parseFloat(element.form) || 0) !== 0) continue; // already a real live form value
+      const archivedForm = formByNameKey.get(nameMatchKey(element.first_name || "", element.second_name || "", element.element_type));
+      if (archivedForm != null) {
+        element.form = archivedForm;
+        patched++;
+      }
+    }
+    return { patched };
   }
 
   /**

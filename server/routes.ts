@@ -1401,7 +1401,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Replace teams data with hardcoded version
         data.teams = teamsWithStrength;
-        
+
+        // Pre-season: FPL resets `form` to 0.0 even though every other stat is still holding
+        // over last season's real totals — fill it back in from our archive while that's true.
+        try {
+          const { seasonArchiveService } = await import('./season-archive-service');
+          await seasonArchiveService.applyPreSeasonFormFallback(data);
+        } catch (e) {
+          console.error("Pre-season form fallback failed:", e);
+        }
+
         // Cache the processed data
         bootstrapCache = { data, timestamp: Date.now() };
         console.log("DEBUG: Cached fresh bootstrap-static data");
