@@ -99,7 +99,7 @@ export function getGameweekFromDate(date: Date, events: BootstrapEvent[]): numbe
  * - Fully available (status='a', chance=null/100): 1.0 for all GWs
  * - 25/50/75% chance: apply that probability for next GW only, 1.0 for GW+2 onwards
  * - 0% with return date: 0.0 before return GW, 0.5 for return GW (uncertain if starting), 1.0 after
- * - 0% with "Unknown return date": 0.0 for next GW, then gradual increase (0.25, 0.5, 0.75, 1.0)
+ * - 0% with "Unknown return date": 0.0 for the next 6 GWs, then gradual increase in GW7-10 (0.25, 0.5, 0.75, 1.0)
  * - Suspended: 0.0 until suspension end date, 1.0 after
  * - Loaned/transferred out: 0.0 for all GWs
  * - Season-ending injury (news contains "season"): 0.0 for all GWs
@@ -152,10 +152,10 @@ export function calculateAvailabilityProbability(
     }
 
     const gwsFromNow = gameweek - nextGW;
-    if (gwsFromNow <= 0) return 0.0;
-    if (gwsFromNow === 1) return 0.25;
-    if (gwsFromNow === 2) return 0.5;
-    if (gwsFromNow === 3) return 0.75;
+    if (gwsFromNow <= 5) return 0.0;
+    if (gwsFromNow === 6) return 0.25;
+    if (gwsFromNow === 7) return 0.5;
+    if (gwsFromNow === 8) return 0.75;
     return 1.0;
   }
 
