@@ -12845,26 +12845,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const rawPointsFromMinutes = (pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1;
               const baseMinutesPoints = rawPointsFromMinutes * confidenceFactor;
               
-              // Build per-GW minutes points using availability probability
-              const events: BootstrapEvent[] = bootstrapData.events || [];
-              const { computeNextRange } = await import("../shared/gameweek-utils");
-              const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
-              const gwStart = gameweekRange.start;
-              const gwEnd = gameweekRange.end;
-              
-              const pointsFromMinutesPerGW: { [key: string]: number } = {};
-              for (let gw = gwStart; gw <= gwEnd; gw++) {
-                const availProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
-                pointsFromMinutesPerGW[`gw${gw}`] = Math.round(baseMinutesPoints * availProb * 100) / 100;
-              }
-              // GW39 TBC: only teams with a TBC fixture (event=null) get a non-zero entry
-              pointsFromMinutesPerGW['gw39'] = tbcTeamIds.has(player.team)
-                ? Math.round(baseMinutesPoints * 100) / 100
-                : 0;
-              
-              // Flat value for backward compatibility (use availability=1.0, i.e. "when playing")
+              // Flat value for backward compatibility (use availability=1.0, i.e. "when playing").
+              // Per-GW pointsFromMinutesPerGW/xMinsPerGW are filled in after the batch loop below,
+              // once every player's base xMins is known and position-group reallocation can run.
               const pointsFromMinutes = Math.round(baseMinutesPoints * 100) / 100;
-              
+
               return {
                 playerId: player.id,
                 playerName: player.web_name,
@@ -12874,7 +12859,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentMinutesPerGame: Math.round(avgMinutesPerGame * 10) / 10,
                 expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
                 pointsFromMinutes: pointsFromMinutes,
-                pointsFromMinutesPerGW: pointsFromMinutesPerGW,
                 playerAppearances: appearances,
                 gamesHit60Plus: gamesHit60Plus,
                 gamesBelow60: gamesBelow60,
@@ -12885,10 +12869,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             })
           );
-          
+
           playerMinutesProjections.push(...batchResults);
         }
-        
+
+        // Per-gameweek injury/availability-aware xMins: for each team+position group, a
+        // player's unavailable minutes (0% availability -> all of it; 75% -> the remaining 25%)
+        // are redistributed to teammates in the same position, weighted by each teammate's own
+        // base xMins share of the group (see server/xmins-reallocation.ts). Uses the same
+        // official FPL availability data (chance_of_playing_next_round/status/news) as
+        // calculateAvailabilityProbability already used elsewhere.
+        {
+          const { reallocateGroupXmins } = await import('./xmins-reallocation');
+          const events: BootstrapEvent[] = bootstrapData.events || [];
+          const { computeNextRange } = await import("../shared/gameweek-utils");
+          const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
+          const gwStart = gameweekRange.start;
+          const gwEnd = gameweekRange.end;
+
+          const playerById = new Map<number, any>(players.map((p: any) => [p.id, p]));
+          const groups = new Map<string, number[]>(); // `${team}_${elementType}` -> playerIds
+          for (const result of playerMinutesProjections) {
+            const p = playerById.get(result.playerId);
+            if (!p) continue;
+            const key = `${p.team}_${p.element_type}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(result.playerId);
+          }
+
+          const baseXMinsById = new Map<number, number>(playerMinutesProjections.map((r: any) => [r.playerId, r.expectedMinutesPerGame]));
+          const baseMinutesPointsById = new Map<number, number>(playerMinutesProjections.map((r: any) => [r.playerId, r.pointsFromMinutes]));
+          const xMinsPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
+          const pointsFromMinutesPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
+
+          for (let gw = gwStart; gw <= gwEnd; gw++) {
+            for (const playerIds of groups.values()) {
+              const groupMembers = playerIds.map(id => ({
+                playerId: id,
+                baseXMins: baseXMinsById.get(id) || 0,
+                availability: calculateAvailabilityProbability(playerById.get(id), gw, currentGameweek, events),
+              }));
+              const adjusted = reallocateGroupXmins(groupMembers);
+              for (const id of playerIds) {
+                const baseXMins = baseXMinsById.get(id) || 0;
+                const adjustedXMins = adjusted.get(id) || 0;
+                const ratio = baseXMins > 0 ? adjustedXMins / baseXMins : 0;
+                const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;
+                xMinsPerGWById.get(id)![`gw${gw}`] = Math.round(adjustedXMins * 10) / 10;
+                pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(baseMinutesPoints * ratio * 100) / 100;
+              }
+            }
+          }
+
+          for (const result of playerMinutesProjections) {
+            const baseMinutesPoints = baseMinutesPointsById.get(result.playerId) || 0;
+            const perGW = pointsFromMinutesPerGWById.get(result.playerId) || {};
+            // GW39 TBC placeholder isn't a normal single-fixture gameweek, so it keeps the
+            // existing simple rule rather than going through position-group reallocation.
+            const p = playerById.get(result.playerId);
+            perGW['gw39'] = p && tbcTeamIds.has(p.team) ? Math.round(baseMinutesPoints * 100) / 100 : 0;
+            (result as any).pointsFromMinutesPerGW = perGW;
+            (result as any).xMinsPerGW = xMinsPerGWById.get(result.playerId) || {};
+          }
+        }
+
         // Sort by points from minutes descending
         playerMinutesProjections.sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes);
         

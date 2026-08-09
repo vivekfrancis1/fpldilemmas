@@ -29,25 +29,30 @@ describe('Minutes projection fallback: promoted vs non-promoted "new" players', 
     expect(meslier.pct60Plus).toBe(0);
   });
 
-  it('promoted-team MID with no PL history (Rudoni, Coventry) gets the per-game-played average, not a flat 90', () => {
+  it('promoted-team MID with manual pre-season xMins data (Rudoni, Coventry) uses that over the historical blend', () => {
     const rudoni = minutesData.find((p: any) => p.playerId === 183);
     expect(rudoni).toBeDefined();
     expect(rudoni.teamShort).toBe('COV');
-    // League avg minutes per actual MID appearance last season — realistically below 90 but high
-    // enough to clear the 60-min threshold.
-    expect(rudoni.expectedMinutesPerGame).toBeGreaterThan(50);
-    expect(rudoni.expectedMinutesPerGame).toBeLessThan(90);
-    expect(rudoni.pct60Plus).toBe(100);
+    // Pre-season, manual_xmins_projections (real analyst start-probability data — see
+    // server/xmins-override.ts) takes priority over the generic historical blend fallback below
+    // whenever it covers the player. Rudoni: CAM 13% + RW 9% + RDM 8% = 30% start probability
+    // across Coventry's projected lineup -> 30% x 90 = 27 expected minutes, well below the
+    // 60-min threshold (a fringe/rotation option, not a nailed-on starter).
+    expect(rudoni.expectedMinutesPerGame).toBe(27);
+    // Pre-season override sets pct60Plus == start probability directly (server/xmins-override.ts).
+    expect(rudoni.pct60Plus).toBe(30);
+    expect(rudoni.pctBelow60).toBe(70);
   });
 
-  it('promoted-team FWD with no PL history (Wright, Coventry) sits below the 60-min threshold, unlike the old always-90 fallback', () => {
+  it('promoted-team FWD with manual pre-season xMins data (Wright, Coventry) uses that over the historical blend', () => {
     const wright = minutesData.find((p: any) => p.playerId === 193);
     expect(wright).toBeDefined();
     expect(wright.teamShort).toBe('COV');
-    // Forwards get subbed more than midfielders — per-game-played average should land below 60.
-    expect(wright.expectedMinutesPerGame).toBeLessThan(60);
-    expect(wright.pct60Plus).toBe(0);
-    expect(wright.pctBelow60).toBe(100);
+    // Wright: 72% start probability at ST -> 72% x 90 = 64.8 -> 65 expected minutes, clearing
+    // the 60-min threshold (a likely starter), overriding the generic historical blend fallback.
+    expect(wright.expectedMinutesPerGame).toBe(65);
+    expect(wright.pct60Plus).toBe(72);
+    expect(wright.pctBelow60).toBe(28);
   });
 
   it('the promoted-team fallback is meaningfully higher than the non-promoted fallback at the same position', () => {
