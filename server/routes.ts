@@ -12725,6 +12725,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           console.log(`📋 Pre-season xMins override active: ${manualXminsByPlayerId.size} players with manual data`);
         }
+
+        // Team+position groups the manual data actually covers (e.g. a team's goalkeepers) —
+        // see server/xmins-override.ts for why an unlisted teammate in a covered group must
+        // not fall back to unrelated historical minutes.
+        const playerByIdForXmins = new Map<number, any>(players.map((p: any) => [p.id, p]));
+        const manualCoveredGroups = new Set<string>();
+        for (const playerId of manualXminsByPlayerId.keys()) {
+          const p = playerByIdForXmins.get(playerId);
+          if (p) manualCoveredGroups.add(`${p.team}_${p.element_type}`);
+        }
         console.log(`📦 DB history cache: ${dbCacheHits}/${allPlayerIds.length} players served from DB`);
 
         // Build fixture→team map and blend map for recentP60 correction.
@@ -12853,6 +12863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ({ avgMinutesPerGame, appearances, gamesHit60Plus, gamesBelow60 } = applyPreSeasonXminsOverride(
                 currentGameweek,
                 manualXminsByPlayerId.get(player.id),
+                manualCoveredGroups.has(`${player.team}_${player.element_type}`),
                 { avgMinutesPerGame, appearances, gamesHit60Plus, gamesBelow60 }
               ));
 
@@ -12919,7 +12930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gwStart = gameweekRange.start;
           const gwEnd = gameweekRange.end;
 
-          const playerById = new Map<number, any>(players.map((p: any) => [p.id, p]));
+          const playerById = playerByIdForXmins;
           const groups = new Map<string, number[]>(); // `${team}_${elementType}` -> playerIds
           for (const result of playerMinutesProjections) {
             const p = playerById.get(result.playerId);
