@@ -826,6 +826,24 @@ export const playerMinutesProjections = pgTable("player_minutes_projections", {
   pk: primaryKey({ columns: [table.playerId, table.gameweek] }),
 }));
 
+// Manually-sourced xMins reference data: per-position start-probability grids from
+// fpl.solioanalytics.com (Manual Uploads/xMins/*.jpeg), transcribed and summed per player
+// (probability of starting anywhere in the XI) then converted to expected minutes (x 0.9).
+// Kept as a separate reference table rather than merged into playerMinutesProjections since
+// it's a distinct external source, refreshed manually rather than computed by our own pipeline.
+export const manualXminsProjections = pgTable("manual_xmins_projections", {
+  playerId: integer("player_id").notNull(),
+  season: text("season").notNull().default(CURRENT_SEASON),
+  source: text("source").notNull().default("solio_baseline"),
+  team: text("team"),
+  matchedName: text("matched_name"), // raw name as it appeared in the source image, for audit
+  startProbability: real("start_probability").notNull(), // 0-100, summed across all slots
+  xMins: real("x_mins").notNull(), // startProbability * 0.9
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.season, table.source] }),
+}));
+
 // Types for projection cache tables
 export type PlayerGoalsProjection = typeof playerGoalsProjections.$inferSelect;
 export type InsertPlayerGoalsProjection = typeof playerGoalsProjections.$inferInsert;
@@ -841,6 +859,9 @@ export type InsertPlayerDefensiveProjection = typeof playerDefensiveProjections.
 
 export type PlayerMinutesProjection = typeof playerMinutesProjections.$inferSelect;
 export type InsertPlayerMinutesProjection = typeof playerMinutesProjections.$inferInsert;
+
+export type ManualXminsProjection = typeof manualXminsProjections.$inferSelect;
+export type InsertManualXminsProjection = typeof manualXminsProjections.$inferInsert;
 
 // Gameweek Data Cache Tables - Store actual FPL data when gameweeks complete
 export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
