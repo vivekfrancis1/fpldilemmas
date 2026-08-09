@@ -12679,6 +12679,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allPlayerIds = playersWithMinutes.map((p: any) => p.id);
         const dbHistories = await getBulkPlayerHistories(allPlayerIds);
         const dbCacheHits = dbHistories.size;
+
+        // Pre-season only (see server/xmins-override.ts): manually-sourced start-probability
+        // data is the best minutes signal available before any 2026/27 gameweek has been played.
+        const { applyPreSeasonXminsOverride } = await import('./xmins-override');
+        const manualXminsByPlayerId = new Map<number, { startProbability: number; xMins: number }>();
+        if (currentGameweek === 0) {
+          const { manualXminsProjections, CURRENT_SEASON: xminsSeason } = await import('@shared/schema');
+          const manualRows = await db.select().from(manualXminsProjections)
+            .where(eq(manualXminsProjections.season, xminsSeason));
+          for (const row of manualRows) {
+            manualXminsByPlayerId.set(row.playerId, { startProbability: row.startProbability, xMins: row.xMins });
+          }
+          console.log(`📋 Pre-season xMins override active: ${manualXminsByPlayerId.size} players with manual data`);
+        }
         console.log(`📦 DB history cache: ${dbCacheHits}/${allPlayerIds.length} players served from DB`);
 
         // Build fixture→team map and blend map for recentP60 correction.
@@ -12800,6 +12814,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Use fallback values if history fetch fails
               }
               }
+
+              // Pre-season only: manual xMins data (start-probability grids) is the best
+              // available minutes signal before any 2026/27 gameweek has been played — see
+              // server/xmins-override.ts. No-ops automatically once the season starts.
+              ({ avgMinutesPerGame, appearances, gamesHit60Plus, gamesBelow60 } = applyPreSeasonXminsOverride(
+                currentGameweek,
+                manualXminsByPlayerId.get(player.id),
+                { avgMinutesPerGame, appearances, gamesHit60Plus, gamesBelow60 }
+              ));
 
               // Calculate percentages
               const pct60Plus = Math.round((gamesHit60Plus / appearances) * 100 * 10) / 10; // % chance of 60+ mins
