@@ -95,12 +95,12 @@ const navSections: NavSection[] = [
   {
     section: "My FPL",
     items: [
-      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
+      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, adminOnly: true },
       { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
-      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
-      { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
-      { path: "/pick-team", label: "Pick Team", icon: UserPlus },
+      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, adminOnly: true },
+      { path: "/transfer-planner", label: "Transfer Planner", icon: Target, adminOnly: true },
+      { path: "/pick-team", label: "Pick Team", icon: UserPlus, adminOnly: true },
     ],
   },
 ];

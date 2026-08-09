@@ -104,12 +104,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
-        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
+        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview", adminOnly: true },
         { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
-        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
-        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false },
-        { path: "/pick-team", label: "Pick Team", icon: UserPlus, description: "Build a squad from scratch — no login or Manager ID needed", popular: false, mobileHidden: false }
+        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false, adminOnly: true },
+        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false, adminOnly: true },
+        { path: "/pick-team", label: "Pick Team", icon: UserPlus, description: "Build a squad from scratch — no login or Manager ID needed", popular: false, mobileHidden: false, adminOnly: true }
       ]
     },
     ];
