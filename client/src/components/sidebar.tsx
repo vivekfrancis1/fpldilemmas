@@ -81,7 +81,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false, adminOnly: true },
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false },
-        { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes per gameweek, reallocation-aware", popular: false }
+        { path: "/player-minutes", label: "Minutes", icon: Clock, description: "Expected minutes per gameweek, reallocation-aware", popular: false }
       ]
     },
     {
