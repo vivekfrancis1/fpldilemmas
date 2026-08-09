@@ -12942,7 +12942,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 baseXMins: baseXMinsById.get(id) || 0,
                 availability: calculateAvailabilityProbability(playerById.get(id), gw, currentGameweek, events),
               }));
-              const adjusted = reallocateGroupXmins(groupMembers);
+              let adjusted: Map<number, number>;
+              try {
+                adjusted = reallocateGroupXmins(groupMembers);
+              } catch (reallocError) {
+                // If the reallocation math itself has an issue, fall back to the manually-sourced
+                // xMins (see server/xmins-override.ts) directly — no cross-player redistribution,
+                // just each player's own best-known expected minutes — rather than losing the
+                // signal entirely for this group/gameweek.
+                console.error(`⚠️ xMins reallocation failed for a group at GW${gw}, falling back to manual xMins:`, reallocError);
+                adjusted = new Map(playerIds.map(id =>
+                  [id, manualXminsByPlayerId.get(id)?.xMins ?? baseXMinsById.get(id) ?? 0]
+                ));
+              }
               for (const id of playerIds) {
                 const baseXMins = baseXMinsById.get(id) || 0;
                 const adjustedXMins = adjusted.get(id) || 0;

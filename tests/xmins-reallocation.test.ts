@@ -44,18 +44,42 @@ describe("reallocateGroupXmins", () => {
     expect(result.get(1)).toBe(0);
   });
 
-  it("handles multiple simultaneously-unavailable players independently (weights use base xMins, not adjusted)", () => {
+  it("gives a simultaneously-unavailable teammate zero share of the reallocation (they can't absorb minutes either)", () => {
     const group: GroupMember[] = [
       { playerId: 1, baseXMins: 80, availability: 0 },
       { playerId: 2, baseXMins: 20, availability: 0 },
       { playerId: 3, baseXMins: 10, availability: 1 },
     ];
     const result = reallocateGroupXmins(group);
-    // freed from 1 = 80, split among 2,3 in ratio 20:10 -> +53.33 to 2, +26.67 to 3
-    // freed from 2 = 20, split among 1,3 in ratio 80:10 -> +17.78 to 1, +2.22 to 3
-    expect(result.get(1)).toBeCloseTo(0 + 20 * (80 / 90)); // 17.78
-    expect(result.get(2)).toBeCloseTo(0 + 80 * (20 / 30)); // 53.33
-    expect(result.get(3)).toBeCloseTo(10 + 80 * (10 / 30) + 20 * (10 / 90)); // ~38.9
+    // Players 1 and 2 are both unavailable this gameweek, so neither can absorb the other's
+    // freed minutes — only player 3 (the sole available teammate) receives anything.
+    expect(result.get(1)).toBe(0);
+    expect(result.get(2)).toBe(0);
+    expect(result.get(3)).toBe(90); // 10 kept + 80 + 20 freed, capped at 90
+  });
+
+  it("weights recipients by kept minutes (base x availability), not raw base xMins", () => {
+    // Player 2 has a much higher base rate (40) than player 3 (10), but is only 20% available
+    // itself (kept = 8, below player 3's kept = 10) — of player 1's freed minutes, player 3
+    // should receive MORE than player 2 despite its lower base rate, because weighting is by
+    // kept minutes, not raw base. (Player 2 is also partially unavailable, so it separately
+    // frees its own 32 minutes, which — since player 1 has zero weight (0% available) — go
+    // entirely to player 3, the only fully-available recipient.)
+    const group: GroupMember[] = [
+      { playerId: 1, baseXMins: 20, availability: 0 },
+      { playerId: 2, baseXMins: 40, availability: 0.2 },
+      { playerId: 3, baseXMins: 10, availability: 1 },
+    ];
+    const result = reallocateGroupXmins(group);
+    const kept2 = 40 * 0.2; // 8
+    const kept3 = 10 * 1; // 10
+    const freed1 = 20;
+    const freed2 = 40 * 0.8; // 32
+    const fromP1toP2 = freed1 * (kept2 / (kept2 + kept3));
+    const fromP1toP3 = freed1 * (kept3 / (kept2 + kept3));
+    expect(result.get(2)).toBeCloseTo(kept2 + fromP1toP2); // player 2 gets LESS than player 3...
+    expect(result.get(3)).toBeCloseTo(kept3 + fromP1toP3 + freed2); // ...despite its 4x higher base rate
+    expect(result.get(3)!).toBeGreaterThan(result.get(2)!);
   });
 
   it("caps every player's reallocated total at 90 minutes", () => {

@@ -3,6 +3,11 @@
 // reallocated to teammates in the same position, weighted by each recipient's own base xMins
 // share of the group. If a player has e.g. 75% availability, they keep 75% of their own xMins
 // and the remaining 25% is reallocated the same way.
+//
+// Recipients are weighted by their own KEPT minutes (baseXMins x availability), not raw
+// baseXMins — a teammate who is themselves unavailable that same gameweek (e.g. two centre-backs
+// both injured at once) can't actually absorb any of the other's freed minutes, so they must get
+// zero weight in the split, not a share proportional to a base rate they can't fulfil.
 
 export interface GroupMember {
   playerId: number;
@@ -21,11 +26,13 @@ export function reallocateGroupXmins(group: GroupMember[]): Map<number, number> 
     if (freed <= 0) continue;
 
     const others = group.filter(m => m.playerId !== source.playerId);
-    const othersTotalBase = others.reduce((sum, m) => sum + m.baseXMins, 0);
-    if (othersTotalBase <= 0) continue; // nobody in the group to reallocate to
+    const othersTotalKept = others.reduce((sum, m) => sum + m.baseXMins * m.availability, 0);
+    if (othersTotalKept <= 0) continue; // nobody available in the group to reallocate to
 
     for (const other of others) {
-      const share = other.baseXMins / othersTotalBase;
+      const weight = other.baseXMins * other.availability;
+      if (weight <= 0) continue; // this teammate is themselves unavailable — can't absorb any of it
+      const share = weight / othersTotalKept;
       result.set(other.playerId, (result.get(other.playerId) || 0) + freed * share);
     }
   }
