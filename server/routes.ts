@@ -10757,25 +10757,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch full season goal share data, team projections, and bootstrap for availability
-        const [goalShareResponse, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
+        // Fetch full season goal share data, team projections, bootstrap for availability, and
+        // per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
+        const [goalShareResponse, teamProjectionsResponse, bootstrapResponse, minutesResponse] = await Promise.all([
           internalFetch('api/goal-share-season'),
           internalFetch('api/team-goal-projections'),
-          internalFetch('api/bootstrap-static')
+          internalFetch('api/bootstrap-static'),
+          internalFetch('api/player-minutes-projections')
         ]);
-        
+
         if (goalShareResponse.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const goalShareData = await goalShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           const bootstrapData = await bootstrapResponse.json();
-          
+
           const goalsEvents: BootstrapEvent[] = bootstrapData.events || [];
           const currentGW = computeCurrentGameweek(goalsEvents as any);
-          
+
           const fplPlayerMap = new Map<number, any>();
           (bootstrapData.elements || []).forEach((el: any) => {
             fplPlayerMap.set(el.id, el);
           });
+
+          // Reallocation-aware per-GW availability ratio — used in place of a standalone
+          // calculateAvailabilityProbability call (same multiplicative slot, not an additional
+          // factor, so this doesn't double-count goalShare's already-baked-in playing-time rate).
+          const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+          if (minutesResponse.ok) {
+            const minutesData = await minutesResponse.json();
+            for (const m of minutesData) {
+              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            }
+          }
           
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -10800,10 +10813,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Calculate projected goals for each gameweek using full season goal share × availability × form
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
                   const gwNum = parseInt(gameweek);
+                  // Reallocation-aware ratio replaces the plain availability call in the same
+                  // multiplicative slot (not an addition) — a no-op unless this player's own
+                  // availability or a same-position teammate's absence is in play, so it doesn't
+                  // double-count goalShare's already-baked-in playing-time rate.
                   const availability = fplPlayer
-                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
+                    ? (availabilityRatioByPlayerId.get(player.playerId)?.[`gw${gwNum}`]
+                        ?? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents))
                     : 1.0;
-                  
+
                   // NOTE: Do NOT apply recentP60 or startingRate here.
                   // goalShare already encodes selection frequency — a rotation player scores fewer goals
                   // per season → lower goalShare. Adding a further playing-time multiplier double-counts.
@@ -11033,25 +11051,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch full season assist share data, team projections, and bootstrap for availability
-        const [assistShareResponse, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
+        // Fetch full season assist share data, team projections, bootstrap for availability, and
+        // per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
+        const [assistShareResponse, teamProjectionsResponse, bootstrapResponse, minutesResponse] = await Promise.all([
           internalFetch('api/assist-share-season'),
           internalFetch('api/team-assist-projections'),
-          internalFetch('api/bootstrap-static')
+          internalFetch('api/bootstrap-static'),
+          internalFetch('api/player-minutes-projections')
         ]);
-        
+
         if (assistShareResponse.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const assistShareData = await assistShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           const bootstrapData = await bootstrapResponse.json();
-          
+
           const assistsEvents: BootstrapEvent[] = bootstrapData.events || [];
           const currentGW = computeCurrentGameweek(assistsEvents as any);
-          
+
           const fplPlayerMap = new Map<number, any>();
           (bootstrapData.elements || []).forEach((el: any) => {
             fplPlayerMap.set(el.id, el);
           });
+
+          // Reallocation-aware per-GW availability ratio — replaces the standalone
+          // calculateAvailabilityProbability call below (same slot, not an addition), so it
+          // doesn't double-count assistShare's already-baked-in playing-time rate.
+          const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+          if (minutesResponse.ok) {
+            const minutesData = await minutesResponse.json();
+            for (const m of minutesData) {
+              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            }
+          }
 
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -11077,9 +11108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
                   const gwNum = parseInt(gameweek);
                   const availability = fplPlayer
-                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, assistsEvents)
+                    ? (availabilityRatioByPlayerId.get(player.playerId)?.[`gw${gwNum}`]
+                        ?? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, assistsEvents))
                     : 1.0;
-                  
+
                   // NOTE: Do NOT apply recentP60 or a form multiplier here.
                   // assistShare already encodes selection frequency and recent assist form through
                   // the additive pool formula. Adding a further multiplier double-counts.
@@ -12901,6 +12933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseMinutesPointsById = new Map<number, number>(playerMinutesProjections.map((r: any) => [r.playerId, r.pointsFromMinutes]));
           const xMinsPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
           const pointsFromMinutesPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
+          const availabilityRatioPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
 
           for (let gw = gwStart; gw <= gwEnd; gw++) {
             for (const playerIds of groups.values()) {
@@ -12917,6 +12950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;
                 xMinsPerGWById.get(id)![`gw${gw}`] = Math.round(adjustedXMins * 10) / 10;
                 pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(baseMinutesPoints * ratio * 100) / 100;
+                availabilityRatioPerGWById.get(id)![`gw${gw}`] = Math.round(ratio * 1000) / 1000;
               }
             }
           }
@@ -12924,12 +12958,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const result of playerMinutesProjections) {
             const baseMinutesPoints = baseMinutesPointsById.get(result.playerId) || 0;
             const perGW = pointsFromMinutesPerGWById.get(result.playerId) || {};
+            const ratioPerGW = availabilityRatioPerGWById.get(result.playerId) || {};
             // GW39 TBC placeholder isn't a normal single-fixture gameweek, so it keeps the
             // existing simple rule rather than going through position-group reallocation.
             const p = playerById.get(result.playerId);
             perGW['gw39'] = p && tbcTeamIds.has(p.team) ? Math.round(baseMinutesPoints * 100) / 100 : 0;
+            ratioPerGW['gw39'] = p ? calculateAvailabilityProbability(p, 39, currentGameweek, events) : 1;
             (result as any).pointsFromMinutesPerGW = perGW;
             (result as any).xMinsPerGW = xMinsPerGWById.get(result.playerId) || {};
+            // Reallocation-aware per-GW multiplier — reflects both this player's own injury
+            // status AND any boost from a same-team-same-position teammate's absence (see
+            // server/xmins-reallocation.ts). Other components' projections should use this in
+            // place of a standalone calculateAvailabilityProbability call, as a drop-in
+            // replacement for the same multiplicative slot (not an additional factor) — for a
+            // goalShare/assistShare-based component this avoids double-counting the player's own
+            // season-long playing-time rate, which is already baked into that share.
+            (result as any).availabilityRatioPerGW = ratioPerGW;
           }
         }
 
@@ -13093,7 +13137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const computeCSForGW = (gw: number, addToTotal: boolean) => {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           const teamFixtureDetails = teamCSProjection.fixtureDetails?.[gw.toString()] || teamCSProjection.fixtureDetails?.[gw] || [];
-          const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
+          // Reallocation-aware ratio (see server/xmins-reallocation.ts) replaces the standalone
+          // availability call — reflects both this player's own injury status and any boost from
+          // a same-team-same-position teammate's absence, in the same multiplicative slot.
+          const availabilityProb = playerMinutes.availabilityRatioPerGW?.[`gw${gw}`]
+            ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
           let cleanSheetPointsForGW = 0;
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
           if (teamCleanSheetPercent !== undefined) {
@@ -17205,13 +17253,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("DEBUG: Player Saves Projections API called - blended formula: 50/50 this-season/last-season saves-per-90 (falls back to league-average for new-to-league keepers) × blended opponent average-goals-for");
 
-        // Get FPL bootstrap data and fixtures from cached endpoints for better performance
-        const [fplResponse, fixturesResponse] = await Promise.all([
+        // Get FPL bootstrap data and fixtures from cached endpoints for better performance, plus
+        // per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
+        const [fplResponse, fixturesResponse, minutesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
-          internalFetch("api/fixtures")
+          internalFetch("api/fixtures"),
+          internalFetch("api/player-minutes-projections")
         ]);
         const fplData = await fplResponse.json();
         const fixturesData = await fixturesResponse.json();
+        const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        if (minutesResponse.ok) {
+          const minutesData = await minutesResponse.json();
+          for (const m of minutesData) {
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+          }
+        }
         const currentGameweek = computeCurrentGameweek(fplData.events);
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
@@ -17310,8 +17367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each FUTURE gameweek only with new formula
           // DGW FIX: Find ALL fixtures for this team in each gameweek
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Per-GW availability probability for this goalkeeper
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, savesEvents);
+            // Reallocation-aware ratio (see server/xmins-reallocation.ts) — for goalkeepers this
+            // is a particularly clean signal, since a team's GK group is almost always exactly
+            // the starter + backup, and an injured starter's minutes go essentially 1:1 to them.
+            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
+              ?? calculateAvailabilityProbability(player, gw, currentGameweek, savesEvents);
             
             // Find ALL fixtures for this team in this gameweek (handles DGW + TBC at GW39)
             const fixtures = fixturesData.filter((f: any) => 
@@ -17439,14 +17499,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { computeNextRange: computeNextRangeDC } = await import("../shared/gameweek-utils");
 
-      // Get FPL bootstrap data, fixtures, and standings from cached internal endpoints for better performance
-      const [fplResponse, fixturesResponse, standingsResponse] = await Promise.all([
+      // Get FPL bootstrap data, fixtures, standings, and per-GW reallocation-aware availability
+      // ratios (see server/xmins-reallocation.ts) from cached internal endpoints
+      const [fplResponse, fixturesResponse, standingsResponse, minutesResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
         internalFetch("api/fixtures"),
-        internalFetch("api/current-standings?venue=all")
+        internalFetch("api/current-standings?venue=all"),
+        internalFetch("api/player-minutes-projections")
       ]);
       const fplData = await fplResponse.json();
       const fixturesData = await fixturesResponse.json();
+      const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+      if (minutesResponse.ok) {
+        const minutesData = await minutesResponse.json();
+        for (const m of minutesData) {
+          if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+        }
+      }
       const currentGameweek = computeCurrentGameweek(fplData.events);
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
@@ -17597,8 +17666,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Opponent's blended (50/50 this-season/last-season) DCC per game
             const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0;
             
-            // Use per-GW availability probability instead of flat minutesMultiplier
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, dcEvents);
+            // Reallocation-aware ratio (see server/xmins-reallocation.ts) instead of flat minutesMultiplier
+            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
+              ?? calculateAvailabilityProbability(player, gw, currentGameweek, dcEvents);
             
             // Apply formula: Projected DC = ((Current DC/game + Threshold) / 2) × (Opponent DCC / 80) × availability
             const projectedDC = ((dcPerGame + threshold) / 2) * (opponentDCC / 80) * availabilityProb;
@@ -17742,7 +17812,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const proxyGA = parseFloat(String(
                   teamGoalData.gameweekProjections['38'] ?? teamGoalData.gameweekProjections[38] ?? 0
                 ));
-                const availabilityProb = calculateAvailabilityProbability(player, 39, currentGameweek, events);
+                const availabilityProb = playerMinutes?.availabilityRatioPerGW?.['gw39']
+                  ?? calculateAvailabilityProbability(player, 39, currentGameweek, events);
                 gwGoalsConceded = availabilityProb * pct60Plus * proxyGA;
                 if (gwGoalsConceded > 0) {
                   const lambda = gwGoalsConceded;
@@ -17771,7 +17842,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const teamGoalsAgainst = teamGoalData.gameweekProjections[gw.toString()] || teamGoalData.gameweekProjections[gw];
               
               if (teamGoalsAgainst !== undefined) {
-                const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
+                // Reallocation-aware ratio (see server/xmins-reallocation.ts)
+                const availabilityProb = playerMinutes?.availabilityRatioPerGW?.[`gw${gw}`]
+                  ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
                 gwGoalsConceded = availabilityProb * pct60Plus * parseFloat(teamGoalsAgainst);
                 
                 // Poisson-based goals conceded points calculation
@@ -17878,9 +17951,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requestedEndYC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndYC && requestedEndYC > gameweekRange.end) ? requestedEndYC : gameweekRange.end;
 
-        // Fetch fixtures to detect DGW
-        const fixturesResponse = await internalFetch("api/fixtures");
+        // Fetch fixtures to detect DGW, plus per-GW reallocation-aware availability ratios
+        // (see server/xmins-reallocation.ts)
+        const [fixturesResponse, ycMinutesResponse] = await Promise.all([
+          internalFetch("api/fixtures"),
+          internalFetch("api/player-minutes-projections")
+        ]);
         const fixturesData = await fixturesResponse.json();
+        const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        if (ycMinutesResponse.ok) {
+          const ycMinutesData = await ycMinutesResponse.json();
+          for (const m of ycMinutesData) {
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+          }
+        }
 
         // FDR multiplier map for opponent difficulty scaling
         const fdrMultiplierYC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
@@ -17919,8 +18003,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 12 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
+            // Reallocation-aware ratio (see server/xmins-reallocation.ts)
+            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
+              ?? calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
             
             // Find fixtures for this team in this gameweek (GW39 = TBC fixtures with event=null)
             const fixtures = fixturesData.filter((f: any) => 
@@ -18033,9 +18118,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requestedEndRC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndRC && requestedEndRC > gameweekRange.end) ? requestedEndRC : gameweekRange.end;
 
-        // Fetch fixtures to detect DGW
-        const fixturesResponse = await internalFetch("api/fixtures");
+        // Fetch fixtures to detect DGW, plus per-GW reallocation-aware availability ratios
+        // (see server/xmins-reallocation.ts)
+        const [fixturesResponse, rcMinutesResponse] = await Promise.all([
+          internalFetch("api/fixtures"),
+          internalFetch("api/player-minutes-projections")
+        ]);
         const fixturesData = await fixturesResponse.json();
+        const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        if (rcMinutesResponse.ok) {
+          const rcMinutesData = await rcMinutesResponse.json();
+          for (const m of rcMinutesData) {
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+          }
+        }
 
         // FDR multiplier map for opponent difficulty scaling (red cards)
         const fdrMultiplierRC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
@@ -18073,8 +18169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 6 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
+            // Reallocation-aware ratio (see server/xmins-reallocation.ts)
+            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
+              ?? calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
             
             // Find fixtures for this team in this gameweek (GW39 = TBC fixtures with event=null)
             const fixtures = fixturesData.filter((f: any) => 
@@ -18188,11 +18285,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
 
-        // Fetch fixtures first so we can detect TBC (event=null) fixtures and extend to GW39
-        const fixturesResponse = await internalFetch("api/fixtures");
+        // Fetch fixtures first so we can detect TBC (event=null) fixtures and extend to GW39,
+        // plus per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
+        const [fixturesResponse, bonusMinutesResponse] = await Promise.all([
+          internalFetch("api/fixtures"),
+          internalFetch("api/player-minutes-projections")
+        ]);
         const allFixtures = await fixturesResponse.json();
         const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
         const endGameweek = hasTBCBonus ? 39 : gameweekRange.end;
+        const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        if (bonusMinutesResponse.ok) {
+          const bonusMinutesData = await bonusMinutesResponse.json();
+          for (const m of bonusMinutesData) {
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+          }
+        }
 
         // Every player is included — no current-season starts filter — since new-to-the-league
         // and promoted-team players (with genuine 0 current-season starts) still get a
@@ -18246,8 +18354,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentGW = computeCurrentGameweek(fplData.events);
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
+            // Reallocation-aware ratio (see server/xmins-reallocation.ts)
+            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
+              ?? calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
             
             const fixtures = allFixtures.filter((f: any) =>
               (f.event === gw || (gw === 39 && (f.event === null || f.event === undefined))) &&
