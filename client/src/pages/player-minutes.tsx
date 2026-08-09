@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SeasonBadge } from "@/components/season-badge";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
+
+interface BootstrapData {
+  events: any[];
+}
 
 interface PlayerMinutesProjection {
   playerId: number;
@@ -21,29 +27,72 @@ interface PlayerMinutesProjection {
   expectedMinutesPerGame: number;
   pointsFromMinutes: number;
   benchAppearances: number;
+  // Per-gameweek expected minutes, reflecting real injury/availability data and the
+  // same-position teammate reallocation from server/xmins-reallocation.ts (e.g. an injured
+  // player's minutes redistributed to whoever covers for them that gameweek).
+  xMinsPerGW?: { [key: string]: number };
 }
 
-type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'expectedMinutes' | 'pointsFromMinutes';
+type SortField = 'name' | 'team' | 'position' | 'currentMinutes' | 'avgXMins' | string;
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerMinutes() {
+  const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [startGameweek, setStartGameweek] = useState<number>(4); // Default to next gameweek
-  const [endGameweek, setEndGameweek] = useState<number>(11); // Default to 8 gameweeks ahead
-  const [sortField, setSortField] = useState<SortField>('expectedMinutes');
+  const [startGameweek, setStartGameweek] = useState<number>(0);
+  const [endGameweek, setEndGameweek] = useState<number>(0);
+  const [initialized, setInitialized] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('avgXMins');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
 
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Fetch player minutes projections data
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
     queryKey: ["/api/player-minutes-projections"],
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
+
+  // Default gameweek range once bootstrap data loads, same pattern as player-saves.tsx
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
+    if (start > 0 && end > 0 && start <= end && end <= 39) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+    }
+    setInitialized(true);
+  }, [bootstrapData, initialized, defaultWeeks]);
+
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) return [];
+    return getNextGameweeksForDropdown(bootstrapData.events, totalWeeks).filter(gw => gw !== 39);
+  }, [bootstrapData?.events, totalWeeks]);
+
+  // GW columns for the table — xMinsPerGW never includes gw39 (no TBC handling needed here,
+  // see server/routes.ts's minutes reallocation block).
+  const dynamicGameweekColumns = useMemo(() => {
+    if (!startGameweek || !endGameweek) return [];
+    const columns: number[] = [];
+    for (let gw = startGameweek; gw <= Math.min(endGameweek, 38); gw++) columns.push(gw);
+    return columns;
+  }, [startGameweek, endGameweek]);
+
+  const getAvgXMins = (player: PlayerMinutesProjection) => {
+    if (dynamicGameweekColumns.length === 0) return player.expectedMinutesPerGame;
+    const total = dynamicGameweekColumns.reduce((sum, gw) => sum + (player.xMinsPerGW?.[`gw${gw}`] ?? 0), 0);
+    return total / dynamicGameweekColumns.length;
+  };
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -93,22 +142,23 @@ export default function PlayerMinutes() {
           aValue = a.position;
           bValue = b.position;
           break;
-        case 'expectedMinutes':
-          aValue = a.expectedMinutesPerGame;
-          bValue = b.expectedMinutesPerGame;
-          break;
         case 'currentMinutes':
           aValue = a.currentMinutesPerGame;
           bValue = b.currentMinutesPerGame;
           break;
-        case 'pointsFromMinutes':
-          aValue = a.pointsFromMinutes;
-          bValue = b.pointsFromMinutes;
+        case 'avgXMins':
+          aValue = getAvgXMins(a);
+          bValue = getAvgXMins(b);
           break;
-
         default:
-          aValue = a.expectedMinutesPerGame;
-          bValue = b.expectedMinutesPerGame;
+          // Dynamic per-gameweek columns, e.g. 'gw6'
+          if (sortField.startsWith('gw')) {
+            aValue = a.xMinsPerGW?.[sortField] ?? 0;
+            bValue = b.xMinsPerGW?.[sortField] ?? 0;
+          } else {
+            aValue = getAvgXMins(a);
+            bValue = getAvgXMins(b);
+          }
       }
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -119,7 +169,7 @@ export default function PlayerMinutes() {
     });
 
     return filtered;
-  }, [playerMinutesData, searchTerm, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection]);
+  }, [playerMinutesData, searchTerm, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection, dynamicGameweekColumns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -176,7 +226,7 @@ export default function PlayerMinutes() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || !initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
         <Card className="w-full max-w-sm shadow-lg">
@@ -207,7 +257,8 @@ export default function PlayerMinutes() {
             <h1>Player Minutes</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
-            Expected minutes per game and FPL points from minutes for each player, calculated using rotation patterns and current form
+            Expected minutes per gameweek for each player — reflecting real injury/availability data and reallocation to
+            whichever teammate covers an absence in the same position that gameweek
           </p>
         </div>
       </div>
@@ -297,7 +348,35 @@ export default function PlayerMinutes() {
             </CollapsibleTrigger>
             <CollapsibleContent>
           <CardContent className="p-6 pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+              <div className="">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">From GW:</label>
+                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>{`GW${gw}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">To GW:</label>
+                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>{`GW${gw}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="">
                 <label className="text-xs font-semibold text-gray-600 mb-1 block">Search:</label>
                 <div className="relative">
@@ -311,7 +390,7 @@ export default function PlayerMinutes() {
                   />
                 </div>
               </div>
-              
+
               <div className="">
                 <label className="text-xs font-semibold text-gray-600 mb-1 block">Min Minutes:</label>
                 <Select value={minMinutes} onValueChange={setMinMinutes}>
@@ -443,24 +522,26 @@ export default function PlayerMinutes() {
                           <span className="md:hidden">Cur</span> {getSortIcon('currentMinutes')}
                         </Button>
                       </th>
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
+                      {dynamicGameweekColumns.map((gw) => (
+                        <th key={`xmins-header-gw${gw}`} className="px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort(`gw${gw}`)}
+                            className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          >
+                            <span className="md:hidden">{gw}</span>
+                            <span className="hidden md:inline">GW{gw}</span>
+                            {getSortIcon(`gw${gw}`)}
+                          </Button>
+                        </th>
+                      ))}
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <Button
                           variant="ghost"
-                          onClick={() => handleSort('expectedMinutes')}
+                          onClick={() => handleSort('avgXMins')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
                         >
-                          <span className="hidden md:inline">Exp</span>
-                          <span className="md:hidden">Exp</span> {getSortIcon('expectedMinutes')}
-                        </Button>
-                      </th>
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleSort('pointsFromMinutes')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
-                        >
-                          <span className="hidden md:inline">Pts</span>
-                          <span className="md:hidden">Pts</span> {getSortIcon('pointsFromMinutes')}
+                          Avg {getSortIcon('avgXMins')}
                         </Button>
                       </th>
                     </tr>
@@ -497,14 +578,19 @@ export default function PlayerMinutes() {
                             {Math.round(player.currentMinutesPerGame)}
                           </div>
                         </td>
-                        <td className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
-                          <div className={`font-bold text-xs md:text-sm ${getMinutesColor(player.expectedMinutesPerGame)}`}>
-                            {Math.round(player.expectedMinutesPerGame)}
-                          </div>
-                        </td>
-                        <td className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
-                          <div className={`font-bold text-xs md:text-sm ${player.pointsFromMinutes >= 2 ? 'text-green-600' : player.pointsFromMinutes >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            {player.pointsFromMinutes}
+                        {dynamicGameweekColumns.map((gw) => {
+                          const value = player.xMinsPerGW?.[`gw${gw}`];
+                          return (
+                            <td key={`xmins-cell-${player.playerId}-gw${gw}`} className="px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
+                              <div className={`font-medium text-xs md:text-sm ${value !== undefined ? getMinutesColor(value) : 'text-gray-300'}`}>
+                                {value !== undefined ? value.toFixed(1) : '-'}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <div className={`font-bold text-xs md:text-sm ${getMinutesColor(getAvgXMins(player))}`}>
+                            {getAvgXMins(player).toFixed(1)}
                           </div>
                         </td>
                       </tr>
