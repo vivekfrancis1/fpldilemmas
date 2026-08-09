@@ -12857,6 +12857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
               }
 
+              // "Current" reflects this player's own actual playing-time history (this season's
+              // games so far, or last season's rate/league fallback pre-season) — kept separate
+              // from the manually-sourced xMins override below so the two columns stay genuinely
+              // distinct instead of both showing the same overridden number pre-season.
+              const historicalAvgMinutesPerGame = avgMinutesPerGame;
+
               // Pre-season only: manual xMins data (start-probability grids) is the best
               // available minutes signal before any 2026/27 gameweek has been played — see
               // server/xmins-override.ts. No-ops automatically once the season starts.
@@ -12899,7 +12905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team?.short_name || 'UNK',
                 position: position?.singular_name || 'Unknown',
                 currentMinutes: totalMinutes,
-                currentMinutesPerGame: Math.round(avgMinutesPerGame * 10) / 10,
+                currentMinutesPerGame: Math.round(historicalAvgMinutesPerGame * 10) / 10,
                 expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
                 pointsFromMinutes: pointsFromMinutes,
                 playerAppearances: appearances,
