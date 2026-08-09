@@ -73,6 +73,7 @@ const navSections: NavSection[] = [
       { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield },
       { path: "/player-saves", label: "Saves", icon: Shield },
       { path: "/player-bonus-points", label: "Bonus Points", icon: Star, adminOnly: true },
+      { path: "/player-minutes", label: "Player Minutes", icon: Clock },
     ],
   },
   {
@@ -120,7 +121,6 @@ const adminSection: NavSection = {
     { path: "/admin-activity-logs", label: "Activity Logs", icon: Activity },
     { path: "/admin-projection-validation", label: "Projection Validation", icon: BarChart3 },
     { path: "/admin-projection-window", label: "Projection Window", icon: CalendarRange },
-    { path: "/player-minutes", label: "Player Minutes", icon: Clock },
     { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield },
     { path: "/player-goals-conceded", label: "Player Goals Conceded", icon: Shield },
     { path: "/player-yellow-cards", label: "Yellow Cards", icon: Shield },

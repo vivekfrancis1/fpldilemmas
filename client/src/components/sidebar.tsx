@@ -80,8 +80,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-saves", label: "Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
         { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false, adminOnly: true },
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
-        // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
-        // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
+        // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false },
+        { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes per gameweek, reallocation-aware", popular: false }
       ]
     },
     {
@@ -141,7 +141,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Advanced Player Tools",
       items: [
-        { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false },
         { path: "/player-goals-conceded", label: "Player Goals Conceded", icon: Shield, description: "Goals conceded projections", popular: false },
         { path: "/player-yellow-cards", label: "Player Yellow Cards", icon: Shield, description: "Yellow card projections", popular: false },

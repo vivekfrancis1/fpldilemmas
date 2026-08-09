@@ -141,13 +141,7 @@ function Router() {
         <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
         <Route path="/match-stats/:fixtureId" component={MatchStats} />
         <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
-        <Route path="/player-minutes">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <PlayerMinutes />
-            </Suspense>
-          </ProtectedRoute>
-        </Route>
+        <Route path="/player-minutes" component={PlayerMinutes} />
         <Route path="/player-cleansheet-points">
           <ProtectedRoute requireAdmin={true}>
             <Suspense fallback={<PageLoader />}>

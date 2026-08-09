@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SeasonBadge } from "@/components/season-badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
@@ -107,6 +106,18 @@ export default function PlayerMinutes() {
     return uniquePositions.sort();
   }, [playerMinutesData]);
 
+  // /api/player-minutes-projections returns the full position name (e.g. "Forward"), not the
+  // abbreviated code the filter buttons and badges use — normalize once so both agree.
+  const normalizePosition = (position: string): string => {
+    switch (position) {
+      case 'Goalkeeper': return 'GKP';
+      case 'Defender': return 'DEF';
+      case 'Midfielder': return 'MID';
+      case 'Forward': return 'FWD';
+      default: return position;
+    }
+  };
+
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
     if (!playerMinutesData) return [];
@@ -119,7 +130,7 @@ export default function PlayerMinutes() {
         if (!matchesSearch) return false;
       }
       
-      if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
+      if (selectedPosition !== "all" && normalizePosition(player.position) !== selectedPosition) return false;
       if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
       if (player.expectedMinutesPerGame < parseInt(minMinutes)) return false;
       return true;
@@ -190,7 +201,7 @@ export default function PlayerMinutes() {
   };
 
   const getPositionColor = (position: string) => {
-    switch (position) {
+    switch (normalizePosition(position)) {
       case 'GKP': return 'bg-yellow-100 text-yellow-800';
       case 'DEF': return 'bg-green-100 text-green-800';
       case 'MID': return 'bg-blue-100 text-blue-800';
@@ -247,8 +258,7 @@ export default function PlayerMinutes() {
   }
 
   return (
-    <ProtectedRoute requireAdmin={true}>
-      <div className="fpl-page-container">
+    <div className="fpl-page-container">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
@@ -603,6 +613,5 @@ export default function PlayerMinutes() {
         )}
       </div>
     </div>
-    </ProtectedRoute>
   );
 }
