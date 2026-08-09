@@ -74,6 +74,13 @@ export default function MatchStats() {
   const [isLoading, setIsLoading] = useState(true);
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Which season tab is active — always starts on "current" (its own "not started yet" empty
+  // state is always correct) and only auto-switches to "previous" once we've actually confirmed
+  // last season's head-to-head exists. Never auto-switches after the user has clicked a tab
+  // themselves, and never overrides a real live/finished current match.
+  const [activeTab, setActiveTab] = useState<"current" | "previous">("current");
+  const hasUserSelectedTabRef = useRef(false);
+
   const { data: bootstrapData } = useQuery<any>({
     queryKey: ['/api/bootstrap-static'],
   });
@@ -119,9 +126,27 @@ export default function MatchStats() {
 
   const effectiveArchivedMatch = isArchivedEntry ? archivedByIdMatch : archivedMatch;
   const effectiveArchivedLoading = isArchivedEntry ? isArchivedByIdLoading : isArchivedLoading;
+  const hasArchivedMatch = !!effectiveArchivedMatch?.found;
 
   const isLive = fixture?.started && !fixture?.finished && !fixture?.finished_provisional;
   const isFinished = fixture?.finished || fixture?.finished_provisional;
+
+  // Auto-select "previous" only once we've actually confirmed there's a 2025/26 meeting to show
+  // for a not-yet-started fixture — defaulting to it unconditionally (the old behavior) meant a
+  // new fixture with no prior meeting (e.g. involving a newly-promoted team) landed the user on
+  // a guaranteed-empty "No 2025/26 meeting" card instead of "current"'s more useful
+  // not-started-yet placeholder.
+  //
+  // Deliberately NOT a run-once effect: the archived-match query starts disabled (it needs
+  // homeTeam/awayTeam from bootstrap-static first), and a disabled query reads isLoading=false
+  // just like a genuinely-settled one — locking in on that first, premature "not loading" tick
+  // would permanently miss the real result once the query actually runs. Re-syncing on every
+  // dependency change (and stopping only once the user manually picks a tab) converges to the
+  // correct answer regardless of how many intermediate loading-state ticks happen along the way.
+  useEffect(() => {
+    if (hasUserSelectedTabRef.current || isArchivedEntry || effectiveArchivedLoading) return;
+    setActiveTab((!isLive && !isFinished && hasArchivedMatch) ? "previous" : "current");
+  }, [isArchivedEntry, effectiveArchivedLoading, hasArchivedMatch, isLive, isFinished]);
 
   const formatDateTime = (kickoffTime: string) => {
     const date = new Date(kickoffTime);
@@ -547,7 +572,6 @@ export default function MatchStats() {
 
   const dateTime = fixture?.kickoff_time ? formatDateTime(fixture.kickoff_time) : null;
   const archivedDateTime = effectiveArchivedMatch?.fixture?.kickoff_time ? formatDateTime(effectiveArchivedMatch.fixture.kickoff_time) : null;
-  const hasArchivedMatch = !!effectiveArchivedMatch?.found;
 
   const previousSeasonContent = effectiveArchivedLoading ? (
     <Skeleton className="h-24 w-full" />
@@ -586,7 +610,14 @@ export default function MatchStats() {
         // Browsing a past season's own schedule — show just that season, no current-season tab.
         <div className="space-y-3 sm:space-y-5">{previousSeasonContent}</div>
       ) : (
-        <Tabs defaultValue={(!isLive && !isFinished) ? "previous" : "current"} className="space-y-3 sm:space-y-5">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => {
+            hasUserSelectedTabRef.current = true;
+            setActiveTab(v as "current" | "previous");
+          }}
+          className="space-y-3 sm:space-y-5"
+        >
           <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid">
             <TabsTrigger value="current">{CURRENT_SEASON_LABEL}</TabsTrigger>
             <TabsTrigger value="previous" disabled={!effectiveArchivedLoading && !hasArchivedMatch}>
