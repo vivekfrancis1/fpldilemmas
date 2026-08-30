@@ -709,25 +709,6 @@ function createPlayerTotalPointsColumns(
       )
     },
     {
-      key: 'totalExpectedPoints',
-      header: `Total`,
-      sortable: true,
-      hideSortIcon: true,
-      align: 'center',
-      className: 'w-[68px] bg-green-50 border-r-2 border-gray-300 px-1 sticky left-[120px] z-[5] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]',
-      render: (_, player) => (
-        isPastMode ? (
-          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
-        ) : (
-          <RangeTotalBreakdownTooltip
-            player={player}
-            gameweekCount={gameweekRange.length}
-            excludedComponents={excludedComponents}
-          />
-        )
-      )
-    },
-    {
       key: 'price',
       header: 'Price',
       sortable: true,
@@ -831,6 +812,25 @@ function createPlayerTotalPointsColumns(
         );
       }
     }] : []),
+    {
+      key: 'totalExpectedPoints',
+      header: `Total`,
+      sortable: true,
+      hideSortIcon: true,
+      align: 'center',
+      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[272px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      render: (_, player) => (
+        isPastMode ? (
+          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
+        ) : (
+          <RangeTotalBreakdownTooltip
+            player={player}
+            gameweekCount={gameweekRange.length}
+            excludedComponents={excludedComponents}
+          />
+        )
+      )
+    },
     {
       key: 'averageValue',
       header: 'Value',
