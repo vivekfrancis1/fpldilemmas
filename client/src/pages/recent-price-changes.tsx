@@ -370,20 +370,42 @@ export default function RecentPriceChanges() {
     return isRise ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700";
   };
 
+  // The actual calendar date/time a player will cross the ±100% threshold by, snapped to the next
+  // 24h-recurring local cutoff on/after that point — null when there's no meaningful ETA at all.
+  const getEtaCutoffDate = (prediction: PricePrediction): Date | null => {
+    if (prediction.hours_to_threshold === null) return null;
+    const hoursUntilTonightCutoff = secondsUntilPriceChange / 3600;
+    const hours = Math.max(prediction.hours_to_threshold, 0); // already-crossed still waits for tonight's cutoff
+    const dayOffset = hours <= hoursUntilTonightCutoff ? 0 : Math.ceil((hours - hoursUntilTonightCutoff) / 24);
+    return new Date(Date.now() + (hoursUntilTonightCutoff + dayOffset * 24) * 3600 * 1000);
+  };
+
   // Price changes only actually happen once every 24h at the same local cutoff time, so instead of
   // a vague "Tonight"/"Tomorrow"/raw duration, name the actual calendar cutoff a player will cross
   // by — "Monday 4:30 AM", "Tuesday 4:30 AM", etc. — for up to a week out; beyond that a named day
   // stops being useful (which Monday?) so it falls back to "> 7 days".
   const formatEta = (prediction: PricePrediction): string => {
-    if (prediction.hours_to_threshold === null) return "-";
+    const cutoffDate = getEtaCutoffDate(prediction);
+    if (!cutoffDate) return "-";
     const hoursUntilTonightCutoff = secondsUntilPriceChange / 3600;
-    const hours = Math.max(prediction.hours_to_threshold, 0); // already-crossed still waits for tonight's cutoff
+    const hours = Math.max(prediction.hours_to_threshold!, 0);
     const dayOffset = hours <= hoursUntilTonightCutoff ? 0 : Math.ceil((hours - hoursUntilTonightCutoff) / 24);
     if (dayOffset > 6) return "> 7 days";
-    const cutoffDate = new Date(Date.now() + (hoursUntilTonightCutoff + dayOffset * 24) * 3600 * 1000);
     const weekday = cutoffDate.toLocaleDateString([], { weekday: 'long' });
     const time = cutoffDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return `${weekday} ${time}`;
+  };
+
+  // Next unfinished gameweek's deadline, straight from bootstrap-static's own events — the same
+  // deadline shown everywhere else in the app, not a hardcoded guess.
+  const nextDeadline = bootstrapData?.events?.find((e: any) => e.is_next) as { deadline_time: string } | undefined;
+  const nextDeadlineDate = nextDeadline ? new Date(nextDeadline.deadline_time) : null;
+
+  const formatDeadlineComparison = (prediction: PricePrediction): string => {
+    if (!nextDeadlineDate) return "-";
+    const cutoffDate = getEtaCutoffDate(prediction);
+    if (!cutoffDate) return "-";
+    return cutoffDate <= nextDeadlineDate ? "Before Transfer Deadline" : "After Transfer Deadline";
   };
 
   return (
@@ -604,6 +626,9 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
+                          <th className="hidden lg:table-cell text-center p-3 font-medium" title="Whether the crossing happens before or after the next transfer deadline">
+                            Vs Transfer Deadline
+                          </th>
                           <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('ownership_percentage')}
@@ -662,6 +687,9 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden md:table-cell p-3 text-right text-xs text-muted-foreground">
                               {formatEta(prediction)}
+                            </td>
+                            <td className="hidden lg:table-cell p-3 text-center text-xs text-muted-foreground">
+                              {formatDeadlineComparison(prediction)}
                             </td>
                             <td className="hidden md:table-cell p-3 text-right font-medium">
                               {prediction.ownership_percentage.toFixed(1)}%
