@@ -813,14 +813,23 @@ export default function TeamGoalsAgainstProjections() {
                           GW39 (TBC)
                         </th>
                       )}
-                      <th 
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                      <th
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-14 z-[5]"
                         onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="md:hidden">Tot</span>
                           <span className="hidden md:inline">Total</span>
                           {sortBy === 'total' && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
+                        </div>
+                      </th>
+                      <th
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                        onClick={() => handleSort('average')}
+                      >
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span>Avg</span>
+                          {sortBy === 'average' && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
                         </div>
                       </th>
                     </tr>
@@ -1006,7 +1015,7 @@ export default function TeamGoalsAgainstProjections() {
                           );
                         })()}
 
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
                           <span className="text-sm md:text-lg font-bold text-blue-900">
                             {viewMode === "past"
                               ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
@@ -1021,7 +1030,12 @@ export default function TeamGoalsAgainstProjections() {
                                 })()}
                           </span>
                         </td>
-                        
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <span className="text-sm md:text-lg font-bold text-blue-900">
+                            {(team.averageGoalsAgainstPerGame ?? 0).toFixed(2)}
+                          </span>
+                        </td>
+
                       </tr>
                     ))}
                     
@@ -1055,14 +1069,19 @@ export default function TeamGoalsAgainstProjections() {
                         );
                       })()}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-14 z-[5]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
-                          {viewMode === "past" 
+                          {viewMode === "past"
                             ? Math.round(totalGoalsAgainst.overallTotal || 0)
                             : (totalGoalsAgainst.overallTotal || 0).toFixed(2)}
                         </span>
                       </td>
-                      
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <span className="text-sm md:text-lg font-bold text-blue-900">
+                          {(totalGoalsAgainst.averagePerGame || 0).toFixed(2)}
+                        </span>
+                      </td>
+
                     </tr>
                   </tbody>
                 </table>

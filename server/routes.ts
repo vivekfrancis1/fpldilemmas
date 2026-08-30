@@ -13363,12 +13363,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek})`);
       
       // Convert to array and sort by team ID since no season totals
+      const rangeWeeks = endGameweek - startGameweek + 1;
       const finalProjections = Array.from(teamsGoalsAgainst.values())
         .sort((a, b) => a.id - b.id)
-        .map((team, index) => ({
-          ...team,
-          position: index + 1
-        }));
+        .map((team, index) => {
+          const total = Object.entries(team.gameweekProjections as Record<string, number>)
+            .filter(([gw]) => gw !== '39')
+            .reduce((sum, [, v]) => sum + (v || 0), 0);
+          return {
+            ...team,
+            position: index + 1,
+            averageGoalsAgainstPerGame: rangeWeeks > 0 ? Math.round((total / rangeWeeks) * 100) / 100 : 0
+          };
+        });
 
       if (!hasExplicitRangeGA) {
         teamGoalsAgainstCache = { data: finalProjections, timestamp: Date.now() };
