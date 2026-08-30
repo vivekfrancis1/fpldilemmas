@@ -35,7 +35,7 @@ interface PlayerCleanSheetData {
   seasonTotalPoints: number;
 }
 
-type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
+type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints' | 'averageExpectedPoints';
 
 export default function PlayerCleanSheetPoints() {
   const { defaultWeeks, totalWeeks } = useProjectionSettings();
@@ -85,23 +85,56 @@ export default function PlayerCleanSheetPoints() {
     return map;
   }, [fixturesData, bootstrapData]);
 
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3;
+    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages.
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+
+  // Team SHORT codes whose own fixture in the current gameweek has kicked off or finished —
+  // their current-GW projection is a stale pre-match estimate and gets blanked client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
   // Available gameweeks for selects (dynamic from bootstrap, up to GW38 normally)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) return Array.from({ length: 12 }, (_, i) => i + 4);
     const nextRange = computeNextRange(bootstrapData.events, totalWeeks);
-    return nextRange.list.length > 0 ? nextRange.list : Array.from({ length: 12 }, (_, i) => i + 4);
-  }, [bootstrapData?.events, totalWeeks]);
+    const list = nextRange.list.length > 0 ? nextRange.list : Array.from({ length: 12 }, (_, i) => i + 4);
+    if (currentGWHasUnstarted && currentGameweek > 0 && !list.includes(currentGameweek)) return [currentGameweek, ...list];
+    return list;
+  }, [bootstrapData?.events, totalWeeks, currentGWHasUnstarted, currentGameweek]);
 
-  // Update gameweek range when bootstrap data is available
+  // Update gameweek range when bootstrap data is available. Re-runs once fixturesData resolves
+  // (currentGWHasUnstarted flips from its default false) since this isn't gated by a one-time
+  // "initialized" flag — it just recomputes with the now-accurate fold-in state.
   useEffect(() => {
     if (bootstrapData?.events) {
       const nextRange = computeNextRange(bootstrapData.events, defaultWeeks);
       if (nextRange.list.length > 0) {
-        setStartGameweek(nextRange.start);
+        const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < nextRange.start) ? currentGameweek : nextRange.start;
+        setStartGameweek(effectiveStart);
         setEndGameweek(nextRange.end);
       }
     }
-  }, [bootstrapData]);
+  }, [bootstrapData, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
   useEffect(() => {
@@ -144,6 +177,15 @@ export default function PlayerCleanSheetPoints() {
     return range;
   }, [startGameweek, endGameweek]);
 
+  // Only counts gameweeks with a real (present) entry — a blanked current-GW cell isn't in
+  // gameweekProjections at all, so it's correctly excluded from the average's denominator.
+  const getCountedAverage = (player: PlayerCleanSheetData) => {
+    const presentGws = gameweekRange.filter(gw => gw.toString() in (player.gameweekProjections || {}));
+    if (presentGws.length === 0) return 0;
+    const total = presentGws.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0);
+    return total / presentGws.length;
+  };
+
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
     if (!cleanSheetData) return [];
@@ -160,12 +202,27 @@ export default function PlayerCleanSheetPoints() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
+  // A decided team's current-GW projection is a stale pre-match estimate — strip the key
+  // entirely so it renders blank ("-") and is excluded from the total/average, same convention
+  // as the other Player Projection pages.
+  const blankedCleanSheetData = useMemo<PlayerCleanSheetData[]>(() => {
+    if (!cleanSheetData) return [];
+    if (currentGameweek <= 0 || currentGWDecidedTeamShorts.size === 0) return cleanSheetData;
+    const gwKey = currentGameweek.toString();
+    return cleanSheetData.map(p => {
+      if (!currentGWDecidedTeamShorts.has(p.team) || !(gwKey in (p.gameweekProjections || {}))) return p;
+      const staleVal = p.gameweekProjections[gwKey] || 0;
+      const { [gwKey]: _omit, ...restProjections } = p.gameweekProjections || {};
+      return { ...p, gameweekProjections: restProjections, totalExpectedPoints: p.totalExpectedPoints - staleVal };
+    });
+  }, [cleanSheetData, currentGameweek, currentGWDecidedTeamShorts]);
+
   // resolvedCleanSheetData: absorbs GW39 real data into assigned GW for expert/custom modes
   const resolvedCleanSheetData = useMemo<PlayerCleanSheetData[]>(() => {
-    if (!cleanSheetData || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return cleanSheetData || [];
+    if (!blankedCleanSheetData || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return blankedCleanSheetData || [];
     const startGW = startGameweek ?? 0;
     const endGW = endGameweek ?? 39;
-    return cleanSheetData.map(player => {
+    return blankedCleanSheetData.map(player => {
       const tbcInfo = tbcTeamInfoMap.get(player.team);
       if (!tbcInfo) return player;
       const gw39CS = Number(player.gameweekProjections?.['39']) || 0;
@@ -185,7 +242,7 @@ export default function PlayerCleanSheetPoints() {
       const newFixtureDetails = { ...(player.fixtureDetails || {}), [key]: [...prevDetails, { opponent: tbcInfo.opponent, isHome: tbcInfo.isHome, cleanSheetPoints: gw39CS }] };
       return { ...player, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails, totalExpectedPoints: player.totalExpectedPoints + gw39CS };
     });
-  }, [cleanSheetData, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [blankedCleanSheetData, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -205,9 +262,13 @@ export default function PlayerCleanSheetPoints() {
       const bTBC = fixtureMode !== 'expert' ? (Number(b.gameweekProjections?.['39']) || 0) : 0;
       let aValue: any = sortField === 'totalExpectedPoints'
         ? (a.totalExpectedPoints + aTBC)
+        : sortField === 'averageExpectedPoints'
+        ? getCountedAverage(a)
         : a[sortField];
       let bValue: any = sortField === 'totalExpectedPoints'
         ? (b.totalExpectedPoints + bTBC)
+        : sortField === 'averageExpectedPoints'
+        ? getCountedAverage(b)
         : b[sortField];
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -223,7 +284,7 @@ export default function PlayerCleanSheetPoints() {
     });
 
     return filtered;
-  }, [resolvedCleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection, fixtureMode]);
+  }, [resolvedCleanSheetData, selectedPosition, selectedTeam, searchTerm, sortField, sortDirection, fixtureMode, gameweekRange]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -484,6 +545,12 @@ export default function PlayerCleanSheetPoints() {
                           Total {getSortIcon('totalExpectedPoints')}
                         </div>
                       </th>
+                      <th className="hidden md:table-cell px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 w-[60px] min-w-[60px] text-xs md:text-sm"
+                          onClick={() => handleSort('averageExpectedPoints')}>
+                        <div className="flex items-center justify-center gap-1">
+                          Avg {getSortIcon('averageExpectedPoints')}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -601,6 +668,11 @@ export default function PlayerCleanSheetPoints() {
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {(player.totalExpectedPoints + (player.gameweekProjections?.['39'] || 0)).toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center bg-green-50 w-[60px] min-w-[60px] border-l border-gray-300">
+                          <span className="text-sm font-medium text-green-900">
+                            {getCountedAverage(player).toFixed(1)}
                           </span>
                         </td>
                       </tr>
