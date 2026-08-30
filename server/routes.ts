@@ -9502,9 +9502,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = computeCurrentGameweek(bootstrapData.events);
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
+      // Only extends to GW39 when a fixture is genuinely postponed with no gameweek assigned
+      // yet — not unconditionally, which previously always showed one extra, always-empty
+      // gameweek that nothing else in the app agreed with.
+      const { computeProjectionRangeWithTBC } = await import("../shared/gameweek-utils");
+      const csRange = computeProjectionRangeWithTBC(bootstrapData.events, rawFixturesDataCS, projectionWindowSettings.totalWeeks);
+      const endGameweek = csRange.end;
       const startGWforCS = currentGameweek + 1;
-      
+
       console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${startGWforCS} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
       // Get team goal projections directly — no HTTP round-trip, no readiness gate dependency
@@ -13102,7 +13107,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Dynamic gameweek range - start from current+1 (next gameweek)
       const startGameweek = reqStart ?? (currentGameweek + 1);
-      const endGameweek = reqEnd ?? Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, 39);
+      // Mirror team-cs-projections' own range exactly (it only extends to GW39 when a fixture
+      // is genuinely postponed with no gameweek assigned yet) rather than unconditionally
+      // capping at 39, which previously showed one extra, always-empty gameweek here that
+      // team-cs-projections itself didn't have.
+      const teamCSMaxGW = Math.max(
+        startGameweek,
+        ...teamCSData.flatMap((t: any) => Object.keys(t.gameweekProjections || {}).map(Number))
+      );
+      const endGameweek = reqEnd ?? Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, teamCSMaxGW);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
       // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets

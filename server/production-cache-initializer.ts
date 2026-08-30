@@ -183,10 +183,15 @@ export class ProductionCacheInitializer {
         // so this warms the exact cache entry that route will actually request. A plain
         // `find(is_current)?.id || 1` diverges from it in pre-season (no is_current event yet)
         // and ends up pre-warming a range nobody asks for.
-        const { computeCurrentGameweek } = await import("@shared/gameweek-utils");
+        const { computeCurrentGameweek, computeProjectionRangeWithTBC, PROJECTION_TOTAL_WEEKS } = await import("@shared/gameweek-utils");
         const currentGW = computeCurrentGameweek(bootstrapData.events);
+        // Only extends to GW39 when a fixture is genuinely postponed with no gameweek assigned
+        // yet — not unconditionally.
+        const fixturesResp = await internalFetch("api/fixtures");
+        const fixturesData = fixturesResp.ok ? await fixturesResp.json() : [];
+        const range = computeProjectionRangeWithTBC(bootstrapData.events, fixturesData, PROJECTION_TOTAL_WEEKS);
         const { TeamGoalsService } = await import('./team-goals-service');
-        await TeamGoalsService.getTeamGoalProjections(currentGW + 1, Math.min(currentGW + 12, 39));
+        await TeamGoalsService.getTeamGoalProjections(currentGW + 1, range.end);
         console.log("✅ TeamGoalsService pre-warmed successfully");
       },
       timeout: 60000

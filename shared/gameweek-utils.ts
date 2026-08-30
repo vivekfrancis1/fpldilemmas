@@ -148,6 +148,26 @@ export function computeNextRange(events: GameweekEvent[], count: number = PROJEC
 }
 
 /**
+ * Same as computeNextRange, but extends `end` to GW39 when — and only when — a fixture is
+ * genuinely postponed with no gameweek assigned yet (fixture.event is null/undefined). GW39
+ * isn't a real gameweek; events (bootstrap-static's gameweek list) never includes it, so
+ * computeNextRange alone always caps at 38 — this is the one legitimate case for going past
+ * that, and every caller that needs GW39-aware ranging should go through this rather than its
+ * own hardcoded `Math.min(..., 39)`, which extends to 39 unconditionally regardless of whether
+ * a TBC fixture actually exists.
+ */
+export function computeProjectionRangeWithTBC(
+  events: GameweekEvent[],
+  fixtures: Array<{ event: number | null | undefined }>,
+  count: number = PROJECTION_TOTAL_WEEKS
+): GameweekRange {
+  const range = computeNextRange(events, count);
+  const hasTBCFixtures = fixtures.some(f => f.event === null || f.event === undefined);
+  if (!hasTBCFixtures) return range;
+  return { ...range, end: 39 };
+}
+
+/**
  * Gets default gameweek range strings for frontend components
  * Returns start and end as strings for compatibility with Select components
  */

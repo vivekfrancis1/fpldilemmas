@@ -66,12 +66,19 @@ export class FPLScoringCacheService {
       let resolvedEnd = endGameweek;
       if (resolvedStart === undefined || resolvedEnd === undefined) {
         try {
-          const bootstrapResp = await internalFetch("api/bootstrap-static");
+          const [bootstrapResp, fixturesResp] = await Promise.all([
+            internalFetch("api/bootstrap-static"),
+            internalFetch("api/fixtures"),
+          ]);
           if (bootstrapResp.ok) {
             const bootstrapData = await bootstrapResp.json();
             const currentGW = computeCurrentGameweek(bootstrapData.events);
             resolvedStart = currentGW + 1;
-            resolvedEnd = Math.min(currentGW + PROJECTION_TOTAL_WEEKS, 39);
+            // Only extends to GW39 when a fixture is genuinely postponed with no gameweek
+            // assigned yet — not unconditionally.
+            const { computeProjectionRangeWithTBC } = await import("../shared/gameweek-utils");
+            const fixturesData = fixturesResp.ok ? await fixturesResp.json() : [];
+            resolvedEnd = computeProjectionRangeWithTBC(bootstrapData.events, fixturesData, PROJECTION_TOTAL_WEEKS).end;
           }
         } catch {
           resolvedStart = resolvedStart ?? 25;
