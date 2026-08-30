@@ -30,7 +30,7 @@ interface PricePrediction {
   days_to_threshold: number | null;
 }
 
-type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'ownership_percentage' | 'current_price';
+type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'hours_to_threshold' | 'ownership_percentage' | 'current_price';
 type PredictionMovementFilter = 'all' | 'rise' | 'drop' | 'locked';
 type PredictionTeamFilter = 'all' | 'my-team';
 
@@ -285,6 +285,18 @@ export default function RecentPriceChanges() {
       return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesTeam;
     })
     .sort((a: PricePrediction, b: PricePrediction) => {
+      // hours_to_threshold is null when there's no meaningful ETA (already crossed uses 0, not
+      // null) — nulls should always sort last regardless of direction, not collapse to 0 and rank
+      // as "soonest".
+      if (predictionSortField === 'hours_to_threshold') {
+        const aNull = a.hours_to_threshold === null;
+        const bNull = b.hours_to_threshold === null;
+        if (aNull && bNull) return 0;
+        if (aNull) return 1;
+        if (bNull) return -1;
+        const result = a.hours_to_threshold! - b.hours_to_threshold!;
+        return predictionSortDirection === 'asc' ? result : -result;
+      }
       const aValue = a[predictionSortField] ?? 0;
       const bValue = b[predictionSortField] ?? 0;
       const result = aValue - bValue;
@@ -433,17 +445,13 @@ export default function RecentPriceChanges() {
                       />
                     </div>
                   </div>
-                  <Select value={predictionPositionFilter} onValueChange={setPredictionPositionFilter}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-position-filter">
-                      <SelectValue placeholder="All Positions" />
+                  <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-team-filter">
+                      <SelectValue placeholder="All Players" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Positions</SelectItem>
-                      {getPlayersByPosition().map(pos => (
-                        <SelectItem key={pos.id} value={pos.name}>
-                          {pos.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="all">All Players</SelectItem>
+                      <SelectItem value="my-team">My Team</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={predictionClubFilter} onValueChange={setPredictionClubFilter}>
@@ -459,6 +467,19 @@ export default function RecentPriceChanges() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={predictionPositionFilter} onValueChange={setPredictionPositionFilter}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-position-filter">
+                      <SelectValue placeholder="All Positions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Positions</SelectItem>
+                      {getPlayersByPosition().map(pos => (
+                        <SelectItem key={pos.id} value={pos.name}>
+                          {pos.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={predictionMovementFilter} onValueChange={(v) => setPredictionMovementFilter(v as PredictionMovementFilter)}>
                     <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-movement-filter">
                       <SelectValue placeholder="Rise & drop" />
@@ -468,15 +489,6 @@ export default function RecentPriceChanges() {
                       <SelectItem value="rise">Rise</SelectItem>
                       <SelectItem value="drop">Drop</SelectItem>
                       <SelectItem value="locked">Locked</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-team-filter">
-                      <SelectValue placeholder="All Players" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Players</SelectItem>
-                      <SelectItem value="my-team">My Team</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -556,8 +568,28 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
-                          <th className="hidden md:table-cell text-right p-3 font-medium" title="Time to reach the ±100% threshold at the current per-hour rate">
-                            Time to Change
+                          <th
+                            className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            title="Time to reach the ±100% threshold at the current per-hour rate"
+                            onClick={() => handlePredictionSort('hours_to_threshold')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Time to Change
+                              {predictionSortField === 'hours_to_threshold' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('ownership_percentage')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Ownership %
+                              {predictionSortField === 'ownership_percentage' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
                           </th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
@@ -608,6 +640,9 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden md:table-cell p-3 text-right text-xs text-muted-foreground">
                               {formatEta(prediction)}
+                            </td>
+                            <td className="hidden md:table-cell p-3 text-right font-medium">
+                              {prediction.ownership_percentage.toFixed(1)}%
                             </td>
                             <td className="hidden md:table-cell p-3">
                               <div className="flex items-center justify-center gap-1">
