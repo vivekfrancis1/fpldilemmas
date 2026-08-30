@@ -9410,13 +9410,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Failed to fetch bootstrap data");
       }
       const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = computeCurrentGameweek(bootstrapData.events);
-      
-      // Process next 12 gameweeks (extend to 39 to include TBC fixtures)
-      const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 39);
+      // Same range computation as /api/team-goal-projections (computeNextRange, capped at 38)
+      // so the two endpoints always cover identical gameweeks — this used to hardcode a cap of
+      // 39 unconditionally, unlike team-goal-projections' explicit GW39-stripping, so assists
+      // showed one extra (always-empty, since GW39 has no real fixtures without an actual TBC
+      // fixture) gameweek that goals didn't.
+      const { computeNextRange } = await import("../shared/gameweek-utils");
+      const { start: startGameweek, end: endGameweek, currentGameweek } = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
       console.log(`DEBUG: Team Assist Projections - Limiting to next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek}`);
-      
+
       // Use TeamGoalsService directly (not HTTP call) as architect specified
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
