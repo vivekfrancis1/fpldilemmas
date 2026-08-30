@@ -7,7 +7,7 @@ interface PlayerAvailabilityInfo {
   news?: string;
 }
 
-export function PlayerAvailabilityBadge({ player }: { player: PlayerAvailabilityInfo }) {
+export function PlayerAvailabilityBadge({ player, compact = false }: { player: PlayerAvailabilityInfo; compact?: boolean }) {
   const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
   const status = player.status || 'a';
   const news = player.news || '';
@@ -54,8 +54,8 @@ export function PlayerAvailabilityBadge({ player }: { player: PlayerAvailability
     <TooltipProvider>
       <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
-          <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm ml-1`}>
-            <StatusIcon className={`h-3 w-3 ${statusColor}`} />
+          <div className={`inline-flex items-center gap-0.5 rounded font-semibold cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm ${compact ? 'px-1 py-px text-[9px] ml-0.5' : 'px-1.5 py-0.5 text-xs gap-1 ml-1'}`}>
+            <StatusIcon className={compact ? `h-2.5 w-2.5 ${statusColor}` : `h-3 w-3 ${statusColor}`} />
             <span className={statusColor}>
               {chanceOfPlaying}%
             </span>

@@ -304,25 +304,23 @@ export const PlayerNameCell = ({
     <div className={cn("flex items-center gap-1", className)}>
       <JerseyIcon team={team} position={position} className="h-7 w-7 object-contain shrink-0" />
       <div className="flex flex-col overflow-hidden">
-        <div className="flex items-center gap-0.5 flex-wrap">
-          <span
-            className={cn(
-              "font-semibold text-gray-900",
-              playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
-            )}
-            onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
-          >
-            {name}
-          </span>
-          {availabilityBadge}
-        </div>
-        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+        <span
+          className={cn(
+            "font-semibold text-gray-900",
+            playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
+          )}
+          onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
+        >
+          {name}
+        </span>
+        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500 flex-wrap">
           {(team || position) && (
             <span>{[team, position && getShortPosition(position)].filter(Boolean).join(" · ")}</span>
           )}
           {showOwnership && ownership !== undefined && (
             <span>{ownership}% owned</span>
           )}
+          {availabilityBadge}
         </div>
       </div>
     </div>

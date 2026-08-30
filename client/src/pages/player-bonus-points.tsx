@@ -663,7 +663,7 @@ export default function PlayerBonusPoints() {
                               className="text-xs md:text-sm"
                               playerId={projection.playerId}
                               availabilityBadge={playerAvailabilityMap && playerAvailabilityMap.get(projection.playerId) && (
-                                <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} />
+                                <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} compact />
                               )}
                             />
                           </td>

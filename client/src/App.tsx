@@ -95,33 +95,13 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/" component={PlayerTotalPoints} />
-        <Route path="/my-dashboard">
-          <ProtectedRoute>
-            <MyDashboard />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/projected-points">
-          <ProtectedRoute>
-            <ProjectedPoints />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/team-optimizer">
-          <ProtectedRoute>
-            <TeamOptimizer />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/transfer-recommendations">
-          <ProtectedRoute>
-            <TransferRecommendations />
-          </ProtectedRoute>
-        </Route>
+        <Route path="/my-dashboard" component={MyDashboard} />
+        <Route path="/projected-points" component={ProjectedPoints} />
+        <Route path="/team-optimizer" component={TeamOptimizer} />
+        <Route path="/transfer-recommendations" component={TransferRecommendations} />
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
-        <Route path="/transfer-planner">
-          <ProtectedRoute>
-            <TransferPlanner />
-          </ProtectedRoute>
-        </Route>
+        <Route path="/transfer-planner" component={TransferPlanner} />
         <Route path="/pick-team">
           <ProtectedRoute requireAdmin={true}>
             <PickTeam />

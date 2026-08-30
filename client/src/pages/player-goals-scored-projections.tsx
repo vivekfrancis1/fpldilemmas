@@ -1069,7 +1069,7 @@ export default function PlayerGoalsScoredProjections() {
                             className="text-xs md:text-sm"
                             playerId={player.playerId}
                             availabilityBadge={playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
-                              <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
+                              <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} compact />
                             )}
                           />
                         </td>

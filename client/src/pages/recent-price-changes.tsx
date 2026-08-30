@@ -607,6 +607,7 @@ export default function RecentPriceChanges() {
                       <thead>
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-2 sm:p-3 font-medium">Player</th>
+                          <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
                             className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('hourly_rate')}
@@ -667,18 +668,6 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
-                          <th
-                            className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('ownership_percentage')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Ownership %
-                              {predictionSortField === 'ownership_percentage' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
-                          <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -692,6 +681,18 @@ export default function RecentPriceChanges() {
                               <div>
                                 <p className="font-medium leading-tight">{prediction.player_name}</p>
                                 <p className="text-[0.9em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
+                              </div>
+                            </td>
+                            <td className="hidden md:table-cell p-3">
+                              <div className="flex items-center justify-center gap-1">
+                                {prediction.ownership_trend === 'up' ? (
+                                  <TrendingUp className="h-4 w-4 text-green-600" />
+                                ) : prediction.ownership_trend === 'down' ? (
+                                  <TrendingDown className="h-4 w-4 text-red-600" />
+                                ) : (
+                                  <span className="h-4 w-4" />
+                                )}
+                                <span className="text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right text-muted-foreground">
@@ -720,21 +721,6 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
-                            </td>
-                            <td className="hidden md:table-cell p-3 text-right font-medium">
-                              {prediction.ownership_percentage.toFixed(1)}%
-                            </td>
-                            <td className="hidden md:table-cell p-3">
-                              <div className="flex items-center justify-center gap-1">
-                                {prediction.ownership_trend === 'up' ? (
-                                  <TrendingUp className="h-4 w-4 text-green-600" />
-                                ) : prediction.ownership_trend === 'down' ? (
-                                  <TrendingDown className="h-4 w-4 text-red-600" />
-                                ) : (
-                                  <span className="h-4 w-4" />
-                                )}
-                                <span className="text-muted-foreground capitalize">{prediction.ownership_trend}</span>
-                              </div>
                             </td>
                           </tr>
                         ))}

@@ -60,6 +60,28 @@ const PREVIOUS_SEASON = "2025/26";
 // expect to already be on a season scale, not a bare per-90 rate.
 const SEASON_GAMES = 38;
 
+/** True once a fixture's 90 minutes are over, even before FPL confirms bonus points. FPL's own
+ * `finished` flag stays false for a while after full time (often ~1hr+) while bonus is being
+ * finalized; `finished_provisional` flips the moment the match itself ends and is what "has this
+ * team/player actually played" should key off, not the bureaucratic bonus-confirmation delay. */
+function isFixtureActuallyOver(fixture: any): boolean {
+  return !!(fixture.finished || fixture.finished_provisional);
+}
+
+/**
+ * The highest gameweek that has at least one fixture that's actually been played (see
+ * isFixtureActuallyOver) — used as the upper bound for "history" endpoints instead of
+ * bootstrap's own event.finished flag, which only flips once EVERY fixture in that gameweek
+ * (including any rearranged/postponed one, and after bonus is confirmed) has completed. That
+ * gate hid an entire gameweek's column for teams/players who had already played their own
+ * fixture, just because some other fixture in the same gameweek hadn't happened (or hadn't had
+ * bonus confirmed) yet.
+ */
+function computeLastFinishedGW(fixturesData: any[]): number {
+  const finishedFixtures = (fixturesData || []).filter((f: any) => isFixtureActuallyOver(f) && typeof f.event === 'number');
+  return finishedFixtures.length > 0 ? Math.max(...finishedFixtures.map((f: any) => f.event)) : 0;
+}
+
 /**
  * Resolve which season a history/"past" view should show. An explicit request always wins;
  * otherwise default to CURRENT_SEASON if it has any finished gameweeks yet, else fall back to
@@ -8105,10 +8127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fixturesData = await fixturesResponse.json();
         teams = bootstrapData.teams;
 
-        const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-        lastFinishedGW = finishedEvents.length > 0
-          ? Math.max(...finishedEvents.map((e: any) => e.id))
-          : 0;
+        lastFinishedGW = computeLastFinishedGW(fixturesData);
       }
 
       console.log(`DEBUG: Season ${resolvedSeason}, last finished gameweek: ${lastFinishedGW}`);
@@ -8131,26 +8150,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Populate actual goals from finished fixtures
+      // Populate actual goals from finished fixtures, tracking each team's own real games-played
+      // count (not the number of gameweek columns shown) so a team that hasn't played its
+      // fixture in the latest, still-in-progress gameweek isn't divided by a game it hasn't played.
+      const teamGamesPlayed = new Map<number, number>();
+      teams.forEach((team: any) => teamGamesPlayed.set(team.id, 0));
       fixturesData.forEach((fixture: any) => {
-        if (fixture.finished && fixture.event <= lastFinishedGW) {
+        if (isFixtureActuallyOver(fixture) && fixture.event <= lastFinishedGW) {
           const homeTeam = teamGoalsMap.get(fixture.team_h);
           const awayTeam = teamGoalsMap.get(fixture.team_a);
-          
+
           if (homeTeam && fixture.team_h_score !== null) {
             homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
             homeTeam.totalGoals += fixture.team_h_score;
+            teamGamesPlayed.set(fixture.team_h, (teamGamesPlayed.get(fixture.team_h) || 0) + 1);
           }
           if (awayTeam && fixture.team_a_score !== null) {
             awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
             awayTeam.totalGoals += fixture.team_a_score;
+            teamGamesPlayed.set(fixture.team_a, (teamGamesPlayed.get(fixture.team_a) || 0) + 1);
           }
         }
       });
-      
+
       // Calculate averages
       const result = Array.from(teamGoalsMap.values()).map((team: any) => {
-        const gamesPlayed = Object.values(team.gameweekGoals).filter((g: any) => g > 0 || Object.keys(team.gameweekGoals).includes(String(g))).length;
+        const gamesPlayed = teamGamesPlayed.get(team.id) || 0;
         return {
           ...team,
           averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
@@ -8176,18 +8201,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Team xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
       const teams = bootstrapData.teams;
-      
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
       
       // Use provided range or default to last 6 gameweeks
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
@@ -8257,9 +8283,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Per-team games played within the fetched range — a team that hasn't yet played its
+      // fixture in the most recent (in-progress) gameweek shouldn't be divided by that gameweek.
+      const teamGamesPlayedXg = new Map<number, number>();
+      teams.forEach((team: any) => teamGamesPlayedXg.set(team.id, 0));
+      fixturesData.forEach((fixture: any) => {
+        if (isFixtureActuallyOver(fixture) && gameweeksToFetch.includes(fixture.event)) {
+          teamGamesPlayedXg.set(fixture.team_h, (teamGamesPlayedXg.get(fixture.team_h) || 0) + 1);
+          teamGamesPlayedXg.set(fixture.team_a, (teamGamesPlayedXg.get(fixture.team_a) || 0) + 1);
+        }
+      });
+
       // Calculate averages and round xG values
       const result = Array.from(teamXgMap.values()).map((team: any) => {
-        const gamesPlayed = gameweeksToFetch.length;
+        const gamesPlayed = teamGamesPlayedXg.get(team.id) || 0;
         // Round gameweek values
         const roundedGameweekXg: { [key: number]: number } = {};
         for (const [gw, xg] of Object.entries(team.gameweekXg)) {
@@ -8335,10 +8372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fixturesData = await fixturesResponse.json();
         teams = bootstrapData.teams;
 
-        const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-        lastFinishedGW = finishedEvents.length > 0
-          ? Math.max(...finishedEvents.map((e: any) => e.id))
-          : 0;
+        lastFinishedGW = computeLastFinishedGW(fixturesData);
       }
 
       const teamGoalsAgainstMap = new Map();
@@ -8358,26 +8392,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      const teamGamesPlayedGA = new Map<number, number>();
+      teams.forEach((team: any) => teamGamesPlayedGA.set(team.id, 0));
       fixturesData.forEach((fixture: any) => {
-        if (fixture.finished && fixture.event <= lastFinishedGW) {
+        if (isFixtureActuallyOver(fixture) && fixture.event <= lastFinishedGW) {
           const homeTeam = teamGoalsAgainstMap.get(fixture.team_h);
           const awayTeam = teamGoalsAgainstMap.get(fixture.team_a);
-          
+
           // Home team concedes away team's goals
           if (homeTeam && fixture.team_a_score !== null) {
             homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
             homeTeam.totalGoals += fixture.team_a_score;
+            teamGamesPlayedGA.set(fixture.team_h, (teamGamesPlayedGA.get(fixture.team_h) || 0) + 1);
           }
           // Away team concedes home team's goals
           if (awayTeam && fixture.team_h_score !== null) {
             awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
             awayTeam.totalGoals += fixture.team_h_score;
+            teamGamesPlayedGA.set(fixture.team_a, (teamGamesPlayedGA.get(fixture.team_a) || 0) + 1);
           }
         }
       });
-      
+
       const result = Array.from(teamGoalsAgainstMap.values()).map((team: any) => {
-        const gamesPlayed = Object.keys(team.gameweekGoals).length;
+        const gamesPlayed = teamGamesPlayedGA.get(team.id) || 0;
         return {
           ...team,
           averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
@@ -8424,10 +8462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       // Fetch live data for each finished gameweek
       const playerGoalsMap = new Map();
@@ -8500,17 +8535,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ season: resolvedSeasonXg, lastFinishedGW, startGW: effStartGw, endGW: effEndGw, players });
       }
 
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
 
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       // Use provided range or default to last 6 gameweeks
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
@@ -8629,11 +8665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       const playerAssistsMap = new Map();
       
@@ -8705,17 +8739,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ season: resolvedSeasonXa, lastFinishedGW, startGW: effStartGwXa, endGW: effEndGwXa, players });
       }
 
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
 
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       // Use provided range or default to last 6 gameweeks
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
@@ -8813,17 +8848,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ season: resolvedSeasonSaves, lastFinishedGW, players });
       }
 
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
 
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       const playerSavesMap = new Map();
 
@@ -8903,17 +8939,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ season: resolvedSeasonDef, lastFinishedGW, players });
       }
 
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
 
       const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
 
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
       const playerDefenseMap = new Map();
 
@@ -9040,17 +9077,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ season: resolvedSeasonPoints, lastFinishedGW, startGW: effStartGwPts, endGW: effEndGwPts, players });
       }
 
-      const bootstrapResponse = await internalFetch("api/bootstrap-static");
-      if (!bootstrapResponse.ok) {
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
-      
-      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-      const lastFinishedGW = finishedEvents.length > 0 
-        ? Math.max(...finishedEvents.map((e: any) => e.id))
-        : 0;
+      const fixturesData = await fixturesResponse.json();
+
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
       
       // Use provided range or default to last 12 gameweeks for performance
       const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
