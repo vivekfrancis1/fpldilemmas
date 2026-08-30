@@ -271,15 +271,15 @@ export default function ResultsAndFixtures() {
   };
 
 
-  // Get match status badge
+  // Get match status badge. Scheduled (not yet started) matches show no badge here — their
+  // kickoff time is shown once, under the date, instead of being repeated as a chip.
   const getStatusBadge = (fixture: any) => {
     if (fixture.isResult) {
       return <Badge variant="secondary" className="bg-green-100 text-green-800">FT</Badge>;
     } else if (fixture.isLive) {
       return <Badge variant="secondary" className="bg-red-100 text-red-800 animate-pulse">LIVE</Badge>;
     } else {
-      const { time } = formatDateTime(fixture.kickoff_time);
-      return <Badge variant="outline" className="text-gray-600">{time}</Badge>;
+      return null;
     }
   };
 
@@ -476,17 +476,19 @@ export default function ResultsAndFixtures() {
                             
                             <div className="flex items-center justify-between pt-1 border-t border-gray-200">
                               <div className="flex items-center space-x-2">
-                                {!fixture.isResult && (
-                                  <span className="text-xs text-gray-600">
-                                    {formatDateTime(fixture.kickoff_time).time}
+                                <div className="flex flex-col leading-tight">
+                                  <span className="text-xs text-gray-500">
+                                    {formatDateTime(fixture.kickoff_time).date}
                                   </span>
-                                )}
-                                <span className="text-xs text-gray-500">
-                                  {formatDateTime(fixture.kickoff_time).date}
-                                </span>
+                                  {!fixture.isResult && !fixture.isLive && (
+                                    <span className="text-xs text-gray-600">
+                                      {formatDateTime(fixture.kickoff_time).time}
+                                    </span>
+                                  )}
+                                </div>
                                 {getStatusBadge(fixture)}
                               </div>
-                              
+
                             </div>
                           </div>
                           
@@ -632,19 +634,19 @@ export default function ResultsAndFixtures() {
                       
                       <div className="flex items-center justify-between pt-1 border-t border-gray-200">
                         <div className="flex items-center space-x-2">
-                          {!fixture.isResult && (
-                            <>
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-xs text-gray-500">
+                              {formatDateTime(fixture.kickoff_time).date}
+                            </span>
+                            {!fixture.isResult && !fixture.isLive && (
                               <span className="text-xs text-gray-600">
                                 {formatDateTime(fixture.kickoff_time).time}
                               </span>
-                              <span className="text-xs text-gray-500">
-                                {formatDateTime(fixture.kickoff_time).date}
-                              </span>
-                            </>
-                          )}
+                            )}
+                          </div>
                           {getStatusBadge(fixture)}
                         </div>
-                        
+
                       </div>
                     </div>
                     
