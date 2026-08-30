@@ -682,19 +682,19 @@ export default function RecentPriceChanges() {
                                 {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
                               </Badge>
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right text-xs text-muted-foreground">
+                            <td className="hidden sm:table-cell p-3 text-right text-sm text-muted-foreground">
                               {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
                             </td>
-                            <td className="hidden md:table-cell p-3 text-right text-xs text-muted-foreground">
+                            <td className="hidden md:table-cell p-3 text-right text-sm text-muted-foreground">
                               {formatEta(prediction)}
                             </td>
-                            <td className="hidden lg:table-cell p-3 text-center text-xs text-muted-foreground">
+                            <td className="hidden lg:table-cell p-3 text-center text-sm text-muted-foreground">
                               {formatDeadlineComparison(prediction)}
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                            <td className="hidden sm:table-cell p-3 text-right text-sm font-medium">
                               {formatPrice(prediction.current_price)}
                             </td>
-                            <td className="hidden md:table-cell p-3 text-right font-medium">
+                            <td className="hidden md:table-cell p-3 text-right text-sm font-medium">
                               {prediction.ownership_percentage.toFixed(1)}%
                             </td>
                             <td className="hidden md:table-cell p-3">
@@ -706,7 +706,7 @@ export default function RecentPriceChanges() {
                                 ) : (
                                   <span className="h-4 w-4" />
                                 )}
-                                <span className="text-xs text-muted-foreground capitalize">{prediction.ownership_trend}</span>
+                                <span className="text-sm text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
                             </td>
                           </tr>
