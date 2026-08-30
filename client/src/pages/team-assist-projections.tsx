@@ -5,7 +5,7 @@ import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -60,23 +60,52 @@ export default function TeamAssistProjections() {
     return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
   }, [fixturesData]);
 
+  // Current (possibly in-progress) gameweek — see the matching comments in team-goal-projections.tsx.
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    return computeCurrentGameweek(bootstrapData.events);
+  }, [bootstrapData?.events]);
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+  const currentGWDecidedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return set;
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        set.add(f.team_h);
+        set.add(f.team_a);
+      }
+    });
+    return set;
+  }, [fixturesData, currentGameweek]);
+
   // Calculate dynamic gameweek ranges based on current gameweek
   const { defaultStart, defaultEnd } = useMemo(() => {
     const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
+    // Fold the current gameweek in when it still has an unstarted fixture.
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && range.startGameweek && currentGameweek < parseInt(range.startGameweek))
+      ? String(currentGameweek)
+      : range.startGameweek;
     return {
-      defaultStart: range.startGameweek || "6",
+      defaultStart: effectiveStart || "6",
       defaultEnd: hasTBCFixture && fixtureMode === 'base' ? "39" : (range.endGameweek || "13")
     };
-  }, [bootstrapData, hasTBCFixture, fixtureMode]);
-  
+  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
+
   const availableGameweeks = useMemo(() => {
     const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], totalWeeks);
+    // Fold the current gameweek in (see defaultStart above) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
   const [startGameweek, setStartGameweek] = useState<string>("6");
   const [endGameweek, setEndGameweek] = useState<string>("13");
@@ -147,7 +176,8 @@ export default function TeamAssistProjections() {
   }, [fixtureMode]);
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
-    queryKey: ["/api/team-assist-projections"],
+    queryKey: [`/api/team-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
+    enabled: !!startGameweek && !!endGameweek,
     // /api/team-assist-projections returns teamId/teamName (not id/team), which left
     // team.team undefined here — rendered as a blank team name in the desktop column.
     select: (data: any[]) => data.map((team, index) => ({
@@ -508,9 +538,19 @@ export default function TeamAssistProjections() {
                       </td>
                       
                       {activeGameweeks.map(gwNumber => {
-                        const assists = team.gameweekProjections[gwNumber] || 0;
-                        const fixtures: FixtureDetail[] = team.fixtureDetails?.[gwNumber.toString()] || [];
+                        // The current gameweek's cell is blanked once this team's own fixture has
+                        // kicked off — see isDecidedCurrentGW in team-goal-projections.tsx.
+                        const isDecidedCurrentGW = gwNumber === currentGameweek && currentGWDecidedTeamIds.has(team.id);
+                        const assists = isDecidedCurrentGW ? 0 : (team.gameweekProjections[gwNumber] || 0);
+                        const fixtures: FixtureDetail[] = isDecidedCurrentGW ? [] : (team.fixtureDetails?.[gwNumber.toString()] || []);
                         const isDGW = fixtures.length > 1;
+                        if (isDecidedCurrentGW) {
+                          return (
+                            <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
+                              <span className="text-gray-400">-</span>
+                            </td>
+                          );
+                        }
                         return (
                           <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getAssistsColor(assists)}`}>
                             {isDGW ? (
