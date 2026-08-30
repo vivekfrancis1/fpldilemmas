@@ -7849,10 +7849,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== PROMOTED TEAM GOALS/CLEAN SHEETS ADMIN ENDPOINTS ====================
   // ==================== FIXTURE ODDS ADMIN ENDPOINTS ====================
   // Raw data layer for The Odds API integration (see server/odds-service.ts) — de-vigged,
-  // cross-bookmaker consensus probabilities per fixture. Admin-only for now since this isn't
-  // wired into any projection calculation yet, just a way to fetch/inspect the data.
-  // POST costs real API quota (free tier: 500 requests/month, 2 credits per call here), so it's
-  // a deliberate manual action, never triggered automatically or from tests.
+  // cross-bookmaker consensus probabilities per fixture. This does feed Team Goal Projections'
+  // 'odds' calculationMode (calculateFixtureGoalsOdds in team-goals-service.ts). Refreshed
+  // automatically every 4 hours by odds-refresh-scheduler.ts; these admin endpoints are for
+  // manual inspection/refresh only. POST costs real API quota (2 credits per call), so manual
+  // triggering should stay occasional, not looped or run from tests.
 
   app.post("/api/admin/refresh-odds", isAuthenticated, requireAdmin, async (_req, res) => {
     try {
@@ -7874,6 +7875,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching fixture odds:", error);
       res.status(500).json({ error: "Failed to fetch fixture odds" });
+    }
+  });
+
+  // ==================== FIXTURE ODDS HISTORY (public) ====================
+  // Time series of how each fixture's consensus odds moved across every scheduled refresh —
+  // powers an "odds over time" chart. Public (read-only, no quota cost) unlike the admin
+  // endpoints above, which touch The Odds API's real request quota.
+
+  app.get("/api/fixture-odds-history/fixtures", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const { listFixturesWithOddsHistory } = await import('./odds-service');
+      const fixtures = await listFixturesWithOddsHistory(season);
+      res.json({ season, fixtures });
+    } catch (error) {
+      console.error("Error listing fixture odds history:", error);
+      res.status(500).json({ error: "Failed to list fixture odds history" });
+    }
+  });
+
+  app.get("/api/fixture-odds-history/:eventId", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const { eventId } = req.params;
+      const { getFixtureOddsHistory } = await import('./odds-service');
+      const history = await getFixtureOddsHistory(season, eventId);
+      if (!history) {
+        return res.status(404).json({ error: "No odds history found for this fixture" });
+      }
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching fixture odds history:", error);
+      res.status(500).json({ error: "Failed to fetch fixture odds history" });
     }
   });
 

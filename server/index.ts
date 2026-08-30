@@ -181,6 +181,13 @@ app.use((req, res, next) => {
       // Start projection accuracy scheduler (tracks GW25-38 projections vs actuals)
       projectionAccuracyScheduler.start();
       console.log("✓ Projection accuracy scheduler started");
+
+      // Start odds refresh scheduler (every 4 hours; no-ops if ODDS_API_KEY isn't set)
+      import('./odds-refresh-scheduler').then(({ oddsRefreshScheduler }) => {
+        oddsRefreshScheduler.start();
+      }).catch((error) => {
+        console.error("Failed to start odds refresh scheduler:", error);
+      });
     });
 
     // Handle server startup errors

@@ -1608,8 +1608,10 @@ export type InsertAdminPromotedTeamCleanSheets = typeof adminPromotedTeamCleanSh
 // Consensus fixture odds fetched from The Odds API (see server/odds-service.ts), de-vigged and
 // averaged across bookmakers by shared/odds-utils.ts. One row per upstream event; refreshed by
 // re-fetching and upserting on oddsApiEventId, so re-running a refresh updates existing rows
-// (odds move as kickoff approaches) rather than duplicating them. Not yet wired into any
-// projection calculation — this is the raw data layer only.
+// (odds move as kickoff approaches) rather than duplicating them. Holds only the LATEST snapshot
+// per fixture — this is what calculateFixtureGoalsOdds in team-goals-service.ts reads for the
+// live 'odds' calculationMode. For the time series (how odds moved leading up to kickoff), see
+// fixtureOddsSnapshots below.
 export const fixtureOdds = pgTable("fixture_odds", {
   id: serial("id").primaryKey(),
   season: varchar("season", { length: 10 }).notNull(),
@@ -1632,3 +1634,28 @@ export const fixtureOdds = pgTable("fixture_odds", {
 
 export type FixtureOdds = typeof fixtureOdds.$inferSelect;
 export type InsertFixtureOdds = typeof fixtureOdds.$inferInsert;
+
+// Append-only time series of the same consensus odds above — one new row per refresh per
+// fixture (no upsert, unlike fixtureOdds), so a fixture approaching kickoff accumulates a
+// history of how the market moved. Powers the "goal projections over time" chart. Rows are
+// written alongside (not instead of) fixtureOdds by refreshFixtureOdds in server/odds-service.ts.
+export const fixtureOddsSnapshots = pgTable("fixture_odds_snapshots", {
+  id: serial("id").primaryKey(),
+  season: varchar("season", { length: 10 }).notNull(),
+  oddsApiEventId: varchar("odds_api_event_id", { length: 64 }).notNull(),
+  homeTeam: varchar("home_team", { length: 100 }).notNull(),
+  awayTeam: varchar("away_team", { length: 100 }).notNull(),
+  commenceTime: timestamp("commence_time").notNull(),
+  bookmakerCount: integer("bookmaker_count").notNull(),
+  homeWinProb: decimal("home_win_prob", { precision: 6, scale: 5 }),
+  drawProb: decimal("draw_prob", { precision: 6, scale: 5 }),
+  awayWinProb: decimal("away_win_prob", { precision: 6, scale: 5 }),
+  over25Prob: decimal("over_2_5_prob", { precision: 6, scale: 5 }),
+  under25Prob: decimal("under_2_5_prob", { precision: 6, scale: 5 }),
+  snapshotAt: timestamp("snapshot_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_fixture_odds_snapshots_event_time").on(table.oddsApiEventId, table.snapshotAt),
+]);
+
+export type FixtureOddsSnapshot = typeof fixtureOddsSnapshots.$inferSelect;
+export type InsertFixtureOddsSnapshot = typeof fixtureOddsSnapshots.$inferInsert;
