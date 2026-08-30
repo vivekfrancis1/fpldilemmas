@@ -92,6 +92,32 @@ export default function PlayerAssistProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Current (possibly in-progress) gameweek — see the matching comments in
+  // team-goal-projections.tsx / player-total-points.tsx.
+  const currentGameweek = useMemo(() => {
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
+  }, [bootstrapData]);
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+  // Short names of teams whose own current-gameweek fixture has kicked off — the cached
+  // projection for them is stale (pre-match); blank their current-GW cell client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    const idToShort = new Map(bootstrapData.teams.map((t: any) => [t.id, t.short_name]));
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        const homeShort = idToShort.get(f.team_h);
+        const awayShort = idToShort.get(f.team_a);
+        if (homeShort) set.add(homeShort as string);
+        if (awayShort) set.add(awayShort as string);
+      }
+    });
+    return set;
+  }, [fixturesData, bootstrapData?.teams, currentGameweek]);
+
   // View mode: "future" for projections, "past" for historical data, "pastXa" for xA history
   const [viewMode, setViewMode] = useViewModeParam<"future" | "past" | "pastXa">("view", "future", ["future", "past", "pastXa"]);
 
@@ -214,9 +240,13 @@ export default function PlayerAssistProjections() {
       return [];
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see currentGWHasUnstarted above) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap, currentGWHasUnstarted, currentGameweek]);
 
   // Initialize gameweeks when bootstrap data loads. Marks the page ready regardless of whether
   // the future range is valid (it isn't, between seasons) — the viewMode-aware reset effect
@@ -227,13 +257,16 @@ export default function PlayerAssistProjections() {
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start)
+      ? currentGameweek
+      : start;
 
-    if (start > 0 && end > 0 && start <= end && end <= 39) {
-      setStartGameweek(start);
+    if (effectiveStart > 0 && end > 0 && effectiveStart <= end && end <= 39) {
+      setStartGameweek(effectiveStart);
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized]);
+  }, [bootstrapData, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Reset gameweek range when viewMode changes
   useEffect(() => {
@@ -245,11 +278,15 @@ export default function PlayerAssistProjections() {
       setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(parseInt(newRange.startGameweek));
+      const start = parseInt(newRange.startGameweek);
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start)
+        ? currentGameweek
+        : start;
+      setStartGameweek(effectiveStart);
       setEndGameweek(parseInt(newRange.endGameweek));
       setSelectedGameweeks(new Set());
     }
-  }, [viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, bootstrapData?.events]);
+  }, [viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, bootstrapData?.events, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
   useEffect(() => {
@@ -284,6 +321,20 @@ export default function PlayerAssistProjections() {
   );
 
   // Transform history data to match projection format for unified display
+  // Strip the current gameweek's entry when it's not meaningful: in future mode, once this
+  // player's own team has kicked off, the cached projection is stale (see
+  // currentGWDecidedTeamShorts); in past/pastXa mode, the underlying live-derived data returns
+  // every player with all-zero stats before their team's fixture kicks off, so a "0" for a
+  // not-yet-played gameweek would misleadingly read as "played and scored nothing".
+  const stripUnmeaningfulCurrentGW = (teamShort: string, gwProjections: Record<string, number>, isFutureMode: boolean) => {
+    if (currentGameweek <= 0) return gwProjections;
+    const teamDecided = currentGWDecidedTeamShorts.has(teamShort);
+    const shouldStrip = isFutureMode ? teamDecided : !teamDecided;
+    if (!shouldStrip) return gwProjections;
+    const { [currentGameweek.toString()]: _omit, ...rest } = gwProjections;
+    return rest;
+  };
+
   const displayData = useMemo(() => {
     if (viewMode === "past" && historyData?.players) {
       return historyData.players.map(player => ({
@@ -291,8 +342,10 @@ export default function PlayerAssistProjections() {
         playerName: player.playerName,
         teamShort: player.teamShort,
         position: player.position,
-        gameweekProjections: Object.fromEntries(
-          Object.entries(player.gameweekAssists).map(([gw, assists]) => [gw, assists])
+        gameweekProjections: stripUnmeaningfulCurrentGW(
+          player.teamShort,
+          Object.fromEntries(Object.entries(player.gameweekAssists).map(([gw, assists]) => [gw, assists])),
+          false
         ),
         totalProjectedAssists: player.totalAssists,
         assistShare: 0, // Not available in history data
@@ -304,15 +357,20 @@ export default function PlayerAssistProjections() {
         playerName: player.name,
         teamShort: player.teamShort,
         position: player.position,
-        gameweekProjections: Object.fromEntries(
-          Object.entries(player.gameweekXa).map(([gw, xa]) => [gw, xa])
+        gameweekProjections: stripUnmeaningfulCurrentGW(
+          player.teamShort,
+          Object.fromEntries(Object.entries(player.gameweekXa).map(([gw, xa]) => [gw, xa])),
+          false
         ),
         totalProjectedAssists: player.totalXa,
         assistShare: 0, // Not available in history data
       }));
     }
-    return playerAssistData || [];
-  }, [viewMode, historyData, xaHistoryData, playerAssistData]);
+    return (playerAssistData || []).map(player => ({
+      ...player,
+      gameweekProjections: stripUnmeaningfulCurrentGW(player.teamShort || '', player.gameweekProjections, true),
+    }));
+  }, [viewMode, historyData, xaHistoryData, playerAssistData, currentGameweek, currentGWDecidedTeamShorts]);
 
   // Combined loading state
   const isLoading = (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXa" && xaHistoryLoading);
@@ -353,10 +411,6 @@ export default function PlayerAssistProjections() {
 
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
-
-  const currentGameweek = useMemo(() => {
-    return computeCurrentGameweek((bootstrapData?.events || []) as any);
-  }, [bootstrapData]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -513,6 +567,16 @@ export default function PlayerAssistProjections() {
       return total;
     };
 
+    // Same total math as above, divided by only the gameweeks with a real (present) entry —
+    // a blanked current-GW cell isn't in gameweekProjections at all (see
+    // stripUnmeaningfulCurrentGW in displayData), so it's excluded here too.
+    const getFilteredAverageForSort = (player: PlayerAssistProjection) => {
+      const tbc = showTBCColumn ? (Number(player.gameweekProjections?.['39']) || 0) : 0;
+      const counted = dynamicGameweekColumns.filter(gw => gw.toString() in player.gameweekProjections).length + (tbc > 0 ? 1 : 0);
+      const total = getFilteredTotalForSort(player) + tbc;
+      return counted > 0 ? total / counted : 0;
+    };
+
     // Sort data
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
@@ -551,6 +615,10 @@ export default function PlayerAssistProjections() {
         case 'assistShare':
           aValue = a.assistShare;
           bValue = b.assistShare;
+          break;
+        case 'rangeAverage':
+          aValue = getFilteredAverageForSort(a);
+          bValue = getFilteredAverageForSort(b);
           break;
         default:
           // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
@@ -986,9 +1054,14 @@ export default function PlayerAssistProjections() {
                               GW39 (TBC)
                             </th>
                           )}
-                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-[65px] min-w-[65px] sticky right-[52px] z-[5]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
                               {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
+                            </Button>
+                          </th>
+                          <th className="hidden md:table-cell px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-emerald-50 w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeAverage')} className="h-auto p-0 font-medium text-gray-500 hover:bg-emerald-100 hover:text-gray-700 text-xs md:text-sm">
+                              Avg {getSortIcon('rangeAverage')}
                             </Button>
                           </th>
                         </tr>
@@ -1003,16 +1076,26 @@ export default function PlayerAssistProjections() {
                           
                           let adjustedTotal = 0;
                           let originalTotal = 0;
+                          // Only counts gameweeks with a real (present) entry — a blanked
+                          // current-GW cell isn't in gameweekProjections at all (see
+                          // stripUnmeaningfulCurrentGW in displayData above), so it's correctly
+                          // excluded from the average's denominator.
+                          let countedWeeks = 0;
                           dynamicGameweekColumns.forEach(gw => {
-                            const val = player.gameweekProjections[gw.toString()] || 0;
+                            const gwKey = gw.toString();
+                            if (!(gwKey in player.gameweekProjections)) return;
+                            const val = player.gameweekProjections[gwKey] || 0;
                             const mult = gwMultipliers[gw] ?? 1;
                             adjustedTotal += val * mult;
                             originalTotal += val;
+                            countedWeeks += 1;
                           });
                           const tbcAssistEntry = viewMode === "future" ? tbcTeamInfoMap.get(player.teamShort || '') : null;
                           const tbcAssists = Number(player.gameweekProjections?.['39']) || 0;
+                          if (tbcAssists > 0) countedWeeks += 1;
                           const pointsTotal = adjustedTotal * 3;
                           const originalPointsTotal = originalTotal * 3;
+                          const averageAssists = countedWeeks > 0 ? originalTotal / countedWeeks : 0;
                           
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
@@ -1121,7 +1204,7 @@ export default function PlayerAssistProjections() {
                                 )}
                               </td>
                             )}
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-[52px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {(() => {
                                 const tbcContrib = showTBCColumn ? tbcAssists : 0;
                                 return hasAnyAdjustment ? (
@@ -1133,6 +1216,9 @@ export default function PlayerAssistProjections() {
                                   <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
                                 );
                               })()}
+                            </td>
+                            <td className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 bg-emerald-50 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                              <span className="text-sm md:text-lg font-bold text-emerald-800">{viewMode === "past" ? Math.round(averageAssists) : averageAssists.toFixed(2)}</span>
                             </td>
                           </tr>
                           );
