@@ -8132,12 +8132,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`DEBUG: Season ${resolvedSeason}, last finished gameweek: ${lastFinishedGW}`);
       
-      // Initialize team goals data structure
+      // Initialize team goals data structure. Each gameweek starts as null ("not played yet" —
+      // rendered blank client-side and excluded from the average) rather than 0, so a team that
+      // hasn't played the latest, still-in-progress gameweek is visually distinct from a team
+      // that played and kept a clean sheet without scoring.
       const teamGoalsMap = new Map();
       teams.forEach((team: any) => {
-        const gameweekGoals: { [key: number]: number } = {};
+        const gameweekGoals: { [key: number]: number | null } = {};
         for (let gw = 1; gw <= lastFinishedGW; gw++) {
-          gameweekGoals[gw] = 0;
+          gameweekGoals[gw] = null;
         }
         teamGoalsMap.set(team.id, {
           id: team.id,
@@ -8286,21 +8289,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Per-team games played within the fetched range — a team that hasn't yet played its
       // fixture in the most recent (in-progress) gameweek shouldn't be divided by that gameweek.
       const teamGamesPlayedXg = new Map<number, number>();
-      teams.forEach((team: any) => teamGamesPlayedXg.set(team.id, 0));
+      const teamPlayedGwsXg = new Map<number, Set<number>>();
+      teams.forEach((team: any) => { teamGamesPlayedXg.set(team.id, 0); teamPlayedGwsXg.set(team.id, new Set()); });
       fixturesData.forEach((fixture: any) => {
         if (isFixtureActuallyOver(fixture) && gameweeksToFetch.includes(fixture.event)) {
           teamGamesPlayedXg.set(fixture.team_h, (teamGamesPlayedXg.get(fixture.team_h) || 0) + 1);
           teamGamesPlayedXg.set(fixture.team_a, (teamGamesPlayedXg.get(fixture.team_a) || 0) + 1);
+          teamPlayedGwsXg.get(fixture.team_h)?.add(fixture.event);
+          teamPlayedGwsXg.get(fixture.team_a)?.add(fixture.event);
         }
       });
 
       // Calculate averages and round xG values
       const result = Array.from(teamXgMap.values()).map((team: any) => {
         const gamesPlayed = teamGamesPlayedXg.get(team.id) || 0;
-        // Round gameweek values
-        const roundedGameweekXg: { [key: number]: number } = {};
+        const playedGws = teamPlayedGwsXg.get(team.id) || new Set();
+        // Round gameweek values — null (blank, not counted in the average) for a gameweek this
+        // team hasn't actually played yet, rather than the placeholder 0 every cell starts at.
+        const roundedGameweekXg: { [key: number]: number | null } = {};
         for (const [gw, xg] of Object.entries(team.gameweekXg)) {
-          roundedGameweekXg[Number(gw)] = Math.round((xg as number) * 100) / 100;
+          roundedGameweekXg[Number(gw)] = playedGws.has(Number(gw)) ? Math.round((xg as number) * 100) / 100 : null;
         }
         return {
           ...team,
@@ -8377,9 +8385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const teamGoalsAgainstMap = new Map();
       teams.forEach((team: any) => {
-        const gameweekGoals: { [key: number]: number } = {};
+        const gameweekGoals: { [key: number]: number | null } = {};
         for (let gw = 1; gw <= lastFinishedGW; gw++) {
-          gameweekGoals[gw] = 0;
+          gameweekGoals[gw] = null;
         }
         teamGoalsAgainstMap.set(team.id, {
           id: team.id,

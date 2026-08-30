@@ -880,17 +880,23 @@ export default function PlayerGoalsScoredProjections() {
 
             <div className="w-full space-y-3">
               <div>
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-xs font-semibold text-gray-600">Availability</span>
+                </div>
+                <button
+                  onClick={() => setApplyAvailability(!applyAvailability)}
+                  className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                >
+                  Avail: {applyAvailability ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div>
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
                   <span className="text-xs font-semibold text-gray-600">
                     Gameweeks{gwFilter.size > 0 && ` (${gwFilter.size})`}
                   </span>
                   <div className="flex flex-wrap items-center gap-1">
-                    <button
-                      onClick={() => setApplyAvailability(!applyAvailability)}
-                      className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-                    >
-                      Avail: {applyAvailability ? 'ON' : 'OFF'}
-                    </button>
                     <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
                     <button onClick={() => setGwFilter(prev => new Set(availableGameweeks.filter(gw => startGameweek && endGameweek && gw >= startGameweek && gw <= endGameweek && !prev.has(gw))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                   </div>

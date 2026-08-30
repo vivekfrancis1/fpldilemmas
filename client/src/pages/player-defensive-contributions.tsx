@@ -990,19 +990,6 @@ export default function PlayerDefensiveContributions() {
                     Player
                   </TableHead>
 
-                  <TableHead 
-                    className="hidden md:table-cell w-[65px] min-w-[65px] cursor-pointer hover:bg-muted/50 px-1 text-xs"
-                    onClick={handleCurrentDCSort}
-                  >
-                    <div className="flex items-center justify-center gap-1 text-center">
-                      <span className="whitespace-nowrap">DC/game (season)</span>
-                      {sortByCurrentDC && (
-                        <span className="text-xs">
-                          {currentDCSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
                   {activeGameweeks.map(gw => {
                     const isTBC = gw === 39 && tbcTeamInfoMap.size > 0 && viewMode === 'future';
                     return (
@@ -1078,11 +1065,6 @@ export default function PlayerDefensiveContributions() {
                             {player.teamName.slice(0, 3).toUpperCase()} · {player.position.slice(0, 3).toUpperCase()}
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-center px-0.5 py-1 text-xs">
-                      <div className="p-1 rounded bg-blue-50 font-bold text-blue-800">
-                        {player.currentSeasonStats.dcPer90.toFixed(1)}
                       </div>
                     </TableCell>
                     {activeGameweeks.map((gwNum) => {

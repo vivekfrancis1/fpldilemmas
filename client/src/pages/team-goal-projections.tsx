@@ -956,7 +956,7 @@ export default function TeamGoalProjections() {
                           
                           const cellContent = (
                             <div className="flex flex-col items-center">
-                              <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
+                              <span>{(goals !== undefined && goals !== null) ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                               {showOpponent && (
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                   {fixtures.length > 0
@@ -979,7 +979,7 @@ export default function TeamGoalProjections() {
                                   <PopoverTrigger asChild>
                                     <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                       <div className="flex flex-col items-center">
-                                        <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
+                                        <span>{(goals !== undefined && goals !== null) ? goals.toFixed(2) : "-"}</span>
                                         {showOpponent && (
                                           <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                             {fixtures.length > 0 ? fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ') : '\u00A0'}
