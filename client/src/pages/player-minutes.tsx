@@ -15,6 +15,7 @@ import JerseyIcon from "@/components/jersey-icon";
 
 interface BootstrapData {
   events: any[];
+  teams: any[];
 }
 
 interface PlayerMinutesProjection {
@@ -55,29 +56,87 @@ export default function PlayerMinutes() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch fixtures to detect whether the current gameweek has an unstarted fixture (fold-in) and
+  // which teams' current-GW fixture is decided (blanking a stale current-GW estimate).
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch player minutes projections data
   const { data: playerMinutesData, isLoading, error } = useQuery<PlayerMinutesProjection[]>({
     queryKey: ["/api/player-minutes-projections"],
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
-  // Default gameweek range once bootstrap data loads, same pattern as player-saves.tsx
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3;
+    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages. The backend already folds the current gameweek into its own xMinsPerGW
+  // range unconditionally (see the /api/player-minutes-projections handler); this mirrors it
+  // client-side so the dropdown/default range and the fetched data agree.
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+
+  // Team SHORT codes whose own fixture in the current gameweek has kicked off or finished —
+  // their current-GW expected-minutes estimate is stale (real minutes are already known) and
+  // gets blanked client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
+  // Blank a decided team's current-GW estimate — strip the key entirely so it renders "-" and
+  // is excluded from the Average's denominator, same convention as the other Player Projection
+  // pages.
+  const blankedMinutesData = useMemo(() => {
+    if (!playerMinutesData) return playerMinutesData;
+    if (currentGameweek <= 0 || currentGWDecidedTeamShorts.size === 0) return playerMinutesData;
+    const gwKey = `gw${currentGameweek}`;
+    return playerMinutesData.map(p => {
+      if (!currentGWDecidedTeamShorts.has(p.teamShort) || !(gwKey in (p.xMinsPerGW || {}))) return p;
+      const { [gwKey]: _omit, ...rest } = p.xMinsPerGW || {};
+      return { ...p, xMinsPerGW: rest };
+    });
+  }, [playerMinutesData, currentGameweek, currentGWDecidedTeamShorts]);
+
+  // Default gameweek range once bootstrap data loads, same pattern as player-saves.tsx. Waits on
+  // fixturesData too — otherwise, on a cold cache, this can fire before fixturesData resolves,
+  // lock in currentGWHasUnstarted=false (its default while fixtures are still loading), and
+  // never reconsider once `initialized` gates it off.
   useEffect(() => {
-    if (!bootstrapData || initialized) return;
+    if (!bootstrapData || !fixturesData || initialized) return;
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
-    if (start > 0 && end > 0 && start <= end && end <= 39) {
-      setStartGameweek(start);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start) ? currentGameweek : start;
+    if (effectiveStart > 0 && end > 0 && effectiveStart <= end && end <= 39) {
+      setStartGameweek(effectiveStart);
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized, defaultWeeks]);
+  }, [bootstrapData, fixturesData, initialized, defaultWeeks, currentGWHasUnstarted, currentGameweek]);
 
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) return [];
-    return getNextGameweeksForDropdown(bootstrapData.events, totalWeeks).filter(gw => gw !== 39);
-  }, [bootstrapData?.events, totalWeeks]);
+    const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks).filter(gw => gw !== 39);
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) gws.unshift(currentGameweek);
+    return gws;
+  }, [bootstrapData?.events, totalWeeks, currentGWHasUnstarted, currentGameweek]);
 
   // GW columns for the table — xMinsPerGW never includes gw39 (no TBC handling needed here,
   // see server/routes.ts's minutes reallocation block).
@@ -88,10 +147,14 @@ export default function PlayerMinutes() {
     return columns;
   }, [startGameweek, endGameweek]);
 
+  // Only counts gameweeks with a real (present) entry — a blanked current-GW cell isn't in
+  // xMinsPerGW at all, so it's correctly excluded from the average's denominator.
   const getAvgXMins = (player: PlayerMinutesProjection) => {
     if (dynamicGameweekColumns.length === 0) return player.expectedMinutesPerGame;
-    const total = dynamicGameweekColumns.reduce((sum, gw) => sum + (player.xMinsPerGW?.[`gw${gw}`] ?? 0), 0);
-    return total / dynamicGameweekColumns.length;
+    const presentGws = dynamicGameweekColumns.filter(gw => `gw${gw}` in (player.xMinsPerGW || {}));
+    if (presentGws.length === 0) return 0;
+    const total = presentGws.reduce((sum, gw) => sum + (player.xMinsPerGW?.[`gw${gw}`] ?? 0), 0);
+    return total / presentGws.length;
   };
 
   // Get unique teams and positions for filters
@@ -121,9 +184,9 @@ export default function PlayerMinutes() {
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    if (!playerMinutesData) return [];
-    
-    let filtered = playerMinutesData.filter(player => {
+    if (!blankedMinutesData) return [];
+
+    let filtered = blankedMinutesData.filter(player => {
       // Search filter
       if (searchTerm) {
         const matchesSearch = player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,7 +244,7 @@ export default function PlayerMinutes() {
     });
 
     return filtered;
-  }, [playerMinutesData, searchTerm, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection, dynamicGameweekColumns]);
+  }, [blankedMinutesData, searchTerm, selectedPosition, selectedTeam, minMinutes, sortField, sortDirection, dynamicGameweekColumns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
