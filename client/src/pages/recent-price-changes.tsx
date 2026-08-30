@@ -576,11 +576,21 @@ export default function RecentPriceChanges() {
                   </div>
                 ) : filteredAndSortedPredictions.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs sm:text-sm">
                       <thead>
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-2 sm:p-3 font-medium">Player</th>
-                          <th className="hidden sm:table-cell text-left p-3 font-medium">Status</th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('hourly_rate')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Per Hr
+                              {predictionSortField === 'hourly_rate' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
                           <th
                             className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('progress')}
@@ -603,17 +613,7 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
-                          <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('hourly_rate')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Per Hr
-                              {predictionSortField === 'hourly_rate' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
+                          <th className="hidden sm:table-cell text-left p-3 font-medium">Status</th>
                           <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             title="Time to reach the ±100% threshold at the current per-hour rate, shown in your device's local time zone"
@@ -663,38 +663,38 @@ export default function RecentPriceChanges() {
                           >
                             <td className="p-2 sm:p-3">
                               <div>
-                                <p className="font-medium text-xs sm:text-sm leading-tight">{prediction.player_name}</p>
-                                <p className="text-xs text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
+                                <p className="font-medium leading-tight">{prediction.player_name}</p>
+                                <p className="text-[0.9em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
                               </div>
                             </td>
-                            <td className="hidden sm:table-cell p-3">
-                              <Badge variant="outline" className={`whitespace-nowrap ${statusBadgeClass(prediction.status)}`}>
-                                {prediction.status}
-                              </Badge>
+                            <td className="hidden sm:table-cell p-3 text-right text-muted-foreground">
+                              {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
                             </td>
                             <td className="p-2 sm:p-3 text-right">
-                              <Badge variant="outline" className={progressBadgeClass(prediction.progress)}>
+                              <Badge variant="outline" className={`text-xs sm:text-sm ${progressBadgeClass(prediction.progress)}`}>
                                 {prediction.progress > 0 ? "+" : ""}{prediction.progress.toFixed(1)}%
                               </Badge>
                             </td>
                             <td className="p-2 sm:p-3 text-right">
-                              <Badge variant="outline" className={progressBadgeClass(prediction.predicted_progress)}>
+                              <Badge variant="outline" className={`text-xs sm:text-sm ${progressBadgeClass(prediction.predicted_progress)}`}>
                                 {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
                               </Badge>
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right text-sm text-muted-foreground">
-                              {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
+                            <td className="hidden sm:table-cell p-3">
+                              <Badge variant="outline" className={`whitespace-nowrap text-xs sm:text-sm ${statusBadgeClass(prediction.status)}`}>
+                                {prediction.status}
+                              </Badge>
                             </td>
-                            <td className="hidden md:table-cell p-3 text-right text-sm text-muted-foreground">
+                            <td className="hidden md:table-cell p-3 text-right text-muted-foreground">
                               {formatEta(prediction)}
                             </td>
-                            <td className="hidden lg:table-cell p-3 text-center text-sm text-muted-foreground">
+                            <td className="hidden lg:table-cell p-3 text-center text-muted-foreground">
                               {formatDeadlineComparison(prediction)}
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right text-sm font-medium">
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
                             </td>
-                            <td className="hidden md:table-cell p-3 text-right text-sm font-medium">
+                            <td className="hidden md:table-cell p-3 text-right font-medium">
                               {prediction.ownership_percentage.toFixed(1)}%
                             </td>
                             <td className="hidden md:table-cell p-3">
@@ -706,7 +706,7 @@ export default function RecentPriceChanges() {
                                 ) : (
                                   <span className="h-4 w-4" />
                                 )}
-                                <span className="text-sm text-muted-foreground capitalize">{prediction.ownership_trend}</span>
+                                <span className="text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
                             </td>
                           </tr>
@@ -888,7 +888,7 @@ export default function RecentPriceChanges() {
               </div>
             ) : filteredAndSortedChanges.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
                       <th 
@@ -1021,23 +1021,21 @@ export default function RecentPriceChanges() {
                               </div>
                             </td>
                             <td className="hidden sm:table-cell p-3">
-                              <div className="font-medium text-sm">{change.team_name}</div>
+                              <div className="font-medium">{change.team_name}</div>
                             </td>
                             <td className="hidden sm:table-cell p-3">
-                              <div className="text-sm text-muted-foreground">{change.position}</div>
+                              <div className="text-muted-foreground">{change.position}</div>
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
-                              <div className="text-sm">
-                                {typeof change.ownership === 'number' 
-                                  ? `${change.ownership.toFixed(1)}%` 
-                                  : `${parseFloat(change.ownership || "0").toFixed(1)}%`}
-                              </div>
+                              {typeof change.ownership === 'number'
+                                ? `${change.ownership.toFixed(1)}%`
+                                : `${parseFloat(change.ownership || "0").toFixed(1)}%`}
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(change.old_price)}
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right">
-                              <Badge variant={change.price_change > 0 ? "success" : change.price_change < 0 ? "destructive" : "secondary"}>
+                              <Badge variant={change.price_change > 0 ? "success" : change.price_change < 0 ? "destructive" : "secondary"} className="text-xs sm:text-sm">
                                 {change.price_change > 0 ? "+" : change.price_change < 0 ? "-" : ""}{formatPrice(Math.abs(change.price_change))}
                               </Badge>
                             </td>
