@@ -444,7 +444,7 @@ export default function RecentPriceChanges() {
               </Alert>
             )}
 
-            <Card className="mb-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+            <Card className="mb-6 shadow-lg border-0 bg-gradient-to-br from-indigo-50 to-purple-50">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-center sm:text-left">
                   <div>
@@ -463,7 +463,7 @@ export default function RecentPriceChanges() {
               </CardContent>
             </Card>
 
-            <Card className="mb-6">
+            <Card className="mb-6 shadow-md border-0">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
@@ -546,7 +546,7 @@ export default function RecentPriceChanges() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="shadow-lg border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
@@ -668,19 +668,19 @@ export default function RecentPriceChanges() {
                               </div>
                             </td>
                             <td className="hidden sm:table-cell p-3">
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusBadgeClass(prediction.status)}`}>
+                              <Badge variant="outline" className={`whitespace-nowrap ${statusBadgeClass(prediction.status)}`}>
                                 {prediction.status}
-                              </span>
+                              </Badge>
                             </td>
                             <td className="p-2 sm:p-3 text-right">
-                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${progressBadgeClass(prediction.progress)}`}>
+                              <Badge variant="outline" className={progressBadgeClass(prediction.progress)}>
                                 {prediction.progress > 0 ? "+" : ""}{prediction.progress.toFixed(1)}%
-                              </span>
+                              </Badge>
                             </td>
                             <td className="p-2 sm:p-3 text-right">
-                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${progressBadgeClass(prediction.predicted_progress)}`}>
+                              <Badge variant="outline" className={progressBadgeClass(prediction.predicted_progress)}>
                                 {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
-                              </span>
+                              </Badge>
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right text-xs text-muted-foreground">
                               {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
@@ -727,7 +727,7 @@ export default function RecentPriceChanges() {
           <TabsContent value="recent">
         {/* Today's Statistics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 px-1">
-          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-100 hover:shadow-xl transition-all duration-300">
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-3 bg-green-200 rounded-full mr-3">
@@ -743,7 +743,7 @@ export default function RecentPriceChanges() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-rose-100 hover:shadow-xl transition-all duration-300">
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-3 bg-red-200 rounded-full mr-3">
@@ -759,7 +759,7 @@ export default function RecentPriceChanges() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-100 hover:shadow-xl transition-all duration-300">
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-200 rounded-full mr-3">
@@ -779,7 +779,7 @@ export default function RecentPriceChanges() {
 
 
         {/* Search and Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-md border-0">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -859,7 +859,7 @@ export default function RecentPriceChanges() {
         )}
 
         {/* Recent Price Changes */}
-        <Card>
+        <Card className="shadow-lg border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -1037,8 +1037,8 @@ export default function RecentPriceChanges() {
                               {formatPrice(change.old_price)}
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right">
-                              <Badge variant={change.price_change > 0 ? "success" : "destructive"}>
-                                {change.price_change > 0 ? "+" : ""}{formatPrice(Math.abs(change.price_change))}
+                              <Badge variant={change.price_change > 0 ? "success" : change.price_change < 0 ? "destructive" : "secondary"}>
+                                {change.price_change > 0 ? "+" : change.price_change < 0 ? "-" : ""}{formatPrice(Math.abs(change.price_change))}
                               </Badge>
                             </td>
                             <td className="p-2 sm:p-3 text-right">
