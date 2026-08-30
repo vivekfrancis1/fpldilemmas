@@ -6889,18 +6889,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
 
-      // FPL's own price_change_projections[].likelihood (-5..+5) turned out too coarse for a
-      // sensible status label: likelihood=1 corresponds to only ~18-20% real progress, so a
-      // naive "any nonzero likelihood = Likely" mapping put over 80% of the entire player pool
-      // in "Likely to rise/drop" — useless for flagging genuinely notable movers. Status is
-      // derived instead from the real progress percentage itself, with our own transparent
-      // magnitude thresholds — not a guess at FPL's undisclosed internal boundary logic.
-      const statusFromProgress = (progress: number): string => {
-        const magnitude = Math.abs(progress);
-        const direction = progress >= 0 ? "rise" : "drop";
-        if (magnitude >= 95) return `Very likely to ${direction}`;
-        if (magnitude >= 50) return `Likely to ${direction}`;
-        if (magnitude >= 15) return direction === "rise" ? "Rising slowly" : "Falling slowly";
+      // Confirmed against the official FPL page's own examples: status is keyed off PREDICTED
+      // progress (not current progress, and not the coarse -5..+5 likelihood scale) — predicted
+      // magnitude > 100% is "Very likely", >= 95% is "Likely", anything else is "Unlikely to
+      // change". This matched every example checked, including cases that looked inconsistent
+      // under a current-progress reading (e.g. a player at -94.6% current but -101.5%
+      // predicted correctly shows "Very likely to drop", not "Likely").
+      const statusFromPredicted = (predictedProgress: number): string => {
+        const magnitude = Math.abs(predictedProgress);
+        const direction = predictedProgress >= 0 ? "rise" : "drop";
+        if (magnitude > 100) return `Very likely to ${direction}`;
+        if (magnitude >= 95) return `Likely to ${direction}`;
         return "Unlikely to change";
       };
 
@@ -6932,7 +6931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
           position: positions.find((p: any) => p.id === player.element_type)?.singular_name_short || "Unknown",
           current_price: player.now_cost,
-          status: statusFromProgress(progress),
+          status: statusFromPredicted(predictedProgress),
           progress: Math.round(progress * 10) / 10,
           predicted_progress: Math.round(predictedProgress * 10) / 10,
           // Rate of change toward tonight's update, matching the "Per hr" column LiveFPL/fpl.page

@@ -20,10 +20,15 @@ describe('/api/price-predictions uses real official FPL fields', () => {
   let predictions: any[];
   let bootstrapElements: any[];
 
+  // /api/price-predictions fetches fresh, uncached live data from FPL on every call, but our own
+  // /api/bootstrap-static endpoint is server-cached for 30 minutes — comparing predictions against
+  // that cached snapshot drifts as real transfer activity moves the live numbers between the two
+  // fetches. Fetching bootstrap-static directly from FPL here (bypassing our cache) keeps both
+  // sides equally fresh, matching how /api/price-predictions itself sources its data.
   beforeAll(async () => {
     const [predictionsRes, bootstrapRes] = await Promise.all([
       fetchJSON(`${BASE_URL}/api/price-predictions`),
-      fetchJSON(`${BASE_URL}/api/bootstrap-static`),
+      fetchJSON("https://fantasy.premierleague.com/api/bootstrap-static/"),
     ]);
     predictions = predictionsRes;
     bootstrapElements = bootstrapRes.elements;
@@ -57,20 +62,26 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     expect(pred.predicted_progress).toBeCloseTo(parseFloat(officialOffset0.projected_percent), 5);
   });
 
-  // FPL's own price_change_projections[].likelihood (-5..+5) turned out to be too coarse for a
-  // sensible status label: 1 maps to only ~18-20% real progress, so a naive "any nonzero
-  // likelihood = Likely to rise/drop" mapping put over 80% of the whole player pool in
-  // "Likely to rise/drop" — nonsensical for a column meant to flag genuinely notable movers.
-  // Status is instead derived from the real progress percentage itself, with our own
-  // transparent magnitude thresholds (>=95% very likely, >=50% likely, >=15% slowly, else
-  // unlikely to change) — not a guess at FPL's undisclosed internal boundary logic.
-  it('status is derived from real progress magnitude, not the coarse likelihood scale', () => {
+  // Confirmed against the official FPL page's own examples (screenshot cross-referenced):
+  // status is keyed off PREDICTED progress (not current progress, and not the coarse -5..+5
+  // likelihood scale) — predicted magnitude > 100% is "Very likely", >= 95% is "Likely",
+  // anything else is "Unlikely to change". This matched every example checked, including cases
+  // that looked inconsistent under a current-progress-based or likelihood-based reading (e.g. a
+  // player at -94.6% current progress but -101.5% predicted showing "Very likely to drop").
+  it('status is keyed off predicted progress crossing >100%/>=95%, not current progress or the likelihood scale', () => {
     const barelyMoving = bootstrapElements.find((p: any) => {
-      const prog = Math.abs(parseFloat(p.price_change_percent) || 0);
-      return prog > 5 && prog < 15;
+      const proj = p.price_change_projections || [];
+      const predicted = Math.abs(proj[0] ? parseFloat(proj[0].projected_percent) : 0);
+      return predicted > 5 && predicted < 90;
     });
-    const strongRiser = bootstrapElements.find((p: any) => (parseFloat(p.price_change_percent) || 0) >= 95);
-    const strongFaller = bootstrapElements.find((p: any) => (parseFloat(p.price_change_percent) || 0) <= -95);
+    const strongRiser = bootstrapElements.find((p: any) => {
+      const proj = p.price_change_projections || [];
+      return proj[0] && parseFloat(proj[0].projected_percent) > 100;
+    });
+    const strongFaller = bootstrapElements.find((p: any) => {
+      const proj = p.price_change_projections || [];
+      return proj[0] && parseFloat(proj[0].projected_percent) < -100;
+    });
     expect(barelyMoving).toBeDefined();
     expect(strongRiser).toBeDefined();
     expect(strongFaller).toBeDefined();
@@ -79,8 +90,6 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     const risePred = predictions.find((p: any) => p.player_id === strongRiser.id);
     const fallPred = predictions.find((p: any) => p.player_id === strongFaller.id);
 
-    // A player barely off 0% must NOT be labeled "Likely" or "Very likely" — that's the
-    // exact over-eager mislabeling this fix corrects.
     expect(barelyPred.status).toBe('Unlikely to change');
     expect(risePred.status.toLowerCase()).toBe('very likely to rise');
     expect(fallPred.status.toLowerCase()).toBe('very likely to drop');

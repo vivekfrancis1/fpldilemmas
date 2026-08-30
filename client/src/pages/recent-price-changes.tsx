@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,12 @@ interface PricePrediction {
   likelihood: number;
   ownership_trend: 'up' | 'down' | 'flat';
   ownership_percentage: number;
+  locked_until: string | null;
 }
 
 type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'ownership_percentage' | 'current_price';
+type PredictionMovementFilter = 'all' | 'rise' | 'drop' | 'locked';
+type PredictionTeamFilter = 'all' | 'my-team';
 
 interface PriceChange {
   player_id: number;
@@ -50,6 +53,29 @@ interface PriceChange {
 type SortField = 'change_date' | 'player_name' | 'team_name' | 'position' | 'old_price' | 'current_price' | 'price_change' | 'ownership' | 'transfers_in' | 'transfers_out' | 'transfers_in_gw' | 'transfers_out_gw';
 type SortDirection = 'asc' | 'desc';
 
+interface MyTeamData {
+  picks: Array<{ element: number }>;
+}
+
+// Seconds until FPL's next price update (00:00 UK time) — mirrors the server's own
+// /api/price-predictions calculation so the client-side countdown always agrees with hours_remaining.
+function getSecondsUntilNextPriceChange(): number {
+  const now = new Date();
+  const ukParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(now);
+  const ukField = (type: string) => parseInt(ukParts.find((p) => p.type === type)?.value || "0", 10);
+  const secondsSinceUkMidnight = ukField("hour") * 3600 + ukField("minute") * 60 + ukField("second");
+  return Math.max(24 * 3600 - secondsSinceUkMidnight, 0);
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return [hours, minutes, seconds].map((n) => n.toString().padStart(2, '0')).join(':');
+}
+
 export default function RecentPriceChanges() {
   const [activeTab, setActiveTab] = useState<"predicted" | "recent">("predicted");
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,8 +87,36 @@ export default function RecentPriceChanges() {
   const [predictionPositionFilter, setPredictionPositionFilter] = useState("all");
   const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('progress');
   const [predictionSortDirection, setPredictionSortDirection] = useState<SortDirection>('desc');
+  const [predictionMovementFilter, setPredictionMovementFilter] = useState<PredictionMovementFilter>('all');
+  const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
+  const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
+  const [secondsUntilPriceChange, setSecondsUntilPriceChange] = useState(() => getSecondsUntilNextPriceChange());
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    try {
+      setCachedManagerId(localStorage.getItem('fpl-manager-id'));
+    } catch {
+      setCachedManagerId(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSecondsUntilPriceChange(getSecondsUntilNextPriceChange());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const nextPriceChangeLocalTime = new Date(Date.now() + secondsUntilPriceChange * 1000)
+    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const { data: myTeamData } = useQuery<MyTeamData>({
+    queryKey: ["/api/manager", cachedManagerId, "team"],
+    enabled: activeTab === "predicted" && predictionTeamFilter === "my-team" && !!cachedManagerId,
+  });
+  const myTeamPlayerIds = new Set((myTeamData?.picks || []).map((p) => p.element));
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -212,14 +266,17 @@ export default function RecentPriceChanges() {
       const matchesSearch = p.player_name.toLowerCase().includes(predictionSearchTerm.toLowerCase()) ||
                            p.team_name.toLowerCase().includes(predictionSearchTerm.toLowerCase());
       const matchesPosition = predictionPositionFilter === "all" || p.position === predictionPositionFilter;
-      return matchesSearch && matchesPosition;
+      const matchesMovement = predictionMovementFilter === "all" ? true
+        : predictionMovementFilter === "locked" ? !!p.locked_until
+        : predictionMovementFilter === "rise" ? p.predicted_progress > 0
+        : p.predicted_progress < 0;
+      const matchesTeam = predictionTeamFilter === "all" || myTeamPlayerIds.has(p.player_id);
+      return matchesSearch && matchesPosition && matchesMovement && matchesTeam;
     })
     .sort((a: PricePrediction, b: PricePrediction) => {
       const aValue = a[predictionSortField] ?? 0;
       const bValue = b[predictionSortField] ?? 0;
-      const result = (predictionSortField === 'progress' || predictionSortField === 'predicted_progress')
-        ? Math.abs(aValue) - Math.abs(bValue)
-        : aValue - bValue;
+      const result = aValue - bValue;
       return predictionSortDirection === 'asc' ? result : -result;
     });
 
@@ -321,6 +378,25 @@ export default function RecentPriceChanges() {
               </Alert>
             )}
 
+            <Card className="mb-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-center sm:text-left">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Next Price Changes Happen in</p>
+                    <p className="text-xl font-bold font-mono" data-testid="text-price-change-countdown">
+                      {formatCountdown(secondsUntilPriceChange)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Next Price Change at</p>
+                    <p className="text-xl font-bold" data-testid="text-price-change-local-time">
+                      {nextPriceChangeLocalTime} <span className="text-sm font-normal text-muted-foreground">(Local Time)</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="mb-6">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -349,7 +425,32 @@ export default function RecentPriceChanges() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={predictionMovementFilter} onValueChange={(v) => setPredictionMovementFilter(v as PredictionMovementFilter)}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-movement-filter">
+                      <SelectValue placeholder="Rise & drop" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Rise &amp; drop</SelectItem>
+                      <SelectItem value="rise">Rise</SelectItem>
+                      <SelectItem value="drop">Drop</SelectItem>
+                      <SelectItem value="locked">Locked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-team-filter">
+                      <SelectValue placeholder="All Players" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Players</SelectItem>
+                      <SelectItem value="my-team">My Team</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {predictionTeamFilter === "my-team" && !cachedManagerId && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Link your Manager ID on the My Team page to filter to your own squad.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
