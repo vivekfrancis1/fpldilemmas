@@ -598,7 +598,7 @@ export default function RecentPriceChanges() {
                             onClick={() => handlePredictionSort('hours_to_threshold')}
                           >
                             <div className="flex items-center justify-end gap-1">
-                              Time to Change
+                              Time of Change
                               {predictionSortField === 'hours_to_threshold' && (
                                 predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                               )}
