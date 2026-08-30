@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,27 +136,56 @@ export default function TeamCSProjections() {
     return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
   }, [fixturesData]);
 
+  // Current (possibly in-progress) gameweek — see the matching comments in team-goal-projections.tsx.
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    return computeCurrentGameweek(bootstrapData.events);
+  }, [bootstrapData?.events]);
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+  const currentGWDecidedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return set;
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        set.add(f.team_h);
+        set.add(f.team_a);
+      }
+    });
+    return set;
+  }, [fixturesData, currentGameweek]);
+
   // Get available gameweeks for dropdown options (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see the reset effect below) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
   // Update state when bootstrap data changes (e.g., on page load)
   useEffect(() => {
     if (bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(newRange.startGameweek);
+      // Fold the current gameweek in when it still has an unstarted fixture.
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(newRange.startGameweek))
+        ? String(currentGameweek)
+        : newRange.startGameweek;
+      setStartGameweek(effectiveStart);
       setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
     }
-  }, [bootstrapData?.events, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks]);
 
   // When switching away from base mode, snap endGameweek back from GW39
   useEffect(() => {
@@ -167,7 +196,8 @@ export default function TeamCSProjections() {
   }, [fixtureMode]);
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamCSProjection[]>({
-    queryKey: ["/api/team-cs-projections"],
+    queryKey: [`/api/team-cs-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
+    enabled: !!startGameweek && !!endGameweek,
   });
 
   // Model-based TBC goal projections — CS probability = e^(-opponentGoals) * 100 (Poisson)
@@ -544,8 +574,11 @@ export default function TeamCSProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          // Use string key to match API response format
-                          const fixtures = team.fixtureDetails?.[gwNumber.toString()] || [];
+                          // Use string key to match API response format. The current gameweek's
+                          // cell is blanked once this team's own fixture has kicked off — see
+                          // isDecidedCurrentGW in team-goal-projections.tsx.
+                          const isDecidedCurrentGW = gwNumber === currentGameweek && currentGWDecidedTeamIds.has(team.id);
+                          const fixtures = isDecidedCurrentGW ? [] : (team.fixtureDetails?.[gwNumber.toString()] || []);
                           const hasFixtures = fixtures.length > 0;
                           const isDGW = fixtures.length > 1;
                           const totalCS = hasFixtures ? fixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) : 0;
