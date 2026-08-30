@@ -73,11 +73,17 @@ export class FPLScoringCacheService {
           if (bootstrapResp.ok) {
             const bootstrapData = await bootstrapResp.json();
             const currentGW = computeCurrentGameweek(bootstrapData.events);
-            resolvedStart = currentGW + 1;
+            const fixturesData = fixturesResp.ok ? await fixturesResp.json() : [];
+            // Fold the current gameweek in when it still has an unstarted fixture — mirrors the
+            // fold-in already applied to Team Projections (team-goal-projections.tsx etc.): a
+            // team whose own fixture hasn't kicked off yet is still worth projecting for, rather
+            // than the cache always starting at currentGW + 1 and omitting it entirely.
+            const currentGWHasUnstarted = currentGW > 0 &&
+              fixturesData.some((f: any) => f.event === currentGW && !f.started);
+            resolvedStart = currentGWHasUnstarted ? currentGW : currentGW + 1;
             // Only extends to GW39 when a fixture is genuinely postponed with no gameweek
             // assigned yet — not unconditionally.
             const { computeProjectionRangeWithTBC } = await import("../shared/gameweek-utils");
-            const fixturesData = fixturesResp.ok ? await fixturesResp.json() : [];
             resolvedEnd = computeProjectionRangeWithTBC(bootstrapData.events, fixturesData, PROJECTION_TOTAL_WEEKS).end;
           }
         } catch {

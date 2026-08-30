@@ -14,6 +14,12 @@ async function fetchJSON(path: string) {
 let bootstrapData: any;
 let currentGameweek: number;
 let nextGameweek: number;
+// The current gameweek is folded into projections when it still has at least one unstarted
+// fixture (a team whose own match hasn't kicked off yet is still worth projecting for) — see
+// currentGWHasUnstarted in player-total-points.tsx and the matching server-side fold-in in
+// fpl-scoring-cache-service.ts / the /api/cached/player-total-points route. effectiveStartGameweek
+// is whichever of currentGameweek/nextGameweek that fold-in actually resolves to.
+let effectiveStartGameweek: number;
 let cachedPlayerTotalPoints: any[];
 let rawCachedPlayerTotalPoints: any[];
 let livePlayerTotalPoints: any[];
@@ -24,6 +30,11 @@ beforeAll(async () => {
   // naive `?.id || 1` fallback would wrongly imply GW1 is already underway).
   currentGameweek = computeCurrentGameweek(bootstrapData.events);
   nextGameweek = Math.min(currentGameweek + 1, 38);
+
+  const fixturesData = await fetchJSON('/api/fixtures');
+  const currentGWHasUnstarted = currentGameweek > 0 &&
+    fixturesData.some((f: any) => f.event === currentGameweek && !f.started);
+  effectiveStartGameweek = currentGWHasUnstarted ? currentGameweek : nextGameweek;
 
   cachedPlayerTotalPoints = await fetchJSON('/api/cached/player-total-points');
   rawCachedPlayerTotalPoints = await fetchJSON('/api/cached/player-total-points?availabilityAdjusted=false');
@@ -72,11 +83,11 @@ describe('Data Source Integrity', () => {
     }
   });
 
-  it('gameweekProjections contain only future gameweeks', () => {
+  it('gameweekProjections contain only gameweeks from the fold-in start onward', () => {
     for (const player of cachedPlayerTotalPoints.slice(0, 20)) {
       const keys = Object.keys(player.gameweekProjections).map(Number);
       for (const gw of keys) {
-        expect(gw).toBeGreaterThan(currentGameweek);
+        expect(gw).toBeGreaterThanOrEqual(effectiveStartGameweek);
         expect(gw).toBeLessThanOrEqual(38);
       }
     }
@@ -613,11 +624,11 @@ describe('Gameweek Range Consistency', () => {
     expect(dominantPct).toBeGreaterThan(0.9);
   });
 
-  it('gameweek range starts from next gameweek', () => {
+  it('gameweek range starts from the fold-in-aware start gameweek', () => {
     const sample = cachedPlayerTotalPoints[0];
     const gwKeys = Object.keys(sample.gameweekProjections || {}).map(Number).sort((a, b) => a - b);
 
-    expect(gwKeys[0]).toBe(nextGameweek);
+    expect(gwKeys[0]).toBe(effectiveStartGameweek);
   });
 
   it('gameweek range does not exceed GW38', () => {

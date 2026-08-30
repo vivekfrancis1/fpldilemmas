@@ -14,8 +14,15 @@ let singleGwKey: string;
 
 beforeAll(async () => {
   const bootstrap = await get('/api/bootstrap-static');
+  const fixtures = await get('/api/fixtures');
   const currentGW: number = computeCurrentGameweek(bootstrap.events);
-  startGW = Math.min(currentGW + 1, 38);
+  // The current gameweek is folded into the default range when it still has an unstarted
+  // fixture (see currentGWHasUnstarted in player-total-points.tsx and the matching server-side
+  // fold-in in fpl-scoring-cache-service.ts / the /api/cached/player-total-points route) — the
+  // real cache key reflects whichever of currentGW/currentGW+1 that fold-in resolves to.
+  const currentGWHasUnstarted = currentGW > 0 &&
+    fixtures.some((f: any) => f.event === currentGW && !f.started);
+  startGW = currentGWHasUnstarted ? currentGW : Math.min(currentGW + 1, 38);
   // Matches /api/cached/player-total-points' default range (routes.ts): the
   // full projection window, not a hardcoded 12 weeks.
   const endGW = Math.min(startGW + PROJECTION_TOTAL_WEEKS - 1, 38);

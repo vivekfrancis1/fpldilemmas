@@ -187,6 +187,14 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
     { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
   ];
   
+  // gwPoints is strictly undefined (not 0) when this gameweek was deliberately excluded — either
+  // it's outside the fetched range, or (future mode) the player's own team has already kicked
+  // off and the cached projection for it is stale (see currentGWDecidedTeamNames). A real
+  // projection/actual-points value of exactly 0 stays a normal ValueCell below.
+  if (gwPoints === undefined) {
+    return <span className="text-gray-400">-</span>;
+  }
+
   if (!hasBreakdownData || !gwPoints) {
     if (availAdj) {
       return (
@@ -358,10 +366,17 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
 // Past Gameweek Breakdown Tooltip Component - for historical data
 function PastGameweekBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
   const gwKey = gameweek.toString();
+  const rawGwPoints = player.gameweekProjections?.[gwKey];
+  // Strictly undefined (not 0) means this gameweek was deliberately excluded — the player's own
+  // team hadn't played yet as of the current gameweek (see currentGWDecidedTeamNames in the
+  // parent). A genuine actual score of 0 still renders normally below.
+  if (rawGwPoints === undefined) {
+    return <span className="text-gray-400">-</span>;
+  }
   const gwStats = (player as any).gameweekStats?.[gwKey];
-  const gwPoints = player.gameweekProjections?.[gwKey] || 0;
+  const gwPoints = rawGwPoints || 0;
   const elementType = (player as any).elementType || 3; // Default to MID if unknown
-  
+
   if (!gwStats) {
     return <span className="font-semibold text-gray-800">{Math.round(gwPoints)}</span>;
   }
@@ -1056,6 +1071,43 @@ export default function PlayerTotalPoints() {
     return finishedEvents.length > 0 ? Math.max(...finishedEvents.map((e: any) => e.id)) : 0;
   }, [bootstrapData?.events]);
 
+  // Calculate current gameweek and upcoming gameweeks — needed by availableGameweeks and the
+  // range-init effects below to fold the current gameweek in when it still has an unstarted
+  // fixture (mirrors the fold-in used on the Team Projections pages).
+  const currentGameweek = useMemo(() => {
+    return computeCurrentGameweek((bootstrapData?.events || []) as any);
+  }, [bootstrapData]);
+
+  const nextGameweek = currentGameweek + 1;
+  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+
+  // True once any fixture in the current gameweek is still unstarted.
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+
+  // Full names of teams whose own current-gameweek fixture has kicked off — the cached
+  // projections cache (fpl-scoring-cache-service.ts) doesn't track per-fixture start status, so
+  // it still returns a stale pre-match projection for a team that's already played; blank those
+  // teams' current-GW cell client-side instead (matches the isDecidedCurrentGW pattern already
+  // used on the Team Projections pages). Keyed by full team name (e.g. "Man City") rather than
+  // short code since that's what the cached player-total-points response's `team` field uses.
+  const currentGWDecidedTeamNames = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    const idToName = new Map(bootstrapData.teams.map((t: any) => [t.id, t.name]));
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        const homeName = idToName.get(f.team_h);
+        const awayName = idToName.get(f.team_a);
+        if (homeName) set.add(homeName as string);
+        if (awayName) set.add(awayName as string);
+      }
+    });
+    return set;
+  }, [fixturesData, bootstrapData?.teams, currentGameweek]);
+
   // Derive short names of teams involved in TBC fixtures (event: null) — must be defined early
   const tbcTeamShortNames = useMemo(() => {
     if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Set<string>();
@@ -1077,13 +1129,20 @@ export default function PlayerTotalPoints() {
       return [];
     }
     if (viewMode === "past") {
-      // Past mode: GW1 to last finished gameweek
-      return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
+      // Past mode: GW1 to last finished gameweek. Also covers endGameweek in case it's already
+      // been corrected upward by the historyData.lastFinishedGW effect past this client-computed
+      // (bootstrap-event-based, laggier) value, so the dropdown still offers that gameweek.
+      const upperBound = Math.max(lastFinishedGW, endGameweek || 0);
+      return Array.from({ length: upperBound }, (_, i) => i + 1);
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see currentGWHasUnstarted) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     if (fixtureMode === 'base' && tbcTeamShortNames.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
-  }, [bootstrapData?.events, viewMode, lastFinishedGW, fixtureMode, tbcTeamShortNames]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW, fixtureMode, tbcTeamShortNames, currentGWHasUnstarted, currentGameweek, endGameweek]);
 
   // One-time initialization when bootstrap data loads. Marks the page ready regardless of
   // whether the future range is valid (it isn't, between seasons) — the viewMode-aware reset
@@ -1094,30 +1153,38 @@ export default function PlayerTotalPoints() {
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start)
+      ? currentGameweek
+      : start;
 
-    if (start > 0 && end > 0 && start <= end && end <= 39) {
-      setStartGameweek(start);
+    if (effectiveStart > 0 && end > 0 && effectiveStart <= end && end <= 39) {
+      setStartGameweek(effectiveStart);
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized]);
+  }, [bootstrapData, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Reset gameweek range when viewMode changes
   useEffect(() => {
     if (!bootstrapData?.events || lastFinishedGW === 0) return;
-    
+
     if (viewMode === "past") {
       // Past mode: default from GW 1 to latest finished gameweek
       const defaultStart = 1;
       setStartGameweek(defaultStart);
       setEndGameweek(lastFinishedGW);
     } else {
-      // Future mode: default to next 6 gameweeks
+      // Future mode: default to next 6 gameweeks, folding the current gameweek in when it still
+      // has an unstarted fixture (see currentGWHasUnstarted above).
       const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(parseInt(range.startGameweek));
+      const start = parseInt(range.startGameweek);
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start)
+        ? currentGameweek
+        : start;
+      setStartGameweek(effectiveStart);
       setEndGameweek(parseInt(range.endGameweek));
     }
-  }, [viewMode, bootstrapData?.events, lastFinishedGW]);
+  }, [viewMode, bootstrapData?.events, lastFinishedGW, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base or custom mode when TBC fixtures exist
   useEffect(() => {
@@ -1142,14 +1209,6 @@ export default function PlayerTotalPoints() {
       } catch {}
     }
   }, [fixtureMode]);
-
-  // Calculate current gameweek and upcoming gameweeks
-  const currentGameweek = useMemo(() => {
-    return computeCurrentGameweek((bootstrapData?.events || []) as any);
-  }, [bootstrapData]);
-
-  const nextGameweek = currentGameweek + 1;
-  const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
 
   // Create team name to short name mapping
   const teamNameToShortName = useMemo(() => {
@@ -1378,6 +1437,18 @@ export default function PlayerTotalPoints() {
     }
   }, [historySeason, historyData?.season]);
 
+  // The client's own lastFinishedGW (above) is derived from bootstrap's event.finished, which
+  // stays false for up to ~1hr after full time pending bonus-point confirmation — the server's
+  // own lastFinishedGW (computeLastFinishedGW, fixture-based) isn't subject to that lag. Once it
+  // comes back higher than what the client guessed, widen endGameweek to match so the just-played
+  // gameweek's real data shows up in History without waiting for bootstrap to catch up.
+  useEffect(() => {
+    if (viewMode !== "past" || !historyData?.lastFinishedGW || !endGameweek) return;
+    if (historyData.lastFinishedGW > endGameweek) {
+      setEndGameweek(historyData.lastFinishedGW);
+    }
+  }, [viewMode, historyData?.lastFinishedGW, endGameweek]);
+
   // Apply GW range filter to full-range data client-side — consistent per-GW values regardless of filter
   const totalPointsData = useMemo(() => {
     if (!fullRangeData || fullRangeData.length === 0) return null;
@@ -1397,9 +1468,15 @@ export default function PlayerTotalPoints() {
     return fullRangeData.map(player => {
       const filtered: { [key: string]: number } = {};
       const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
+      // Once this player's own team has kicked off in the current gameweek, the cached
+      // projection for it is stale (pre-match) — blank it rather than showing a number that no
+      // longer reflects reality (see currentGWDecidedTeamNames above).
+      const isCurrentGWDecided = (gw: number) =>
+        viewMode === 'future' && gw === currentGameweek && currentGWDecidedTeamNames.has(player.team);
 
       for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
         if (selectedGameweeks.size > 0 && !selectedGameweeks.has(gw)) continue;
+        if (isCurrentGWDecided(gw)) continue;
         const key = gw.toString();
         if (key in gwProjections) {
           filtered[key] = gwProjections[key];
@@ -1419,6 +1496,7 @@ export default function PlayerTotalPoints() {
         const filteredComp: { [key: string]: number } = {};
         for (let gw = startGameweek; gw <= effectiveEndGW; gw++) {
           if (selectedGameweeks.size > 0 && !selectedGameweeks.has(gw)) continue;
+          if (isCurrentGWDecided(gw)) continue;
           const key = gw.toString();
           if (key in gwMap) filteredComp[key] = gwMap[key];
         }
@@ -1441,7 +1519,7 @@ export default function PlayerTotalPoints() {
         averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
       };
     });
-  }, [fullRangeData, startGameweek, endGameweek, selectedGameweeks, tbcTeamShortNames, viewMode]);
+  }, [fullRangeData, startGameweek, endGameweek, selectedGameweeks, tbcTeamShortNames, viewMode, currentGameweek, currentGWDecidedTeamNames]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1568,6 +1646,12 @@ export default function PlayerTotalPoints() {
       const gameweekProjections: { [gw: string]: number } = {};
       
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        // The FPL live endpoint this history is built from includes every player with all-zero
+        // stats even before their team's fixture kicks off — skip the cell entirely (rather than
+        // showing a real "0", which reads as "played and scored nothing") for the current
+        // gameweek when this player's own team hasn't played yet.
+        if (gw === currentGameweek && !currentGWDecidedTeamNames.has(player.teamName)) continue;
+
         const mins = player.gameweekMinutes?.[gw] || 0;
         let pts: number;
 
@@ -1626,7 +1710,7 @@ export default function PlayerTotalPoints() {
         gameweekStats: player.gameweekStats,
       } as unknown as PlayerTotalPointsData;
     }).filter(p => p.totalExpectedPoints > 0 || hasComponentFilter);
-  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek, excludedComponents]);
+  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek, excludedComponents, currentGameweek, currentGWDecidedTeamNames]);
 
   // Generate full gameweek range (for toggle display)
   const fullGameweekRange = useMemo(() => {

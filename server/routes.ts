@@ -10954,11 +10954,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
+        // Forward an explicit startGameweek/endGameweek (if the caller passed one — the
+        // aggregator does, to fold the current gameweek in for teams whose fixture hasn't
+        // kicked off) to team-goal-projections, which only honors an explicit range and
+        // otherwise defaults to skipping the current gameweek entirely (see its own comment).
+        // Without this, a caller-requested current-GW row silently fell back to that default and
+        // came back as if the range started a gameweek later than actually asked for.
+        const goalsQueryStart = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+        const goalsQueryEnd = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+        const goalsHasExplicitRange = !isNaN(goalsQueryStart) && !isNaN(goalsQueryEnd) && goalsQueryStart > 0 && goalsQueryEnd >= goalsQueryStart;
+        const teamProjectionsUrl = goalsHasExplicitRange
+          ? `api/team-goal-projections?startGameweek=${goalsQueryStart}&endGameweek=${goalsQueryEnd}`
+          : 'api/team-goal-projections';
+
         // Fetch full season goal share data, team projections, bootstrap for availability, and
         // per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
         const [goalShareResponse, teamProjectionsResponse, bootstrapResponse, minutesResponse] = await Promise.all([
           internalFetch('api/goal-share-season'),
-          internalFetch('api/team-goal-projections'),
+          internalFetch(teamProjectionsUrl),
           internalFetch('api/bootstrap-static'),
           internalFetch('api/player-minutes-projections')
         ]);
@@ -11248,11 +11261,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
+        // Forward an explicit startGameweek/endGameweek (if the caller passed one) to
+        // team-assist-projections — see the matching comment in player-goals-scored-projections.
+        const assistsQueryStart = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+        const assistsQueryEnd = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+        const assistsHasExplicitRange = !isNaN(assistsQueryStart) && !isNaN(assistsQueryEnd) && assistsQueryStart > 0 && assistsQueryEnd >= assistsQueryStart;
+        const teamAssistProjectionsUrl = assistsHasExplicitRange
+          ? `api/team-assist-projections?startGameweek=${assistsQueryStart}&endGameweek=${assistsQueryEnd}`
+          : 'api/team-assist-projections';
+
         // Fetch full season assist share data, team projections, bootstrap for availability, and
         // per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
         const [assistShareResponse, teamProjectionsResponse, bootstrapResponse, minutesResponse] = await Promise.all([
           internalFetch('api/assist-share-season'),
-          internalFetch('api/team-assist-projections'),
+          internalFetch(teamAssistProjectionsUrl),
           internalFetch('api/bootstrap-static'),
           internalFetch('api/player-minutes-projections')
         ]);
@@ -13096,7 +13118,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const events: BootstrapEvent[] = bootstrapData.events || [];
           const { computeNextRange } = await import("../shared/gameweek-utils");
           const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
-          const gwStart = gameweekRange.start;
+          // Fold the current gameweek in when it still has an unstarted fixture — mirrors the
+          // fold-in already applied to Team Projections; this endpoint's range is otherwise
+          // shared/cached ('default' key above) so it can't take an explicit override per-request.
+          let xminsCurrentGWHasUnstarted = false;
+          try {
+            const xminsFixturesRes = await internalFetch("api/fixtures");
+            if (xminsFixturesRes.ok) {
+              const xminsFixtures = await xminsFixturesRes.json();
+              xminsCurrentGWHasUnstarted = gameweekRange.currentGameweek > 0 &&
+                xminsFixtures.some((f: any) => f.event === gameweekRange.currentGameweek && !f.started);
+            }
+          } catch { /* fold-in is best-effort */ }
+          const gwStart = xminsCurrentGWHasUnstarted ? gameweekRange.currentGameweek : gameweekRange.start;
           const gwEnd = gameweekRange.end;
 
           const playerById = playerByIdForXmins;
@@ -13240,9 +13274,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Simplified: Fetch only required data for projections
       console.log(`DEBUG: Fetching data for clean sheet points projections`);
+      // Forward an explicit range (if the caller passed one) to team-cs-projections — see the
+      // matching comment in player-goals-scored-projections.
+      const teamCSUrl = (reqStart !== null && reqEnd !== null)
+        ? `api/team-cs-projections?startGameweek=${reqStart}&endGameweek=${reqEnd}`
+        : 'api/team-cs-projections';
       const [bootstrapResponse, teamCSResponse, playerMinutesResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
-        internalFetch("api/team-cs-projections"),
+        internalFetch(teamCSUrl),
         internalFetch("api/player-minutes-projections")
       ]);
       
@@ -17949,11 +17988,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-        
+
+        // Forward the resolved range to team-goals-against-projections — see the matching
+        // comment in player-goals-scored-projections.
+        const teamGAUrl = `api/team-goals-against-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`;
+
         // Get FPL bootstrap data from cached endpoint and team projections in parallel
         const [fplResponse, teamProjectionsResponse, playerMinutesResponse, gcFixturesResponse] = await Promise.all([
           internalFetch("api/bootstrap-static"),
-          internalFetch("api/team-goals-against-projections"),
+          internalFetch(teamGAUrl),
           internalFetch("api/player-minutes-projections"),
           internalFetch("api/fixtures")
         ]);
@@ -18114,7 +18157,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Yellow Cards Projections - API-first with cache fallback
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
-      const ycCacheKey = req.query.endGameweek ? `yc-gw${req.query.endGameweek}` : 'default';
+      const ycCacheKey = (req.query.startGameweek || req.query.endGameweek)
+        ? `yc-gw${req.query.startGameweek || 'def'}-${req.query.endGameweek || 'def'}`
+        : 'default';
       const ycHit = yellowCardsCache.get(ycCacheKey);
       if (ycHit && Date.now() - ycHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(ycHit.data);
@@ -18136,10 +18181,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentGameweek = computeCurrentGameweek(fplData.events);
         const finishedGWCountYC = fplData.events.filter((e: any) => e.finished).length;
 
-        // Use dynamic gameweek calculation for next 12 gameweeks
+        // Use dynamic gameweek calculation for next 12 gameweeks, unless the caller passed an
+        // explicit start (the aggregator does, to fold the current gameweek in for teams whose
+        // fixture hasn't kicked off yet).
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
-        const startGameweek = gameweekRange.start;
+        const requestedStartYC = parseInt(req.query.startGameweek as string);
+        const startGameweek = (requestedStartYC && requestedStartYC > 0) ? requestedStartYC : gameweekRange.start;
         const requestedEndYC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndYC && requestedEndYC > gameweekRange.end) ? requestedEndYC : gameweekRange.end;
 
@@ -18276,7 +18324,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Red Cards Projections - API-first with cache fallback
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
-      const rcCacheKey = req.query.endGameweek ? `rc-gw${req.query.endGameweek}` : 'default';
+      const rcCacheKey = (req.query.startGameweek || req.query.endGameweek)
+        ? `rc-gw${req.query.startGameweek || 'def'}-${req.query.endGameweek || 'def'}`
+        : 'default';
       const rcHit = redCardsCache.get(rcCacheKey);
       if (rcHit && Date.now() - rcHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(rcHit.data);
@@ -18298,10 +18348,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentGameweek = computeCurrentGameweek(fplData.events);
         const finishedGWCountRC = fplData.events.filter((e: any) => e.finished).length;
 
-        // Use dynamic gameweek calculation for next 6 gameweeks
+        // Use dynamic gameweek calculation for next 6 gameweeks, unless the caller passed an
+        // explicit start (the aggregator does, to fold the current gameweek in for teams whose
+        // fixture hasn't kicked off yet).
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, 6);
-        const startGameweek = gameweekRange.start;
+        const requestedStartRC = parseInt(req.query.startGameweek as string);
+        const startGameweek = (requestedStartRC && requestedStartRC > 0) ? requestedStartRC : gameweekRange.start;
         const requestedEndRC = parseInt(req.query.endGameweek as string);
         const endGameweek = (requestedEndRC && requestedEndRC > gameweekRange.end) ? requestedEndRC : gameweekRange.end;
 
@@ -18442,7 +18495,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Bonus Points Projections - API-first with cache fallback
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
-      const bpCacheKey = 'default';
+      // An explicit range (the aggregator passes one, to fold the current gameweek in for teams
+      // whose fixture hasn't kicked off) needs its own cache key — reusing 'default' regardless
+      // of the requested range would return whatever range happened to be cached first.
+      const bpQueryStart = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+      const bpQueryEnd = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+      const bpHasExplicitRange = !isNaN(bpQueryStart) && !isNaN(bpQueryEnd) && bpQueryStart > 0 && bpQueryEnd >= bpQueryStart;
+      const bpCacheKey = bpHasExplicitRange ? `${bpQueryStart}-${bpQueryEnd}` : 'default';
       const bpHit = bonusPointsCache.get(bpCacheKey);
       if (bpHit && Date.now() - bpHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
         return res.json(bpHit.data);
@@ -18462,10 +18521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
 
-        // Use dynamic gameweek calculation for next 12 gameweeks
+        // Use dynamic gameweek calculation for next 12 gameweeks, unless the caller passed an
+        // explicit start (the aggregator does, to fold the current gameweek in for teams whose
+        // fixture hasn't kicked off yet).
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
-        const startGameweek = gameweekRange.start;
+        const startGameweek = bpHasExplicitRange ? bpQueryStart : gameweekRange.start;
 
         // Fetch fixtures first so we can detect TBC (event=null) fixtures and extend to GW39,
         // plus per-GW reallocation-aware availability ratios (see server/xmins-reallocation.ts)
@@ -18475,7 +18536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         const allFixtures = await fixturesResponse.json();
         const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
-        const endGameweek = hasTBCBonus ? 39 : gameweekRange.end;
+        const endGameweek = hasTBCBonus ? 39 : (bpHasExplicitRange ? bpQueryEnd : gameweekRange.end);
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
         if (bonusMinutesResponse.ok) {
           const bonusMinutesData = await bonusMinutesResponse.json();
@@ -18670,8 +18731,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse availabilityAdjusted flag (default true)
       const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
 
+      // Fold the current gameweek in when it still has an unstarted fixture — mirrors the same
+      // fold-in already applied where this data gets aggregated (fpl-scoring-cache-service.ts).
+      let currentGWHasUnstarted = false;
+      try {
+        const fixturesResponse = await internalFetch("api/fixtures");
+        if (fixturesResponse.ok) {
+          const fixturesForFold = await fixturesResponse.json();
+          currentGWHasUnstarted = currentGameweek > 0 &&
+            fixturesForFold.some((f: any) => f.event === currentGameweek && !f.started);
+        }
+      } catch { /* fold-in is best-effort; falls back to currentGameweek + 1 below */ }
+
       // Calculate the projection range — cap at 38 (GW39 is a synthetic TBC bucket, never expose it)
-      const startGameweek = currentGameweek + 1;
+      const startGameweek = currentGWHasUnstarted ? currentGameweek : currentGameweek + 1;
       const endGameweek = Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, 38);
 
       // For raw (unadjusted) requests, always delegate to the live aggregator which applies
