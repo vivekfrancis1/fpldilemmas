@@ -396,7 +396,7 @@ export default function PlayerCleanSheetPoints() {
                   return (
                     <button key={pos}
                       onClick={() => setSelectedPosition(selectedPosition === value && value !== 'all' ? 'all' : value)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                       {pos}
                     </button>
                   );
@@ -408,13 +408,13 @@ export default function PlayerCleanSheetPoints() {
             <TabsContent value="teams" className="mt-0">
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 <button onClick={() => setSelectedTeam('all')}
-                  className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                  className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                   All
                 </button>
                 {teams.map(team => (
                   <button key={team}
                     onClick={() => setSelectedTeam(selectedTeam === team ? 'all' : team)}
-                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                    className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                     {team}
                   </button>
                 ))}
@@ -433,7 +433,7 @@ export default function PlayerCleanSheetPoints() {
             </h2>
               <button
                 onClick={() => setShowOpponent(!showOpponent)}
-                className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                className={`shrink-0 inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
               >
                 {showOpponent ? 'Hide Opp' : 'Show Opp'}
               </button>

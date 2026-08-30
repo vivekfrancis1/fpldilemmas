@@ -24,6 +24,16 @@ html {
     min-width: 44px;
   }
 
+  /* Small multi-select filter/toggle pills (gameweek, position, team chips in the various
+     Team/Player Projections filter panels) are deliberately compact and packed many-per-row —
+     the blanket 44x44 touch-target rule above was ballooning every single one of them into a
+     44px square regardless of their tiny text, making filter rows look chunky and wasting most
+     of the panel on padding. These are dense multi-select controls, not primary tap targets. */
+  .chip-toggle {
+    min-height: unset;
+    min-width: unset;
+  }
+
   .fpl-table-cell {
     @apply px-1 py-2 text-xs;
   }

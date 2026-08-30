@@ -876,12 +876,12 @@ export default function PlayerDefensiveContributions() {
                 </span>
                 <div className="flex flex-wrap items-center gap-1">
                   <button onClick={() => setApplyAvailability(!applyAvailability)}
-                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                    className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
                     data-testid="button-toggle-availability">
                     {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
                   </button>
-                  <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
-                  <button onClick={() => setSelectedGameweeks(prev => new Set(gameweeks.filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
+                  <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                  <button onClick={() => setSelectedGameweeks(prev => new Set(gameweeks.filter(gw => !prev.has(gw))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -889,7 +889,7 @@ export default function PlayerDefensiveContributions() {
                   const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gwNumber);
                   return (
                     <button key={gwNumber} onClick={() => toggleGameweekSelection(gwNumber)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                      className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-gw-${gwNumber}`}>
                       GW{gwNumber}
                     </button>
@@ -897,7 +897,7 @@ export default function PlayerDefensiveContributions() {
                 })}
                 {tbcTeamInfoMap.size > 0 && endGameweek >= 39 && viewMode === 'future' && (
                   <button onClick={() => toggleGameweekSelection(39)}
-                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                    className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                     data-testid="button-toggle-gw-39">
                     GW39 (TBC)
                   </button>
@@ -911,7 +911,7 @@ export default function PlayerDefensiveContributions() {
                   Position{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                 </span>
                 <button onClick={() => setSelectedPositions(new Set())}
-                  className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
+                  className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
                 </button>
               </div>
@@ -920,7 +920,7 @@ export default function PlayerDefensiveContributions() {
                   const isActive = selectedPositions.size === 0 || selectedPositions.has(full);
                   return (
                     <button key={full} onClick={() => togglePositionSelection(full)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                      className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-position-${full}`}>
                       {short}
                     </button>
@@ -935,7 +935,7 @@ export default function PlayerDefensiveContributions() {
                   Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                 </span>
                 <button onClick={() => setSelectedTeams(new Set())}
-                  className="rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
+                  className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
                   All
                 </button>
               </div>
@@ -946,7 +946,7 @@ export default function PlayerDefensiveContributions() {
                   const displayName = bsTeam?.short_name || team;
                   return (
                     <button key={team} onClick={() => toggleTeamSelection(team)}
-                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                      className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                       data-testid={`button-toggle-team-${team}`}>
                       {displayName}
                     </button>
@@ -974,7 +974,7 @@ export default function PlayerDefensiveContributions() {
           </h2>
           <button
             onClick={() => setShowOpponent(!showOpponent)}
-            className={`shrink-0 inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+            className={`shrink-0 inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
             data-testid="button-toggle-opponent"
           >
             {showOpponent ? 'Hide Opp' : 'Show Opp'}

@@ -21,6 +21,10 @@ interface Fixture {
   team_a_difficulty?: number;
   kickoff_time: string;
   finished: boolean;
+  // True the moment the match itself ends, before FPL's `finished` flag flips (which waits for
+  // bonus points to be officially confirmed, often 1hr+ after full time) — the right signal for
+  // "is this match actually over" rather than "has FPL fully closed the book on it".
+  finished_provisional?: boolean;
   team_h_score?: number;
   team_a_score?: number;
   minutes?: number;
@@ -189,9 +193,9 @@ export default function ResultsAndFixtures() {
         ...fixture,
         homeTeam,
         awayTeam,
-        isResult: fixture.finished,
-        isUpcoming: !fixture.finished && !fixture.started,
-        isLive: fixture.started && !fixture.finished,
+        isResult: fixture.finished || fixture.finished_provisional,
+        isUpcoming: !fixture.finished && !fixture.finished_provisional && !fixture.started,
+        isLive: fixture.started && !fixture.finished && !fixture.finished_provisional,
       };
     });
   }, [fixturesData, bootstrapData, isHistorical]);

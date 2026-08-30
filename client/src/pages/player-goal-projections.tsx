@@ -353,7 +353,7 @@ export default function PlayerGoalProjections() {
                       return (
                         <button key={pos}
                           onClick={() => setPositionFilter(positionFilter === value && value !== 'all' ? 'all' : value)}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                           {pos}
                         </button>
                       );

@@ -255,9 +255,13 @@ export default function CurrentStandings() {
     return Math.round(value);
   };
 
-  const SortableHeader = ({ field, children, tooltip }: { field: SortField; children: React.ReactNode; tooltip: string }) => (
-    <th 
-      className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+  // xGF/xGA are inherently fractional (a statistical model, not a countable event like goals or
+  // cards), so unlike formatStat they always keep 2 decimals, even in the season-totals view.
+  const formatXg = (value: number) => value.toFixed(2);
+
+  const SortableHeader = ({ field, children, tooltip, normalCase = false }: { field: SortField; children: React.ReactNode; tooltip: string; normalCase?: boolean }) => (
+    <th
+      className={`px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${normalCase ? 'normal-case' : 'uppercase'}`}
       onClick={() => handleSort(field)}
       data-testid={`sort-${field}`}
     >
@@ -503,8 +507,8 @@ export default function CurrentStandings() {
                     </th>
                     
                     {/* Expected Goals - After Points */}
-                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances">xGF</SortableHeader>
-                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded">xGA</SortableHeader>
+                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances" normalCase>xGF</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded" normalCase>xGA</SortableHeader>
                     <SortableHeader 
                       field="adjustedGoalRate" 
                       tooltip={statsView === 'per-game' 
@@ -620,10 +624,10 @@ export default function CurrentStandings() {
                       
                       {/* Expected Goals - After Points */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`expected-goals-for-${team.shortName}`}>
-                        {formatStat(team.expectedGoalsFor)}
+                        {formatXg(team.expectedGoalsFor)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
-                        {formatStat(team.expectedGoalsAgainst)}
+                        {formatXg(team.expectedGoalsAgainst)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
                         {team.adjustedGoalRate ? team.adjustedGoalRate.toFixed(2) : '0.00'}
@@ -751,8 +755,8 @@ export default function CurrentStandings() {
                       <td className="px-3 py-4 text-center text-sm font-bold text-blue-900 border-l bg-blue-100">{summaryStats.averages.points.toFixed(1)}</td>
                       
                       {/* Expected Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       

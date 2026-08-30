@@ -766,8 +766,8 @@ export default function TeamGoalProjections() {
                           Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                         </span>
                         <div className="flex flex-wrap items-center gap-1">
-                          <button onClick={clearGameweekSelections} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
-                          <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).filter(gw => !prev.has(gw))))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300">Invert</button>
+                          <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                          <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => parseInt(startGameweek) + i).filter(gw => !prev.has(gw))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300">Invert</button>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -775,7 +775,7 @@ export default function TeamGoalProjections() {
                           const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                           return (
                             <button key={gw} onClick={() => toggleGameweekSelection(gw)}
-                              className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? (gw === 39 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300') : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
+                              className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? (gw === 39 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-orange-100 text-orange-700 border-orange-300') : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
                               {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
                             </button>
                           );
@@ -796,13 +796,13 @@ export default function TeamGoalProjections() {
                       </div>
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
                         <button onClick={() => setSelectedTeams(new Set())}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.size === 0 ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.size === 0 ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                           All
                         </button>
                         {bootstrapData?.teams?.sort((a, b) => a.short_name.localeCompare(b.short_name)).map(team => (
                           <button key={team.id}
                             onClick={() => toggleTeamSelection(team.short_name)}
-                            className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.has(team.short_name) ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.has(team.short_name) ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                             {team.short_name}
                           </button>
                         ))}
@@ -843,7 +843,7 @@ export default function TeamGoalProjections() {
                   </Badge>
                 )}
                 <button onClick={() => setShowOpponent(!showOpponent)}
-                  className={`ml-auto inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                  className={`ml-auto inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                   <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
                 </button>
               </CardTitle>
@@ -895,14 +895,23 @@ export default function TeamGoalProjections() {
                           GW39 (TBC)
                         </th>
                       )}
-                      <th 
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                      <th
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-14 z-[5]"
                         onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
                           <span className="md:hidden">Tot</span>
                           <span className="hidden md:inline">Total</span>
                           {sortBy === 'total' && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
+                        </div>
+                      </th>
+                      <th
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                        onClick={() => handleSort('average')}
+                      >
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span>Avg</span>
+                          {sortBy === 'average' && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                         </div>
                       </th>
                     </tr>
@@ -1055,7 +1064,7 @@ export default function TeamGoalProjections() {
                           );
                         })()}
                         
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {(() => {
                               const gwSum = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
@@ -1065,7 +1074,12 @@ export default function TeamGoalProjections() {
                             })()}
                           </span>
                         </td>
-                        
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                          <span className="text-sm md:text-lg font-bold text-orange-900">
+                            {(team.averageGoalsPerGame ?? 0).toFixed(2)}
+                          </span>
+                        </td>
+
                       </tr>
                     ))}
                     
@@ -1099,13 +1113,18 @@ export default function TeamGoalProjections() {
                         );
                       })()}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-14 z-[5]">
                         <span className="text-sm md:text-lg font-bold text-orange-900">
                           {(() => {
                             const tbcSum = filteredProjections.reduce((s, t) => s + getUnabsorbedTBC(t.teamShort), 0);
                             const grand = totalGoals.overallTotal + tbcSum;
                             return viewMode === "past" ? grand : grand.toFixed(2);
                           })()}
+                        </span>
+                      </td>
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <span className="text-sm md:text-lg font-bold text-orange-900">
+                          {totalGoals.averagePerGame.toFixed(2)}
                         </span>
                       </td>
                       

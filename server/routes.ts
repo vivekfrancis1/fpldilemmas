@@ -8443,8 +8443,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((p) => {
             const gameweekGoals: Record<number, number> = {};
             let totalGoals = 0;
-            p.byGameweek.forEach((row, gw) => { gameweekGoals[gw] = row.goals_scored; totalGoals += row.goals_scored; });
-            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekGoals, totalGoals };
+            let gamesPlayed = 0;
+            p.byGameweek.forEach((row, gw) => {
+              gameweekGoals[gw] = row.goals_scored;
+              totalGoals += row.goals_scored;
+              if (row.minutes > 0) gamesPlayed += 1;
+            });
+            const averageGoals = gamesPlayed > 0 ? Math.round((totalGoals / gamesPlayed) * 100) / 100 : 0;
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekGoals, totalGoals, gamesPlayed, averageGoals };
           })
           .filter((p) => p.totalGoals > 0);
         return res.json({ season: resolvedSeason, lastFinishedGW, players });
@@ -8485,7 +8491,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     teamShort: team?.short_name || 'UNK',
                     position: position?.singular_name_short || 'UNK',
                     gameweekGoals: {},
-                    totalGoals: 0
+                    totalGoals: 0,
+                    gamesPlayed: 0
                   });
                 }
               }
@@ -8493,6 +8500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (playerData) {
                 playerData.gameweekGoals[gw] = el.stats.goals_scored || 0;
                 playerData.totalGoals += el.stats.goals_scored || 0;
+                if ((el.stats.minutes || 0) > 0) playerData.gamesPlayed += 1;
               }
             });
           }
@@ -8500,8 +8508,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error fetching GW${gw} live data:`, err);
         }
       }
-      
-      const players = Array.from(playerGoalsMap.values()).filter((p: any) => p.totalGoals > 0);
+
+      const players = Array.from(playerGoalsMap.values())
+        .filter((p: any) => p.totalGoals > 0)
+        .map((p: any) => ({ ...p, averageGoals: p.gamesPlayed > 0 ? Math.round((p.totalGoals / p.gamesPlayed) * 100) / 100 : 0 }));
       res.json({ season: resolvedSeason, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player goals history:", error);
@@ -8528,8 +8538,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((p) => {
             const gameweekXg: Record<number, number> = {};
             let totalXg = 0;
-            p.byGameweek.forEach((row, gw) => { gameweekXg[gw] = row.expected_goals; totalXg += row.expected_goals; });
-            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXg, totalXg };
+            let gamesPlayed = 0;
+            p.byGameweek.forEach((row, gw) => {
+              gameweekXg[gw] = row.expected_goals;
+              totalXg += row.expected_goals;
+              if (row.minutes > 0) gamesPlayed += 1;
+            });
+            const averageXg = gamesPlayed > 0 ? Math.round((totalXg / gamesPlayed) * 100) / 100 : 0;
+            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXg, totalXg, gamesPlayed, averageXg };
           })
           .filter((p) => p.totalXg > 0);
         return res.json({ season: resolvedSeasonXg, lastFinishedGW, startGW: effStartGw, endGW: effEndGw, players });
@@ -8599,7 +8615,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team?.short_name || 'UNK',
                 position: position?.singular_name_short || 'UNK',
                 gameweekXg: {},
-                totalXg: 0
+                totalXg: 0,
+                gamesPlayed: 0
               });
             }
           }
@@ -8609,12 +8626,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const xg = parseFloat(el.stats.expected_goals) || 0;
             playerData.gameweekXg[gw] = xg;
             playerData.totalXg += xg;
+            if ((el.stats.minutes || 0) > 0) playerData.gamesPlayed += 1;
           }
         });
       }
-      
+
       // Filter to only players with xG > 0
-      const players = Array.from(playerXgMap.values()).filter((p: any) => p.totalXg > 0);
+      const players = Array.from(playerXgMap.values())
+        .filter((p: any) => p.totalXg > 0)
+        .map((p: any) => ({ ...p, averageXg: p.gamesPlayed > 0 ? Math.round((p.totalXg / p.gamesPlayed) * 100) / 100 : 0 }));
       console.log(`DEBUG: Player xG History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
       res.json({ season: resolvedSeasonXg, lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
@@ -8646,8 +8666,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((p) => {
             const gameweekAssists: Record<number, number> = {};
             let totalAssists = 0;
-            p.byGameweek.forEach((row, gw) => { gameweekAssists[gw] = row.assists; totalAssists += row.assists; });
-            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekAssists, totalAssists };
+            let gamesPlayed = 0;
+            p.byGameweek.forEach((row, gw) => {
+              gameweekAssists[gw] = row.assists;
+              totalAssists += row.assists;
+              if (row.minutes > 0) gamesPlayed += 1;
+            });
+            const averageAssists = gamesPlayed > 0 ? Math.round((totalAssists / gamesPlayed) * 100) / 100 : 0;
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekAssists, totalAssists, gamesPlayed, averageAssists };
           })
           .filter((p) => p.totalAssists > 0);
         const responseData = { season: resolvedSeasonAssists, lastFinishedGW, players };
@@ -8689,7 +8715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     teamShort: team?.short_name || 'UNK',
                     position: position?.singular_name_short || 'UNK',
                     gameweekAssists: {},
-                    totalAssists: 0
+                    totalAssists: 0,
+                    gamesPlayed: 0
                   });
                 }
               }
@@ -8697,6 +8724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (playerData) {
                 playerData.gameweekAssists[gw] = el.stats.assists || 0;
                 playerData.totalAssists += el.stats.assists || 0;
+                if ((el.stats.minutes || 0) > 0) playerData.gamesPlayed += 1;
               }
             });
           }
@@ -8704,8 +8732,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error fetching GW${gw} live data:`, err);
         }
       }
-      
-      const players = Array.from(playerAssistsMap.values()).filter((p: any) => p.totalAssists > 0);
+
+      const players = Array.from(playerAssistsMap.values())
+        .filter((p: any) => p.totalAssists > 0)
+        .map((p: any) => ({ ...p, averageAssists: p.gamesPlayed > 0 ? Math.round((p.totalAssists / p.gamesPlayed) * 100) / 100 : 0 }));
       res.json({ season: resolvedSeasonAssists, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player assists history:", error);
@@ -8732,8 +8762,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((p) => {
             const gameweekXa: Record<number, number> = {};
             let totalXa = 0;
-            p.byGameweek.forEach((row, gw) => { gameweekXa[gw] = row.expected_assists; totalXa += row.expected_assists; });
-            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXa, totalXa };
+            let gamesPlayed = 0;
+            p.byGameweek.forEach((row, gw) => {
+              gameweekXa[gw] = row.expected_assists;
+              totalXa += row.expected_assists;
+              if (row.minutes > 0) gamesPlayed += 1;
+            });
+            const averageXa = gamesPlayed > 0 ? Math.round((totalXa / gamesPlayed) * 100) / 100 : 0;
+            return { id: p.playerId, name: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: p.position, gameweekXa, totalXa, gamesPlayed, averageXa };
           })
           .filter((p) => p.totalXa > 0);
         return res.json({ season: resolvedSeasonXa, lastFinishedGW, startGW: effStartGwXa, endGW: effEndGwXa, players });
@@ -8803,7 +8839,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team?.short_name || 'UNK',
                 position: position?.singular_name_short || 'UNK',
                 gameweekXa: {},
-                totalXa: 0
+                totalXa: 0,
+                gamesPlayed: 0
               });
             }
           }
@@ -8813,12 +8850,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const xa = parseFloat(el.stats.expected_assists) || 0;
             playerData.gameweekXa[gw] = xa;
             playerData.totalXa += xa;
+            if ((el.stats.minutes || 0) > 0) playerData.gamesPlayed += 1;
           }
         });
       }
-      
+
       // Filter to only players with xA > 0
-      const players = Array.from(playerXaMap.values()).filter((p: any) => p.totalXa > 0);
+      const players = Array.from(playerXaMap.values())
+        .filter((p: any) => p.totalXa > 0)
+        .map((p: any) => ({ ...p, averageXa: p.gamesPlayed > 0 ? Math.round((p.totalXa / p.gamesPlayed) * 100) / 100 : 0 }));
       console.log(`DEBUG: Player xA History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
       res.json({ season: resolvedSeasonXa, lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
@@ -8842,8 +8882,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((p) => {
             const gameweekSaves: Record<number, number> = {};
             let totalSaves = 0;
-            p.byGameweek.forEach((row, gw) => { gameweekSaves[gw] = row.saves; totalSaves += row.saves; });
-            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: 'GKP', gameweekSaves, totalSaves };
+            let gamesPlayed = 0;
+            p.byGameweek.forEach((row, gw) => {
+              gameweekSaves[gw] = row.saves;
+              totalSaves += row.saves;
+              if (row.minutes > 0) gamesPlayed += 1;
+            });
+            const averageSaves = gamesPlayed > 0 ? Math.round((totalSaves / gamesPlayed) * 100) / 100 : 0;
+            return { playerId: p.playerId, playerName: p.playerName, teamName: p.teamName, teamShort: p.teamShort, position: 'GKP', gameweekSaves, totalSaves, gamesPlayed, averageSaves };
           });
         return res.json({ season: resolvedSeasonSaves, lastFinishedGW, players });
       }
@@ -8881,13 +8927,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     teamShort: team?.short_name || 'UNK',
                     position: 'GKP',
                     gameweekSaves: {},
-                    totalSaves: 0
+                    totalSaves: 0,
+                    gamesPlayed: 0
                   });
                 }
                 const playerData = playerSavesMap.get(el.id);
                 if (playerData) {
                   playerData.gameweekSaves[gw] = el.stats.saves || 0;
                   playerData.totalSaves += el.stats.saves || 0;
+                  if ((el.stats.minutes || 0) > 0) playerData.gamesPlayed += 1;
                 }
               }
             });
@@ -8896,8 +8944,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error fetching GW${gw} live data:`, err);
         }
       }
-      
-      const players = Array.from(playerSavesMap.values());
+
+      const players = Array.from(playerSavesMap.values())
+        .map((p: any) => ({ ...p, averageSaves: p.gamesPlayed > 0 ? Math.round((p.totalSaves / p.gamesPlayed) * 100) / 100 : 0 }));
       res.json({ season: resolvedSeasonSaves, lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player saves history:", error);
@@ -16981,7 +17030,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, saves projections from GW${startGameweek} to GW${endGameweek}`);
 
       const { TeamGoalsService } = await import("./team-goals-service");
-      const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
 
       // This season's (2026/27) average goals-for per team, computed once for all 20 teams
       // rather than per-fixture.
@@ -17044,10 +17092,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
           // (player.saves/minutes otherwise still reflect 2025/26's frozen pre-kickoff carryover)
           // and once the player has enough minutes that a per-90 extrapolation isn't dominated
-          // by small-sample noise (e.g. 1 save in a single substitute cameo would otherwise
-          // extrapolate to 90 saves per 90).
+          // by small-sample noise. Goalkeepers rarely get subbed off early, so a single full
+          // appearance (~90 min) is already a reasonably reliable sample — unlike outfield
+          // per-90 rates elsewhere, which use the higher MIN_MINUTES_FOR_RATE (270) threshold.
+          const MIN_MINUTES_FOR_SAVES_RATE = 90;
           const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0');
-          const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+          const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_SAVES_RATE
             ? (savesPer90FromAPI > 0 ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI : savesPerTeamGame)
             : undefined;
 
