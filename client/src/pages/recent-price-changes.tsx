@@ -603,8 +603,6 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
-                          <th className="hidden lg:table-cell text-right p-3 font-medium">Purchase Price</th>
-                          <th className="hidden lg:table-cell text-right p-3 font-medium">Selling Price</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -659,15 +657,10 @@ export default function RecentPriceChanges() {
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
                             </td>
-                            <td className="hidden lg:table-cell p-3 text-right text-muted-foreground">-</td>
-                            <td className="hidden lg:table-cell p-3 text-right text-muted-foreground">-</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    <p className="text-xs text-muted-foreground mt-3 px-1">
-                      Purchase/Selling Price only apply to players in your own squad — link your team to see those here.
-                    </p>
                   </div>
                 ) : !isLoadingPredictions && !predictionsError ? null : (
                   <div className="text-center py-8 text-muted-foreground">
