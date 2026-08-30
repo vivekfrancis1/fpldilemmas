@@ -83,6 +83,51 @@ function computeLastFinishedGW(fixturesData: any[]): number {
 }
 
 /**
+ * Live-accurate per-player goals/assists/xG/xA for the current season, summed across every
+ * gameweek that's actually over (isFixtureActuallyOver) — sourced directly from FPL's live event
+ * endpoint per gameweek instead of the DB-cached element-summary history (playerHistoryCache),
+ * which is only refreshed periodically (see prefetchAllPlayerHistories) and can lag a live or
+ * just-finished match by hours, understating goal/assist share — and therefore every downstream
+ * projection — for anyone who scored in the most recent gameweek. `explain[].fixture` on each
+ * live element entry identifies which fixture a gameweek's stats came from, so — same as the old
+ * DB-history approach — a mid-season transfer's former-club games still don't count toward the
+ * new club's totals: only fixtures matching the player's CURRENT team (fixtureTeamMap) count.
+ */
+async function getLiveCurrentSeasonGoalAssistTotals(
+  fixtureTeamMap: Map<number, { home: number; away: number }>,
+  playerTeamMap: Map<number, number>,
+  maxGW: number
+): Promise<Map<number, { goals: number; assists: number; xg: number; xa: number }>> {
+  const totals = new Map<number, { goals: number; assists: number; xg: number; xa: number }>();
+  for (let gw = 1; gw <= maxGW; gw++) {
+    try {
+      const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+      if (!liveResponse.ok) continue;
+      const liveData = await liveResponse.json();
+      (liveData.elements || []).forEach((el: any) => {
+        const currentTeam = playerTeamMap.get(el.id);
+        if (currentTeam === undefined) return;
+        const explain = el.explain || [];
+        const playedForCurrentTeam = explain.some((e: any) => {
+          const fix = fixtureTeamMap.get(e.fixture);
+          return fix && (fix.home === currentTeam || fix.away === currentTeam);
+        });
+        if (!playedForCurrentTeam) return;
+        const entry = totals.get(el.id) || { goals: 0, assists: 0, xg: 0, xa: 0 };
+        entry.goals += el.stats?.goals_scored || 0;
+        entry.assists += el.stats?.assists || 0;
+        entry.xg += parseFloat(el.stats?.expected_goals || 0);
+        entry.xa += parseFloat(el.stats?.expected_assists || 0);
+        totals.set(el.id, entry);
+      });
+    } catch (err) {
+      console.error(`Error fetching GW${gw} live data for goal/assist share:`, err);
+    }
+  }
+  return totals;
+}
+
+/**
  * Resolve which season a history/"past" view should show. An explicit request always wins;
  * otherwise default to CURRENT_SEASON if it has any finished gameweeks yet, else fall back to
  * PREVIOUS_SEASON (the "latest year with data" default) — right now that's PREVIOUS_SEASON,
@@ -10226,20 +10271,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixtureTeamMap = new Map<number, { home: number; away: number }>();
       finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
 
-      const { getBulkPlayerHistories } = await import('./player-history-service');
-      const allPlayerIds = bootstrapData.elements.map((p: any) => p.id);
-      const dbHistories = await getBulkPlayerHistories(allPlayerIds);
+      const playerTeamMap = new Map<number, number>();
+      bootstrapData.elements.forEach((p: any) => playerTeamMap.set(p.id, p.team));
+      const maxGW = finishedFixtures.length > 0 ? Math.max(...finishedFixtures.map((f: any) => f.event)) : 0;
+      const liveTotals = await getLiveCurrentSeasonGoalAssistTotals(fixtureTeamMap, playerTeamMap, maxGW);
 
       bootstrapData.elements.forEach((player: any) => {
-        const history = dbHistories.get(player.id) || [];
-        const currentClubGames = history.filter((g: any) => {
-          const fix = fixtureTeamMap.get(g.fixture);
-          return fix && (fix.home === player.team || fix.away === player.team);
-        });
-        const goals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
-        const xg = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
-        realGoalsByPlayerId.set(player.id, goals);
-        realXGByPlayerId.set(player.id, xg);
+        const live = liveTotals.get(player.id);
+        realGoalsByPlayerId.set(player.id, live?.goals || 0);
+        realXGByPlayerId.set(player.id, live?.xg || 0);
       });
 
       bootstrapData.teams.forEach((team: any) => {
@@ -10341,20 +10381,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixtureTeamMap = new Map<number, { home: number; away: number }>();
       finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
 
-      const { getBulkPlayerHistories } = await import('./player-history-service');
-      const allPlayerIds = bootstrapData.elements.map((p: any) => p.id);
-      const dbHistories = await getBulkPlayerHistories(allPlayerIds);
+      const playerTeamMap = new Map<number, number>();
+      bootstrapData.elements.forEach((p: any) => playerTeamMap.set(p.id, p.team));
+      const maxGW = finishedFixtures.length > 0 ? Math.max(...finishedFixtures.map((f: any) => f.event)) : 0;
+      const liveTotals = await getLiveCurrentSeasonGoalAssistTotals(fixtureTeamMap, playerTeamMap, maxGW);
 
       bootstrapData.elements.forEach((player: any) => {
-        const history = dbHistories.get(player.id) || [];
-        const currentClubGames = history.filter((g: any) => {
-          const fix = fixtureTeamMap.get(g.fixture);
-          return fix && (fix.home === player.team || fix.away === player.team);
-        });
-        const assists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
-        const xa = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
-        realAssistsByPlayerId.set(player.id, assists);
-        realXAByPlayerId.set(player.id, xa);
+        const live = liveTotals.get(player.id);
+        realAssistsByPlayerId.set(player.id, live?.assists || 0);
+        realXAByPlayerId.set(player.id, live?.xa || 0);
       });
 
       bootstrapData.teams.forEach((team: any) => {
@@ -10421,8 +10456,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // admin-configured assumed goals for promoted teams — no real xG data exists for the
   // Championship, so promoted-team xG is always 0, same as the assist-share promoted override).
   async function fetchProjectedShareInputs(bootstrapData: any) {
-    const { getBulkPlayerHistories } = await import('./player-history-service');
-
     const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
     const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
     // A just-finished fixture stays `finished: false` for up to ~1hr while bonus points are
@@ -10433,23 +10466,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const finishedFixtures = allFixtures.filter((f: any) => isFixtureActuallyOver(f));
     const fixtureTeamMap = new Map<number, { home: number; away: number }>();
     finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
-    const allPlayerIds = bootstrapData.elements.map((p: any) => p.id);
-    const dbHistories = await getBulkPlayerHistories(allPlayerIds);
+
+    const playerTeamMap = new Map<number, number>();
+    bootstrapData.elements.forEach((p: any) => playerTeamMap.set(p.id, p.team));
+    const maxGW = finishedFixtures.length > 0 ? Math.max(...finishedFixtures.map((f: any) => f.event)) : 0;
+    // Sourced live (see getLiveCurrentSeasonGoalAssistTotals docstring) rather than from the
+    // DB-cached element-summary history, which only refreshes periodically and can lag a live or
+    // just-finished match by hours — understating goalShare/assistShare, and therefore every
+    // projection derived from it, for anyone who scored in the most recent gameweek.
+    const liveTotals = await getLiveCurrentSeasonGoalAssistTotals(fixtureTeamMap, playerTeamMap, maxGW);
 
     const this27Goals = new Map<number, number>();
     const this27XG = new Map<number, number>();
     const this27Assists = new Map<number, number>();
     const this27XA = new Map<number, number>();
     bootstrapData.elements.forEach((player: any) => {
-      const history = dbHistories.get(player.id) || [];
-      const currentClubGames = history.filter((g: any) => {
-        const fix = fixtureTeamMap.get(g.fixture);
-        return fix && (fix.home === player.team || fix.away === player.team);
-      });
-      this27Goals.set(player.id, currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0));
-      this27XG.set(player.id, currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0));
-      this27Assists.set(player.id, currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0));
-      this27XA.set(player.id, currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0));
+      const live = liveTotals.get(player.id);
+      this27Goals.set(player.id, live?.goals || 0);
+      this27XG.set(player.id, live?.xg || 0);
+      this27Assists.set(player.id, live?.assists || 0);
+      this27XA.set(player.id, live?.xa || 0);
     });
 
     const gamesByTeam = new Map<number, number>();
