@@ -146,10 +146,18 @@ export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { g
   // measured against that real total rather than the sum of the players listed here.
 };
 
+// Where a fixture's expected-goals number actually came from — surfaced to the client so the
+// Team Goal Projections page can show, per fixture, whether it's using live betting-market
+// odds (The Odds API) or the internal dynamic/tiered model. 'odds' only when calculationMode
+// is 'odds' AND a usable stored odds row exists for that exact fixture; every other case
+// (including 'odds' mode falling back because no odds are stored) is 'model'.
+export type GoalsSource = 'odds' | 'model';
+
 interface FixtureDetail {
   opponent: string;
   isHome: boolean;
   goals: number;
+  source: GoalsSource;
 }
 
 interface TeamGoalProjection {
@@ -387,7 +395,7 @@ export class TeamGoalsService {
 
         try {
           // Apply the hybrid team goal calculation logic with real xGF/xGA data
-          const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
+          const { expectedGoals, source } = await TeamGoalsService.calculateFixtureGoals(
             team, opponent, fixture, isHome, bootstrapData, fixturesData,
             bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
           );
@@ -397,6 +405,7 @@ export class TeamGoalsService {
             opponent: opponent.short_name,
             isHome,
             expectedGoals: Math.round(expectedGoals * 100) / 100,
+            source,
             isActual: false
           };
 
@@ -432,7 +441,8 @@ export class TeamGoalsService {
         fixtureDetails[p.gameweek].push({
           opponent: p.opponent,
           isHome: p.isHome,
-          goals: p.expectedGoals
+          goals: p.expectedGoals,
+          source: p.source
         });
         
         // Add to gameweek projection (handles both SGW and DGW - initialized to 0 above)
@@ -478,7 +488,7 @@ export class TeamGoalsService {
     bettingData: any,
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
-  ): Promise<number> {
+  ): Promise<{ expectedGoals: number; source: GoalsSource }> {
     // 'tiered' mode uses the pre-2025 formula (base xG x venue x tier/context
     // multipliers) instead of live performance data — restored from git history
     // (pre-f01baa93) as an admin-selectable alternative, not the default.
@@ -510,7 +520,7 @@ export class TeamGoalsService {
     fixturesData: any[],
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
-  ): Promise<number> {
+  ): Promise<{ expectedGoals: number; source: GoalsSource }> {
     try {
       // SEASON DATA ONLY: Uses verified data from current standings API
       // Formula: GF×0.25 + xGF×0.25 + GC×0.25 + xGC×0.25
@@ -550,9 +560,9 @@ export class TeamGoalsService {
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
       const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
-      
-      return expectedGoals;
-      
+
+      return { expectedGoals, source: 'model' };
+
     } catch (error) {
       console.error(`❌ CALCULATION ERROR: Team ${team.name} vs ${opponent.name} GW${fixture.event} - ${error}`);
       throw error;
@@ -602,7 +612,7 @@ export class TeamGoalsService {
     fixturesData: any[],
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
-  ): Promise<number> {
+  ): Promise<{ expectedGoals: number; source: GoalsSource }> {
     const fallback = () => TeamGoalsService.calculateFixtureGoalsDynamic(
       team, opponent, fixture, isHome, bootstrapData, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
     );
@@ -618,10 +628,11 @@ export class TeamGoalsService {
       const solved = solveExpectedGoalsFromOdds(oddsRow.homeWinProb, oddsRow.drawProb, oddsRow.awayWinProb, oddsRow.over25Prob);
       if (!solved) return fallback();
 
-      const expectedGoals = isHome ? solved.lambdaHome : solved.lambdaAway;
+      const rawExpectedGoals = isHome ? solved.lambdaHome : solved.lambdaAway;
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
-      return Math.max(absoluteMin, Math.min(absoluteMax, expectedGoals));
+      const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, rawExpectedGoals));
+      return { expectedGoals, source: 'odds' };
     } catch (error) {
       console.error(`⚠️ Odds-mode lookup failed for Team ${team.name} vs ${opponent.name} GW${fixture.event}, falling back to dynamic - ${error}`);
       return fallback();
@@ -644,7 +655,7 @@ export class TeamGoalsService {
     fixturesData: any[],
     adminGoalSettings: any,
     MASTER_TEAM_DEFAULTS: any
-  ): number {
+  ): { expectedGoals: number; source: GoalsSource } {
     // Phase 1: Universal base xG foundation
     let expectedGoals = TeamGoalsService.num(adminGoalSettings.averageBaseXGPerTeamPerGame, MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame);
 
@@ -678,7 +689,7 @@ export class TeamGoalsService {
     // Final absolute bounds
     const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
     const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
-    return Math.max(absoluteMin, Math.min(absoluteMax, expectedGoals));
+    return { expectedGoals: Math.max(absoluteMin, Math.min(absoluteMax, expectedGoals)), source: 'model' };
   }
 
   private static parseTeamArray(teamData: any): number[] {
@@ -1323,7 +1334,7 @@ export class TeamGoalsService {
         const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
         if (!homeTeam || !awayTeam) return null;
 
-        const [homeGoals, awayGoals] = await Promise.all([
+        const [home, away] = await Promise.all([
           TeamGoalsService.calculateFixtureGoals(
             homeTeam, awayTeam, fixture, true,
             bootstrapData, fixturesData, bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
@@ -1340,8 +1351,8 @@ export class TeamGoalsService {
           homeTeamShort: homeTeam.short_name,
           awayTeamId: fixture.team_a,
           awayTeamShort: awayTeam.short_name,
-          homeGoals: Math.round(homeGoals * 100) / 100,
-          awayGoals: Math.round(awayGoals * 100) / 100,
+          homeGoals: Math.round(home.expectedGoals * 100) / 100,
+          awayGoals: Math.round(away.expectedGoals * 100) / 100,
         };
       })
     );

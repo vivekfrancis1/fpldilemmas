@@ -21,6 +21,7 @@ interface FixtureDetail {
   opponent: string;
   isHome: boolean;
   goals: number;
+  source?: 'odds' | 'model';
 }
 
 interface TBCGoalProjection {
@@ -825,6 +826,18 @@ export default function TeamGoalProjections() {
                   <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
                 </button>
               </CardTitle>
+              {viewMode === "future" && (
+                <p className="text-[11px] text-gray-500 flex items-center gap-3 pt-1">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Live odds (The Odds API)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+                    Internal model
+                  </span>
+                </p>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -902,8 +915,22 @@ export default function TeamGoalProjections() {
                           const isDGW = fixtures.length > 1;
                           const teamOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                           
+                          const cellSource = fixtures.length === 1 ? fixtures[0].source : undefined;
+
                           const cellContent = (
-                            <div className="flex flex-col items-center">
+                            <div className="relative flex flex-col items-center">
+                              {cellSource && goals !== undefined && (
+                                <span
+                                  title={
+                                    cellSource === 'odds'
+                                      ? 'Live betting-market odds (The Odds API)'
+                                      : 'Internal projection model (no live odds for this fixture)'
+                                  }
+                                  className={`absolute -top-1 -right-1 md:-right-2 h-1.5 w-1.5 rounded-full ${
+                                    cellSource === 'odds' ? 'bg-emerald-500' : 'bg-gray-300'
+                                  }`}
+                                />
+                              )}
                               <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                               {showOpponent && (
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
@@ -943,7 +970,14 @@ export default function TeamGoalProjections() {
                                       </div>
                                       {fixtures.map((f: FixtureDetail, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center text-sm">
-                                          <span className="text-gray-600">vs {f.opponent} ({f.isHome ? 'H' : 'A'})</span>
+                                          <span className="text-gray-600">
+                                            vs {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                            {f.source && (
+                                              <span className={`ml-1.5 text-[10px] ${f.source === 'odds' ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                                {f.source === 'odds' ? '● odds' : '○ model'}
+                                              </span>
+                                            )}
+                                          </span>
                                           <span className="font-medium text-green-700">{f.goals.toFixed(2)}</span>
                                         </div>
                                       ))}
