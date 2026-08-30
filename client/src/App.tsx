@@ -72,6 +72,7 @@ const ProjectedPoints = lazy(() => import("./pages/projected-points"));
 const TeamOptimizer = lazy(() => import("./pages/team-optimizer"));
 const TransferRecommendations = lazy(() => import("./pages/transfer-recommendations"));
 const ProjectionAccuracy = lazy(() => import("./pages/projection-accuracy"));
+const MatchOddsHistory = lazy(() => import("./pages/match-odds-history"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
@@ -118,6 +119,7 @@ function Router() {
         <Route path="/team/:name" component={TeamDetail} />
 
         <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
+        <Route path="/match-odds-history/:eventId" component={MatchOddsHistory} />
         <Route path="/projected-standings" component={ProjectedStandings} />
         <Route path="/current-standings" component={CurrentStandings} />
         <Route path="/predicted-scores" component={PredictedScores} />

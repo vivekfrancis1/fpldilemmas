@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
@@ -190,6 +192,27 @@ export default function ProjectedGoalsCS() {
         .filter((fixture: any) => fixture.event >= startGW && fixture.event <= endGW);
     },
   });
+
+  // Fixtures that have accumulated odds history (see server/odds-service.ts) — used to show a
+  // "View Odds Trend" link only on matches where there's actually something to chart. Fetched
+  // once for the whole page rather than per-match; matching is by FPL team id since the Odds
+  // API uses full team names that don't always match FPL's short display names.
+  const { data: oddsHistoryFixtures } = useQuery<{ fixtures: { oddsApiEventId: string; homeTeam: string; awayTeam: string }[] }>({
+    queryKey: [`/api/fixture-odds-history/fixtures`],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const oddsHistoryEventIdByTeams = useMemo(() => {
+    const map = new Map<string, string>();
+    (oddsHistoryFixtures?.fixtures || []).forEach((f) => {
+      const homeId = oddsApiTeamNameToFplId(f.homeTeam);
+      const awayId = oddsApiTeamNameToFplId(f.awayTeam);
+      if (homeId && awayId) {
+        map.set(`${homeId}-${awayId}`, f.oddsApiEventId);
+      }
+    });
+    return map;
+  }, [oddsHistoryFixtures]);
 
   // Process data from separate endpoints to create match projections
   const projectionsData = useMemo(() => {
@@ -717,13 +740,23 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                 >
                                   {/* Kickoff Time Header */}
-                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
-                                    <div className="flex items-center justify-center gap-1.5">
+                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
                                       <Clock className="h-3 w-3 text-gray-500" />
                                       <span className="text-xs font-medium text-gray-700">
                                         {match1.kickoffTime ? formatKickoffTime(match1.kickoffTime) : 'Date TBC'}
                                       </span>
                                     </div>
+                                    {oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`) && (
+                                      <Link
+                                        href={`/match-odds-history/${oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`)}`}
+                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-colors shadow-sm"
+                                        title="See how the market odds for this fixture have moved over time"
+                                      >
+                                        <TrendingUp className="h-3.5 w-3.5" />
+                                        Odds Trend
+                                      </Link>
+                                    )}
                                   </div>
                                   
                                   {/* Home Team - Compact */}
@@ -827,13 +860,23 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                 >
                                   {/* Kickoff Time Header */}
-                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100">
-                                    <div className="flex items-center justify-center gap-1.5">
+                                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
                                       <Clock className="h-3 w-3 text-gray-500" />
                                       <span className="text-xs font-medium text-gray-700">
                                         {match2.kickoffTime ? formatKickoffTime(match2.kickoffTime) : 'Date TBC'}
                                       </span>
                                     </div>
+                                    {oddsHistoryEventIdByTeams.get(`${match2.homeTeam.id}-${match2.awayTeam.id}`) && (
+                                      <Link
+                                        href={`/match-odds-history/${oddsHistoryEventIdByTeams.get(`${match2.homeTeam.id}-${match2.awayTeam.id}`)}`}
+                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-colors shadow-sm"
+                                        title="See how the market odds for this fixture have moved over time"
+                                      >
+                                        <TrendingUp className="h-3.5 w-3.5" />
+                                        Odds Trend
+                                      </Link>
+                                    )}
                                   </div>
                                   
                                   {/* Home Team - Compact */}
