@@ -124,7 +124,37 @@ export default function PlayerDefensiveContributions() {
     return computeCurrentGameweek(bootstrapData.events as any);
   }, [bootstrapData]);
 
-  const nextGameweek = currentGameweek !== null ? Math.min(currentGameweek + 1, 38) : null;
+  // Fetch fixtures early — needed for the current-gameweek fold-in below.
+  const { data: fixturesDataEarly } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesDataEarly) || !currentGameweek || currentGameweek <= 0) return false;
+    return (fixturesDataEarly as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesDataEarly, currentGameweek]);
+  // Short names of teams whose own current-gameweek fixture has kicked off — the cached
+  // projection for them is stale (pre-match); blank their current-GW cell client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesDataEarly) || !bootstrapData?.teams || !currentGameweek || currentGameweek <= 0) return set;
+    const idToShort = new Map(bootstrapData.teams.map((t: any) => [t.id, t.short_name]));
+    (fixturesDataEarly as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        const homeShort = idToShort.get(f.team_h);
+        const awayShort = idToShort.get(f.team_a);
+        if (homeShort) set.add(homeShort as string);
+        if (awayShort) set.add(awayShort as string);
+      }
+    });
+    return set;
+  }, [fixturesDataEarly, bootstrapData?.teams, currentGameweek]);
+
+  // Fold the current gameweek in when it still has an unstarted fixture (see
+  // currentGWHasUnstarted above) — same convention as Team Projections / Player Points.
+  const nextGameweek = currentGameweek !== null
+    ? (currentGWHasUnstarted ? currentGameweek : Math.min(currentGameweek + 1, 38))
+    : null;
 
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -138,6 +168,8 @@ export default function PlayerDefensiveContributions() {
   const [currentDCSortOrder, setCurrentDCSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByTotal, setSortByTotal] = useState<boolean>(false);
   const [totalSortOrder, setTotalSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortByAverage, setSortByAverage] = useState<boolean>(false);
+  const [averageSortOrder, setAverageSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
@@ -278,7 +310,12 @@ export default function PlayerDefensiveContributions() {
           isHome,
           isProjected: true,
         };
-      }).sort((a, b) => a.gameweek - b.gameweek);
+      })
+        // Once this player's own team has kicked off in the current gameweek, the cached
+        // projection for it is stale — drop it rather than showing a number that no longer
+        // reflects reality (see currentGWDecidedTeamShorts above).
+        .filter(gwp => !(currentGameweek !== null && gwp.gameweek === currentGameweek && currentGWDecidedTeamShorts.has(player.teamName)))
+        .sort((a, b) => a.gameweek - b.gameweek);
       
       // Use actual current season stats from API (not legacy averages)
       const currentDCPer90 = player.dcPerGame || 0;
@@ -301,13 +338,21 @@ export default function PlayerDefensiveContributions() {
         confidence: 0.75, // Default confidence
       };
     });
-  }, [defensiveData, bootstrapData, fixturesData]);
+  }, [defensiveData, bootstrapData, fixturesData, currentGameweek, currentGWDecidedTeamShorts]);
 
   // Transform history data to match projection format for past mode
   const displayData: PlayerDefensiveData[] = useMemo(() => {
     if (viewMode === "past" && historyData?.players) {
       return historyData.players.map(player => {
-        const gameweekProjections = Object.entries(player.gameweekStats || {}).map(([gwKey, stats]) => {
+        const teamShort = player.teamShort || player.teamName;
+        // The underlying live-derived data returns every player with all-zero stats before
+        // their team's fixture kicks off — drop the current gameweek's entry for a team that
+        // hasn't played it yet, rather than showing a misleading "0" (see
+        // currentGWDecidedTeamShorts above).
+        const includedGWStatsEntries = Object.entries(player.gameweekStats || {}).filter(([gwKey]) =>
+          !(currentGameweek !== null && parseInt(gwKey) === currentGameweek && !currentGWDecidedTeamShorts.has(teamShort))
+        );
+        const gameweekProjections = includedGWStatsEntries.map(([gwKey, stats]) => {
           const gameweek = parseInt(gwKey);
           return {
             gameweek,
@@ -324,8 +369,9 @@ export default function PlayerDefensiveContributions() {
           };
         }).sort((a, b) => a.gameweek - b.gameweek);
 
-        const gamesPlayed = Object.keys(player.gameweekStats || {}).length;
-        const dcPerGame = gamesPlayed > 0 ? player.totalDefensiveContribution / gamesPlayed : 0;
+        const gamesPlayed = includedGWStatsEntries.length;
+        const totalDefensiveContributionCounted = includedGWStatsEntries.reduce((sum, [, stats]) => sum + (stats.defensiveContribution || 0), 0);
+        const dcPerGame = gamesPlayed > 0 ? totalDefensiveContributionCounted / gamesPlayed : 0;
 
         return {
           playerId: player.playerId,
@@ -346,7 +392,7 @@ export default function PlayerDefensiveContributions() {
       });
     }
     return players;
-  }, [viewMode, historyData, players]);
+  }, [viewMode, historyData, players, currentGameweek, currentGWDecidedTeamShorts]);
 
   // Get all gameweeks from the data (based on view mode)
   const allGameweeks = useMemo(() => {
@@ -354,8 +400,14 @@ export default function PlayerDefensiveContributions() {
       const lastFinished = historyData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
-    if (displayData.length > 0 && displayData[0].gameweekProjections.length > 0) {
-      return displayData[0].gameweekProjections.map(gw => gw.gameweek);
+    // Union across every player, not just the first — a player whose own team's current-GW
+    // fixture has kicked off has that gameweek's entry stripped (see currentGWDecidedTeamShorts
+    // above) while other players' teams that haven't played yet still have it, so relying on any
+    // one player's array as "the" set of available columns silently loses that gameweek.
+    if (displayData.length > 0) {
+      const gwSet = new Set<number>();
+      displayData.forEach(p => p.gameweekProjections.forEach(gw => gwSet.add(gw.gameweek)));
+      if (gwSet.size > 0) return Array.from(gwSet).sort((a, b) => a - b);
     }
     return gameweekRange.start > 0 ? Array.from({ length: 38 - gameweekRange.start + 1 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
   }, [viewMode, historyData?.lastFinishedGW, displayData, gameweekRange.start]);
@@ -432,7 +484,7 @@ export default function PlayerDefensiveContributions() {
   // Helper to get adjusted total for sorting with per-gameweek multipliers
   const getAdjustedTotalDC = (player: any) => {
     const playerInfo = playerAvailabilityMap?.get(player.playerId);
-    const gwMultipliers = applyAvailability 
+    const gwMultipliers = applyAvailability
       ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek ?? 1, bootstrapData)
       : {};
     let total = 0;
@@ -443,6 +495,13 @@ export default function PlayerDefensiveContributions() {
       }
     });
     return total;
+  };
+
+  // Same total, divided by only the gameweeks with a real (present) entry — a blanked
+  // current-GW entry is already excluded from player.gameweekProjections entirely.
+  const getAdjustedAverageDC = (player: any) => {
+    const counted = player.gameweekProjections.filter((gw: any) => activeGameweeks.includes(gw.gameweek)).length;
+    return counted > 0 ? getAdjustedTotalDC(player) / counted : 0;
   };
 
   const getAdjustedTotalDCPoints = (player: any) => {
@@ -512,6 +571,14 @@ export default function PlayerDefensiveContributions() {
         return totalSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
+    // Sort by Average if specified
+    else if (sortByAverage) {
+      filtered.sort((a, b) => {
+        const aValue = getAdjustedAverageDC(a);
+        const bValue = getAdjustedAverageDC(b);
+        return averageSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
     // Sort by gameweek column if specified
     else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
@@ -539,7 +606,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
+  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAverage, averageSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(displayData.map(p => p.position).filter(Boolean)));
@@ -582,6 +649,7 @@ export default function PlayerDefensiveContributions() {
   const handleCurrentDCSort = () => {
     setGameweekSortColumn(null);
     setSortByTotal(false);
+    setSortByAverage(false);
     if (sortByCurrentDC) {
       setCurrentDCSortOrder(currentDCSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -593,11 +661,24 @@ export default function PlayerDefensiveContributions() {
   const handleTotalSort = () => {
     setGameweekSortColumn(null);
     setSortByCurrentDC(false);
+    setSortByAverage(false);
     if (sortByTotal) {
       setTotalSortOrder(totalSortOrder === "desc" ? "asc" : "desc");
     } else {
       setSortByTotal(true);
       setTotalSortOrder("desc");
+    }
+  };
+
+  const handleAverageSort = () => {
+    setGameweekSortColumn(null);
+    setSortByCurrentDC(false);
+    setSortByTotal(false);
+    if (sortByAverage) {
+      setAverageSortOrder(averageSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortByAverage(true);
+      setAverageSortOrder("desc");
     }
   };
 
@@ -1016,8 +1097,8 @@ export default function PlayerDefensiveContributions() {
                       </TableHead>
                     );
                   })}
-                  <TableHead 
-                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                  <TableHead
+                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] sticky right-[52px] z-[5]"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1025,6 +1106,19 @@ export default function PlayerDefensiveContributions() {
                       {sortByTotal && (
                         <span className="text-xs">
                           {totalSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="hidden md:table-cell px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-emerald-50 font-semibold cursor-pointer hover:bg-emerald-100 transition-colors w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                    onClick={handleAverageSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Avg
+                      {sortByAverage && (
+                        <span className="text-xs">
+                          {averageSortOrder === "desc" ? "↓" : "↑"}
                         </span>
                       )}
                     </div>
@@ -1041,14 +1135,17 @@ export default function PlayerDefensiveContributions() {
                   
                   let adjustedTotalDC = 0;
                   let originalTotalDC = 0;
-                  player.gameweekProjections
-                    .filter(gw => activeGameweeks.includes(gw.gameweek))
-                    .forEach(gw => {
-                      const mult = gwMultipliers[gw.gameweek] ?? 1;
-                      adjustedTotalDC += gw.defensiveContribution * mult;
-                      originalTotalDC += gw.defensiveContribution;
-                    });
-                  
+                  // player.gameweekProjections already excludes a blanked current-GW entry
+                  // entirely (see the players/displayData memos above), so this count is the
+                  // correct denominator for the average, same convention as Team Projections.
+                  const countedGWs = player.gameweekProjections.filter(gw => activeGameweeks.includes(gw.gameweek));
+                  countedGWs.forEach(gw => {
+                    const mult = gwMultipliers[gw.gameweek] ?? 1;
+                    adjustedTotalDC += gw.defensiveContribution * mult;
+                    originalTotalDC += gw.defensiveContribution;
+                  });
+                  const averageDC = countedGWs.length > 0 ? originalTotalDC / countedGWs.length : 0;
+
                   return (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 w-[130px] min-w-[130px]">
@@ -1102,7 +1199,7 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-[52px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
@@ -1111,6 +1208,9 @@ export default function PlayerDefensiveContributions() {
                       ) : (
                         <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                       )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 bg-emerald-50 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <span className="text-sm md:text-lg font-bold text-emerald-800">{viewMode === "past" ? Math.round(averageDC) : averageDC.toFixed(1)}</span>
                     </TableCell>
                   </TableRow>
                   );

@@ -17763,7 +17763,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const currentGameweek = computeCurrentGameweek(fplData.events);
-      const nextGameweek = currentGameweek + 1; // Start from next gameweek
+      // Fold the current gameweek in when it still has an unstarted fixture — mirrors the
+      // fold-in already applied to Team Projections / Player Points; without this, the loop
+      // below always floored at currentGameweek + 1 regardless of what startGameweek was
+      // explicitly requested as.
+      const currentGWHasUnstartedDC = currentGameweek > 0 &&
+        fixturesData.some((f: any) => f.event === currentGameweek && !f.started);
+      const nextGameweek = currentGWHasUnstartedDC ? currentGameweek : currentGameweek + 1;
       const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
 
       const dcDefaultRange = computeNextRangeDC(fplData.events, projectionWindowSettings.totalWeeks);
