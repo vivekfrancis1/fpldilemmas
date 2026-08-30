@@ -41,6 +41,9 @@ interface MatchProjection {
   };
   totalExpectedGoals: number;
   confidence: 'High' | 'Medium' | 'Low';
+  homeWinProb?: number | null;
+  drawProb?: number | null;
+  awayWinProb?: number | null;
 }
 
 export default function ProjectedGoalsCS() {
@@ -263,6 +266,26 @@ export default function ProjectedGoalsCS() {
     return map;
   }, [oddsHistoryFixtures]);
 
+  // Latest consensus win/draw/away-win probabilities per fixture (see /api/fixture-odds-current)
+  // — only populated for fixtures the Odds API currently has lines open on, so this map is
+  // sparse by design and the match card below only renders the bar when a match has an entry.
+  const { data: currentFixtureOdds } = useQuery<{ odds: { homeTeam: string; awayTeam: string; homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }[] }>({
+    queryKey: [`/api/fixture-odds-current`],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const winDrawLossByTeams = useMemo(() => {
+    const map = new Map<string, { homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }>();
+    (currentFixtureOdds?.odds || []).forEach((o) => {
+      const homeId = oddsApiTeamNameToFplId(o.homeTeam);
+      const awayId = oddsApiTeamNameToFplId(o.awayTeam);
+      if (homeId && awayId) {
+        map.set(`${homeId}-${awayId}`, { homeWinProb: o.homeWinProb, drawProb: o.drawProb, awayWinProb: o.awayWinProb });
+      }
+    });
+    return map;
+  }, [currentFixtureOdds]);
+
   // Process data from separate endpoints to create match projections
   const projectionsData = useMemo(() => {
     if (!teamGoalData || !teamCSData || !fixturesData || !bootstrapData) return [];
@@ -334,6 +357,10 @@ export default function ProjectedGoalsCS() {
           ? (fixture.team_h_score === 0 ? 1 : 0)
           : (awayCSFixture?.cleanSheetOdds ?? csMap.get(awayTeam.id)?.[gwKey] ?? 0);
 
+        // Win/Draw/Loss probability is only meaningful for a match that hasn't been decided yet —
+        // once it's finished or live, the actual/live scoreline is shown instead.
+        const winDrawLoss = (!isDecided) ? winDrawLossByTeams.get(`${homeTeam.id}-${awayTeam.id}`) : undefined;
+
         matches.push({
           id: fixture.id,
           gameweek: fixture.event,
@@ -341,6 +368,9 @@ export default function ProjectedGoalsCS() {
           finished: isResult,
           isLive,
           matchResult: isDecided ? `${fixture.team_h_score}-${fixture.team_a_score}` : 'TBD',
+          homeWinProb: winDrawLoss?.homeWinProb ?? null,
+          drawProb: winDrawLoss?.drawProb ?? null,
+          awayWinProb: winDrawLoss?.awayWinProb ?? null,
           homeTeam: {
             id: homeTeam.id,
             name: homeTeam.name,
@@ -375,7 +405,7 @@ export default function ProjectedGoalsCS() {
       }
       return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
     });
-  }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek, viewMode]);
+  }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek, viewMode, winDrawLossByTeams]);
 
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
@@ -438,6 +468,40 @@ export default function ProjectedGoalsCS() {
     if (result === 'projected_loss') return 'PL';
     if (result === 'projected_draw') return 'PD';
     return '-';
+  };
+
+  // A compact 3-segment bar (Home Win / Draw / Away Win) for matches where the Odds API
+  // currently has a market open — sparse by design (see winDrawLossByTeams), so this renders
+  // nothing when the fixture's probabilities aren't available yet.
+  const renderWinDrawLossBar = (match: MatchProjection) => {
+    if (match.finished || match.isLive) return null;
+    if (match.homeWinProb == null || match.drawProb == null || match.awayWinProb == null) return null;
+    const homePct = Math.round(match.homeWinProb * 100);
+    const drawPct = Math.round(match.drawProb * 100);
+    const awayPct = Math.round(match.awayWinProb * 100);
+    // Each label/percentage sits centered over its own segment's actual width (not evenly
+    // spaced) so "Draw" and its % always land over the grey portion of the bar, wherever that
+    // happens to fall — a near-nailed-on favorite can shrink the draw segment to a sliver.
+    const segment = (pct: number, label: string, colorClass: string) => (
+      <div style={{ width: `${pct}%` }} className="flex flex-col items-center min-w-0">
+        <span className="text-[9px] font-semibold text-gray-500 truncate max-w-full">{label}</span>
+        <span className={`text-[10px] font-bold mt-1 ${colorClass}`}>{pct}%</span>
+      </div>
+    );
+    return (
+      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+        <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-200 mb-1">
+          <div style={{ width: `${homePct}%` }} className="bg-emerald-500" title={`${match.homeTeam.shortName} to win: ${homePct}%`} />
+          <div style={{ width: `${drawPct}%` }} className="bg-gray-400" title={`Draw: ${drawPct}%`} />
+          <div style={{ width: `${awayPct}%` }} className="bg-blue-500" title={`${match.awayTeam.shortName} to win: ${awayPct}%`} />
+        </div>
+        <div className="flex items-start">
+          {segment(homePct, `${match.homeTeam.shortName} Win`, "text-emerald-700")}
+          {segment(drawPct, "Draw", "text-gray-600")}
+          {segment(awayPct, `${match.awayTeam.shortName} Win`, "text-blue-700")}
+        </div>
+      </div>
+    );
   };
 
   const formatKickoffTime = (kickoffTime: string) => {
@@ -911,6 +975,8 @@ export default function ProjectedGoalsCS() {
                                       )}
                                     </div>
                                   </div>
+
+                                  {renderWinDrawLossBar(match1)}
                                 </div>
                               )}
 
@@ -1031,6 +1097,8 @@ export default function ProjectedGoalsCS() {
                                       )}
                                     </div>
                                   </div>
+
+                                  {renderWinDrawLossBar(match2)}
                                 </div>
                               )}
                             </div>

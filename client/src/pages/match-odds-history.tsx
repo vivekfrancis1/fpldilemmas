@@ -6,6 +6,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -52,14 +54,21 @@ export default function MatchOddsHistory() {
         hour: "numeric",
         minute: "2-digit",
       }),
+      homeWinPct: s.homeWinProb !== null ? s.homeWinProb * 100 : null,
+      drawPct: s.drawProb !== null ? s.drawProb * 100 : null,
+      awayWinPct: s.awayWinProb !== null ? s.awayWinProb * 100 : null,
     }));
   }, [data]);
+
+  // Win/Draw/Loss is only chartable when the Odds API actually had a live market on this
+  // fixture at some snapshot — some snapshots (e.g. totals-only market gaps) can be missing it.
+  const hasWinDrawLossData = chartData.some((d) => d.homeWinProb !== null && d.drawProb !== null && d.awayWinProb !== null);
 
   // Indices worth labeling with their actual value on the chart, rather than leaving every
   // point as a bare dot: the first and last snapshots (where the line started/currently stands)
   // and the lowest/highest points reached (how far the market swung), per series independently
   // since home and away xG don't necessarily peak at the same snapshot.
-  const getHighlightIndices = (key: "expectedHomeGoals" | "expectedAwayGoals"): Set<number> => {
+  const getHighlightIndices = (key: "expectedHomeGoals" | "expectedAwayGoals" | "homeWinPct" | "drawPct" | "awayWinPct"): Set<number> => {
     const indices = new Set<number>();
     const values = chartData
       .map((d, i) => ({ v: d[key], i }))
@@ -78,8 +87,11 @@ export default function MatchOddsHistory() {
     return indices;
   };
 
-  const renderAnnotatedDot = (color: string, highlightIndices: Set<number>, labelAbove: boolean) => (props: any) => {
-    const { cx, cy, index, value } = props;
+  const renderAnnotatedDot = (color: string, highlightIndices: Set<number>, labelAbove: boolean, formatValue: (v: number) => string = (v) => v.toFixed(2), dataKey?: string) => (props: any) => {
+    const { cx, cy, index, payload } = props;
+    // Stacked Area charts pass `value` as a [start, end] range tuple, not the series' own value —
+    // read the real value straight off the row instead when a dataKey is given (Area usage here).
+    const value = dataKey ? payload?.[dataKey] : props.value;
     if (value === null || value === undefined) return <g key={`dot-${index}`} />;
     if (!highlightIndices.has(index)) {
       return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={color} stroke={color} />;
@@ -95,11 +107,22 @@ export default function MatchOddsHistory() {
           fontWeight={600}
           fill={color}
         >
-          {value.toFixed(2)}
+          {formatValue(value)}
         </text>
       </g>
     );
   };
+
+  // Win/draw/loss labels are only meaningful read together — "home 58% at this snapshot" needs
+  // "draw 24%, away 18%" alongside it at that same moment to read as a full picture. So instead
+  // of each series picking its own first/last/min/max independently (which would highlight three
+  // different snapshots), union all three series' interesting indices into one shared set and
+  // apply it to all three — every highlighted snapshot then shows all three figures together.
+  const winDrawLossHighlightIndices = new Set<number>([
+    ...getHighlightIndices("homeWinPct"),
+    ...getHighlightIndices("drawPct"),
+    ...getHighlightIndices("awayWinPct"),
+  ]);
 
   // Viewer's own local time zone abbreviation (e.g. "IST", "GMT+1", "PDT") — whatever the
   // browser's own Intl data resolves to for their device, not a hardcoded zone.
@@ -218,41 +241,69 @@ export default function MatchOddsHistory() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Snapshot Detail</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase">
-                      <th className="px-3 py-2">Snapshot</th>
-                      <th className="px-3 py-2 text-center">Books</th>
-                      <th className="px-3 py-2 text-center">Home Win%</th>
-                      <th className="px-3 py-2 text-center">Draw%</th>
-                      <th className="px-3 py-2 text-center">Away Win%</th>
-                      <th className="px-3 py-2 text-center">{data.homeTeam} xG</th>
-                      <th className="px-3 py-2 text-center">{data.awayTeam} xG</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...chartData].reverse().map((s, i) => (
-                      <tr key={i} className="border-b border-gray-100 last:border-0">
-                        <td className="px-3 py-2 whitespace-nowrap">{s.label}</td>
-                        <td className="px-3 py-2 text-center">{s.bookmakerCount}</td>
-                        <td className="px-3 py-2 text-center">{s.homeWinProb !== null ? `${Math.round(s.homeWinProb * 100)}%` : '-'}</td>
-                        <td className="px-3 py-2 text-center">{s.drawProb !== null ? `${Math.round(s.drawProb * 100)}%` : '-'}</td>
-                        <td className="px-3 py-2 text-center">{s.awayWinProb !== null ? `${Math.round(s.awayWinProb * 100)}%` : '-'}</td>
-                        <td className="px-3 py-2 text-center font-medium text-emerald-700">{s.expectedHomeGoals !== null ? s.expectedHomeGoals.toFixed(2) : '-'}</td>
-                        <td className="px-3 py-2 text-center font-medium text-blue-700">{s.expectedAwayGoals !== null ? s.expectedAwayGoals.toFixed(2) : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          {hasWinDrawLossData && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-base">Win / Draw / Loss Probability Over Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chartData.length < 2 ? (
+                  <p className="text-sm text-gray-500 py-6 text-center">
+                    Only {chartData.length} snapshot{chartData.length === 1 ? "" : "s"} collected so far —
+                    check back after a few more refreshes (every 4 hours) to see the trend.
+                  </p>
+                ) : (
+                  <div className="h-72 sm:h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={24} />
+                        <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip
+                          formatter={(value: number, name: string) => [value !== null && value !== undefined ? `${value.toFixed(0)}%` : "-", name]}
+                          labelFormatter={(label) => `Snapshot: ${label}`}
+                        />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="homeWinPct"
+                          name={`${data.homeTeam} Win`}
+                          stackId="1"
+                          stroke="#059669"
+                          fill="#059669"
+                          fillOpacity={0.6}
+                          dot={renderAnnotatedDot("#047857", winDrawLossHighlightIndices, true, (v) => `${v.toFixed(0)}%`, "homeWinPct")}
+                          connectNulls
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="drawPct"
+                          name="Draw"
+                          stackId="1"
+                          stroke="#9ca3af"
+                          fill="#9ca3af"
+                          fillOpacity={0.6}
+                          dot={renderAnnotatedDot("#4b5563", winDrawLossHighlightIndices, false, (v) => `${v.toFixed(0)}%`, "drawPct")}
+                          connectNulls
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="awayWinPct"
+                          name={`${data.awayTeam} Win`}
+                          stackId="1"
+                          stroke="#2563eb"
+                          fill="#2563eb"
+                          fillOpacity={0.6}
+                          dot={renderAnnotatedDot("#1d4ed8", winDrawLossHighlightIndices, true, (v) => `${v.toFixed(0)}%`, "awayWinPct")}
+                          connectNulls
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

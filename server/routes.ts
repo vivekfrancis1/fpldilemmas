@@ -7895,6 +7895,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Latest consensus 1X2 (home win / draw / away win) probability per fixture — powers the
+  // Win/Draw/Loss display on Match Predictions. Public/read-only (reads the already-fetched
+  // fixture_odds table, no Odds API quota cost), unlike /api/admin/fixture-odds above.
+  app.get("/api/fixture-odds-current", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const { getFixtureOdds } = await import('./odds-service');
+      const odds = await getFixtureOdds(season);
+      res.json({
+        season,
+        odds: odds.map(o => ({
+          oddsApiEventId: o.oddsApiEventId,
+          homeTeam: o.homeTeam,
+          awayTeam: o.awayTeam,
+          commenceTime: o.commenceTime,
+          homeWinProb: o.homeWinProb,
+          drawProb: o.drawProb,
+          awayWinProb: o.awayWinProb,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching current fixture odds:", error);
+      res.status(500).json({ error: "Failed to fetch current fixture odds" });
+    }
+  });
+
   // The last gameweek with real Odds API coverage — Team Projections pages default their
   // visible range to this instead of a fixed week count. See getMaxGameweekWithOdds's docstring.
   app.get("/api/fixture-odds-max-gameweek", async (req, res) => {
