@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import JerseyIcon from '@/components/jersey-icon';
 
 export interface TableColumn<T = any> {
   key: string;
@@ -297,28 +298,26 @@ export const PlayerNameCell = ({
 }) => {
   const [, navigate] = useLocation();
   return (
-    <div className={cn("flex flex-col", className)}>
-      <div
-        className={cn(
-          "font-semibold text-gray-900",
-          playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
-        )}
-        onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
-      >
-        {name}
-      </div>
-      <div className="flex items-center gap-1 mt-1">
-        {position && (
-          <PositionBadge position={position} compact={true} />
-        )}
-        {team && (
-          <TeamBadge team={team} compact={true} />
-        )}
-        {showOwnership && ownership !== undefined && (
-          <span className="text-xs text-gray-500">
-            {ownership}% owned
-          </span>
-        )}
+    <div className={cn("flex items-start gap-1", className)}>
+      <JerseyIcon team={team} position={position} className="h-5 w-5 object-contain shrink-0 mt-0.5" />
+      <div className="flex flex-col overflow-hidden">
+        <div
+          className={cn(
+            "font-semibold text-gray-900",
+            playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
+          )}
+          onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
+        >
+          {name}
+        </div>
+        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+          {(team || position) && (
+            <span>{[team, position && getShortPosition(position)].filter(Boolean).join(" · ")}</span>
+          )}
+          {showOwnership && ownership !== undefined && (
+            <span>{ownership}% owned</span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -353,6 +352,16 @@ export const TeamBadge = ({
   );
 };
 
+export const getShortPosition = (pos: string) => {
+  switch (pos?.toLowerCase()) {
+    case 'goalkeeper': return 'GKP';
+    case 'defender': return 'DEF';
+    case 'midfielder': return 'MID';
+    case 'forward': return 'FWD';
+    default: return pos?.substring(0, 3).toUpperCase() || 'UNK';
+  }
+};
+
 export const PositionBadge = ({ position, className, compact = false }: { position: string; className?: string; compact?: boolean }) => {
   const getPositionColor = (pos: string) => {
     switch (pos?.toLowerCase()) {
@@ -361,16 +370,6 @@ export const PositionBadge = ({ position, className, compact = false }: { positi
       case 'midfielder': return 'bg-green-100 text-green-800';
       case 'forward': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getShortPosition = (pos: string) => {
-    switch (pos?.toLowerCase()) {
-      case 'goalkeeper': return 'GKP';
-      case 'defender': return 'DEF';
-      case 'midfielder': return 'MID';
-      case 'forward': return 'FWD';
-      default: return pos?.substring(0, 3).toUpperCase() || 'UNK';
     }
   };
 

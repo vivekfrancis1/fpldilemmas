@@ -18,6 +18,7 @@ import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import JerseyIcon from "@/components/jersey-icon";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean; deadline_time: string }>;
@@ -1064,20 +1065,18 @@ export default function PlayerDefensiveContributions() {
                   return (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 w-[130px] min-w-[130px]">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-0.5 flex-wrap">
-                          <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{viewMode === "future" ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName) : player.playerName}</span>
-                          {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
-                            <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-0.5 mt-0.5">
-                          <Badge variant="outline" className="text-[10px] md:text-xs px-1">
-                            {player.position.slice(0, 3).toUpperCase()}
-                          </Badge>
-                          <Badge variant="outline" className="text-[10px] md:text-xs px-1">
-                            {player.teamName.slice(0, 3).toUpperCase()}
-                          </Badge>
+                      <div className="flex items-start gap-1">
+                        <JerseyIcon team={player.teamName} position={player.position} className="h-5 w-5 md:h-6 md:w-6 object-contain shrink-0 mt-0.5" />
+                        <div className="flex flex-col overflow-hidden">
+                          <div className="flex items-center gap-0.5 flex-wrap">
+                            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{viewMode === "future" ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName) : player.playerName}</span>
+                            {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
+                              <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
+                            )}
+                          </div>
+                          <div className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                            {player.teamName.slice(0, 3).toUpperCase()} · {player.position.slice(0, 3).toUpperCase()}
+                          </div>
                         </div>
                       </div>
                     </TableCell>

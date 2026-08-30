@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
+import JerseyIcon from "@/components/jersey-icon";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -96,7 +97,7 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   );
 }
 
-import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
+import { EnhancedTable, PlayerNameCell, getShortPosition, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
@@ -679,24 +680,30 @@ function createPlayerTotalPointsColumns(
       className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]',
       style: { width: '120px', minWidth: '80px', maxWidth: '140px' } as CSSProperties,
       render: (_, player) => (
-        <div className="w-[80px] md:w-[110px] overflow-hidden">
-          <div className="flex items-center gap-0.5 flex-wrap">
-            {myTeamPlayerIds?.has(player.playerId) && (
-              <span className="text-purple-600 flex-shrink-0" title="In My Team">
-                <Users className="h-3 w-3" />
-              </span>
-            )}
-            <Link
-              href={`/player/${player.playerId}?from=${encodeURIComponent(window.location.pathname)}`}
-              className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px] hover:text-purple-700 hover:underline"
-            >
-              {!isPastMode ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name) : (player.playerName || player.name)}
-            </Link>
-            <PlayerAvailabilityBadge player={player} />
-          </div>
-          <div className="flex items-center gap-0.5 mt-0.5">
-            <PositionBadge position={player.position} compact={true} />
-            <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} teamName={player.teamName || player.team} compact={true} />
+        <div className="flex items-start gap-1 w-[80px] md:w-[110px] overflow-hidden">
+          <JerseyIcon
+            team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || ''}
+            position={player.position}
+            className="h-6 w-6 object-contain shrink-0 mt-0.5"
+          />
+          <div className="overflow-hidden">
+            <div className="flex items-center gap-0.5 flex-wrap">
+              {myTeamPlayerIds?.has(player.playerId) && (
+                <span className="text-purple-600 flex-shrink-0" title="In My Team">
+                  <Users className="h-3 w-3" />
+                </span>
+              )}
+              <Link
+                href={`/player/${player.playerId}?from=${encodeURIComponent(window.location.pathname)}`}
+                className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[60px] md:max-w-[90px] hover:text-purple-700 hover:underline"
+              >
+                {!isPastMode ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name) : (player.playerName || player.name)}
+              </Link>
+              <PlayerAvailabilityBadge player={player} />
+            </div>
+            <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 truncate">
+              {(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || player.teamName || player.team} · {getShortPosition(player.position)}
+            </div>
           </div>
         </div>
       )

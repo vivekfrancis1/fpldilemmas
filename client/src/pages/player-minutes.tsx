@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SeasonBadge } from "@/components/season-badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import JerseyIcon from "@/components/jersey-icon";
 
 interface BootstrapData {
   events: any[];
@@ -565,11 +566,14 @@ export default function PlayerMinutes() {
                         }`}
                       >
                         <td className="px-1 md:px-3 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
-                          <div className="flex flex-col">
-                            <div className="font-medium text-gray-900 text-xs md:text-sm truncate max-w-[90px] md:max-w-none">{player.playerName}</div>
-                            <div className="text-[10px] md:text-sm text-gray-500">
-                              <span className="md:hidden">{player.teamShort} • {player.position}</span>
-                              <span className="hidden md:inline">Total: {player.currentMinutes} min</span>
+                          <div className="flex items-start gap-1">
+                            <JerseyIcon team={player.teamShort} position={player.position} className="h-5 w-5 md:h-6 md:w-6 object-contain shrink-0 mt-0.5" />
+                            <div className="flex flex-col overflow-hidden">
+                              <div className="font-medium text-gray-900 text-xs md:text-sm truncate max-w-[90px] md:max-w-none">{player.playerName}</div>
+                              <div className="text-[10px] md:text-sm text-gray-500">
+                                <span className="md:hidden">{player.teamShort} · {player.position}</span>
+                                <span className="hidden md:inline">Total: {player.currentMinutes} min</span>
+                              </div>
                             </div>
                           </div>
                         </td>
