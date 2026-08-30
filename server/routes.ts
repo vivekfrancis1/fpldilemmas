@@ -7234,14 +7234,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           teamGoalRates[teamId] = {
             expectedGoalsPerGame: team.expectedGoalsPerGame,
-            variance: team.variance,
-            confidence: team.confidence
+            variance: team.variance
           };
-          
+
           teamCleanSheetRates[teamId] = {
             baseCleanSheetRate: team.baseCleanSheetRate,
-            homeBonus: team.homeBonus,
-            confidence: team.cleanSheetConfidence
+            homeBonus: team.homeBonus
           };
         });
         
@@ -9312,8 +9310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameweekProjections: gameweekAssists,
           fixtureDetails: fixtureDetails,
           totalAssists: Math.round((tp.totalGoals || 0) * assistRatio * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * assistRatio * 100) / 100,
-          confidence: tp.confidence
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * assistRatio * 100) / 100
         };
       });
       
@@ -9505,31 +9502,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        // Elite-level confidence calculation using advanced statistical market analysis
-        const teamBettingData = bettingData.teamCleanSheetRates[team.id] || { confidence: 0.70 };
-        const roundedTotalCSProbability = Math.round(totalCSProbability * 10) / 10;
-        let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-        
-        // Advanced multi-dimensional confidence assessment
-        const marketConfidence = teamBettingData.confidence; // Base market reliability
-        const performanceConsistency = projections.length > 0 ? 
-          Math.max(0, 1 - (Math.max(...projections.map((p: any) => p.cleanSheetOdds)) - Math.min(...projections.map((p: any) => p.cleanSheetOdds))) / 80) : 0;
-        const volumeConfidence = Math.min(1.0, projections.length / 5); // 5+ fixtures for full confidence
-        const qualityBonus = averageCleanSheetOdds >= 35 ? 0.15 : averageCleanSheetOdds >= 25 ? 0.10 : 0;
-        
-        // Sophisticated composite confidence with weighted factors
-        const compositeConfidence = (marketConfidence * 0.4) + // Market data quality
-                                   (performanceConsistency * 0.25) + // Statistical consistency
-                                   (volumeConfidence * 0.20) + // Sample size adequacy
-                                   (qualityBonus * 0.15); // Performance excellence bonus
-        
-        // Confidence based purely on composite score
-        if (compositeConfidence >= 0.80) {
-          confidence = 'High'; // Elite market confidence and statistical reliability
-        } else if (compositeConfidence <= 0.55) {
-          confidence = 'Low';  // Poor market confidence or statistical reliability
-        }
-        
         return {
           id: team.id,
           team: team.short_name,
@@ -9539,7 +9511,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixtureDetails, // Individual CS% per fixture (shows 2 entries for DGW)
           totalCleanSheets: Math.round(totalCSProbability * 10) / 10,
           averageCleanSheetOdds: Math.round(averageCleanSheetOdds * 10) / 10,
-          confidence,
           position: 0 // Will be set after sorting
         };
       });
@@ -13150,7 +13121,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamName: team.name,
           gameweekProjections: gameweekProjections,
           fixtureDetails: fixtureDetails, // Individual goals against per fixture
-          confidence: 'Medium',
           position: 0
         });
       });
@@ -13251,21 +13221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-      });
-      
-      // Calculate final team totals
-      let totalGoalsAgainst = 0;
-      Array.from(teamsGoalsAgainst.values()).forEach((team: any) => {
-        let teamTotal = 0;
-        Object.values(team.gameweekProjections).forEach((goals: any) => {
-          if (typeof goals === 'number') {
-            teamTotal += goals;
-          }
-        });
-        
-        // Removed season total calculations
-        // Set confidence to medium for all teams
-        team.confidence = 'Medium';
       });
       
       // Debug info (season totals removed)

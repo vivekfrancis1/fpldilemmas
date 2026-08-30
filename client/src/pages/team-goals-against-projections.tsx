@@ -61,7 +61,6 @@ interface TeamGoalsAgainstProjection {
   };
   totalProjectedGoalsAgainst: number;
   averageGoalsAgainstPerGame: number;
-  confidence: 'High' | 'Medium' | 'Low';
   position: number;
 }
 
@@ -304,7 +303,6 @@ export default function TeamGoalsAgainstProjections() {
         gameweekProjections: team.gameweekGoals,
         totalProjectedGoalsAgainst: team.totalGoals,
         averageGoalsAgainstPerGame: team.averageGoalsPerGame,
-        confidence: 'High' as const,
         position: team.position
       }));
     }
@@ -418,15 +416,6 @@ export default function TeamGoalsAgainstProjections() {
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks]);
-
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'High': return 'bg-green-100 text-green-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const getGoalsAgainstColor = (goalsAgainst: number) => {
     // Lower goals against = better defense = green colors

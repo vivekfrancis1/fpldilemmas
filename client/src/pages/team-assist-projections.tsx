@@ -39,7 +39,6 @@ interface TeamAssistProjection {
   fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
   totalAssists: number;
   averageAssistsPerGame: number;
-  confidence: 'High' | 'Medium' | 'Low';
   position: number;
 }
 
@@ -276,15 +275,6 @@ export default function TeamAssistProjections() {
     if (assists >= 1.0) return "text-blue-600 bg-blue-50";
     if (assists >= 0.6) return "text-yellow-600 bg-yellow-50";
     return "text-red-600 bg-red-50";
-  };
-
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'High': return "bg-green-100 text-green-800 border-green-200";
-      case 'Medium': return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case 'Low': return "bg-red-100 text-red-800 border-red-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
-    }
   };
 
   if (isLoading || projectionsLoading) {

@@ -77,7 +77,6 @@ interface TeamGoalProjection {
   };
   totalProjectedGoals: number;
   averageGoalsPerGame: number;
-  confidence: 'High' | 'Medium' | 'Low';
   position: number;
 }
 
@@ -357,7 +356,6 @@ export default function TeamGoalProjections() {
         gameweekProjections: team.gameweekGoals,
         totalProjectedGoals: team.totalGoals,
         averageGoalsPerGame: team.averageGoalsPerGame,
-        confidence: 'High' as const,
         position: team.position
       }));
     }
@@ -369,7 +367,6 @@ export default function TeamGoalProjections() {
         gameweekProjections: team.gameweekXg,
         totalProjectedGoals: team.totalXg,
         averageGoalsPerGame: team.averageXgPerGame,
-        confidence: 'High' as const,
         position: team.position
       }));
     }
@@ -386,7 +383,6 @@ export default function TeamGoalProjections() {
       fixtureDetails: team.fixtureDetails,
       totalProjectedGoals: team.totalGoals,
       averageGoalsPerGame: team.averageGoalsPerGame,
-      confidence: team.confidence,
       position: index + 1,
     }));
   }, [viewMode, historyData, xgHistoryData, projectionsData]);
@@ -523,15 +519,6 @@ export default function TeamGoalProjections() {
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks]);
-
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'High': return 'bg-green-100 text-green-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const getGoalsColor = (goals: number) => {
     if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';

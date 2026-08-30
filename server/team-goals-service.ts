@@ -117,7 +117,6 @@ interface TeamGoalProjection {
   fixtureDetails: { [gameweek: number]: FixtureDetail[] }; // Individual goals per fixture
   totalGoals: number;
   averageGoalsPerGame: number;
-  confidence: 'High' | 'Medium' | 'Low';
 }
 
 interface TeamGoalsServiceCache {
@@ -279,8 +278,7 @@ export class TeamGoalsService {
           gameweekProjections: emptyGameweekProjections,
           fixtureDetails: emptyFixtureDetails,
           totalGoals: 0,
-          averageGoalsPerGame: 0,
-          confidence: 'Low' as const
+          averageGoalsPerGame: 0
         };
       }
     }));
@@ -398,16 +396,9 @@ export class TeamGoalsService {
         gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.expectedGoals) * 100) / 100;
       });
       
-      // Determine confidence based on betting market data
-      const teamBettingData = bettingData.teamGoalRates[team.id] || { confidence: 0.70 };
-      let confidence: 'High' | 'Medium' | 'Low' = 'Medium';
-      
-      if (teamBettingData.confidence >= 0.85) confidence = 'High';
-      else if (teamBettingData.confidence <= 0.65) confidence = 'Low';
-      
       const roundedTotalGoals = Math.round(totalGoals * 100) / 100;
       const averageGoalsPerGame = Math.round((totalGoals / Math.max(1, projections.length)) * 100) / 100;
-      
+
       return {
         teamId: team.id,
         teamName: team.name,
@@ -415,8 +406,7 @@ export class TeamGoalsService {
         gameweekProjections,
         fixtureDetails, // Individual goals per fixture (shows 2 entries for DGW)
         totalGoals: roundedTotalGoals,
-        averageGoalsPerGame,
-        confidence
+        averageGoalsPerGame
       };
   }
 
