@@ -12974,24 +12974,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Expected minutes per game (from actual history)
               const expectedMinutesPerGame = Math.min(90, avgMinutesPerGame);
               
-              // Apply minimum appearances threshold for confidence scaling.
-              // For blend-eligible players (AFCON/injury/transfer returnees), use teamGames
-              // instead of appearances — their low active count is structural, not a data-quality issue.
-              const MIN_APPEARANCES_THRESHOLD = 10;
-              const blendInfoForConf = minutesBlendMap.get(player.id);
-              const effectiveAppearances = blendInfoForConf ? blendInfoForConf.teamGames : appearances;
-              const confidenceFactor = Math.min(1, effectiveAppearances / MIN_APPEARANCES_THRESHOLD);
-              
               // Calculate points from minutes using probability-based formula
-              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence
-              // Per-GW availability from calculateAvailabilityProbability replaces flat appearanceRate
+              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins)
+              // Per-GW availability from calculateAvailabilityProbability replaces flat appearanceRate.
+              // No confidence discount for low appearance counts (removed — it was a snapshot of
+              // today's appearances applied flat across the whole GW3-38 projection horizon, so it
+              // never recovered even for nailed-on starters, suppressing pointsFromMinutes to a
+              // fraction of its real value for the entire rest of the season early on).
               const rawPointsFromMinutes = (pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1;
-              const baseMinutesPoints = rawPointsFromMinutes * confidenceFactor;
-              
+
               // Flat value for backward compatibility (use availability=1.0, i.e. "when playing").
               // Per-GW pointsFromMinutesPerGW/xMinsPerGW are filled in after the batch loop below,
               // once every player's base xMins is known and position-group reallocation can run.
-              const pointsFromMinutes = Math.round(baseMinutesPoints * 100) / 100;
+              const pointsFromMinutes = Math.round(rawPointsFromMinutes * 100) / 100;
 
               return {
                 playerId: player.id,
@@ -13007,8 +13002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 gamesBelow60: gamesBelow60,
                 pct60Plus: pct60Plus,
                 pctBelow60: pctBelow60,
-                benchAppearances: Math.max(0, appearances - playerStarts),
-                confidenceFactor: Math.round(confidenceFactor * 100) / 100
+                benchAppearances: Math.max(0, appearances - playerStarts)
               };
             })
           );
