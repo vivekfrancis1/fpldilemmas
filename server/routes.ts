@@ -9516,36 +9516,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
       const teamGoalProjectionsCS = await TeamGoalsServiceCS.getTeamGoalProjections(startGWforCS, endGameweek);
 
-      // Build actual season CS rate map for 50:50 blend with Poisson formula. Each team's rate is
-      // itself 50% this season (2026/27) + 50% last season (2025/26, from the archive/promoted-team
-      // data in TeamGoalsService) — same blend treatment as team goals, rather than falling back to
-      // a single flat league average for every team while this season has few/no games played.
+      // Build actual season CS rate map from this season (2026/27) only, however many games
+      // each team has actually played — no 2025/26 blend and no league-average fallback. A
+      // team with 0 games played so far shows a 0 rate rather than a synthetic estimate.
       const standingsResponse = await internalFetch("api/current-standings");
       const standingsData = standingsResponse.ok ? await standingsResponse.json() : [];
       const standingsTeams: any[] = standingsData.standings || standingsData || [];
-      let totalCS = 0, totalPlayed = 0;
-      standingsTeams.forEach((t: any) => { totalCS += t.cleanSheets || 0; totalPlayed += t.played || 0; });
-      const leagueAvgCSRate = totalPlayed > 0 ? totalCS / totalPlayed : 0.257;
       const actualCSRateMap = new Map<number, number>();
-      await Promise.all(teams.map(async (t: any) => {
+      teams.forEach((t: any) => {
         const standingsEntry = standingsTeams.find((s: any) => s.id === t.id);
         const thisSeasonRate = standingsEntry && standingsEntry.played > 0
           ? (standingsEntry.cleanSheets || 0) / standingsEntry.played
-          : undefined;
-        const lastSeasonRate = await TeamGoalsServiceCS.getLastSeasonCleanSheetRate(t.id);
-
-        let rate: number;
-        if (thisSeasonRate !== undefined && lastSeasonRate !== undefined) {
-          rate = thisSeasonRate * 0.5 + lastSeasonRate * 0.5;
-        } else if (lastSeasonRate !== undefined) {
-          rate = lastSeasonRate;
-        } else if (thisSeasonRate !== undefined) {
-          rate = thisSeasonRate;
-        } else {
-          rate = leagueAvgCSRate;
-        }
-        actualCSRateMap.set(t.id, rate);
-      }));
+          : 0;
+        actualCSRateMap.set(t.id, thisSeasonRate);
+      });
 
       // Build goals-against maps by mirroring: home concedes what away scores and vice versa
       const teamGoalsAgainstMap = new Map();
@@ -9627,7 +9611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // formulaCS captures fixture difficulty (opponent attack strength).
           // teamActualCSPct anchors the prediction to the defending team's real defensive quality.
           const formulaCS = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
-          const teamActualCSPct = (actualCSRateMap.get(team.id) ?? leagueAvgCSRate) * 100;
+          const teamActualCSPct = (actualCSRateMap.get(team.id) ?? 0) * 100;
           let cleanSheetProbability = 0.5 * formulaCS + 0.5 * teamActualCSPct;
 
           // Ensure realistic bounds (0-100%)
@@ -12700,18 +12684,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
         console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}, finished GWs: ${finishedGWCount}`);
         
-        // Every player is included — no current-season minutes filter — since new-to-the-league
-        // and promoted-team players (with genuine 0 current-season minutes) still get an expected
-        // minutes projection via their 2025/26 rate or the position league-average fallback below,
-        // instead of being silently dropped (which previously zeroed out minutes, clean sheets, and
-        // goals-conceded points for virtually every promoted-team squad member).
+        // Every player is included — no current-season minutes filter. A player with genuinely
+        // 0 minutes this season (new signing, academy graduate, promoted-team squad member yet
+        // to feature) simply projects 0 expected minutes until they actually play — no 2025/26
+        // rate or league-average fallback.
         const playersWithMinutes = players;
         console.log(`DEBUG: Processing ${playersWithMinutes.length} players for 60-min threshold calculation`);
-
-        const { getLastSeasonPlayerRow, lastSeasonMinutesPerStart, getLeagueAverageRates } = await import('./player-history-blend-service');
-        const leagueAverageMinutes = await getLeagueAverageRates();
-        const { PROMOTED_TEAM_PLAYER_LAST_SEASON } = await import('./team-goals-service');
-        const promotedTeamNamesForMinutes = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
         // Bulk-load player histories from DB cache (set at startup; avoids 515 external API calls)
         const { getBulkPlayerHistories, computeRecentMetrics } = await import('./player-history-service');
@@ -12795,36 +12773,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               let gamesBelow60 = 0;
               let avgMinutesPerGame = Math.min(90, totalMinutes / Math.max(1, appearances));
 
-              // New to the league this season (promoted-team squads, new signings, academy
-              // graduates) — player.minutes/starts are genuinely 0, so there's no history to
-              // fetch. Blend their 2025/26 minutes-per-start rate (matched by name+position
-              // across the season's id reassignment), falling back to a league-average rate for
-              // anyone with no PL history at all — instead of silently projecting 0 expected
-              // minutes (which previously zeroed out clean sheets and goals-conceded points
-              // downstream too). The league-average fallback itself depends on whether the
-              // player's current club was promoted: a promoted club's whole squad is equally
-              // new to the top flight and most of them do feature at some point, so we use the
-              // average minutes per actual appearance (>=1 min) — "when they play, how long do
-              // they last." A name-unmatched player at an established club is much more likely a
-              // genuine fringe/reserve signing who may never feature at all, so we use the average
-              // across every registered player at that position, played or not — correctly
-              // reflecting that most such players contribute nothing.
-              if (totalMinutes === 0 && playerStarts === 0) {
-                const positionCode = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
-                const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-                const lastSeasonRate = lastSeasonRow ? lastSeasonMinutesPerStart(lastSeasonRow) : undefined;
-                const isPromotedTeam = promotedTeamNamesForMinutes.has(team?.name || '');
-                const leagueFallback = isPromotedTeam
-                  ? leagueAverageMinutes.minutesPerGamePlayedByPosition[positionCode]
-                  : leagueAverageMinutes.minutesAllPlayersByPosition[positionCode];
-                avgMinutesPerGame = lastSeasonRate ?? leagueFallback ?? 75;
-                // Use the full confidence-threshold appearance count — this is a deliberate
-                // estimate (last-season rate or position average), not noisy small-sample data,
-                // so it shouldn't also get dampened by the low-appearances confidence factor below.
-                appearances = 10;
-                gamesHit60Plus = avgMinutesPerGame >= 60 ? appearances : 0;
-                gamesBelow60 = avgMinutesPerGame >= 60 ? 0 : appearances;
-              } else {
+              // No 2025/26 last-season blend and no promoted-team/new-signing fallback — a
+              // player with genuinely 0 minutes/starts this season (new signing, academy
+              // graduate, promoted-team squad member yet to feature) simply has no history to
+              // fetch below, so gamesWithMinutes stays empty and the defaults set above
+              // (appearances=1, avgMinutesPerGame=0) correctly stand: 0 expected minutes until
+              // they actually play, not a synthetic estimate.
               try {
                 // Use DB-cached history (pre-fetched at startup) — falls back to live fetch if missing
                 const cachedHistory = dbHistories.get(player.id);
@@ -12861,7 +12815,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               } catch (historyError) {
                 // Use fallback values if history fetch fails
-              }
               }
 
               // "Current" reflects this player's own actual playing-time history (this season's
@@ -17327,12 +17280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, saves projections from GW${startGameweek} to GW${endGameweek}`);
 
       const { TeamGoalsService } = await import("./team-goals-service");
-      const { getLastSeasonPlayerRow, lastSeasonSavesPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
-      const leagueAverages = await getLeagueAverageRates();
+      const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
 
-      // Blended (50/50 this-season/last-season) average goals-for per team, computed once for
-      // all 20 teams rather than per-fixture — this replaces the old current-season-only AGR,
-      // which was 0 for every team pre-season since it only counted completed fixtures.
+      // This season's (2026/27) average goals-for per team, computed once for all 20 teams
+      // rather than per-fixture.
       const teamAvgGoalsForMap = new Map<number, number>();
       await Promise.all(fplData.teams.map(async (team: any) => {
         try {
@@ -17399,12 +17350,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? (savesPer90FromAPI > 0 ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI : savesPerTeamGame)
             : undefined;
 
-          // Blend with the player's 2025/26 saves-per-90 (matched by name+position across the
-          // season's id reassignment), falling back to the league-average keeper rate for
-          // anyone new to the league (promoted-team keepers, summer signings from abroad).
-          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-          const lastSeasonSavesRate = lastSeasonRow ? lastSeasonSavesPer90(lastSeasonRow) : undefined;
-          const blendedSavesPerGame = blendRate(thisSeasonSavesPer90, lastSeasonSavesRate, leagueAverages.gkSavesPer90);
+          // This season's data only — a keeper with no usable current-season rate yet (new
+          // signing, promoted-team squad member, or under the minutes threshold) projects 0
+          // saves/game until they build up real minutes, rather than a 2025/26 or
+          // league-average estimate.
+          const blendedSavesPerGame = thisSeasonSavesPer90 ?? 0;
 
           const savesEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -17432,7 +17382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // Opponent's blended average goals-for per game (50/50 this-season/last-season)
+              // Opponent's average goals-for per game (this season only)
               const opponentAGR = teamAvgGoalsForMap.get(opponentId) || 0;
 
               // Apply formula: blended saves/game × opponent's blended goals-for/1.35 × availability
@@ -17571,34 +17521,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, starting projections from GW${nextGameweek}`);
       const standingsData = await standingsResponse.json();
 
-      const { TeamGoalsService } = await import("./team-goals-service");
-      const { getLastSeasonPlayerRow, lastSeasonDCPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
-      const leagueAverages = await getLeagueAverageRates();
-      const leagueAverageDCC = await TeamGoalsService.getLeagueAverageDCCRate();
+      const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
 
-      // Blended (50/50 this-season/last-season) DCC per game for every team, computed once —
-      // this-season DCC is only trusted once real fixtures are completed (team.played > 0),
-      // same reasoning as the saves endpoint's blended opponent goals-for.
+      // This season's DCC per game for every team, computed once — only trusted once real
+      // fixtures are completed (team.played > 0); 0 otherwise.
       const teamDCCPerGameMap = new Map<number, number>();
-      await Promise.all(fplData.teams.map(async (team: any) => {
+      fplData.teams.forEach((team: any) => {
         const standingsTeam = standingsData.find((t: any) => t.id === team.id);
         const thisSeasonDCC = standingsTeam && standingsTeam.played > 0
           ? standingsTeam.defensiveContributionsConceded / standingsTeam.played
-          : undefined;
-        let lastSeasonDCC: number | undefined;
-        try {
-          lastSeasonDCC = await TeamGoalsService.getLastSeasonTeamDCCRate(team.id);
-        } catch (error) {
-          console.error(`Failed to get last-season DCC for team ${team.id}:`, error);
-        }
-        teamDCCPerGameMap.set(team.id, blendRate(thisSeasonDCC, lastSeasonDCC, leagueAverageDCC));
-      }));
+          : 0;
+        teamDCCPerGameMap.set(team.id, thisSeasonDCC);
+      });
 
-      console.log(`DEBUG: Loaded blended DCC per game for ${teamDCCPerGameMap.size} teams`);
+      console.log(`DEBUG: Loaded this-season DCC per game for ${teamDCCPerGameMap.size} teams`);
 
-      // Every outfield player is included — no current-season minutes/DC filter — since new-to-
-      // the-league and promoted-team players (with genuine 0 current-season data) still get a
-      // projection via their 2025/26 rate or the position league-average fallback.
+      // Every outfield player is included — no current-season minutes/DC filter. A player with
+      // genuinely 0 current-season data (new signing, promoted-team squad member yet to
+      // feature) projects 0 until they actually play.
       const playersWithDefensiveData = fplData.elements.filter((player: any) => player.element_type !== 1);
 
       console.log(`DEBUG: Projecting defensive contributions for ${playersWithDefensiveData.length} outfield players`);
@@ -17677,19 +17617,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? (seasonDefensiveContribution / (player.minutes || 1)) * 90
             : undefined;
 
-          // Blend with the player's 2025/26 DC-per-90 (matched by name+position across the
-          // season's id reassignment), falling back to the league-average rate for the
-          // player's position group for anyone new to the league (promoted-team players,
-          // summer signings from abroad, academy graduates).
-          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-          const lastSeasonDCRate = lastSeasonRow ? lastSeasonDCPer90(lastSeasonRow) : undefined;
-          const positionLeagueAverage = player.element_type === 2 ? leagueAverages.defDCPer90 : leagueAverages.midFwdDCPer90;
-          const dcPerGame = blendRate(thisSeasonDCPer90, lastSeasonDCRate, positionLeagueAverage);
+          // This season's data only — a player with no usable current-season rate yet (new
+          // signing, promoted-team squad member, or under the minutes threshold) projects 0
+          // DC/game until they build up real minutes.
+          const dcPerGame = thisSeasonDCPer90 ?? 0;
 
-          // Poisson-based chance of hitting the DC threshold in a given game, from the blended
-          // per-game rate — replaces counting actual past threshold hits (which needed the
-          // per-player live history fetch this rewrite removes, and had no answer at all for
-          // new-to-the-league players).
+          // Poisson-based chance of hitting the DC threshold in a given game, from the
+          // this-season per-game rate — replaces counting actual past threshold hits (which
+          // needed a per-player live history fetch).
           const chanceOfHittingThreshold = poissonProbAtLeastDC(dcPerGame, threshold);
 
           const dcEvents: BootstrapEvent[] = fplData.events || [];
@@ -17707,7 +17642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            // Opponent's blended (50/50 this-season/last-season) DCC per game
+            // Opponent's DCC per game (this season only)
             const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0;
             
             // Reallocation-aware ratio (see server/xmins-reallocation.ts) instead of flat minutesMultiplier
@@ -18013,8 +17948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling
         const fdrMultiplierYC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        const { getLastSeasonPlayerRow, lastSeasonYellowCardsPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
-        const leagueAveragesYC = await getLeagueAverageRates();
+        const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
 
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
@@ -18034,13 +17968,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? (seasonYellowCards / player.minutes) * 90
             : undefined;
 
-          // Blend with the player's 2025/26 yellow-cards-per-90 (matched by name+position
-          // across the season's id reassignment), falling back to the league-average rate for
-          // the player's position for anyone new to the league.
-          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-          const lastSeasonYCRate = lastSeasonRow ? lastSeasonYellowCardsPer90(lastSeasonRow) : undefined;
-          const positionLeagueAverageYC = leagueAveragesYC.yellowCardsPer90ByPosition[position] ?? leagueAveragesYC.yellowCardsPer90ByPosition.MID;
-          const blendedYCRate = blendRate(thisSeasonYCPer90, lastSeasonYCRate, positionLeagueAverageYC);
+          // This season's data only — a player with no usable current-season rate yet projects
+          // 0 yellow cards/game until they build up real minutes.
+          const blendedYCRate = thisSeasonYCPer90 ?? 0;
 
           const ycEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -18180,8 +18110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling (red cards)
         const fdrMultiplierRC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        const { getLastSeasonPlayerRow, lastSeasonRedCardsPer90, getLeagueAverageRates, blendRate, MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
-        const leagueAveragesRC = await getLeagueAverageRates();
+        const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
 
         // Extract red card data for all players using historical data
         const redCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
@@ -18200,13 +18129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? (seasonRedCards / player.minutes) * 90
             : undefined;
 
-          // Blend with the player's 2025/26 red-cards-per-90 (matched by name+position across
-          // the season's id reassignment), falling back to the league-average rate for the
-          // player's position for anyone new to the league.
-          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-          const lastSeasonRCRate = lastSeasonRow ? lastSeasonRedCardsPer90(lastSeasonRow) : undefined;
-          const positionLeagueAverageRC = leagueAveragesRC.redCardsPer90ByPosition[position] ?? leagueAveragesRC.redCardsPer90ByPosition.MID;
-          const blendedRCRate = blendRate(thisSeasonRCPer90, lastSeasonRCRate, positionLeagueAverageRC);
+          // This season's data only — a player with no usable current-season rate yet projects
+          // 0 red cards/game until they build up real minutes.
+          const blendedRCRate = thisSeasonRCPer90 ?? 0;
 
           const rcEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -18352,14 +18277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activePlayers = fplData.elements;
         const finishedGWs = fplData.events.filter((e: any) => e.finished).length;
 
-        const { getLastSeasonPlayerRow, lastSeasonBonusPerStart, getLeagueAverageRates, blendRate, MIN_STARTS_FOR_RATE } = await import("./player-history-blend-service");
-        const leagueAverages = await getLeagueAverageRates();
-        const positionLeagueAverageBonus = (elementType: number) => {
-          if (elementType === 1) return leagueAverages.gkBonusPerStart;
-          if (elementType === 2) return leagueAverages.defBonusPerStart;
-          if (elementType === 4) return leagueAverages.fwdBonusPerStart;
-          return leagueAverages.midBonusPerStart;
-        };
+        const { MIN_STARTS_FOR_RATE } = await import("./player-history-blend-service");
 
         // Count finished fixtures per team (accounts for DGWs)
         const teamFixturesPlayed = new Map<number, number>();
@@ -18370,7 +18288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
-        // Bonus per fixture blends this-season and last-season bonus-per-start.
+        // Bonus per fixture uses this season's bonus-per-start only.
         const bonusPointsProjections = await Promise.all(activePlayers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -18387,12 +18305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? (player.bonus || 0) / (player.starts || 1)
             : undefined;
 
-          // Blend with the player's 2025/26 bonus-per-start (matched by name+position across
-          // the season's id reassignment), falling back to the league-average rate for the
-          // player's position for anyone new to the league.
-          const lastSeasonRow = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-          const lastSeasonBonusRate = lastSeasonRow ? lastSeasonBonusPerStart(lastSeasonRow) : undefined;
-          const bonusPerFixture = blendRate(thisSeasonBonusPerFixture, lastSeasonBonusRate, positionLeagueAverageBonus(player.element_type));
+          // This season's data only — a player with no usable current-season rate yet (new
+          // signing, promoted-team squad member, or under the starts threshold) projects 0
+          // bonus/fixture until they build up real starts.
+          const bonusPerFixture = thisSeasonBonusPerFixture ?? 0;
 
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = computeCurrentGameweek(fplData.events);
