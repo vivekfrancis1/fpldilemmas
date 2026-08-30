@@ -40,7 +40,7 @@ export default function ProjectionDocumentation() {
               <AlertDescription>
                 <strong className="text-lg">Real FPL Data · Set Piece Bonuses · Minutes Blend Correction</strong>
                 <p className="mt-2">
-                  All projections are built on <strong>verified full-season FPL API data</strong>. Set piece specialists receive goal/assist share bonuses from official FPL set piece order fields. Goal/assist share itself blends each player's this-season and last-season (2025/26) rates — see Player Tools. Separately, players who missed a block of games through AFCON, injury, or a late transfer get a <strong>time-weighted blend correction</strong> to their <strong>minutes projection</strong> (recentP60/confidenceFactor) so the absence doesn't wrongly read as a permanent drop in playing time — this correction does not touch goal share or assist share.
+                  All projections are built on <strong>verified full-season FPL API data</strong>. Set piece specialists receive goal/assist share bonuses from official FPL set piece order fields. Goal/assist share itself blends each player's this-season and last-season (2025/26) rates — see Player Tools. Separately, players who missed a block of games through AFCON, injury, or a late transfer get a <strong>time-weighted blend correction</strong> to their <strong>minutes projection</strong> (recentP60) so the absence doesn't wrongly read as a permanent drop in playing time — this correction does not touch goal share or assist share.
                 </p>
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                   <div className="bg-white/50 p-2 rounded">
@@ -110,7 +110,6 @@ export default function ProjectionDocumentation() {
                       <div>✓ Recomputed live each request (0 pre-season, grows as GWs are played)</div>
                       <div>✓ Time-weighted normalisation</div>
                       <div>✓ recentP60 from active games</div>
-                      <div>✓ confidenceFactor = 1.0</div>
                     </div>
                   </div>
 
@@ -143,7 +142,7 @@ export default function ProjectionDocumentation() {
                     </div>
                     <div className="bg-white p-3 rounded border-l-4 border-orange-400">
                       <div className="font-bold text-orange-700 mb-1">③ Minutes Blend Correction</div>
-                      For AFCON/injury/transfer returnees, minutes history is normalised to their per-game rate × team games so absence zeros don't drag recentP60/confidenceFactor down — goal/assist share is unaffected.
+                      For AFCON/injury/transfer returnees, minutes history is normalised to their per-game rate × team games so absence zeros don't drag recentP60 down — goal/assist share is unaffected.
                     </div>
                     <div className="bg-white p-3 rounded border-l-4 border-purple-400">
                       <div className="font-bold text-purple-700 mb-1">④ Points Compilation</div>
@@ -208,7 +207,7 @@ export default function ProjectionDocumentation() {
                         <li>✓ Qualifies if ≥3 active games, ≥4 consec DNP, ≥70% start rate, played last 4</li>
                         <li>✓ blendWeight = activeGames / teamGames</li>
                         <li>✓ blended = raw×weight + (raw/active × teamGames)×(1−weight)</li>
-                        <li>✓ Corrects recentP60 and confidenceFactor in minutes projections only</li>
+                        <li>✓ Corrects recentP60 in minutes projections only</li>
                         <li>✓ Does NOT touch goalShare or assistShare — those use a separate this-season/last-season blend (see Player Tools)</li>
                       </ul>
                     </div>
@@ -511,15 +510,10 @@ export default function ProjectionDocumentation() {
                         pct60Plus = games with ≥60 min / 8 × 100<br/>
                         pctBelow60 = games with 1–59 min / 8 × 100<br/>
                         <br/>
-                        rawMinutesPts = (pct60Plus/100)×2 + (pctBelow60/100)×1<br/>
-                        <br/>
-                        effectiveAppearances = teamGames (blend-eligible) OR appearances (others)<br/>
-                        confidenceFactor = min(1, effectiveAppearances / 10)<br/>
-                        <br/>
-                        minutesPoints = rawMinutesPts × confidenceFactor
+                        minutesPoints = (pct60Plus/100)×2 + (pctBelow60/100)×1
                       </div>
                       <div className="text-sm text-teal-800">
-                        For blend-eligible players (AFCON / injury returnees), using teamGames (≥27) as effectiveAppearances gives confidenceFactor = 1.0 — removing the unwarranted penalty for structural absences.
+                        No appearance-count discount is applied — a player's minutesPoints reflects their recent playing-time pattern directly, for every projected gameweek across the full horizon (GW3-38), not just the next one or two.
                       </div>
                     </div>
                   </div>
@@ -676,15 +670,15 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-amber-900 mb-3">This-season / last-season blend (server/routes.ts buildProjectedGoalShare)</h4>
+                    <h4 className="font-semibold text-amber-900 mb-3">This-season only, no last-season blend (server/routes.ts buildProjectedGoalShare)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
-                      <div>share2526 = player's (goals+xG) share of team total, 2025/26</div>
-                      <div>share2627 = same, 2026/27 so far (undefined pre-season)</div>
-                      <div className="mt-1">finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526</div>
-                      <div>projectedGoals = finalShare × teamGoalProjections</div>
+                      <div>playerCombined = 0.5 × player's 2026/27 goals + 0.5 × player's 2026/27 xG (current-club games only)</div>
+                      <div>teamCombined = 0.5 × team's 2026/27 goals + 0.5 × team's 2026/27 xG</div>
+                      <div className="mt-1">goalShare = teamCombined {">"} 0 ? playerCombined / teamCombined : 0</div>
+                      <div>projectedGoals = goalShare × teamGoalProjections</div>
                     </div>
                     <p className="text-sm text-amber-800 mt-2">
-                      Applies to every player uniformly, all season — not an eligibility-gated correction for a specific subset. This is a different mechanism from the AFCON/injury/transfer <strong>minutes</strong> blend (Player Tools → Minutes, or Algorithms → Minutes Projections): that one only kicks in for the ~50-or-so players who meet the four-condition absence gate, and only corrects recentP60/confidenceFactor — it has no effect on goal or assist share.
+                      Uses only this season's (2026/27) data, however many games have actually been played — no 2025/26 blend and no promoted-team/new-signing fallback, so a team or player with 0 games so far shows 0 rather than a synthetic pre-season estimate. This is a different mechanism from the AFCON/injury/transfer <strong>minutes</strong> blend (Player Tools → Minutes, or Algorithms → Minutes Projections): that one only kicks in for the ~50-or-so players who meet the four-condition absence gate, and only corrects recentP60 — it has no effect on goal or assist share.
                     </p>
                   </div>
                 </CardContent>
@@ -852,15 +846,12 @@ export default function ProjectionDocumentation() {
                       <div>[blend-eligible: current-club fixtures only]</div>
                       <div>pct60Plus = games ≥60 min / 8 × 100</div>
                       <div>pctBelow60 = games 1–59 min / 8 × 100</div>
-                      <div className="mt-1">rawPts = (pct60Plus/100)×2 + (pctBelow60/100)×1</div>
-                      <div className="mt-1">effectiveApps = teamGames (blend-eligible) | appearances (others)</div>
-                      <div>confidenceFactor = min(1, effectiveApps / 10)</div>
-                      <div>minutesPts = rawPts × confidenceFactor</div>
+                      <div className="mt-1">minutesPts = (pct60Plus/100)×2 + (pctBelow60/100)×1</div>
                     </div>
                   </div>
                   <div className="text-sm space-y-1">
                     <div><strong>FPL Points:</strong> 2 pts for 60+ min · 1 pt for 1–59 min · 0 for DNP</div>
-                    <div><strong>Blend effect:</strong> Returnees get confidenceFactor = 1.0 (not penalised for absence games)</div>
+                    <div><strong>Blend effect:</strong> Returnees' recentP60 is computed from current-club games only, so absence games from before their return don't drag it down</div>
                   </div>
                   <div className="bg-gray-50 p-2 rounded text-xs font-mono">API: /api/player-minutes-projections</div>
                 </CardContent>
@@ -1580,20 +1571,6 @@ export default function ProjectionDocumentation() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-amber-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-amber-900 mb-2">Confidence Factor Logic</h4>
-                    <div className="font-mono text-xs bg-white p-2 rounded mb-2 space-y-1">
-                      <div>{"// Blend-eligible player:"}</div>
-                      <div>effectiveApps = teamGames  {"// e.g. 27"}</div>
-                      <div>confidenceFactor = min(1, 27/10) = 1.0</div>
-                      <div className="mt-1">{"// Genuine rookie:"}</div>
-                      <div>effectiveApps = appearances  {"// e.g. 4"}</div>
-                      <div>confidenceFactor = min(1, 4/10) = 0.40</div>
-                    </div>
-                    <p className="text-xs text-amber-700">
-                      Using teamGames for returnees ensures structural absences don't penalise their minutes projection. The 0.40 penalty correctly applies only to genuine data-sparse rookies.
-                    </p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1727,14 +1704,7 @@ export default function ProjectionDocumentation() {
                       </div>
                     </div>
                     <div className="bg-orange-50 p-3 rounded text-sm">
-                      <strong>2. confidenceFactor penalising structural absence</strong>
-                      <p className="mt-1 text-orange-800">Player has {"<"}10 appearances but qualifies for blend. Fix: effectiveAppearances uses teamGames (≥27), giving confidenceFactor = 1.0.</p>
-                      <div className="font-mono text-xs mt-2 bg-white p-2 rounded">
-                        Check: inspect confidenceFactor field in minutes projection response
-                      </div>
-                    </div>
-                    <div className="bg-orange-50 p-3 rounded text-sm">
-                      <strong>3. Player not in blend map</strong>
+                      <strong>2. Player not in blend map</strong>
                       <p className="mt-1 text-orange-800">Player may not qualify (maxConsecDNP {"<"} 4, or didn't play last 4 fixtures). Check blend table:</p>
                       <div className="font-mono text-xs mt-2 bg-white p-2 rounded">
                         SELECT * FROM blend_eligible_players ORDER BY blend_weight;<br/>
