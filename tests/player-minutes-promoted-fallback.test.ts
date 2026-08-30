@@ -29,30 +29,32 @@ describe('Minutes projection fallback: promoted vs non-promoted "new" players', 
     expect(meslier.pct60Plus).toBe(0);
   });
 
-  it('promoted-team MID with manual pre-season xMins data (Rudoni, Coventry) uses that over the historical blend', () => {
+  it('promoted-team MID now has real current-season minutes (Rudoni, Coventry), no longer hitting any fallback', () => {
+    // The manual pre-season xMins override (server/xmins-override.ts) only applies while
+    // currentGameweek === 0; it self-disables the moment a real gameweek goes live, and by
+    // GW2 Rudoni has genuinely played across two separate fixtures (his own team's GW1 and
+    // GW2 matches have both finished, even though the wider GW2 window hasn't for every team
+    // yet — current-standings/history counts per-fixture, not per-gameweek). He's fully past
+    // the "0 minutes, needs a fallback" case this test file is otherwise about — this just
+    // locks in that his average now reflects both real games (20 + 70 minutes) rather than
+    // either the old manual override value or a stale single-game figure.
     const rudoni = minutesData.find((p: any) => p.playerId === 183);
     expect(rudoni).toBeDefined();
     expect(rudoni.teamShort).toBe('COV');
-    // Pre-season, manual_xmins_projections (real analyst start-probability data — see
-    // server/xmins-override.ts) takes priority over the generic historical blend fallback below
-    // whenever it covers the player. Rudoni: CAM 13% + RW 9% + RDM 8% = 30% start probability
-    // across Coventry's projected lineup -> 30% x 90 = 27 expected minutes, well below the
-    // 60-min threshold (a fringe/rotation option, not a nailed-on starter).
-    expect(rudoni.expectedMinutesPerGame).toBe(27);
-    // Pre-season override sets pct60Plus == start probability directly (server/xmins-override.ts).
-    expect(rudoni.pct60Plus).toBe(30);
-    expect(rudoni.pctBelow60).toBe(70);
+    expect(rudoni.currentMinutesPerGame).toBe(45);
+    expect(rudoni.expectedMinutesPerGame).toBe(45);
   });
 
-  it('promoted-team FWD with manual pre-season xMins data (Wright, Coventry) uses that over the historical blend', () => {
+  it('promoted-team FWD still on 0 current-season minutes (Wright, Coventry) falls through to the historical blend now that the pre-season override has disabled itself', () => {
+    // Wright genuinely has 0 minutes/0 starts recorded this season, so — with the pre-season
+    // manual xMins override now inactive (currentGameweek !== 0) — he correctly falls through
+    // to the same last-season-rate/league-average fallback as any other 0-minute player (see
+    // getLastSeasonPlayerRow/lastSeasonMinutesPerStart in player-history-blend-service.ts),
+    // not the manual analyst projection this test previously exercised pre-season.
     const wright = minutesData.find((p: any) => p.playerId === 193);
     expect(wright).toBeDefined();
     expect(wright.teamShort).toBe('COV');
-    // Wright: 72% start probability at ST -> 72% x 90 = 64.8 -> 65 expected minutes, clearing
-    // the 60-min threshold (a likely starter), overriding the generic historical blend fallback.
-    expect(wright.expectedMinutesPerGame).toBe(65);
-    expect(wright.pct60Plus).toBe(72);
-    expect(wright.pctBelow60).toBe(28);
+    expect(wright.expectedMinutesPerGame).toBe(54);
   });
 
   it('the promoted-team fallback is meaningfully higher than the non-promoted fallback at the same position', () => {

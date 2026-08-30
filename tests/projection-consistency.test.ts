@@ -368,7 +368,12 @@ describe('Server-Side Availability Adjustments', () => {
   });
 
   it('live endpoint also supports availabilityAdjusted param', async () => {
-    const endGW = Math.min(nextGameweek + 5, 38);
+    // Window must extend past the "unknown return date" ramp's flat-0% period (6 gameweeks,
+    // see calculateAvailabilityProbability in server/availability-adjustments.ts) — a player
+    // with no parseable return date is genuinely 0% available for that whole span, so both
+    // raw and availability-adjusted totals are legitimately 0 (nothing to reconstruct) if the
+    // window doesn't reach the gameweeks where their availability actually ramps back up.
+    const endGW = Math.min(nextGameweek + 9, 38);
     const adjustedData = await fetchJSON(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${endGW}`);
     const rawData = await fetchJSON(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${endGW}&availabilityAdjusted=false`);
 

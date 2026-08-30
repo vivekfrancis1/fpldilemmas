@@ -8,12 +8,19 @@ const BASE_URL = 'http://localhost:5050';
 // manager's real picks aren't available from FPL yet (see client/src/lib/preseason-draft-cache.ts
 // and client/src/lib/draft-to-fpl-picks.ts).
 describe('/api/manager/:managerId/team draft-picks fallback', () => {
-  // A real, currently-pre-season manager ID (no 2026/27 picks locked yet) used throughout this
-  // session's manual testing — confirmed to 404 with TEAM_NOT_AVAILABLE on plain GET.
+  // FPL manager IDs are a much smaller sequential range than this, so it can never resolve to
+  // a real account and reliably 404s with TEAM_NOT_AVAILABLE regardless of season progress —
+  // unlike a real "currently has no picks" manager ID, which stops being true the moment that
+  // manager sets a real team (as 376201, used here pre-season, since has).
+  const NONEXISTENT_MANAGER_ID = 999999999;
+  // A real manager ID, now with genuine GW2 picks locked in — still useful for the POST test
+  // below, which needs a real account so its account-level entry-data enrichment (transfers
+  // limit, etc.) has something real to fetch; the draftPicks bypass only replaces the SQUAD
+  // PICKS half of the response, not that account-level data.
   const MANAGER_ID = 376201;
 
-  it('plain GET is unchanged: still 404s with TEAM_NOT_AVAILABLE when no real picks exist yet', async () => {
-    const res = await fetch(`${BASE_URL}/api/manager/${MANAGER_ID}/team`);
+  it('plain GET 404s with TEAM_NOT_AVAILABLE for a manager with no picks at all', async () => {
+    const res = await fetch(`${BASE_URL}/api/manager/${NONEXISTENT_MANAGER_ID}/team`);
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.code).toBe('TEAM_NOT_AVAILABLE');

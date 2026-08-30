@@ -70,11 +70,18 @@ describe('/api/current-standings (historical season)', () => {
   }, 30000);
 
   it('still serves the live (current season) table by default, unaffected by the season param', async () => {
-    const standings = await fetchJSON('/api/current-standings?venue=all');
-    expect(Array.isArray(standings)).toBe(true);
-    // Pre-season: no completed 2026/27 matches yet, so every team should show 0 games played.
-    for (const team of standings) {
-      expect(team.played).toBe(0);
+    const defaultStandings = await fetchJSON('/api/current-standings?venue=all');
+    const explicitCurrentSeason = await fetchJSON('/api/current-standings?venue=all&season=2026%2F27');
+    expect(Array.isArray(defaultStandings)).toBe(true);
+    // Omitting ?season= must serve exactly the same (live, current-season) table as explicitly
+    // requesting the current season — not a snapshot of any particular played-count, which
+    // naturally changes as the real season progresses gameweek by gameweek.
+    expect(defaultStandings.length).toBe(explicitCurrentSeason.length);
+    for (const team of defaultStandings) {
+      const matching = explicitCurrentSeason.find((t: any) => t.id === team.id);
+      expect(matching).toBeDefined();
+      expect(team.played).toBe(matching.played);
+      expect(team.goalsFor).toBe(matching.goalsFor);
     }
   }, 30000);
 });
