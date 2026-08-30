@@ -616,7 +616,7 @@ export default function RecentPriceChanges() {
                           </th>
                           <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            title="Time to reach the ±100% threshold at the current per-hour rate"
+                            title="Time to reach the ±100% threshold at the current per-hour rate, shown in your device's local time zone"
                             onClick={() => handlePredictionSort('hours_to_threshold')}
                           >
                             <div className="flex items-center justify-end gap-1">
@@ -630,6 +630,17 @@ export default function RecentPriceChanges() {
                             Vs Transfer Deadline
                           </th>
                           <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('current_price')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Current Price
+                              {predictionSortField === 'current_price' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('ownership_percentage')}
                           >
@@ -641,17 +652,6 @@ export default function RecentPriceChanges() {
                             </div>
                           </th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
-                          <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('current_price')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Current Price
-                              {predictionSortField === 'current_price' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -691,6 +691,9 @@ export default function RecentPriceChanges() {
                             <td className="hidden lg:table-cell p-3 text-center text-xs text-muted-foreground">
                               {formatDeadlineComparison(prediction)}
                             </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              {formatPrice(prediction.current_price)}
+                            </td>
                             <td className="hidden md:table-cell p-3 text-right font-medium">
                               {prediction.ownership_percentage.toFixed(1)}%
                             </td>
@@ -705,9 +708,6 @@ export default function RecentPriceChanges() {
                                 )}
                                 <span className="text-xs text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
-                            </td>
-                            <td className="hidden sm:table-cell p-3 text-right font-medium">
-                              {formatPrice(prediction.current_price)}
                             </td>
                           </tr>
                         ))}
