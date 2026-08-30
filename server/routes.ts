@@ -8422,6 +8422,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Team Assists endpoint - actual assists from finished gameweeks, aggregated from
+  // each player's live gameweek stats by team. Team Assist History = sum of individual assists
+  // of every player on that team for that gameweek (mirrors /api/team-xg-history's structure,
+  // el.stats.assists instead of el.stats.expected_goals).
+  app.get("/api/team-assists-history", async (req, res) => {
+    try {
+      const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
+      const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
+
+      console.log(`DEBUG: Team Assists History API called (GW${startGw || 1}-${endGw || 'last'})`);
+
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      const teams = bootstrapData.teams;
+
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
+
+      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
+
+      console.log(`DEBUG: Fetching team assists history for GW${effectiveStartGw}-${effectiveEndGw}`);
+
+      const teamAssistsMap = new Map();
+      teams.forEach((team: any) => {
+        const gameweekAssists: { [key: number]: number } = {};
+        for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+          gameweekAssists[gw] = 0;
+        }
+        teamAssistsMap.set(team.id, {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekAssists: gameweekAssists,
+          totalAssists: 0,
+          averageAssistsPerGame: 0,
+          position: team.position || 0
+        });
+      });
+
+      const gameweeksToFetch: number[] = [];
+      for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+        gameweeksToFetch.push(gw);
+      }
+
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data for team assists:`, err);
+          }
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
+
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { gw, data: liveData } = result;
+
+        liveData.elements.forEach((el: any) => {
+          const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+          if (player) {
+            const teamData = teamAssistsMap.get(player.team);
+            if (teamData) {
+              const assists = el.stats.assists || 0;
+              teamData.gameweekAssists[gw] = (teamData.gameweekAssists[gw] || 0) + assists;
+              teamData.totalAssists += assists;
+            }
+          }
+        });
+      }
+
+      // Per-team games played within the fetched range — see the matching comment in
+      // /api/team-xg-history for why this uses real fixture completion, not the column count.
+      const teamGamesPlayedAssists = new Map<number, number>();
+      const teamPlayedGwsAssists = new Map<number, Set<number>>();
+      teams.forEach((team: any) => { teamGamesPlayedAssists.set(team.id, 0); teamPlayedGwsAssists.set(team.id, new Set()); });
+      fixturesData.forEach((fixture: any) => {
+        if (isFixtureActuallyOver(fixture) && gameweeksToFetch.includes(fixture.event)) {
+          teamGamesPlayedAssists.set(fixture.team_h, (teamGamesPlayedAssists.get(fixture.team_h) || 0) + 1);
+          teamGamesPlayedAssists.set(fixture.team_a, (teamGamesPlayedAssists.get(fixture.team_a) || 0) + 1);
+          teamPlayedGwsAssists.get(fixture.team_h)?.add(fixture.event);
+          teamPlayedGwsAssists.get(fixture.team_a)?.add(fixture.event);
+        }
+      });
+
+      const result = Array.from(teamAssistsMap.values()).map((team: any) => {
+        const gamesPlayed = teamGamesPlayedAssists.get(team.id) || 0;
+        const playedGws = teamPlayedGwsAssists.get(team.id) || new Set();
+        const roundedGameweekAssists: { [key: number]: number | null } = {};
+        for (const [gw, assists] of Object.entries(team.gameweekAssists)) {
+          roundedGameweekAssists[Number(gw)] = playedGws.has(Number(gw)) ? (assists as number) : null;
+        }
+        return {
+          ...team,
+          gameweekAssists: roundedGameweekAssists,
+          averageAssistsPerGame: gamesPlayed > 0 ? Math.round((team.totalAssists / gamesPlayed) * 100) / 100 : 0
+        };
+      });
+
+      console.log(`DEBUG: Team Assists History - returned ${result.length} teams for GW${effectiveStartGw}-${effectiveEndGw}`);
+      res.json({
+        lastFinishedGW,
+        startGW: effectiveStartGw,
+        endGW: effectiveEndGw,
+        teams: result
+      });
+    } catch (error) {
+      console.error("Error fetching team assists history:", error);
+      res.status(500).json({ error: "Failed to fetch team assists history" });
+    }
+  });
+
+  // Past Team xA (Expected Assists) endpoint - aggregated player xA by team from finished
+  // gameweeks. Team xA History = sum of individual xA of every player on that team for that
+  // gameweek (mirrors /api/team-xg-history's structure, el.stats.expected_assists instead of
+  // el.stats.expected_goals).
+  app.get("/api/team-xa-history", async (req, res) => {
+    try {
+      const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
+      const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
+
+      console.log(`DEBUG: Team xA History API called (GW${startGw || 1}-${endGw || 'last'})`);
+
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      const teams = bootstrapData.teams;
+
+      const lastFinishedGW = computeLastFinishedGW(fixturesData);
+
+      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
+
+      console.log(`DEBUG: Fetching team xA history for GW${effectiveStartGw}-${effectiveEndGw}`);
+
+      const teamXaMap = new Map();
+      teams.forEach((team: any) => {
+        const gameweekXa: { [key: number]: number } = {};
+        for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+          gameweekXa[gw] = 0;
+        }
+        teamXaMap.set(team.id, {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekXa: gameweekXa,
+          totalXa: 0,
+          averageXaPerGame: 0,
+          position: team.position || 0
+        });
+      });
+
+      const gameweeksToFetch: number[] = [];
+      for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+        gameweeksToFetch.push(gw);
+      }
+
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data for team xA:`, err);
+          }
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
+
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { gw, data: liveData } = result;
+
+        liveData.elements.forEach((el: any) => {
+          const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+          if (player) {
+            const teamData = teamXaMap.get(player.team);
+            if (teamData) {
+              const xa = parseFloat(el.stats.expected_assists) || 0;
+              teamData.gameweekXa[gw] = (teamData.gameweekXa[gw] || 0) + xa;
+              teamData.totalXa += xa;
+            }
+          }
+        });
+      }
+
+      const teamGamesPlayedXa = new Map<number, number>();
+      const teamPlayedGwsXa = new Map<number, Set<number>>();
+      teams.forEach((team: any) => { teamGamesPlayedXa.set(team.id, 0); teamPlayedGwsXa.set(team.id, new Set()); });
+      fixturesData.forEach((fixture: any) => {
+        if (isFixtureActuallyOver(fixture) && gameweeksToFetch.includes(fixture.event)) {
+          teamGamesPlayedXa.set(fixture.team_h, (teamGamesPlayedXa.get(fixture.team_h) || 0) + 1);
+          teamGamesPlayedXa.set(fixture.team_a, (teamGamesPlayedXa.get(fixture.team_a) || 0) + 1);
+          teamPlayedGwsXa.get(fixture.team_h)?.add(fixture.event);
+          teamPlayedGwsXa.get(fixture.team_a)?.add(fixture.event);
+        }
+      });
+
+      const result = Array.from(teamXaMap.values()).map((team: any) => {
+        const gamesPlayed = teamGamesPlayedXa.get(team.id) || 0;
+        const playedGws = teamPlayedGwsXa.get(team.id) || new Set();
+        const roundedGameweekXa: { [key: number]: number | null } = {};
+        for (const [gw, xa] of Object.entries(team.gameweekXa)) {
+          roundedGameweekXa[Number(gw)] = playedGws.has(Number(gw)) ? Math.round((xa as number) * 100) / 100 : null;
+        }
+        return {
+          ...team,
+          gameweekXa: roundedGameweekXa,
+          totalXa: Math.round(team.totalXa * 100) / 100,
+          averageXaPerGame: gamesPlayed > 0 ? Math.round((team.totalXa / gamesPlayed) * 100) / 100 : 0
+        };
+      });
+
+      console.log(`DEBUG: Team xA History - returned ${result.length} teams for GW${effectiveStartGw}-${effectiveEndGw}`);
+      res.json({
+        lastFinishedGW,
+        startGW: effectiveStartGw,
+        endGW: effectiveEndGw,
+        teams: result
+      });
+    } catch (error) {
+      console.error("Error fetching team xA history:", error);
+      res.status(500).json({ error: "Failed to fetch team xA history" });
+    }
+  });
+
   // Past Team Goals Against endpoint - actual goals conceded from finished fixtures
   app.get("/api/team-goals-against-history", async (req, res) => {
     try {
