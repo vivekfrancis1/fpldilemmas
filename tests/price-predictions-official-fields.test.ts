@@ -52,14 +52,32 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     }
   });
 
-  it('predicted_progress matches the official offset-0 projection exactly', () => {
-    const withProjection = bootstrapElements.find(
-      (p: any) => p.price_change_projections && p.price_change_projections.length > 0
-    );
+  it('predicted_progress matches the official offset-0 projection when FPL has a real signal (nonzero likelihood)', () => {
+    const withProjection = bootstrapElements.find((p: any) => {
+      const proj = p.price_change_projections || [];
+      const offset0 = proj.find((pr: any) => pr.offset === 0);
+      return offset0 && offset0.likelihood !== 0;
+    });
     expect(withProjection).toBeDefined();
     const pred = predictions.find((p: any) => p.player_id === withProjection.id);
     const officialOffset0 = withProjection.price_change_projections.find((pr: any) => pr.offset === 0);
     expect(pred.predicted_progress).toBeCloseTo(parseFloat(officialOffset0.projected_percent), 5);
+  });
+
+  // Confirmed against the official FPL page directly: a player whose offset-0 projection has
+  // likelihood 0 (FPL's "no real signal" flag) shows Predicted Progress equal to current Progress
+  // there — not the near-zero placeholder value in projected_percent, which is meaningless in that
+  // case (e.g. Kudus at -13% current progress showed a placeholder of "0.0", while every other
+  // player's real, nonzero-likelihood projection tracks its own current progress closely).
+  it('falls back to progress (not the placeholder projected_percent) when likelihood is 0', () => {
+    const noSignal = bootstrapElements.find((p: any) => {
+      const proj = p.price_change_projections || [];
+      const offset0 = proj.find((pr: any) => pr.offset === 0);
+      return offset0 && offset0.likelihood === 0 && Math.abs(parseFloat(p.price_change_percent)) > 1;
+    });
+    if (!noSignal) return; // no live example right now — nothing to assert against
+    const pred = predictions.find((p: any) => p.player_id === noSignal.id);
+    expect(pred.predicted_progress).toBeCloseTo(pred.progress, 5);
   });
 
   // Confirmed against the official FPL page's own examples (screenshot cross-referenced):

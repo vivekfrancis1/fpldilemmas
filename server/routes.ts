@@ -6917,10 +6917,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const progress = parseFloat(player.price_change_percent ?? "0") || 0;
         const projections: Array<{ offset: number; projected_percent: string; likelihood: number }> =
           player.price_change_projections || [];
-        // offset 0 = FPL's projection for tonight's update (the next price-change point)
+        // offset 0 = FPL's projection for tonight's update (the next price-change point).
+        // likelihood runs -5..+5 (negative = drop confidence, positive = rise confidence), and
+        // likelihood === 0 is FPL's "no signal" flag — its projected_percent is a meaningless
+        // placeholder (always exactly 0.0) rather than a real forecast, confirmed against the
+        // official FPL page: a likelihood-0 player (e.g. Kudus) shows Predicted Progress equal to
+        // current Progress there, not the near-zero placeholder from this field. Every other
+        // player's projection (nonzero likelihood) tracks its current progress closely, so falling
+        // back to progress itself is the only case that needed special-casing.
         const offset0 = projections.find((p) => p.offset === 0) ?? projections[0];
-        const predictedProgress = offset0 ? (parseFloat(offset0.projected_percent) || 0) : progress;
         const likelihood = offset0?.likelihood ?? 0;
+        const predictedProgress = offset0 && likelihood !== 0 ? (parseFloat(offset0.projected_percent) || 0) : progress;
 
         const netTransfersEvent = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
         const seasonNetTransfers = (player.transfers_in || 0) - (player.transfers_out || 0);
