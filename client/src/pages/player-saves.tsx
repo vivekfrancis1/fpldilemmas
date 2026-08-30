@@ -130,6 +130,35 @@ export default function PlayerSaves() {
     return map;
   }, [fixturesData, bootstrapData, viewMode]);
 
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3;
+    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages (Points/Goals/Assists/Defensive Contributions).
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+
+  // Team SHORT codes (player-saves-projections' teamName field is already the short code) whose
+  // own fixture in the current gameweek has kicked off or finished — their current-GW projection
+  // is a stale pre-match estimate and gets blanked client-side rather than shown as if still valid.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
   // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past") {
@@ -140,9 +169,10 @@ export default function PlayerSaves() {
       return [];
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) gws.unshift(currentGameweek);
     if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, fixtureMode, tbcTeamInfoMap, currentGWHasUnstarted, currentGameweek]);
 
   // Create teamName to short_name mapping
   const teamNameToShort = useMemo(() => {
@@ -186,13 +216,14 @@ export default function PlayerSaves() {
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start) ? currentGameweek : start;
 
-    if (start > 0 && end > 0 && start <= end && end <= 39) {
-      setStartGameweek(start);
+    if (effectiveStart > 0 && end > 0 && effectiveStart <= end && end <= 39) {
+      setStartGameweek(effectiveStart);
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized]);
+  }, [bootstrapData, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Reset gameweek range when viewMode changes
   useEffect(() => {
@@ -204,11 +235,13 @@ export default function PlayerSaves() {
       setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(parseInt(newRange.startGameweek));
+      const start = parseInt(newRange.startGameweek);
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start) ? currentGameweek : start;
+      setStartGameweek(effectiveStart);
       setEndGameweek(parseInt(newRange.endGameweek));
       setSelectedGameweeks(new Set());
     }
-  }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
+  }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
   useEffect(() => {
@@ -269,6 +302,10 @@ export default function PlayerSaves() {
       let totalPoints = 0;
       let activeCount = 0;
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        // A decided team's current-GW projection is a stale pre-match estimate — omit the key
+        // entirely so it renders blank ("-") and is excluded from the total/average, same
+        // convention as the other Player Projection pages.
+        if (gw === currentGameweek && currentGWDecidedTeamShorts.has(player.teamName)) continue;
         const gwKey = `gw${gw}`;
         const saves = originalSaves[gwKey] || 0;
         const points = originalPoints[gwKey] || 0;
@@ -291,7 +328,7 @@ export default function PlayerSaves() {
         averagePerGameweek: activeCount > 0 ? totalSaves / activeCount : 0
       };
     });
-  }, [allSavesProjections, startGameweek, endGameweek, selectedGameweeks]);
+  }, [allSavesProjections, startGameweek, endGameweek, selectedGameweeks, currentGameweek, currentGWDecidedTeamShorts]);
 
   // Unified display data - transforms history data to match projection format
   const displayData = useMemo(() => {
@@ -302,6 +339,10 @@ export default function PlayerSaves() {
         let activeCount = 0;
         
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          // A team that hasn't played the still-live current gameweek yet reports 0 for every
+          // stat (the live endpoint returns zeroed placeholders pre-kickoff) — omit the key so
+          // it renders blank instead of being mistaken for a real 0-save game.
+          if (gw === currentGameweek && !currentGWDecidedTeamShorts.has(player.teamShort)) continue;
           const gwSaves = player.gameweekSaves[gw] || 0;
           saves[`gw${gw}`] = gwSaves;
           if (selectedGameweeks.size === 0 || selectedGameweeks.has(gw)) {
@@ -324,7 +365,7 @@ export default function PlayerSaves() {
       });
     }
     return savesProjections || [];
-  }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, selectedGameweeks]);
+  }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, selectedGameweeks, currentGameweek, currentGWDecidedTeamShorts]);
 
   // Absorb GW39 real saves data into the assigned GW's saves when fixtureMode is custom/expert
   const resolvedDisplayData = useMemo(() => {
@@ -367,12 +408,6 @@ export default function PlayerSaves() {
 
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
-
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3;
-    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
-    return currentEvent ? currentEvent.id : 3;
-  }, [bootstrapData]);
 
   const teams = useMemo(() => {
     if (!displayData || !Array.isArray(displayData)) return [];
@@ -857,12 +892,12 @@ export default function PlayerSaves() {
                             GW39 (TBC)
                           </th>
                         )}
-                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-[65px] min-w-[65px] sticky right-0 md:right-[65px] z-[5]">
                           <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
                             Total {getSortIcon('totalSaves')}
                           </Button>
                         </th>
-                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-green-50 w-[52px] min-w-[52px] hidden md:table-cell">
+                        <th className="hidden md:table-cell px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-green-50 w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           Avg
                         </th>
                       </tr>
@@ -877,14 +912,21 @@ export default function PlayerSaves() {
                         
                         let adjustedTotal = 0;
                         let originalTotal = 0;
+                        // Only counts gameweeks with a real (present) entry — a blanked
+                        // current-GW cell isn't in projection.saves at all, so it's correctly
+                        // excluded from the average's denominator.
+                        let countedWeeks = 0;
                         dynamicGameweekColumns.forEach(gw => {
-                          const val = projection.saves?.[`gw${gw}`] || 0;
+                          const gwKey = `gw${gw}`;
+                          if (!(gwKey in (projection.saves || {}))) return;
+                          const val = projection.saves?.[gwKey] || 0;
                           const mult = gwMultipliers[gw] ?? 1;
                           adjustedTotal += val * mult;
                           originalTotal += val;
+                          countedWeeks += 1;
                         });
-                        const adjustedAverage = adjustedTotal / dynamicGameweekColumns.length;
-                        const originalAverage = originalTotal / dynamicGameweekColumns.length;
+                        const adjustedAverage = countedWeeks > 0 ? adjustedTotal / countedWeeks : 0;
+                        const originalAverage = countedWeeks > 0 ? originalTotal / countedWeeks : 0;
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
@@ -996,7 +1038,7 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {(() => {
                               const tbcVal2 = showTBCColumn ? getUnabsorbedTBCSavesForPlayer(projection) : 0;
                               return hasAnyAdjustment ? (
@@ -1009,7 +1051,7 @@ export default function PlayerSaves() {
                               );
                             })()}
                           </td>
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>

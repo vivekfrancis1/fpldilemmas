@@ -17554,14 +17554,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         const currentGameweek = computeCurrentGameweek(fplData.events);
-        const nextGameweek = currentGameweek + 1; // Start from next gameweek
+        // Fold the current gameweek in when it still has an unstarted fixture — see the matching
+        // comment on the Defensive Contributions projections endpoint for why nextGameweek can't
+        // just be currentGameweek + 1 unconditionally (it silently re-floors an explicitly
+        // requested earlier startGameweek).
+        const currentGWHasUnstartedSaves = currentGameweek > 0 &&
+          fixturesData.some((f: any) => f.event === currentGameweek && !f.started);
+        const nextGameweek = currentGWHasUnstartedSaves ? currentGameweek : currentGameweek + 1;
         const finishedGWCount = fplData.events.filter((e: any) => e.finished).length;
 
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
         const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const hasTBCSaves = fixturesData.some((f: any) => f.event === null || f.event === undefined);
-        const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
+        // Default (no explicit param — the cached endpoint always calls unparameterized) folds in
+        // the current gameweek via nextGameweek rather than gameweekRange.start, which is always
+        // currentGameweek + 1 regardless of whether this gameweek has actually started.
+        const startGameweek = parseInt(req.query.startGameweek as string) || nextGameweek;
         const endGameweek = parseInt(req.query.endGameweek as string) || (hasTBCSaves ? 39 : gameweekRange.end);
 
         console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, saves projections from GW${startGameweek} to GW${endGameweek}`);
