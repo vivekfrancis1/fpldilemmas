@@ -1,12 +1,13 @@
 /**
- * PlayerHistoryBlendService - shared last-season (2025/26) player-level data for blending
- * per-90 rates into current-season (2026/27) projections (saves, defensive contributions,
- * bonus points), the same way TeamGoalsService blends team-level goals/clean sheets.
+ * PlayerHistoryBlendService - real 2025/26 player-level data, matched to the current 2026/27
+ * squad by name (player element IDs are reassigned every season by the FPL API, so a current
+ * player is matched to their 2025/26 row by normalized full name + element_type, not by ID).
  *
- * Player element IDs are reassigned every season by the FPL API, so a current player is
- * matched to their 2025/26 row by (normalized full name, element_type) rather than by ID.
- * Players with no match (promoted-team players, new signings from abroad, academy graduates)
- * are "new to the league" — callers fall back to a league-average-for-position rate for them.
+ * No current-season projection blends this in anymore (per explicit product decision — see the
+ * "new to the league" comments in routes.ts and team-goals-service.ts) — the only remaining
+ * consumer is the explicit ?season=2025/26 real-history viewer (buildRealGoalShareForSeason /
+ * buildRealAssistShareForSeason in routes.ts), which needs a genuine historical lookup, not a
+ * projection input.
  */
 
 import { pool } from "./db";
@@ -78,7 +79,7 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
       lastSeasonPlayersCache = rows;
       return rows;
     } catch (error) {
-      console.error("Failed to fetch last-season player stats for blending:", error);
+      console.error("Failed to fetch last-season player stats:", error);
       lastSeasonPlayersCache = [];
       return [];
     }
@@ -88,57 +89,6 @@ async function fetchLastSeasonPlayers(): Promise<LastSeasonPlayerRow[]> {
     return await lastSeasonPlayersInFlight;
   } finally {
     lastSeasonPlayersInFlight = null;
-  }
-}
-
-interface GameweekAppearance {
-  elementType: number;
-  minutes: number;
-  starts: number;
-}
-
-let lastSeasonGameweeksCache: GameweekAppearance[] | null = null;
-let lastSeasonGameweeksInFlight: Promise<GameweekAppearance[]> | null = null;
-
-/**
- * Every 2025/26 gameweek row (one per player per gameweek they were in the matchday squad
- * for), joined to season_player_snapshot for element_type. Unlike fetchLastSeasonPlayers'
- * season totals, this preserves per-appearance granularity — needed to tell "minutes earned
- * while starting" apart from "minutes earned as a substitute," which a season-total minutes/
- * starts ratio conflates (a squad player's occasional late-sub cameos inflate their apparent
- * per-start average, since those sub minutes count toward total minutes but not toward starts).
- */
-async function fetchLastSeasonGameweeks(): Promise<GameweekAppearance[]> {
-  if (lastSeasonGameweeksCache) return lastSeasonGameweeksCache;
-  if (lastSeasonGameweeksInFlight) return lastSeasonGameweeksInFlight;
-
-  lastSeasonGameweeksInFlight = (async () => {
-    try {
-      const result = await pool.query(
-        `SELECT sps.element_type, gpd.minutes, gpd.starts
-         FROM gameweek_player_data gpd
-         JOIN season_player_snapshot sps ON sps.season = gpd.season AND sps.player_id = gpd.player_id
-         WHERE gpd.season = $1`,
-        [LAST_SEASON]
-      );
-      const rows: GameweekAppearance[] = result.rows.map((r: any) => ({
-        elementType: r.element_type,
-        minutes: r.minutes || 0,
-        starts: r.starts || 0,
-      }));
-      lastSeasonGameweeksCache = rows;
-      return rows;
-    } catch (error) {
-      console.error("Failed to fetch last-season gameweek appearances for blending:", error);
-      lastSeasonGameweeksCache = [];
-      return [];
-    }
-  })();
-
-  try {
-    return await lastSeasonGameweeksInFlight;
-  } finally {
-    lastSeasonGameweeksInFlight = null;
   }
 }
 
@@ -162,206 +112,7 @@ export async function getLastSeasonPlayerRow(firstName: string, secondName: stri
 }
 
 // Below this many minutes, a per-90 extrapolation is dominated by small-sample noise (e.g. 4 DC
-// in a single substitute cameo would otherwise extrapolate to 360 DC per 90) — treat as no
-// usable rate and let the caller fall back to the league average instead.
+// in a single substitute cameo would otherwise extrapolate to 360 DC per 90) — callers treat a
+// player under this threshold as having no usable current-season rate yet.
 export const MIN_MINUTES_FOR_RATE = 270; // ~3 full matches
 export const MIN_STARTS_FOR_RATE = 3;
-
-function per90(total: number, minutes: number): number | undefined {
-  return minutes >= MIN_MINUTES_FOR_RATE ? (total / minutes) * 90 : undefined;
-}
-
-export function lastSeasonSavesPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.saves, row.minutes);
-}
-
-export function lastSeasonDCPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.defensiveContribution, row.minutes);
-}
-
-export function lastSeasonBonusPerStart(row: LastSeasonPlayerRow): number | undefined {
-  return row.starts >= MIN_STARTS_FOR_RATE ? row.bonus / row.starts : undefined;
-}
-
-export function lastSeasonYellowCardsPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.yellowCards, row.minutes);
-}
-
-export function lastSeasonRedCardsPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.redCards, row.minutes);
-}
-
-export function lastSeasonGoalsPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.goalsScored, row.minutes);
-}
-
-export function lastSeasonXGPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.expectedGoals, row.minutes);
-}
-
-export function lastSeasonAssistsPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.assists, row.minutes);
-}
-
-export function lastSeasonXAPer90(row: LastSeasonPlayerRow): number | undefined {
-  return per90(row.expectedAssists, row.minutes);
-}
-
-/** Expected minutes per start, capped at 90 — used to seed a minutes projection from a player's last-season row. */
-export function lastSeasonMinutesPerStart(row: LastSeasonPlayerRow): number | undefined {
-  return row.starts >= MIN_STARTS_FOR_RATE ? Math.min(90, row.minutes / row.starts) : undefined;
-}
-
-let leagueAveragesCache: {
-  gkSavesPer90: number;
-  defDCPer90: number;
-  midFwdDCPer90: number;
-  gkBonusPerStart: number;
-  defBonusPerStart: number;
-  midBonusPerStart: number;
-  fwdBonusPerStart: number;
-  yellowCardsPer90ByPosition: Record<string, number>;
-  redCardsPer90ByPosition: Record<string, number>;
-  goalsPer90ByPosition: Record<string, number>;
-  xgPer90ByPosition: Record<string, number>;
-  assistsPer90ByPosition: Record<string, number>;
-  xaPer90ByPosition: Record<string, number>;
-  minutesPerStartByPosition: Record<string, number>;
-  minutesPerGamePlayedByPosition: Record<string, number>;
-  minutesAllPlayersByPosition: Record<string, number>;
-} | null = null;
-
-/**
- * League-average 2025/26 per-90 (or per-start) rates by position group — the fallback for
- * players with no last-season row at all (promoted-team players, new-to-the-league signings).
- * Position-grouped because DC thresholds/formulas and bonus levels differ meaningfully by
- * position (e.g. defenders earn DC via CBIT only, mids/forwards via CBIRT).
- */
-export async function getLeagueAverageRates() {
-  if (leagueAveragesCache) return leagueAveragesCache;
-  const rows = await fetchLastSeasonPlayers();
-  const gameweeks = await fetchLastSeasonGameweeks();
-
-  const withMinutes = rows.filter(r => r.minutes > 0);
-
-  // Average minutes/game across every registered player at a position, whether they ever
-  // played or not (season-total minutes / 38 games, averaged per player) — the fallback for
-  // "new" players at an established (non-promoted) club, where most name-unmatched players
-  // really are fringe squad members who may never feature at all, not surprise starters.
-  const avgMinutesAllPlayers = (filtered: LastSeasonPlayerRow[]) => {
-    if (filtered.length === 0) return 0;
-    const total = filtered.reduce((sum, r) => sum + r.minutes / 38, 0);
-    return total / filtered.length;
-  };
-
-  // Average minutes per actual appearance (start or sub) with >=1 minute, computed from
-  // per-gameweek rows rather than season totals — the fallback for "new" players at a
-  // promoted club, where the whole squad is equally new to the top flight and most of them
-  // do feature at some point; this answers "when they play, how long do they typically last"
-  // without assuming a guaranteed full 90 (the old, buggy season-total-based per-start figure).
-  const avgMinutesPerGamePlayed = (elementType: number) => {
-    const appeared = gameweeks.filter(g => g.elementType === elementType && g.minutes >= 1);
-    if (appeared.length === 0) return 0;
-    return appeared.reduce((sum, g) => sum + g.minutes, 0) / appeared.length;
-  };
-  const avgPer90 = (filtered: LastSeasonPlayerRow[], statTotal: (r: LastSeasonPlayerRow) => number) => {
-    const totalMinutes = filtered.reduce((sum, r) => sum + r.minutes, 0);
-    const totalStat = filtered.reduce((sum, r) => sum + statTotal(r), 0);
-    return totalMinutes > 0 ? (totalStat / totalMinutes) * 90 : 0;
-  };
-  const avgPerStart = (filtered: LastSeasonPlayerRow[]) => {
-    const totalStarts = filtered.reduce((sum, r) => sum + r.starts, 0);
-    const totalBonus = filtered.reduce((sum, r) => sum + r.bonus, 0);
-    return totalStarts > 0 ? totalBonus / totalStarts : 0;
-  };
-  const avgMinutesPerStart = (filtered: LastSeasonPlayerRow[]) => {
-    const totalStarts = filtered.reduce((sum, r) => sum + r.starts, 0);
-    const totalMinutes = filtered.reduce((sum, r) => sum + r.minutes, 0);
-    return totalStarts > 0 ? Math.min(90, totalMinutes / totalStarts) : 75;
-  };
-
-  const gks = withMinutes.filter(r => r.elementType === 1);
-  const defs = withMinutes.filter(r => r.elementType === 2);
-  const midsFwds = withMinutes.filter(r => r.elementType === 3 || r.elementType === 4);
-  const mids = withMinutes.filter(r => r.elementType === 3);
-  const fwds = withMinutes.filter(r => r.elementType === 4);
-
-  leagueAveragesCache = {
-    gkSavesPer90: avgPer90(gks, r => r.saves),
-    defDCPer90: avgPer90(defs, r => r.defensiveContribution),
-    midFwdDCPer90: avgPer90(midsFwds, r => r.defensiveContribution),
-    gkBonusPerStart: avgPerStart(gks),
-    defBonusPerStart: avgPerStart(defs),
-    midBonusPerStart: avgPerStart(mids),
-    fwdBonusPerStart: avgPerStart(fwds),
-    yellowCardsPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.yellowCards),
-      DEF: avgPer90(defs, r => r.yellowCards),
-      MID: avgPer90(mids, r => r.yellowCards),
-      FWD: avgPer90(fwds, r => r.yellowCards),
-    },
-    redCardsPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.redCards),
-      DEF: avgPer90(defs, r => r.redCards),
-      MID: avgPer90(mids, r => r.redCards),
-      FWD: avgPer90(fwds, r => r.redCards),
-    },
-    goalsPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.goalsScored),
-      DEF: avgPer90(defs, r => r.goalsScored),
-      MID: avgPer90(mids, r => r.goalsScored),
-      FWD: avgPer90(fwds, r => r.goalsScored),
-    },
-    xgPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.expectedGoals),
-      DEF: avgPer90(defs, r => r.expectedGoals),
-      MID: avgPer90(mids, r => r.expectedGoals),
-      FWD: avgPer90(fwds, r => r.expectedGoals),
-    },
-    assistsPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.assists),
-      DEF: avgPer90(defs, r => r.assists),
-      MID: avgPer90(mids, r => r.assists),
-      FWD: avgPer90(fwds, r => r.assists),
-    },
-    xaPer90ByPosition: {
-      GKP: avgPer90(gks, r => r.expectedAssists),
-      DEF: avgPer90(defs, r => r.expectedAssists),
-      MID: avgPer90(mids, r => r.expectedAssists),
-      FWD: avgPer90(fwds, r => r.expectedAssists),
-    },
-    minutesPerStartByPosition: {
-      GKP: avgMinutesPerStart(gks),
-      DEF: avgMinutesPerStart(defs),
-      MID: avgMinutesPerStart(mids),
-      FWD: avgMinutesPerStart(fwds),
-    },
-    minutesPerGamePlayedByPosition: {
-      GKP: avgMinutesPerGamePlayed(1),
-      DEF: avgMinutesPerGamePlayed(2),
-      MID: avgMinutesPerGamePlayed(3),
-      FWD: avgMinutesPerGamePlayed(4),
-    },
-    minutesAllPlayersByPosition: {
-      GKP: avgMinutesAllPlayers(rows.filter(r => r.elementType === 1)),
-      DEF: avgMinutesAllPlayers(rows.filter(r => r.elementType === 2)),
-      MID: avgMinutesAllPlayers(rows.filter(r => r.elementType === 3)),
-      FWD: avgMinutesAllPlayers(rows.filter(r => r.elementType === 4)),
-    },
-  };
-  return leagueAveragesCache;
-}
-
-/**
- * 50/50 blend of this-season and last-season per-90 (or per-start) rates, falling back to
- * whichever side is available, and finally to the league-average-for-position rate if the
- * player has neither — same rule as TeamGoalsService's getTeamAverageGoals.
- */
-export function blendRate(thisSeasonRate: number | undefined, lastSeasonRate: number | undefined, leagueAverageRate: number): number {
-  if (thisSeasonRate !== undefined && lastSeasonRate !== undefined) {
-    return 0.5 * thisSeasonRate + 0.5 * lastSeasonRate;
-  }
-  if (lastSeasonRate !== undefined) return lastSeasonRate;
-  if (thisSeasonRate !== undefined) return thisSeasonRate;
-  return leagueAverageRate;
-}

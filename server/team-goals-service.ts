@@ -3,73 +3,22 @@
  * Single source of truth for team goal totals used by both team-goal-projections and goal-share endpoints
  */
 
-import { pool } from "./db";
 import { CURRENT_SEASON } from "@shared/schema";
 import { solveExpectedGoalsFromOdds } from "@shared/odds-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import type { StoredFixtureOdds } from "./odds-service";
 
-// Season archived in season_fixtures_archive that GF/GC blending uses as "last season".
-const LAST_SEASON = "2025/26";
-
-// ASSUMED (deliberately regressed) goals for the three clubs promoted into the Premier League
-// for 2026/27 (Coventry City, Ipswich Town, Hull City) — an admin-configured estimate of what
-// they'll score in the tougher top-flight, NOT their real Championship total (see
-// PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS below for that). FPL's current-standings API only
-// covers Premier League teams, so these clubs have no top-flight "last season" data to read
-// from season_fixtures_archive — these totals stand in for that side of the GF/GC blend (see
-// getLastSeasonTeamGoals) until real 2026/27 PL games accumulate. Provided directly, on the
-// assumption they'd played a full 38-game Premier League season — matches the game count
-// every other (non-promoted) team's last-season data is based on, not their actual
-// (46-game) Championship season.
-const PROMOTED_TEAM_LAST_SEASON_GOALS: Record<string, { goalsFor: number; goalsAgainst: number; played: number }> = {
-  "Coventry City": { goalsFor: 47, goalsAgainst: 58, played: 38 },
-  "Ipswich Town": { goalsFor: 38, goalsAgainst: 61, played: 38 },
-  "Hull City": { goalsFor: 33, goalsAgainst: 68, played: 38 },
-};
-
-// REAL final 2025/26 Championship goals scored, across the true 46-game season — distinct from
-// PROMOTED_TEAM_LAST_SEASON_GOALS above (which is a deliberately-regressed PL-level assumption).
-// Used as the goal-share denominator for these teams' players (player's real Championship goals
-// ÷ team's real Championship total), since PROMOTED_TEAM_PLAYER_LAST_SEASON only lists notable
-// scorers and badly undercounts the true total if summed directly.
+// REAL final 2025/26 Championship goals scored, across the true 46-game season — used only by
+// the explicit ?season=2025/26 real-history viewer (buildRealGoalShareForSeason/
+// buildRealAssistShareForSeason in routes.ts) as the goal-share denominator for promoted teams'
+// players (player's real Championship goals ÷ team's real Championship total), since
+// PROMOTED_TEAM_PLAYER_LAST_SEASON only lists notable scorers and badly undercounts the true
+// total if summed directly. Not used by any current-season projection.
 export const PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS: Record<string, number> = {
   "Coventry City": 97,
   "Ipswich Town": 80,
   "Hull City": 70,
 };
-
-// Cache for archived last-season team goals, keyed by team name (team IDs are reassigned
-// each season by the FPL API, so name is the only stable join key across a season boundary).
-// Never expires within a process lifetime — the archive is immutable once written.
-let lastSeasonGoalsCache: Map<string, { goalsFor: number; goalsAgainst: number; played: number }> | null = null;
-let lastSeasonGoalsInFlight: Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> | null = null;
-
-// 2025/26 clean sheet counts for the three promoted clubs, provided directly on the same
-// assumed-38-game-Premier-League-season basis as PROMOTED_TEAM_LAST_SEASON_GOALS above.
-const PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS: Record<string, { cleanSheets: number; played: number }> = {
-  "Coventry City": { cleanSheets: 8, played: 38 },
-  "Ipswich Town": { cleanSheets: 7, played: 38 },
-  "Hull City": { cleanSheets: 6, played: 38 },
-};
-
-// Cache for archived last-season clean sheet rates, same name-keyed/immutable-archive
-// reasoning as lastSeasonGoalsCache above.
-let lastSeasonCleanSheetsCache: Map<string, { cleanSheets: number; played: number }> | null = null;
-let lastSeasonCleanSheetsInFlight: Promise<Map<string, { cleanSheets: number; played: number }>> | null = null;
-
-// Cache for admin-configured promoted-team goal/clean-sheet overrides (admin_promoted_team_goals
-// / admin_promoted_team_clean_sheets tables). Unlike the archive caches above, these are NOT
-// immutable — an admin can change them at any time via the Admin Goal Projections / Admin Clean
-// Sheet Config pages — so update{PromotedTeamGoals,PromotedTeamCleanSheets} below clear both this
-// cache and the corresponding lastSeasonGoalsCache/lastSeasonCleanSheetsCache on every write.
-let promotedTeamGoalsOverrideCache: Map<string, { goalsFor: number; goalsAgainst: number; played: number }> | null = null;
-let promotedTeamCleanSheetsOverrideCache: Map<string, { cleanSheets: number; played: number }> | null = null;
-
-// Cache for archived last-season team DCC (defensive contributions conceded) per game,
-// keyed by team name — reconstructed from gameweek_player_data, see fetchLastSeasonTeamDCC.
-let lastSeasonDCCCache: Map<string, number> | null = null;
-let lastSeasonDCCInFlight: Promise<Map<string, number>> | null = null;
 
 // Fixture-odds rows indexed by "homeTeamId-awayTeamId" (FPL ids, via the Odds API team-name
 // crosswalk) for 'odds' calculationMode. Short TTL so a manual /api/admin/refresh-odds is
@@ -141,7 +90,7 @@ export const PROMOTED_TEAM_PLAYER_LAST_SEASON: Record<string, Record<string, { g
   // now back at their parent clubs Leeds/Liverpool) and Romain Esse (Coventry, now Crystal
   // Palace) all scored real Championship goals last season but aren't on their promoted club's
   // CURRENT roster, so they can't be matched to a specific player here — same reasoning as Diop
-  // above. Their goals are still reflected in the team's real total (PROMOTED_TEAM_LAST_SEASON_GOALS),
+  // above. Their goals are still reflected in the team's real total (PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS),
   // just not attributable to an individual, which is exactly why goal-share for promoted teams is
   // measured against that real total rather than the sum of the players listed here.
 };
@@ -842,233 +791,6 @@ export class TeamGoalsService {
   }
 
   /**
-   * Fetch each team's last-season (2025/26) actual goals for/against from the durable
-   * archive, keyed by team name (not ID — the FPL API reassigns team IDs each season, so
-   * name is the only join key that survives a season boundary). Teams with no PL history
-   * last season (promoted clubs) come from the admin-configurable promoted-team goals
-   * setting instead (PROMOTED_TEAM_LAST_SEASON_GOALS defaults, overridable per-team in the
-   * Admin Goal Projections page — see fetchPromotedTeamGoalsOverrides).
-   */
-  private static async fetchLastSeasonTeamGoals(): Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> {
-    if (lastSeasonGoalsCache) {
-      return lastSeasonGoalsCache;
-    }
-    if (lastSeasonGoalsInFlight) {
-      return lastSeasonGoalsInFlight;
-    }
-    lastSeasonGoalsInFlight = (async () => {
-      const map = new Map<string, { goalsFor: number; goalsAgainst: number; played: number }>();
-      const promotedTeamOverrides = await TeamGoalsService.fetchPromotedTeamGoalsOverrides();
-      promotedTeamOverrides.forEach((stats, name) => {
-        map.set(name, { ...stats });
-      });
-      try {
-        const result = await pool.query(
-          `SELECT team_h_name, team_a_name, team_h_score, team_a_score
-           FROM season_fixtures_archive
-           WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
-          [LAST_SEASON]
-        );
-        const agg = new Map<string, { gf: number; ga: number; played: number }>();
-        for (const row of result.rows) {
-          const h = agg.get(row.team_h_name) || { gf: 0, ga: 0, played: 0 };
-          h.gf += row.team_h_score; h.ga += row.team_a_score; h.played += 1;
-          agg.set(row.team_h_name, h);
-
-          const a = agg.get(row.team_a_name) || { gf: 0, ga: 0, played: 0 };
-          a.gf += row.team_a_score; a.ga += row.team_h_score; a.played += 1;
-          agg.set(row.team_a_name, a);
-        }
-        agg.forEach((stats, name) => {
-          map.set(name, { goalsFor: stats.gf, goalsAgainst: stats.ga, played: stats.played });
-        });
-      } catch (error) {
-        // Not fatal — promoted-team entries above are still available, and getTeamAverageGoals
-        // falls back to this-season-only data when a team has no last-season entry at all.
-        console.error('Failed to fetch archived last-season team goals:', error);
-      }
-      lastSeasonGoalsCache = map;
-      return map;
-    })();
-    try {
-      return await lastSeasonGoalsInFlight;
-    } finally {
-      lastSeasonGoalsInFlight = null;
-    }
-  }
-
-  /**
-   * Fetch each team's last-season (2025/26) clean sheet rate from the durable archive,
-   * keyed by team name — same reasoning and same archive table as fetchLastSeasonTeamGoals,
-   * just counting 0-conceded fixtures instead of goal totals. Promoted clubs come from the
-   * admin-configurable promoted-team clean sheets setting (see fetchPromotedTeamCleanSheetsOverrides).
-   */
-  private static async fetchLastSeasonCleanSheetRates(): Promise<Map<string, { cleanSheets: number; played: number }>> {
-    if (lastSeasonCleanSheetsCache) {
-      return lastSeasonCleanSheetsCache;
-    }
-    if (lastSeasonCleanSheetsInFlight) {
-      return lastSeasonCleanSheetsInFlight;
-    }
-    lastSeasonCleanSheetsInFlight = (async () => {
-      const map = new Map<string, { cleanSheets: number; played: number }>();
-      const promotedTeamOverrides = await TeamGoalsService.fetchPromotedTeamCleanSheetsOverrides();
-      promotedTeamOverrides.forEach((stats, name) => {
-        map.set(name, { ...stats });
-      });
-      try {
-        const result = await pool.query(
-          `SELECT team_h_name, team_a_name, team_h_score, team_a_score
-           FROM season_fixtures_archive
-           WHERE season = $1 AND finished = true AND team_h_score IS NOT NULL AND team_a_score IS NOT NULL`,
-          [LAST_SEASON]
-        );
-        const agg = new Map<string, { cs: number; played: number }>();
-        for (const row of result.rows) {
-          const h = agg.get(row.team_h_name) || { cs: 0, played: 0 };
-          h.played += 1; if (row.team_a_score === 0) h.cs += 1;
-          agg.set(row.team_h_name, h);
-
-          const a = agg.get(row.team_a_name) || { cs: 0, played: 0 };
-          a.played += 1; if (row.team_h_score === 0) a.cs += 1;
-          agg.set(row.team_a_name, a);
-        }
-        agg.forEach((stats, name) => {
-          map.set(name, { cleanSheets: stats.cs, played: stats.played });
-        });
-      } catch (error) {
-        // Not fatal — promoted-team entries above are still available, and getLastSeasonCleanSheetRate
-        // returns undefined when a team has no last-season entry at all, letting the caller fall back.
-        console.error('Failed to fetch archived last-season clean sheet rates:', error);
-      }
-      lastSeasonCleanSheetsCache = map;
-      return map;
-    })();
-    try {
-      return await lastSeasonCleanSheetsInFlight;
-    } finally {
-      lastSeasonCleanSheetsInFlight = null;
-    }
-  }
-
-  /**
-   * Promoted-team goals for/against, starting from the PROMOTED_TEAM_LAST_SEASON_GOALS
-   * defaults and letting any admin-saved row (admin_promoted_team_goals) override a team.
-   * Cached in-process until an admin writes a new value via updatePromotedTeamGoals.
-   */
-  private static async fetchPromotedTeamGoalsOverrides(): Promise<Map<string, { goalsFor: number; goalsAgainst: number; played: number }>> {
-    if (promotedTeamGoalsOverrideCache) {
-      return promotedTeamGoalsOverrideCache;
-    }
-    const map = new Map<string, { goalsFor: number; goalsAgainst: number; played: number }>();
-    for (const [name, stats] of Object.entries(PROMOTED_TEAM_LAST_SEASON_GOALS)) {
-      map.set(name, { ...stats });
-    }
-    try {
-      const result = await pool.query(`SELECT team_name, goals_for, goals_against, played FROM admin_promoted_team_goals`);
-      for (const row of result.rows) {
-        map.set(row.team_name, { goalsFor: row.goals_for, goalsAgainst: row.goals_against, played: row.played });
-      }
-    } catch (error) {
-      console.error('Failed to fetch admin promoted-team goal overrides, using defaults:', error);
-    }
-    promotedTeamGoalsOverrideCache = map;
-    return map;
-  }
-
-  /** Same as fetchPromotedTeamGoalsOverrides, for clean sheets (admin_promoted_team_clean_sheets). */
-  private static async fetchPromotedTeamCleanSheetsOverrides(): Promise<Map<string, { cleanSheets: number; played: number }>> {
-    if (promotedTeamCleanSheetsOverrideCache) {
-      return promotedTeamCleanSheetsOverrideCache;
-    }
-    const map = new Map<string, { cleanSheets: number; played: number }>();
-    for (const [name, stats] of Object.entries(PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS)) {
-      map.set(name, { ...stats });
-    }
-    try {
-      const result = await pool.query(`SELECT team_name, clean_sheets, played FROM admin_promoted_team_clean_sheets`);
-      for (const row of result.rows) {
-        map.set(row.team_name, { cleanSheets: row.clean_sheets, played: row.played });
-      }
-    } catch (error) {
-      console.error('Failed to fetch admin promoted-team clean sheet overrides, using defaults:', error);
-    }
-    promotedTeamCleanSheetsOverrideCache = map;
-    return map;
-  }
-
-  /** Admin-facing read for the Admin Goal Projections page's Promoted Teams section. */
-  static async getPromotedTeamGoalsSettings(): Promise<Array<{ teamName: string; goalsFor: number; goalsAgainst: number; played: number }>> {
-    const map = await TeamGoalsService.fetchPromotedTeamGoalsOverrides();
-    return Array.from(map.entries()).map(([teamName, stats]) => ({ teamName, ...stats }));
-  }
-
-  /**
-   * Admin-facing write for the Admin Goal Projections page's Promoted Teams section. Upserts
-   * each team's goals for/against (played is always the assumed-38-game basis, not editable —
-   * see the PROMOTED_TEAM_LAST_SEASON_GOALS comment above) and invalidates both the override
-   * cache and the downstream lastSeasonGoalsCache so the new values take effect immediately.
-   */
-  static async updatePromotedTeamGoals(
-    updates: Array<{ teamName: string; goalsFor: number; goalsAgainst: number }>,
-    updatedBy: string
-  ): Promise<void> {
-    for (const { teamName, goalsFor, goalsAgainst } of updates) {
-      if (!(teamName in PROMOTED_TEAM_LAST_SEASON_GOALS)) {
-        throw new Error(`Unknown promoted team: ${teamName}`);
-      }
-      await pool.query(
-        `INSERT INTO admin_promoted_team_goals (team_name, goals_for, goals_against, played, updated_by)
-         VALUES ($1, $2, $3, 38, $4)
-         ON CONFLICT (team_name) DO UPDATE SET goals_for = $2, goals_against = $3, updated_at = NOW(), updated_by = $4`,
-        [teamName, goalsFor, goalsAgainst, updatedBy]
-      );
-    }
-    promotedTeamGoalsOverrideCache = null;
-    lastSeasonGoalsCache = null;
-  }
-
-  /** Admin-facing read for the Admin Clean Sheet Config page's Promoted Teams section. */
-  static async getPromotedTeamCleanSheetSettings(): Promise<Array<{ teamName: string; cleanSheets: number; played: number }>> {
-    const map = await TeamGoalsService.fetchPromotedTeamCleanSheetsOverrides();
-    return Array.from(map.entries()).map(([teamName, stats]) => ({ teamName, ...stats }));
-  }
-
-  /** Admin-facing write for the Admin Clean Sheet Config page's Promoted Teams section — same shape as updatePromotedTeamGoals. */
-  static async updatePromotedTeamCleanSheets(
-    updates: Array<{ teamName: string; cleanSheets: number }>,
-    updatedBy: string
-  ): Promise<void> {
-    for (const { teamName, cleanSheets } of updates) {
-      if (!(teamName in PROMOTED_TEAM_LAST_SEASON_CLEAN_SHEETS)) {
-        throw new Error(`Unknown promoted team: ${teamName}`);
-      }
-      await pool.query(
-        `INSERT INTO admin_promoted_team_clean_sheets (team_name, clean_sheets, played, updated_by)
-         VALUES ($1, $2, 38, $3)
-         ON CONFLICT (team_name) DO UPDATE SET clean_sheets = $2, updated_at = NOW(), updated_by = $3`,
-        [teamName, cleanSheets, updatedBy]
-      );
-    }
-    promotedTeamCleanSheetsOverrideCache = null;
-    lastSeasonCleanSheetsCache = null;
-  }
-
-  /**
-   * Get a team's last-season (2025/26) clean sheet rate (0-1), or undefined if no last-season
-   * data exists for them at all. Public — consumed directly by the /api/team-cs-projections
-   * route to blend with this season's rate the same way team goals are blended.
-   */
-  static async getLastSeasonCleanSheetRate(teamId: number): Promise<number | undefined> {
-    const { TEAMS_BY_ID } = await import("@shared/schema");
-    const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
-    if (!teamName) return undefined;
-    const map = await TeamGoalsService.fetchLastSeasonCleanSheetRates();
-    const entry = map.get(teamName);
-    return entry && entry.played > 0 ? entry.cleanSheets / entry.played : undefined;
-  }
-
-  /**
    * Get team's average goals scored per game: this season (2026/27) only, straight from
    * however many fixtures they've actually completed so far — no 2025/26 blend. Each team's
    * own "played" count advances independently as its individual fixtures finish (current-
@@ -1111,99 +833,6 @@ export class TeamGoalsService {
       console.error(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
       throw error;
     }
-  }
-
-  /**
-   * Reconstruct each 2025/26 team's defensive-contributions-conceded per game — how many DC
-   * points opposing outfield players earned against them, on average, per fixture. There's no
-   * ready-made archive for this (unlike goals, which season_fixtures_archive stores directly),
-   * so it's rebuilt from gameweek_player_data: every non-GK row's own defensive_contribution is
-   * attributed as "conceded" to that row's opponent_team for the gameweek. Games-played per team
-   * is reused from fetchLastSeasonTeamGoals (same season_fixtures_archive count), joined via
-   * team name since gameweek_player_data's team ids are the 2025/26-season namespace.
-   */
-  private static async fetchLastSeasonTeamDCC(): Promise<Map<string, number>> {
-    if (lastSeasonDCCCache) {
-      return lastSeasonDCCCache;
-    }
-    if (lastSeasonDCCInFlight) {
-      return lastSeasonDCCInFlight;
-    }
-    lastSeasonDCCInFlight = (async () => {
-      const map = new Map<string, number>();
-      try {
-        // 2025/26 team id -> name, and which player ids are goalkeepers (excluded from DC)
-        const teamRows = await pool.query(
-          `SELECT DISTINCT team_id, team_name FROM historical_player_stats WHERE season = $1`,
-          [LAST_SEASON]
-        );
-        const teamIdToName = new Map<number, string>();
-        teamRows.rows.forEach((r: any) => teamIdToName.set(r.team_id, r.team_name));
-
-        const gkRows = await pool.query(
-          `SELECT player_id FROM historical_player_stats WHERE season = $1 AND element_type = 1`,
-          [LAST_SEASON]
-        );
-        const goalkeeperIds = new Set<number>(gkRows.rows.map((r: any) => r.player_id));
-
-        const dcRows = await pool.query(
-          `SELECT player_id, opponent_team, defensive_contribution
-           FROM gameweek_player_data
-           WHERE season = $1 AND opponent_team IS NOT NULL AND defensive_contribution > 0`,
-          [LAST_SEASON]
-        );
-        const dcConcededByTeamId = new Map<number, number>();
-        for (const row of dcRows.rows) {
-          if (goalkeeperIds.has(row.player_id)) continue;
-          const current = dcConcededByTeamId.get(row.opponent_team) || 0;
-          dcConcededByTeamId.set(row.opponent_team, current + row.defensive_contribution);
-        }
-
-        const gamesPlayedByName = await TeamGoalsService.fetchLastSeasonTeamGoals();
-        dcConcededByTeamId.forEach((totalDC, teamId) => {
-          const teamName = teamIdToName.get(teamId);
-          if (!teamName) return;
-          const played = gamesPlayedByName.get(teamName)?.played;
-          if (played && played > 0) {
-            map.set(teamName, totalDC / played);
-          }
-        });
-      } catch (error) {
-        // Not fatal — getLastSeasonTeamDCCRate falls back to this-season-only or league average.
-        console.error('Failed to reconstruct archived last-season team DCC:', error);
-      }
-      lastSeasonDCCCache = map;
-      return map;
-    })();
-    try {
-      return await lastSeasonDCCInFlight;
-    } finally {
-      lastSeasonDCCInFlight = null;
-    }
-  }
-
-  /**
-   * A team's last-season (2025/26) defensive-contributions-conceded per game, or undefined if
-   * they have no PL data for that season (promoted teams) — same "undefined means fall back"
-   * contract as getLastSeasonCleanSheetRate.
-   */
-  static async getLastSeasonTeamDCCRate(teamId: number): Promise<number | undefined> {
-    const { TEAMS_BY_ID } = await import("@shared/schema");
-    const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
-    if (!teamName) return undefined;
-    const map = await TeamGoalsService.fetchLastSeasonTeamDCC();
-    return map.get(teamName);
-  }
-
-  /**
-   * League-average 2025/26 DCC per game across every team that has archived data — the fallback
-   * for promoted teams (Coventry/Ipswich/Hull), who have no Premier League DC data to blend.
-   */
-  static async getLeagueAverageDCCRate(): Promise<number> {
-    const map = await TeamGoalsService.fetchLastSeasonTeamDCC();
-    if (map.size === 0) return 0;
-    const total = Array.from(map.values()).reduce((sum, v) => sum + v, 0);
-    return total / map.size;
   }
 
   /**
