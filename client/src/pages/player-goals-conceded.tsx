@@ -71,7 +71,12 @@ export default function PlayerGoalsConceded() {
 
   // Get current gameweek — dropdown options span next gameweek through GW38, default view is 6 gameweeks
   const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
-  const nextGameweek = currentGameweek + 1;
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages.
+  const currentGWHasUnstarted = Array.isArray(fixturesData) && currentGameweek > 0 &&
+    (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+  const nextGameweek = currentGWHasUnstarted ? currentGameweek : currentGameweek + 1;
   const defaultGameweeks = Array.from({ length: 6 }, (_, i) => nextGameweek + i);
   const allSelectableGameweeks = Array.from({ length: Math.max(38 - nextGameweek + 1, 0) }, (_, i) => nextGameweek + i);
   // In custom/expert mode, GW39 is absorbed into the assigned GW — no separate column
@@ -93,12 +98,42 @@ export default function PlayerGoalsConceded() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Team SHORT codes whose own fixture in the current gameweek has kicked off or finished —
+  // their current-GW projection is a stale pre-match estimate and gets blanked client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
+  // A decided team's current-GW projection is a stale pre-match estimate — strip the key
+  // entirely so it renders blank and is excluded from the total/average, same convention as the
+  // other Player Projection pages.
+  const blankedProjections = useMemo<GoalsConcededProjection[]>(() => {
+    const data = (goalsConcededProjections as GoalsConcededProjection[]) || [];
+    if (currentGameweek <= 0 || currentGWDecidedTeamShorts.size === 0) return data;
+    const gwKey = `gw${currentGameweek}`;
+    return data.map(p => {
+      if (!currentGWDecidedTeamShorts.has(p.teamName)) return p;
+      if (!(gwKey in (p.goalsConceded || {})) && !(gwKey in (p.pointsFromGoalsConceded || {}))) return p;
+      const { [gwKey]: _omitGC, ...restGC } = p.goalsConceded || {};
+      const { [gwKey]: _omitPts, ...restPts } = p.pointsFromGoalsConceded || {};
+      return { ...p, goalsConceded: restGC, pointsFromGoalsConceded: restPts };
+    });
+  }, [goalsConcededProjections, currentGameweek, currentGWDecidedTeamShorts]);
+
   // Resolve GW39 data: in custom/expert mode, absorb GW39 into the assigned GW
   const resolvedProjections = useMemo<GoalsConcededProjection[]>(() => {
-    if (!goalsConcededProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
-      return (goalsConcededProjections as GoalsConcededProjection[]) || [];
+    if (!blankedProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
+      return blankedProjections || [];
     }
-    return (goalsConcededProjections as GoalsConcededProjection[]).map((projection: GoalsConcededProjection) => {
+    return blankedProjections.map((projection: GoalsConcededProjection) => {
       const tbcInfo = tbcTeamInfoMap.get(projection.teamName);
       if (!tbcInfo) return projection;
       const gw39GC = projection.goalsConceded['gw39'] || 0;
@@ -111,7 +146,16 @@ export default function PlayerGoalsConceded() {
       const newPointsFromGoalsConceded = { ...projection.pointsFromGoalsConceded, [gwKey]: (projection.pointsFromGoalsConceded[gwKey] || 0) + gw39Pts, 'gw39': 0 };
       return { ...projection, goalsConceded: newGoalsConceded, pointsFromGoalsConceded: newPointsFromGoalsConceded };
     });
-  }, [goalsConcededProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+  }, [blankedProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+
+  // Only counts gameweeks with a real (present) entry — a blanked current-GW cell isn't in the
+  // map at all, so it's correctly excluded from the average's denominator.
+  const getDisplayAverage = (values: { [key: string]: number }) => {
+    const presentGws = displayGWs.filter(gw => `gw${gw}` in (values || {}));
+    if (presentGws.length === 0) return 0;
+    const total = presentGws.reduce((sum, gw) => sum + (values[`gw${gw}`] || 0), 0);
+    return total / presentGws.length;
+  };
 
   const filteredProjections = resolvedProjections.filter((projection: GoalsConcededProjection) => {
     const matchesSearch = !searchTerm || 
@@ -141,6 +185,9 @@ export default function PlayerGoalsConceded() {
     } else if (sortBy === "totalGoalsConceded") {
       aValue = displayGWs.reduce((sum, gw) => sum + (a.goalsConceded[`gw${gw}`] || 0), 0);
       bValue = displayGWs.reduce((sum, gw) => sum + (b.goalsConceded[`gw${gw}`] || 0), 0);
+    } else if (sortBy === "averagePerGameweek") {
+      aValue = getDisplayAverage(a.goalsConceded);
+      bValue = getDisplayAverage(b.goalsConceded);
     } else if (sortBy === "totalPoints") {
       aValue = displayGWs.reduce((sum, gw) => sum + (a.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
       bValue = displayGWs.reduce((sum, gw) => sum + (b.pointsFromGoalsConceded[`gw${gw}`] || 0), 0);
@@ -424,13 +471,13 @@ export default function PlayerGoalsConceded() {
                           <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
                           <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => (
-                            <td key={gw} className="text-center">{projection.goalsConceded[`gw${gw}`]}</td>
+                            <td key={gw} className="text-center">{projection.goalsConceded[`gw${gw}`] ?? '-'}</td>
                           ))}
                           <td className="text-center font-semibold text-red-600">
                             {displayTotalGC.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {displayGWs.length > 0 ? (displayTotalGC / displayGWs.length).toFixed(2) : '0.00'}
+                            {getDisplayAverage(projection.goalsConceded).toFixed(2)}
                           </td>
                         </tr>
                         );
@@ -494,13 +541,13 @@ export default function PlayerGoalsConceded() {
                           <td className="text-center text-xs font-semibold fpl-col-pos">{projection.position}</td>
                           <td className="text-center text-sm fpl-col-team">{projection.teamName}</td>
                           {displayGWs.map(gw => (
-                            <td key={gw} className="text-center">{projection.pointsFromGoalsConceded[`gw${gw}`]}</td>
+                            <td key={gw} className="text-center">{projection.pointsFromGoalsConceded[`gw${gw}`] ?? '-'}</td>
                           ))}
                           <td className="text-center font-semibold text-red-600">
                             {displayTotalPts.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {displayGWs.length > 0 ? (displayTotalPts / displayGWs.length).toFixed(2) : '0.00'}
+                            {getDisplayAverage(projection.pointsFromGoalsConceded).toFixed(2)}
                           </td>
                         </tr>
                         );

@@ -18053,14 +18053,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         const fplData = await fplResponse.json();
         const currentGameweek = computeCurrentGameweek(fplData.events);
-        const nextGameweek = currentGameweek + 1; // Start from next gameweek
-        
+
         // Get team goals AGAINST (conceded) projections and player minutes data
         const [teamProjections, playerMinutesData, gcFixturesData] = await Promise.all([
           teamProjectionsResponse.json(),
           playerMinutesResponse.json(),
           gcFixturesResponse.json()
         ]);
+
+        // Fold the current gameweek in when it still has an unstarted fixture — mirrors the
+        // fold-in already applied to Team Projections / Player Points; without this, the loop
+        // below always floored at currentGameweek + 1 regardless of what startGameweek was
+        // explicitly requested as.
+        const currentGWHasUnstartedGC = currentGameweek > 0 &&
+          gcFixturesData.some((f: any) => f.event === currentGameweek && !f.started);
+        const nextGameweek = currentGWHasUnstartedGC ? currentGameweek : currentGameweek + 1;
         
         // Filter to only GKP and DEF (affected by goals conceded)
         const affectedPlayers = fplData.elements.filter((player: any) => 
