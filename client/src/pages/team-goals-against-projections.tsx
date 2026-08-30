@@ -1015,26 +1015,46 @@ export default function TeamGoalsAgainstProjections() {
                           );
                         })()}
 
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
-                          <span className="text-sm md:text-lg font-bold text-blue-900">
-                            {viewMode === "past"
-                              ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
-                              : (() => {
-                                  const regularGA = activeGameweeks
-                                    .filter(gw => gw !== 39)
-                                    .reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
-                                  const tbcGA = (activeGameweeks.includes(39) && fixtureMode === 'base')
-                                    ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
-                                    : ((activeGameweeks.includes(39) || (selectedGameweeks.size > 0 && !selectedGameweeks.has(39))) ? 0 : getUnabsorbedTBC(team.teamShort));
-                                  return (regularGA + tbcGA).toFixed(2);
-                                })()}
-                          </span>
-                        </td>
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                          <span className="text-sm md:text-lg font-bold text-blue-900">
-                            {(team.averageGoalsAgainstPerGame ?? 0).toFixed(2)}
-                          </span>
-                        </td>
+                        {(() => {
+                          if (viewMode === "past") {
+                            const total = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+                            const countedWeeks = activeGameweeks.filter(gw => team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined).length;
+                            const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                            return (
+                              <>
+                                <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
+                                  <span className="text-sm md:text-lg font-bold text-blue-900">{total}</span>
+                                </td>
+                                <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                                  <span className="text-sm md:text-lg font-bold text-blue-900">{avg.toFixed(2)}</span>
+                                </td>
+                              </>
+                            );
+                          }
+                          // Exclude the current gameweek's contribution once this team's own fixture
+                          // is decided — its cell is blanked (see isDecidedCurrentGW below) but the
+                          // raw backend value is still a stale projection. Average is derived from
+                          // this same (corrected) total divided by the gameweeks actually counted,
+                          // so the two numbers always agree.
+                          const countedRegularGws = activeGameweeks.filter(gw => gw !== 39 && !(gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)));
+                          const regularGA = countedRegularGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+                          const tbcGA = (activeGameweeks.includes(39) && fixtureMode === 'base')
+                            ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
+                            : ((activeGameweeks.includes(39) || (selectedGameweeks.size > 0 && !selectedGameweeks.has(39))) ? 0 : getUnabsorbedTBC(team.teamShort));
+                          const total = regularGA + tbcGA;
+                          const countedWeeks = countedRegularGws.length + (tbcGA > 0 ? 1 : 0);
+                          const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                          return (
+                            <>
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{total.toFixed(2)}</span>
+                              </td>
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{avg.toFixed(2)}</span>
+                              </td>
+                            </>
+                          );
+                        })()}
 
                       </tr>
                     ))}

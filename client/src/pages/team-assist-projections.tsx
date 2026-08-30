@@ -805,18 +805,32 @@ export default function TeamAssistProjections() {
                         );
                       })()}
 
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
-                        <span className="text-sm md:text-lg font-bold text-blue-900">
-                          {(() => {
-                            const rowTotal = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + getUnabsorbedTBC(team.teamShort);
-                            return viewMode === "past" ? rowTotal : rowTotal.toFixed(2);
-                          })()}
-                        </span>
-                      </td>
-                      
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium text-gray-900 hidden md:table-cell">
-                        {team.averageAssistsPerGame.toFixed(2)}
-                      </td>
+                      {(() => {
+                        // Exclude the current gameweek's contribution once this team's own fixture
+                        // is decided — its cell is blanked but the raw backend value is still a
+                        // stale projection. Average is derived from this same (corrected) total
+                        // divided by the gameweeks actually counted, so the two always agree.
+                        const countedGws = activeGameweeks.filter(gw =>
+                          !(viewMode === "future" && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
+                          (viewMode !== "past" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+                        );
+                        const tbc = getUnabsorbedTBC(team.teamShort);
+                        const rowTotal = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
+                        const countedWeeks = countedGws.length + (tbc > 0 ? 1 : 0);
+                        const avg = countedWeeks > 0 ? rowTotal / countedWeeks : 0;
+                        return (
+                          <>
+                            <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
+                              <span className="text-sm md:text-lg font-bold text-blue-900">
+                                {viewMode === "past" ? rowTotal : rowTotal.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium text-gray-900 hidden md:table-cell">
+                              {avg.toFixed(2)}
+                            </td>
+                          </>
+                        );
+                      })()}
                       
                     </tr>
                   ))}

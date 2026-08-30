@@ -1126,21 +1126,36 @@ export default function TeamGoalProjections() {
                           );
                         })()}
                         
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
-                          <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {(() => {
-                              const gwSum = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
-                              const tbcGoals = getUnabsorbedTBC(team.teamShort);
-                              const total = gwSum + tbcGoals;
-                              return viewMode === "past" ? total : total.toFixed(2);
-                            })()}
-                          </span>
-                        </td>
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                          <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {(team.averageGoalsPerGame ?? 0).toFixed(2)}
-                          </span>
-                        </td>
+                        {(() => {
+                          // Exclude the current gameweek's contribution once this team's own
+                          // fixture is decided — its cell is blanked (see isDecidedCurrentGW
+                          // above) but the raw backend value is still a stale projection.
+                          // Average is derived from this same (corrected) total divided by the
+                          // gameweeks actually counted, so the two numbers always agree.
+                          const countedGws = activeGameweeks.filter(gw =>
+                            !(viewMode === "future" && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
+                            (viewMode !== "past" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+                          );
+                          const gwSum = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+                          const tbcGoals = getUnabsorbedTBC(team.teamShort);
+                          const total = gwSum + tbcGoals;
+                          const countedWeeks = countedGws.length + (tbcGoals > 0 ? 1 : 0);
+                          const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                          return (
+                            <>
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
+                                <span className="text-sm md:text-lg font-bold text-orange-900">
+                                  {viewMode === "past" ? total : total.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                                <span className="text-sm md:text-lg font-bold text-orange-900">
+                                  {avg.toFixed(2)}
+                                </span>
+                              </td>
+                            </>
+                          );
+                        })()}
 
                       </tr>
                     ))}
