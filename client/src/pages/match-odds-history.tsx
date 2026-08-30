@@ -55,6 +55,52 @@ export default function MatchOddsHistory() {
     }));
   }, [data]);
 
+  // Indices worth labeling with their actual value on the chart, rather than leaving every
+  // point as a bare dot: the first and last snapshots (where the line started/currently stands)
+  // and the lowest/highest points reached (how far the market swung), per series independently
+  // since home and away xG don't necessarily peak at the same snapshot.
+  const getHighlightIndices = (key: "expectedHomeGoals" | "expectedAwayGoals"): Set<number> => {
+    const indices = new Set<number>();
+    const values = chartData
+      .map((d, i) => ({ v: d[key], i }))
+      .filter((d): d is { v: number; i: number } => d.v !== null && d.v !== undefined);
+    if (values.length === 0) return indices;
+    indices.add(values[0].i);
+    indices.add(values[values.length - 1].i);
+    let minEntry = values[0];
+    let maxEntry = values[0];
+    for (const entry of values) {
+      if (entry.v < minEntry.v) minEntry = entry;
+      if (entry.v > maxEntry.v) maxEntry = entry;
+    }
+    indices.add(minEntry.i);
+    indices.add(maxEntry.i);
+    return indices;
+  };
+
+  const renderAnnotatedDot = (color: string, highlightIndices: Set<number>, labelAbove: boolean) => (props: any) => {
+    const { cx, cy, index, value } = props;
+    if (value === null || value === undefined) return <g key={`dot-${index}`} />;
+    if (!highlightIndices.has(index)) {
+      return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={color} stroke={color} />;
+    }
+    return (
+      <g key={`dot-${index}`}>
+        <circle cx={cx} cy={cy} r={4.5} fill={color} stroke="#fff" strokeWidth={1.5} />
+        <text
+          x={cx}
+          y={labelAbove ? cy - 10 : cy + 18}
+          textAnchor="middle"
+          fontSize={11}
+          fontWeight={600}
+          fill={color}
+        >
+          {value.toFixed(2)}
+        </text>
+      </g>
+    );
+  };
+
   const commenceTimeLabel = data?.commenceTime
     ? new Date(data.commenceTime).toLocaleString(undefined, {
         weekday: "short",
@@ -145,7 +191,7 @@ export default function MatchOddsHistory() {
                         name={`${data.homeTeam} (xG)`}
                         stroke="#059669"
                         strokeWidth={2}
-                        dot={{ r: 3 }}
+                        dot={renderAnnotatedDot("#059669", getHighlightIndices("expectedHomeGoals"), true)}
                         connectNulls
                       />
                       <Line
@@ -154,7 +200,7 @@ export default function MatchOddsHistory() {
                         name={`${data.awayTeam} (xG)`}
                         stroke="#2563eb"
                         strokeWidth={2}
-                        dot={{ r: 3 }}
+                        dot={renderAnnotatedDot("#2563eb", getHighlightIndices("expectedAwayGoals"), false)}
                         connectNulls
                       />
                     </LineChart>
