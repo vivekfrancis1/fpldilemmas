@@ -680,11 +680,11 @@ export default function ResultsAndFixtures() {
                             </span>
                           ) : (
                             <div className="text-center">
-                              <div className="text-sm text-gray-600">
-                                {formatDateTime(fixture.kickoff_time).time}
-                              </div>
                               <div className="text-xs text-gray-500">
                                 {formatDateTime(fixture.kickoff_time).date}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {formatDateTime(fixture.kickoff_time).time}
                               </div>
                             </div>
                           )}
