@@ -6898,9 +6898,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const statusFromPredicted = (predictedProgress: number): string => {
         const magnitude = Math.abs(predictedProgress);
         const direction = predictedProgress >= 0 ? "rise" : "drop";
-        if (magnitude > 100) return `Very likely to ${direction}`;
-        if (magnitude >= 95) return `Likely to ${direction}`;
-        return "Unlikely to change";
+        if (magnitude > 100) return `Very likely to ${direction} today`;
+        if (magnitude >= 95) return `May ${direction} today`;
+        return "Unlikely to change today";
       };
 
       // Hours remaining until FPL's next price update (00:00 UK time) — Europe/London so BST/GMT

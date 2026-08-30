@@ -108,9 +108,9 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     const risePred = predictions.find((p: any) => p.player_id === strongRiser.id);
     const fallPred = predictions.find((p: any) => p.player_id === strongFaller.id);
 
-    expect(barelyPred.status).toBe('Unlikely to change');
-    expect(risePred.status.toLowerCase()).toBe('very likely to rise');
-    expect(fallPred.status.toLowerCase()).toBe('very likely to drop');
+    expect(barelyPred.status).toBe('Unlikely to change today');
+    expect(risePred.status.toLowerCase()).toBe('very likely to rise today');
+    expect(fallPred.status.toLowerCase()).toBe('very likely to drop today');
   });
 
   it('hourly_rate is (predicted_progress - progress) / hours remaining until the next 00:00 UK price update', () => {

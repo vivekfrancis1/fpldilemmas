@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles, Filter } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 
 interface PricePrediction {
@@ -93,6 +94,8 @@ export default function RecentPriceChanges() {
   const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
   const [predictionClubFilter, setPredictionClubFilter] = useState("all");
   const [predictionStatusFilter, setPredictionStatusFilter] = useState("all");
+  const [isPredictionFiltersOpen, setIsPredictionFiltersOpen] = useState(false); // collapsed by default, especially on mobile
+  const [isRecentFiltersOpen, setIsRecentFiltersOpen] = useState(false); // collapsed by default, especially on mobile
   const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
   const [secondsUntilPriceChange, setSecondsUntilPriceChange] = useState(() => getSecondsUntilNextPriceChange());
   const { toast } = useToast();
@@ -351,11 +354,11 @@ export default function RecentPriceChanges() {
   // Colors mirror FPL's own price-changes page: darker/more saturated = closer to certain.
   const statusBadgeClass = (status: string): string => {
     switch (status) {
-      case "Very likely to rise": return "bg-green-700 text-white";
-      case "Likely to rise": return "bg-green-100 text-green-800";
-      case "Very likely to drop": return "bg-red-800 text-white";
-      case "Likely to drop": return "bg-red-100 text-red-700";
-      default: return "bg-gray-100 text-gray-600"; // Unlikely to change
+      case "Very likely to rise today": return "bg-green-700 text-white";
+      case "May rise today": return "bg-green-100 text-green-800";
+      case "Very likely to drop today": return "bg-red-800 text-white";
+      case "May drop today": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-600"; // Unlikely to change today
     }
   };
 
@@ -463,88 +466,107 @@ export default function RecentPriceChanges() {
               </CardContent>
             </Card>
 
-            <Card className="mb-6 shadow-md border-0">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search players or teams..."
-                        value={predictionSearchTerm}
-                        onChange={(e) => setPredictionSearchTerm(e.target.value)}
-                        className="pl-9"
-                        data-testid="input-search-predictions"
-                      />
+            <Collapsible open={isPredictionFiltersOpen} onOpenChange={setIsPredictionFiltersOpen} className="mb-6">
+              <Card className="shadow-md border-0">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        <CardTitle className="text-sm sm:text-lg">Search &amp; Filters</CardTitle>
+                      </div>
+                      {isPredictionFiltersOpen ? (
+                        <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                      )}
                     </div>
-                  </div>
-                  <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-team-filter">
-                      <SelectValue placeholder="All Players" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Players</SelectItem>
-                      <SelectItem value="my-team">My Team</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={predictionClubFilter} onValueChange={setPredictionClubFilter}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-club-filter">
-                      <SelectValue placeholder="All Teams" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Teams</SelectItem>
-                      {getClubs().map(club => (
-                        <SelectItem key={club.id} value={club.name}>
-                          {club.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={predictionPositionFilter} onValueChange={setPredictionPositionFilter}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-position-filter">
-                      <SelectValue placeholder="All Positions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Positions</SelectItem>
-                      {getPlayersByPosition().map(pos => (
-                        <SelectItem key={pos.id} value={pos.name}>
-                          {pos.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={predictionMovementFilter} onValueChange={(v) => setPredictionMovementFilter(v as PredictionMovementFilter)}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-movement-filter">
-                      <SelectValue placeholder="Rise & drop" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Rise &amp; drop</SelectItem>
-                      <SelectItem value="rise">Rise</SelectItem>
-                      <SelectItem value="drop">Drop</SelectItem>
-                      <SelectItem value="locked">Locked</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={predictionStatusFilter} onValueChange={setPredictionStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-status-filter">
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Very likely to rise">Very likely to rise</SelectItem>
-                      <SelectItem value="Likely to rise">Likely to rise</SelectItem>
-                      <SelectItem value="Unlikely to change">Unlikely to change</SelectItem>
-                      <SelectItem value="Likely to drop">Likely to drop</SelectItem>
-                      <SelectItem value="Very likely to drop">Very likely to drop</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {predictionTeamFilter === "my-team" && !cachedManagerId && (
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Link your Manager ID on the My Team page to filter to your own squad.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 text-xs sm:text-sm">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <div className="flex-1">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search players or teams..."
+                            value={predictionSearchTerm}
+                            onChange={(e) => setPredictionSearchTerm(e.target.value)}
+                            className="pl-9 h-9 text-xs sm:text-sm"
+                            data-testid="input-search-predictions"
+                          />
+                        </div>
+                      </div>
+                      <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
+                        <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-team-filter">
+                          <SelectValue placeholder="All Players" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Players</SelectItem>
+                          <SelectItem value="my-team">My Team</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={predictionClubFilter} onValueChange={setPredictionClubFilter}>
+                        <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-club-filter">
+                          <SelectValue placeholder="All Teams" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Teams</SelectItem>
+                          {getClubs().map(club => (
+                            <SelectItem key={club.id} value={club.name}>
+                              {club.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={predictionPositionFilter} onValueChange={setPredictionPositionFilter}>
+                        <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-position-filter">
+                          <SelectValue placeholder="All Positions" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Positions</SelectItem>
+                          {getPlayersByPosition().map(pos => (
+                            <SelectItem key={pos.id} value={pos.name}>
+                              {pos.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={predictionMovementFilter} onValueChange={(v) => setPredictionMovementFilter(v as PredictionMovementFilter)}>
+                        <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-movement-filter">
+                          <SelectValue placeholder="Rise & drop" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Rise &amp; drop</SelectItem>
+                          <SelectItem value="rise">Rise</SelectItem>
+                          <SelectItem value="drop">Drop</SelectItem>
+                          <SelectItem value="locked">Locked</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={predictionStatusFilter} onValueChange={setPredictionStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-status-filter">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="Very likely to rise today">Very likely to rise today</SelectItem>
+                          <SelectItem value="May rise today">May rise today</SelectItem>
+                          <SelectItem value="Unlikely to change today">Unlikely to change today</SelectItem>
+                          <SelectItem value="May drop today">May drop today</SelectItem>
+                          <SelectItem value="Very likely to drop today">Very likely to drop today</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {predictionTeamFilter === "my-team" && !cachedManagerId && (
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Link your Manager ID on the My Team page to filter to your own squad.
+                      </p>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             <Card className="shadow-lg border-0">
               <CardHeader>
@@ -553,8 +575,8 @@ export default function RecentPriceChanges() {
                   Predicted Price Changes
                 </CardTitle>
                 <CardDescription>
-                  Real-time progress toward each player's next price change, straight from FPL's own official data — updates as transfers happen, same numbers you'd see on fantasy.premierleague.com.
-                  {" "}Status: predicted progress past <strong>100%</strong> is "Very likely", <strong>95–100%</strong> is "Likely", anything below is "Unlikely to change".
+                  Real-time progress toward each player's next price change, straight from FPL's own official data.
+                  {" "}Status: predicted progress past <strong>100%</strong> is "Very likely", <strong>95–100%</strong> is "May", anything below is "Unlikely to change".
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -779,64 +801,83 @@ export default function RecentPriceChanges() {
 
 
         {/* Search and Filters */}
-        <Card className="mb-6 shadow-md border-0">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search players or teams..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                      data-testid="input-search-players"
-                    />
+        <Collapsible open={isRecentFiltersOpen} onOpenChange={setIsRecentFiltersOpen} className="mb-6">
+          <Card className="shadow-md border-0">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <CardTitle className="text-sm sm:text-lg">Search &amp; Filters</CardTitle>
+                  </div>
+                  {isRecentFiltersOpen ? (
+                    <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 text-xs sm:text-sm">
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search players or teams..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-9 h-9 text-xs sm:text-sm"
+                          data-testid="input-search-players"
+                        />
+                      </div>
+                    </div>
+                    <Select value={positionFilter} onValueChange={setPositionFilter}>
+                      <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-position-filter">
+                        <SelectValue placeholder="All Positions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Positions</SelectItem>
+                        {getPlayersByPosition().map(pos => (
+                          <SelectItem key={pos.id} value={pos.name}>
+                            {pos.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
+                      <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-change-filter">
+                        <SelectValue placeholder="All Changes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Changes</SelectItem>
+                        <SelectItem value="rises">Price Rises</SelectItem>
+                        <SelectItem value="falls">Price Falls</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Refresh Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleRefresh}
+                      disabled={refreshMutation.isPending}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2 text-xs sm:text-sm"
+                      data-testid="button-refresh-prices"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+                      {refreshMutation.isPending ? "Refreshing..." : "Refresh from FPL API"}
+                    </Button>
                   </div>
                 </div>
-                <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="w-full sm:w-48" data-testid="select-position-filter">
-                    <SelectValue placeholder="All Positions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Positions</SelectItem>
-                    {getPlayersByPosition().map(pos => (
-                      <SelectItem key={pos.id} value={pos.name}>
-                        {pos.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={changeTypeFilter} onValueChange={setChangeTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-48" data-testid="select-change-filter">
-                    <SelectValue placeholder="All Changes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Changes</SelectItem>
-                    <SelectItem value="rises">Price Rises</SelectItem>
-                    <SelectItem value="falls">Price Falls</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Refresh Button */}
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleRefresh}
-                  disabled={refreshMutation.isPending}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  data-testid="button-refresh-prices"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
-                  {refreshMutation.isPending ? "Refreshing..." : "Refresh from FPL API"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Error Display */}
         {changesError && (
