@@ -18510,8 +18510,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        const { MIN_STARTS_FOR_RATE } = await import("./player-history-blend-service");
-
         // Count finished fixtures per team (accounts for DGWs)
         const teamFixturesPlayed = new Map<number, number>();
         allFixtures.forEach((f: any) => {
@@ -18532,15 +18530,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalPoints = 0;
 
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
-          // (player.bonus/starts otherwise still reflect 2025/26's frozen pre-kickoff carryover)
-          // and once starts clear the small-sample noise floor.
-          const thisSeasonBonusPerFixture = finishedGWs > 0 && (player.starts || 0) >= MIN_STARTS_FOR_RATE
-            ? (player.bonus || 0) / (player.starts || 1)
+          // (player.bonus/starts otherwise still reflect 2025/26's frozen pre-kickoff carryover).
+          // No minimum-starts gate — a player's rate from even 1-2 starts is used as-is rather
+          // than projecting a flat 0 until they clear an arbitrary threshold.
+          const thisSeasonBonusPerFixture = finishedGWs > 0 && (player.starts || 0) > 0
+            ? (player.bonus || 0) / player.starts
             : undefined;
 
           // This season's data only — a player with no usable current-season rate yet (new
-          // signing, promoted-team squad member, or under the starts threshold) projects 0
-          // bonus/fixture until they build up real starts.
+          // signing, promoted-team squad member, or 0 starts so far) projects 0 bonus/fixture
+          // until they've started at least once.
           const bonusPerFixture = thisSeasonBonusPerFixture ?? 0;
 
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
