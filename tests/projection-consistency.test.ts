@@ -339,11 +339,22 @@ describe('Server-Side Availability Adjustments', () => {
   });
 
   it('fully available players have identical projections in adjusted and raw responses', () => {
-    const availablePlayers = bootstrapData.elements.filter(
-      (el: any) =>
-        el.status === 'a' &&
-        (el.chance_of_playing_next_round === null || el.chance_of_playing_next_round === 100)
-    );
+    // Being individually fully fit isn't sufficient on its own: the reallocation-aware
+    // availabilityRatioPerGW (server/xmins-reallocation.ts) can push a fully-fit player's own
+    // ratio above 1.0 when a same-team-same-position teammate is unavailable and they absorb
+    // some of that teammate's freed minutes — a real, intended effect, not a bug. Only players
+    // with no less-than-fully-available teammate in the same team+position group are a clean
+    // test of "individually fully fit implies adjusted === raw".
+    const isFullyAvailable = (el: any) =>
+      el.status === 'a' && (el.chance_of_playing_next_round === null || el.chance_of_playing_next_round === 100);
+
+    const availablePlayers = bootstrapData.elements.filter((el: any) => {
+      if (!isFullyAvailable(el)) return false;
+      const teammates = bootstrapData.elements.filter(
+        (t: any) => t.team === el.team && t.element_type === el.element_type && t.id !== el.id
+      );
+      return teammates.every(isFullyAvailable);
+    });
 
     const failures: string[] = [];
     const sample = availablePlayers.slice(0, 30);
@@ -379,8 +390,12 @@ describe('Server-Side Availability Adjustments', () => {
 
     expect(adjustedData.length).toBe(rawData.length);
 
+    // Must also have real current-season minutes: with the last-season/league-average
+    // fallback removed (per explicit product decision), a player who's been out since before
+    // their first appearance this season has no signal to project at all, so both raw and
+    // adjusted are legitimately 0 for them — not useful for testing that the two differ.
     const injuredPlayers = bootstrapData.elements.filter(
-      (el: any) => el.chance_of_playing_next_round === 0
+      (el: any) => el.chance_of_playing_next_round === 0 && (el.minutes || 0) > 0
     );
 
     let differencesFound = 0;
@@ -729,11 +744,18 @@ describe('Projection Value Sanity Checks', () => {
   });
 
   it('goalkeepers have save projections, outfield players do not', () => {
+    // Saves-per-90 has no last-season/league-average fallback anymore (per explicit product
+    // decision) — a keeper needs >=270 real current-season minutes (MIN_MINUTES_FOR_RATE in
+    // server/player-history-blend-service.ts) before a per-90 rate is trusted at all, so 0
+    // saves is the CORRECT projection for anyone under that threshold, not a defect. Only a
+    // keeper who has cleared the threshold and still shows 0 everywhere is a genuine issue.
+    const MIN_MINUTES_FOR_RATE = 270;
     let issues = 0;
 
     for (const player of cachedPlayerTotalPoints.slice(0, 100)) {
       const bootstrapPlayer = bootstrapData.elements.find((el: any) => el.id === player.playerId);
       if (!bootstrapPlayer) continue;
+      if ((bootstrapPlayer.minutes || 0) < MIN_MINUTES_FOR_RATE) continue;
 
       const hasSaves = player.pointsFromSaves && Object.values(player.pointsFromSaves as Record<string, number>).some((v: number) => v > 0);
 

@@ -9939,7 +9939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const PROMOTED_TEAM_CHAMPIONSHIP_GAMES = 46;
 
   async function buildRealGoalShareForSeason(bootstrapData: any, season: string): Promise<any[]> {
-    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS, TeamGoalsService } = await import('./team-goals-service');
+    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS } = await import('./team-goals-service');
     const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
     const realGoalsByPlayerId = new Map<number, number>();
@@ -9988,34 +9988,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    const promotedGoalsSettings = season === PREVIOUS_SEASON ? await TeamGoalsService.getPromotedTeamGoalsSettings() : [];
-    const assumedGoalsByTeamName = new Map(promotedGoalsSettings.map((s: any) => [s.teamName, s.goalsFor]));
-
     const finalResponse: any[] = [];
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
       const teamGoalsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realGoalsByPlayerId.get(p.id) || 0), 0);
       const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
-      // Two different numbers for promoted teams: the REAL Championship total (goal share is a
-      // real ratio, so it's measured against the real total, not the incomplete sum of just the
-      // players individually listed in PROMOTED_TEAM_PLAYER_LAST_SEASON), and the ASSUMED
-      // (deliberately regressed) PL-level total, used only as the multiplier to convert that
-      // real share into a Premier-League-appropriate "assumed goals of player" figure.
+      // Promoted teams' goal share is measured against the REAL Championship total (a real
+      // ratio needs a real total, not the incomplete sum of just the players individually
+      // listed in PROMOTED_TEAM_PLAYER_LAST_SEASON) — no assumed/regressed conversion to a
+      // "Premier-League-appropriate" figure; projectedGoals is just the player's real goals.
       const actualChampionshipGoals = isPromoted ? PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS[team.name] : undefined;
-      const assumedTeamGoals = isPromoted ? assumedGoalsByTeamName.get(team.name) : undefined;
       const shareDenominator = (isPromoted && actualChampionshipGoals !== undefined) ? actualChampionshipGoals : teamGoalsTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const goals = realGoalsByPlayerId.get(p.id) || 0;
         const goalShare = shareDenominator > 0 ? (goals / shareDenominator) * 100 : 0;
-        const projectedGoals = (isPromoted && assumedTeamGoals !== undefined) ? (goalShare / 100) * assumedTeamGoals : goals;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
           playerName: `${p.first_name} ${p.second_name}`,
           position,
           goalShare: Math.round(goalShare * 100) / 100,
-          projectedGoals: Math.round(projectedGoals * 100) / 100,
+          projectedGoals: Math.round(goals * 100) / 100,
         };
       }).sort((a: any, b: any) => b.goalShare - a.goalShare);
 
@@ -10026,7 +10020,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         season,
         games: gamesByTeamId.get(team.id) || 0,
         expectedGoals: Math.round((isPromoted && actualChampionshipGoals !== undefined ? actualChampionshipGoals : teamGoalsTotal) * 100) / 100,
-        assumedTeamGoals: assumedTeamGoals !== undefined ? assumedTeamGoals : undefined,
         players,
       });
     });
@@ -10041,7 +10034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    *  in for it), same reasoning as buildRealGoalShareForSeason's assumedTeamGoals: the listed
    *  players in PROMOTED_TEAM_PLAYER_LAST_SEASON don't account for the whole squad's output. */
   async function buildRealAssistShareForSeason(bootstrapData: any, season: string): Promise<any[]> {
-    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS, TeamGoalsService } = await import('./team-goals-service');
+    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS } = await import('./team-goals-service');
     const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
     const realAssistsByPlayerId = new Map<number, number>();
@@ -10092,31 +10085,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // No separate admin-configurable "assumed team assists" exists — 0.85 × the corresponding
     // goals figure stands in for it, same idea as goals: 0.85 × the REAL Championship total
-    // (97/80/70) for the share denominator, 0.85 × the ASSUMED regressed PL total (47/38/33,
-    // via getPromotedTeamGoalsSettings) as the multiplier for projectedAssists.
-    const promotedGoalsSettings = season === PREVIOUS_SEASON ? await TeamGoalsService.getPromotedTeamGoalsSettings() : [];
-    const assumedGoalsByTeamName = new Map(promotedGoalsSettings.map((s: any) => [s.teamName, s.goalsFor]));
-
+    // (97/80/70) for the share denominator. No assumed/regressed PL-total conversion —
+    // projectedAssists is just the player's real assists.
     const finalResponse: any[] = [];
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
       const teamAssistsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realAssistsByPlayerId.get(p.id) || 0), 0);
       const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
       const actualChampionshipAssists = isPromoted ? PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS[team.name] * 0.85 : undefined;
-      const assumedTeamAssists = isPromoted ? (assumedGoalsByTeamName.get(team.name) ?? 0) * 0.85 : undefined;
       const shareDenominator = (isPromoted && actualChampionshipAssists !== undefined) ? actualChampionshipAssists : teamAssistsTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const assists = realAssistsByPlayerId.get(p.id) || 0;
         const assistShare = shareDenominator > 0 ? (assists / shareDenominator) * 100 : 0;
-        const projectedAssists = (isPromoted && assumedTeamAssists !== undefined) ? (assistShare / 100) * assumedTeamAssists : assists;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
           playerName: `${p.first_name} ${p.second_name}`,
           position,
           assistShare: Math.round(assistShare * 100) / 100,
-          projectedAssists: Math.round(projectedAssists * 100) / 100,
+          projectedAssists: Math.round(assists * 100) / 100,
         };
       }).sort((a: any, b: any) => b.assistShare - a.assistShare);
 
@@ -10127,7 +10115,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         season,
         games: gamesByTeamId.get(team.id) || 0,
         expectedAssists: Math.round((isPromoted && actualChampionshipAssists !== undefined ? actualChampionshipAssists : teamAssistsTotal) * 100) / 100,
-        assumedTeamAssists: assumedTeamAssists !== undefined ? Math.round(assumedTeamAssists * 100) / 100 : undefined,
         players,
       });
     });
@@ -10143,31 +10130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // admin-configured assumed goals for promoted teams — no real xG data exists for the
   // Championship, so promoted-team xG is always 0, same as the assist-share promoted override).
   async function fetchProjectedShareInputs(bootstrapData: any) {
-    const { PROMOTED_TEAM_PLAYER_LAST_SEASON, PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS, TeamGoalsService } = await import('./team-goals-service');
-    const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
-    const { getLastSeasonPlayerRow } = await import('./player-history-blend-service');
     const { getBulkPlayerHistories } = await import('./player-history-service');
-
-    const last26Goals = new Map<number, number>();
-    const last26XG = new Map<number, number>();
-    const last26Assists = new Map<number, number>();
-    const last26XA = new Map<number, number>();
-    await Promise.all(bootstrapData.elements.map(async (player: any) => {
-      const team = bootstrapData.teams.find((t: any) => t.id === player.team);
-      if (team && promotedTeamNames.has(team.name)) {
-        const entry = PROMOTED_TEAM_PLAYER_LAST_SEASON[team.name][player.web_name];
-        last26Goals.set(player.id, entry?.goals ?? 0);
-        last26Assists.set(player.id, entry?.assists ?? 0);
-        last26XG.set(player.id, 0);
-        last26XA.set(player.id, 0);
-      } else {
-        const row = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
-        last26Goals.set(player.id, row?.goalsScored ?? 0);
-        last26Assists.set(player.id, row?.assists ?? 0);
-        last26XG.set(player.id, row?.expectedGoals ?? 0);
-        last26XA.set(player.id, row?.expectedAssists ?? 0);
-      }
-    }));
 
     const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
     const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
@@ -10200,69 +10163,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gamesByTeam.set(team.id, count);
     });
 
-    // Two different 2025/26 team-goals figures for promoted teams: the ASSUMED (deliberately
-    // regressed) PL-level total, used for the Team Goal Projections rate; and the REAL
-    // Championship total, used only as the goal-share denominator (see PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS).
-    const promotedGoalsSettings = await TeamGoalsService.getPromotedTeamGoalsSettings();
-    const assumedGoalsByTeamName = new Map(promotedGoalsSettings.map((s: any) => [s.teamName, s.goalsFor]));
-    const actualChampionshipGoalsByTeamName = new Map(Object.entries(PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS));
-
-    return { promotedTeamNames, last26Goals, last26XG, last26Assists, last26XA, this27Goals, this27XG, this27Assists, this27XA, gamesByTeam, assumedGoalsByTeamName, actualChampionshipGoalsByTeamName };
+    return { this27Goals, this27XG, this27Assists, this27XA, gamesByTeam };
   }
 
   /**
    * Projected (default, no ?season=) goal share — the source of the goalShare percentage that
    * player-goal-projections and player-goals-scored-projections multiply against their own
-   * per-gameweek team-goal-projections. Formula (all confirmed with the user):
-   *   - Team Goal Projections = [(0.5×Goals + 0.5×xG) for 2025/26 + (0.5×Goals + 0.5×xG) for
-   *     2026/27] ÷ (38 + games played in 2026/27) — a per-game rate, not a season total.
-   *   - Player's goalShare for a season = player's (0.5×Goals + 0.5×xG) ÷ team's (0.5×Goals +
-   *     0.5×xG) for that same season.
-   *   - Final share = average of the 2025/26 and 2026/27 shares — but until 2026/27 has any
-   *     real team total to divide by, only the 2025/26 share is used (matches "till the season
-   *     starts we take only 2025/26 data").
-   *   - projectedGoals = final share × Team Goal Projections (also a per-game rate).
+   * per-gameweek team-goal-projections. This season's (2026/27) data only, however many games
+   * have actually been played — no 2025/26 blend and no promoted-team/new-signing fallback:
+   *   - Team Goal Projections (a per-game rate) = team's (0.5×Goals + 0.5×xG) ÷ games played.
+   *   - Player's goalShare = player's (0.5×Goals + 0.5×xG) ÷ team's (0.5×Goals + 0.5×xG).
+   *   - projectedGoals = goalShare × Team Goal Projections.
+   *   - A team/player with 0 games played so far shows 0 for both, rather than a synthetic
+   *     pre-season estimate.
    */
   async function buildProjectedGoalShare(bootstrapData: any): Promise<any[]> {
-    const { promotedTeamNames, last26Goals, last26XG, this27Goals, this27XG, gamesByTeam, assumedGoalsByTeamName, actualChampionshipGoalsByTeamName } = await fetchProjectedShareInputs(bootstrapData);
+    const { this27Goals, this27XG, gamesByTeam } = await fetchProjectedShareInputs(bootstrapData);
 
     const finalResponse: any[] = [];
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
-      const isPromoted = promotedTeamNames.has(team.name);
-      const teamGoalsSum2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26Goals.get(p.id) || 0), 0);
-      const teamXGSum2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26XG.get(p.id) || 0), 0);
-
-      // Promoted teams: two different 2025/26 team totals. The REAL Championship total is used
-      // only as the goal-share denominator (a real ratio needs a real total); the ASSUMED
-      // (deliberately regressed) PL-level total feeds the Team Goal Projections rate instead,
-      // since that's meant to represent expected PL-level output, not Championship output.
-      const teamGoalsForShare2526 = isPromoted ? (actualChampionshipGoalsByTeamName.get(team.name) ?? teamGoalsSum2526) : teamGoalsSum2526;
-      const teamGoalsForRate2526 = isPromoted ? (assumedGoalsByTeamName.get(team.name) ?? teamGoalsSum2526) : teamGoalsSum2526;
-      const teamXG2526 = isPromoted ? 0 : teamXGSum2526; // no real xG data for the Championship
 
       const teamGoals2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27Goals.get(p.id) || 0), 0);
       const teamXG2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27XG.get(p.id) || 0), 0);
       const games2627 = gamesByTeam.get(team.id) || 0;
 
-      const team2526CombinedForShare = 0.5 * teamGoalsForShare2526 + 0.5 * teamXG2526;
-      const team2526CombinedForRate = 0.5 * teamGoalsForRate2526 + 0.5 * teamXG2526;
       const team2627Combined = 0.5 * teamGoals2627 + 0.5 * teamXG2627;
-      // Team Goal Projections = average of the 2025/26 and 2026/27 per-game rates — until
-      // 2026/27 has any games played, only the 2025/26 rate is used ("till the season starts
-      // we take only 2025/26 data").
-      const rate2526 = team2526CombinedForRate / SEASON_GAMES;
-      const rate2627 = games2627 > 0 ? team2627Combined / games2627 : undefined;
-      const teamGoalProjections = rate2627 !== undefined ? 0.5 * rate2526 + 0.5 * rate2627 : rate2526;
+      const teamGoalProjections = games2627 > 0 ? team2627Combined / games2627 : 0;
 
       const players = teamPlayersList.map((p: any) => {
-        const player2526Combined = 0.5 * (last26Goals.get(p.id) || 0) + 0.5 * (isPromoted ? 0 : (last26XG.get(p.id) || 0));
-        const share2526 = team2526CombinedForShare > 0 ? player2526Combined / team2526CombinedForShare : 0;
-
         const player2627Combined = 0.5 * (this27Goals.get(p.id) || 0) + 0.5 * (this27XG.get(p.id) || 0);
-        const share2627 = team2627Combined > 0 ? player2627Combined / team2627Combined : undefined;
-
-        const finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526;
+        const finalShare = team2627Combined > 0 ? player2627Combined / team2627Combined : 0;
         const projectedGoals = finalShare * teamGoalProjections;
 
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
@@ -10290,43 +10221,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /** Assist-share counterpart of buildProjectedGoalShare — see that function for the full formula. */
   async function buildProjectedAssistShare(bootstrapData: any): Promise<any[]> {
-    const { promotedTeamNames, last26Assists, last26XA, this27Assists, this27XA, gamesByTeam, assumedGoalsByTeamName, actualChampionshipGoalsByTeamName } = await fetchProjectedShareInputs(bootstrapData);
+    const { this27Assists, this27XA, gamesByTeam } = await fetchProjectedShareInputs(bootstrapData);
 
     const finalResponse: any[] = [];
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
-      const isPromoted = promotedTeamNames.has(team.name);
-
-      const teamAssistsSum2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26Assists.get(p.id) || 0), 0);
-      const teamXASum2526 = teamPlayersList.reduce((sum: number, p: any) => sum + (last26XA.get(p.id) || 0), 0);
-      // No separate "assumed team assists" admin config — 0.85 × the corresponding goals figure
-      // stands in, same idea as buildProjectedGoalShare: REAL Championship total for the share
-      // denominator, ASSUMED (regressed) PL total for the rate.
-      const teamAssistsForShare2526 = isPromoted ? (actualChampionshipGoalsByTeamName.get(team.name) ?? teamAssistsSum2526) * 0.85 : teamAssistsSum2526;
-      const teamAssistsForRate2526 = isPromoted ? (assumedGoalsByTeamName.get(team.name) ?? teamAssistsSum2526) * 0.85 : teamAssistsSum2526;
-      const teamXA2526 = isPromoted ? 0 : teamXASum2526; // no real xA data for the Championship
 
       const teamAssists2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27Assists.get(p.id) || 0), 0);
       const teamXA2627 = teamPlayersList.reduce((sum: number, p: any) => sum + (this27XA.get(p.id) || 0), 0);
       const games2627 = gamesByTeam.get(team.id) || 0;
 
-      const team2526CombinedForShare = 0.5 * teamAssistsForShare2526 + 0.5 * teamXA2526;
-      const team2526CombinedForRate = 0.5 * teamAssistsForRate2526 + 0.5 * teamXA2526;
       const team2627Combined = 0.5 * teamAssists2627 + 0.5 * teamXA2627;
-      // Average of the 2025/26 and 2026/27 per-game rates — see the matching comment in
-      // buildProjectedGoalShare above.
-      const rate2526 = team2526CombinedForRate / SEASON_GAMES;
-      const rate2627 = games2627 > 0 ? team2627Combined / games2627 : undefined;
-      const teamAssistProjections = rate2627 !== undefined ? 0.5 * rate2526 + 0.5 * rate2627 : rate2526;
+      const teamAssistProjections = games2627 > 0 ? team2627Combined / games2627 : 0;
 
       const players = teamPlayersList.map((p: any) => {
-        const player2526Combined = 0.5 * (last26Assists.get(p.id) || 0) + 0.5 * (isPromoted ? 0 : (last26XA.get(p.id) || 0));
-        const share2526 = team2526CombinedForShare > 0 ? player2526Combined / team2526CombinedForShare : 0;
-
         const player2627Combined = 0.5 * (this27Assists.get(p.id) || 0) + 0.5 * (this27XA.get(p.id) || 0);
-        const share2627 = team2627Combined > 0 ? player2627Combined / team2627Combined : undefined;
-
-        const finalShare = share2627 !== undefined ? (share2526 + share2627) / 2 : share2526;
+        const finalShare = team2627Combined > 0 ? player2627Combined / team2627Combined : 0;
         const projectedAssists = finalShare * teamAssistProjections;
 
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';

@@ -16,13 +16,12 @@ interface SeasonGoalShareData {
   season: string;
   games: number; // games the team total is based on (38, or 46 for a promoted team's 2025/26 Championship season)
   expectedGoals: number; // Real team goal total for the season
-  assumedTeamGoals?: number; // Promoted teams only (2025/26): admin-configured assumed total, used for projectedGoals instead of expectedGoals
   players: {
     playerId: number;
     playerName: string;
     position: string;
     goalShare: number; // Percentage of team's goals
-    projectedGoals: number; // goalShare applied to expectedGoals (or assumedTeamGoals for a promoted team)
+    projectedGoals: number; // player's real goals for the season
   }[];
 }
 
@@ -211,11 +210,6 @@ export default function GoalShare() {
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
                             Goals ({team.games} games): <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(0)}</span>
-                            {team.assumedTeamGoals !== undefined && (
-                              <span className="ml-2 text-amber-700">
-                                (assumed team total: {team.assumedTeamGoals})
-                              </span>
-                            )}
                           </p>
                         </div>
                       </div>
