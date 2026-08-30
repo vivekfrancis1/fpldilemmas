@@ -845,7 +845,7 @@ export default function ProjectedGoalsCS() {
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
                                         <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.homeTeam.expectedGoals)}`}>
-                                          {match1.homeTeam.expectedGoals.toFixed(2)}
+                                          {(match1.finished || match1.isLive) ? match1.homeTeam.expectedGoals : match1.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
@@ -891,7 +891,7 @@ export default function ProjectedGoalsCS() {
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
                                         <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.awayTeam.expectedGoals)}`}>
-                                          {match1.awayTeam.expectedGoals.toFixed(2)}
+                                          {(match1.finished || match1.isLive) ? match1.awayTeam.expectedGoals : match1.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
@@ -965,7 +965,7 @@ export default function ProjectedGoalsCS() {
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
                                         <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.homeTeam.expectedGoals)}`}>
-                                          {match2.homeTeam.expectedGoals.toFixed(2)}
+                                          {(match2.finished || match2.isLive) ? match2.homeTeam.expectedGoals : match2.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
@@ -1011,7 +1011,7 @@ export default function ProjectedGoalsCS() {
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
                                         <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.awayTeam.expectedGoals)}`}>
-                                          {match2.awayTeam.expectedGoals.toFixed(2)}
+                                          {(match2.finished || match2.isLive) ? match2.awayTeam.expectedGoals : match2.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}

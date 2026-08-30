@@ -8447,10 +8447,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const lastFinishedGW = computeLastFinishedGW(fixturesData);
 
-      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      // Fold the current gameweek in once any of its fixtures are underway or done — see the
+      // matching comment in /api/team-goals-history. The FPL live-event endpoint already
+      // returns partial stats for a gameweek in progress, so no special fetch is needed —
+      // just extending the range and per-team "played" tracking below is enough.
+      const currentGameweekAssists = computeCurrentGameweek(bootstrapData.events);
+      const currentGWDecidedAssists = currentGameweekAssists > lastFinishedGW &&
+        fixturesData.some((f: any) => f.event === currentGameweekAssists && (isFixtureActuallyOver(f) || f.started));
+      const liveGameweekAssists = currentGWDecidedAssists ? currentGameweekAssists : null;
+      const historyCapAssists = Math.max(lastFinishedGW, liveGameweekAssists ?? 0);
+
+      const effectiveEndGw = endGw ? Math.min(endGw, historyCapAssists) : historyCapAssists;
       const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
 
-      console.log(`DEBUG: Fetching team assists history for GW${effectiveStartGw}-${effectiveEndGw}`);
+      console.log(`DEBUG: Fetching team assists history for GW${effectiveStartGw}-${effectiveEndGw}, live GW: ${liveGameweekAssists ?? 'none'}`);
 
       const teamAssistsMap = new Map();
       teams.forEach((team: any) => {
@@ -8503,7 +8513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (teamData) {
               const assists = el.stats.assists || 0;
               teamData.gameweekAssists[gw] = (teamData.gameweekAssists[gw] || 0) + assists;
-              teamData.totalAssists += assists;
+              // Exclude the live (in-progress) gameweek from the season total/average — a
+              // mid-match count is provisional, same principle as /api/team-goals-history.
+              if (gw !== liveGameweekAssists) {
+                teamData.totalAssists += assists;
+              }
             }
           }
         });
@@ -8511,16 +8525,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Per-team games played within the fetched range — see the matching comment in
       // /api/team-xg-history for why this uses real fixture completion, not the column count.
+      // A team whose fixture in the live gameweek has started (but isn't over) still gets that
+      // gameweek marked "played" so its live cell shows through — just not counted toward
+      // gamesPlayed/totalAssists above.
       const teamGamesPlayedAssists = new Map<number, number>();
       const teamPlayedGwsAssists = new Map<number, Set<number>>();
+      const liveTeamIdsAssists = new Set<number>();
       teams.forEach((team: any) => { teamGamesPlayedAssists.set(team.id, 0); teamPlayedGwsAssists.set(team.id, new Set()); });
       fixturesData.forEach((fixture: any) => {
-        if (isFixtureActuallyOver(fixture) && gameweeksToFetch.includes(fixture.event)) {
+        if (!gameweeksToFetch.includes(fixture.event)) return;
+        const isOver = isFixtureActuallyOver(fixture);
+        const isLive = !isOver && fixture.event === liveGameweekAssists && !!fixture.started;
+        if (!isOver && !isLive) return;
+        if (isOver) {
           teamGamesPlayedAssists.set(fixture.team_h, (teamGamesPlayedAssists.get(fixture.team_h) || 0) + 1);
           teamGamesPlayedAssists.set(fixture.team_a, (teamGamesPlayedAssists.get(fixture.team_a) || 0) + 1);
-          teamPlayedGwsAssists.get(fixture.team_h)?.add(fixture.event);
-          teamPlayedGwsAssists.get(fixture.team_a)?.add(fixture.event);
+        } else {
+          liveTeamIdsAssists.add(fixture.team_h);
+          liveTeamIdsAssists.add(fixture.team_a);
         }
+        teamPlayedGwsAssists.get(fixture.team_h)?.add(fixture.event);
+        teamPlayedGwsAssists.get(fixture.team_a)?.add(fixture.event);
       });
 
       const result = Array.from(teamAssistsMap.values()).map((team: any) => {
@@ -8540,6 +8565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Assists History - returned ${result.length} teams for GW${effectiveStartGw}-${effectiveEndGw}`);
       res.json({
         lastFinishedGW,
+        liveGameweek: liveGameweekAssists,
+        liveTeamIds: Array.from(liveTeamIdsAssists),
         startGW: effectiveStartGw,
         endGW: effectiveEndGw,
         teams: result

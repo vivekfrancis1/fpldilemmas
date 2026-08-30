@@ -5,8 +5,10 @@ import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGameweek } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGameweek, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,11 +45,44 @@ interface TeamAssistProjection {
   position: number;
 }
 
+interface TeamAssistsHistory {
+  lastFinishedGW: number;
+  liveGameweek?: number | null;
+  liveTeamIds?: number[];
+  teams: {
+    id: number;
+    team: string;
+    teamShort: string;
+    gameweekAssists: { [key: string]: number | null };
+    totalAssists: number;
+    averageAssistsPerGame: number;
+    position: number;
+  }[];
+}
+
+interface TeamXaHistory {
+  lastFinishedGW: number;
+  liveGameweek?: number | null;
+  liveTeamIds?: number[];
+  teams: {
+    id: number;
+    team: string;
+    teamShort: string;
+    gameweekXa: { [key: string]: number | null };
+    totalXa: number;
+    averageXaPerGame: number;
+    position: number;
+  }[];
+}
+
 export default function TeamAssistProjections() {
   const { defaultWeeks, totalWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // View mode: "future" for projections, "past" for actual assists history, "pastXg" for xA history
+  const [viewMode, setViewMode] = useViewModeParam<"future" | "past" | "pastXg">("view", "future", ["future", "past", "pastXg"]);
 
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
 
@@ -89,8 +124,36 @@ export default function TeamAssistProjections() {
   });
   const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
 
-  // Calculate dynamic gameweek ranges based on current gameweek
+  const [startGameweek, setStartGameweek] = useState<string>("6");
+  const [endGameweek, setEndGameweek] = useState<string>("13");
+
+  const { data: historyData, isLoading: historyLoading } = useQuery<TeamAssistsHistory>({
+    queryKey: ["/api/team-assists-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/team-assists-history?startGw=${startGameweek}&endGw=${endGameweek}`);
+      if (!response.ok) throw new Error("Failed to fetch team assists history");
+      return response.json();
+    },
+    enabled: viewMode === "past" && parseInt(startGameweek) > 0 && parseInt(endGameweek) > 0,
+  });
+
+  const { data: xaHistoryData, isLoading: xaHistoryLoading } = useQuery<TeamXaHistory>({
+    queryKey: ["/api/team-xa-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/team-xa-history?startGw=${startGameweek}&endGw=${endGameweek}`);
+      if (!response.ok) throw new Error("Failed to fetch team xA history");
+      return response.json();
+    },
+    enabled: viewMode === "pastXg" && parseInt(startGameweek) > 0 && parseInt(endGameweek) > 0,
+  });
+
+  // Calculate dynamic gameweek ranges based on current gameweek and view mode
   const { defaultStart, defaultEnd } = useMemo(() => {
+    if (viewMode === "past" || viewMode === "pastXg") {
+      // History modes: whole season so far, GW1 to the last finished gameweek.
+      const lastFinished = (viewMode === "past" ? historyData?.lastFinishedGW : xaHistoryData?.lastFinishedGW) || 24;
+      return { defaultStart: "1", defaultEnd: String(lastFinished) };
+    }
     const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
     // Fold the current gameweek in when it still has an unstarted fixture.
     const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && range.startGameweek && currentGameweek < parseInt(range.startGameweek))
@@ -106,9 +169,13 @@ export default function TeamAssistProjections() {
       defaultStart: effectiveStart || "6",
       defaultEnd: effectiveEnd
     };
-  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
+  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW]);
 
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past" || viewMode === "pastXg") {
+      const lastFinished = (viewMode === "past" ? historyData?.lastFinishedGW : xaHistoryData?.lastFinishedGW) || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
     const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], totalWeeks);
     // Fold the current gameweek in (see defaultStart above) when it still has an unstarted fixture.
     if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
@@ -119,10 +186,8 @@ export default function TeamAssistProjections() {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
+  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW]);
 
-  const [startGameweek, setStartGameweek] = useState<string>("6");
-  const [endGameweek, setEndGameweek] = useState<string>("13");
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
@@ -139,7 +204,7 @@ export default function TeamAssistProjections() {
   }, []);
 
   // Update state when defaults change
-  useMemo(() => {
+  useEffect(() => {
     if (defaultStart && defaultStart !== startGameweek) setStartGameweek(defaultStart);
     if (defaultEnd && defaultEnd !== endGameweek) setEndGameweek(defaultEnd);
   }, [defaultStart, defaultEnd]);
@@ -191,7 +256,7 @@ export default function TeamAssistProjections() {
 
   const { data: projectionsData, isLoading: projectionsLoading } = useQuery<TeamAssistProjection[]>({
     queryKey: [`/api/team-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
-    enabled: !!startGameweek && !!endGameweek,
+    enabled: viewMode === "future" && !!startGameweek && !!endGameweek,
     // /api/team-assist-projections returns teamId/teamName (not id/team), which left
     // team.team undefined here — rendered as a blank team name in the desktop column.
     select: (data: any[]) => data.map((team, index) => ({
@@ -228,12 +293,39 @@ export default function TeamAssistProjections() {
     return map;
   }, [tbcGoalData, bootstrapData]);
 
-  // Absorb TBC into assigned GW when fixtureMode is custom/expert
+  // Unified data for display - adapts based on view mode
+  const displayData = useMemo((): TeamAssistProjection[] => {
+    if (viewMode === "past" && historyData?.teams) {
+      return historyData.teams.map(team => ({
+        id: team.id,
+        team: team.team,
+        teamShort: team.teamShort,
+        gameweekProjections: team.gameweekAssists as any,
+        totalAssists: team.totalAssists,
+        averageAssistsPerGame: team.averageAssistsPerGame,
+        position: team.position,
+      }));
+    }
+    if (viewMode === "pastXg" && xaHistoryData?.teams) {
+      return xaHistoryData.teams.map(team => ({
+        id: team.id,
+        team: team.team,
+        teamShort: team.teamShort,
+        gameweekProjections: team.gameweekXa as any,
+        totalAssists: team.totalXa,
+        averageAssistsPerGame: team.averageXaPerGame,
+        position: team.position,
+      }));
+    }
+    return projectionsData || [];
+  }, [viewMode, historyData, xaHistoryData, projectionsData]);
+
+  // Absorb TBC into assigned GW when fixtureMode is custom/expert (future mode only)
   const resolvedProjections = useMemo(() => {
-    if (fixtureMode === 'base' || !tbcGoalData?.length || !projectionsData) return projectionsData || [];
+    if (viewMode !== "future" || fixtureMode === 'base' || !tbcGoalData?.length || !displayData.length) return displayData;
     const startGW = parseInt(startGameweek);
     const endGW = parseInt(endGameweek);
-    return projectionsData.map(team => {
+    return displayData.map(team => {
       const tbcFixture = tbcGoalData.find(f => f.homeTeamShort === team.teamShort || f.awayTeamShort === team.teamShort);
       if (!tbcFixture) return team;
       const tbcEntry = tbcAssistMap.get(team.teamShort);
@@ -252,10 +344,11 @@ export default function TeamAssistProjections() {
       const newFixtureDetails = { ...(team.fixtureDetails || {}), [key]: [...existing, { opponent: tbcEntry.opponent, isHome: tbcEntry.isHome, assists: tbcEntry.assists }] };
       return { ...team, gameweekProjections: newProjections, fixtureDetails: newFixtureDetails };
     });
-  }, [fixtureMode, projectionsData, tbcGoalData, tbcAssistMap, tbcAssignments, startGameweek, endGameweek]);
+  }, [viewMode, fixtureMode, displayData, tbcGoalData, tbcAssistMap, tbcAssignments, startGameweek, endGameweek]);
 
-  // TBC assists still in TBC column (not absorbed)
+  // TBC assists still in TBC column (not absorbed) — future mode only
   const getUnabsorbedTBC = (teamShort: string): number => {
+    if (viewMode !== 'future') return 0;
     if (fixtureMode === 'expert') return 0;
     if (fixtureMode === 'base') return tbcAssistMap.get(teamShort)?.assists || 0;
     const f = tbcGoalData?.find(x => x.homeTeamShort === teamShort || x.awayTeamShort === teamShort);
@@ -339,7 +432,12 @@ export default function TeamAssistProjections() {
     return "text-red-600 bg-red-50";
   };
 
-  if (isLoading || projectionsLoading) {
+  const isDataLoading = isLoading
+    || (viewMode === "future" && projectionsLoading)
+    || (viewMode === "past" && historyLoading)
+    || (viewMode === "pastXg" && xaHistoryLoading);
+
+  if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
         <Card className="w-full max-w-sm shadow-lg">
@@ -366,15 +464,23 @@ export default function TeamAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>Team Assist Projections</h1><SeasonBadge />
+            <h1>Team Assists</h1><SeasonBadge />
           </div>
           <p className="fpl-page-subtitle">
-            Assists for each team across all 38 gameweeks - actual assists for completed games, projections for upcoming games
+            Projected and historical assists for each team across selected gameweeks
           </p>
         </div>
       </div>
 
-      {tbcAssistMap.size > 0 && (
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXg")} className="mb-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="future">Assist Projections</TabsTrigger>
+          <TabsTrigger value="past">Assists History</TabsTrigger>
+          <TabsTrigger value="pastXg">xA History</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {viewMode === "future" && tbcAssistMap.size > 0 && (
         <div className="flex justify-center mb-5">
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
             <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
@@ -497,7 +603,11 @@ export default function TeamAssistProjections() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              {`Team Assist Projections: GW${startGameweek}-GW${endGameweek}`}
+              {viewMode === "future"
+                ? `Team Assist Projections: GW${startGameweek}-GW${endGameweek}`
+                : viewMode === "past"
+                  ? `Team Assists History: GW${startGameweek}-GW${endGameweek}`
+                  : `Team xA History: GW${startGameweek}-GW${endGameweek}`}
               {selectedGameweeks.size > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">
                   {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
@@ -507,16 +617,18 @@ export default function TeamAssistProjections() {
                 {filteredProjections.length} teams
               </Badge>
             </CardTitle>
-            <p className="text-[11px] text-gray-500 flex items-center gap-3 pt-1">
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Live odds (The Odds API)
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
-                Internal model
-              </span>
-            </p>
+            {viewMode === "future" && (
+              <p className="text-[11px] text-gray-500 flex items-center gap-3 pt-1">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Live odds (The Odds API)
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+                  Internal model
+                </span>
+              </p>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -548,7 +660,7 @@ export default function TeamAssistProjections() {
                       </th>
                       );
                     })}
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
+                    {viewMode === "future" && fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                       <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
                         GW39 (TBC)
                       </th>
@@ -589,6 +701,25 @@ export default function TeamAssistProjections() {
                       </td>
                       
                       {activeGameweeks.map(gwNumber => {
+                        // History/xA History: preserve null ("not played yet") vs 0 ("played,
+                        // no assists") — a live (in-progress) fixture gets a pulsing indicator.
+                        if (viewMode !== "future") {
+                          const rawValue = team.gameweekProjections[gwNumber];
+                          const value = (rawValue !== undefined && rawValue !== null) ? rawValue : null;
+                          const liveGw = viewMode === "past" ? historyData?.liveGameweek : xaHistoryData?.liveGameweek;
+                          const liveIds = viewMode === "past" ? historyData?.liveTeamIds : xaHistoryData?.liveTeamIds;
+                          const isLiveCell = liveGw === gwNumber && (liveIds || []).includes(team.id);
+                          return (
+                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${value !== null ? getAssistsColor(value) : ''}`}>
+                              <span className="flex items-center justify-center gap-1">
+                                {value !== null ? (viewMode === "past" ? value : value.toFixed(2)) : <span className="text-gray-400">-</span>}
+                                {isLiveCell && (
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" title="Match in progress" />
+                                )}
+                              </span>
+                            </td>
+                          );
+                        }
                         // The current gameweek's cell is blanked once this team's own fixture has
                         // kicked off — see isDecidedCurrentGW in team-goal-projections.tsx.
                         const isDecidedCurrentGW = gwNumber === currentGameweek && currentGWDecidedTeamIds.has(team.id);
@@ -634,7 +765,7 @@ export default function TeamAssistProjections() {
                         );
                       })}
                       
-                      {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                      {viewMode === "future" && fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
@@ -676,7 +807,10 @@ export default function TeamAssistProjections() {
 
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
-                          {(activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + getUnabsorbedTBC(team.teamShort)).toFixed(2)}
+                          {(() => {
+                            const rowTotal = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + getUnabsorbedTBC(team.teamShort);
+                            return viewMode === "past" ? rowTotal : rowTotal.toFixed(2);
+                          })()}
                         </span>
                       </td>
                       
@@ -703,12 +837,12 @@ export default function TeamAssistProjections() {
                       const gwTotal = totalAssists.gameweekTotals[gwNumber] || 0;
                       return (
                         <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 w-[52px] min-w-[52px]">
-                          {gwTotal > 0 ? gwTotal.toFixed(2) : "-"}
+                          {gwTotal > 0 ? (viewMode === "past" ? gwTotal : gwTotal.toFixed(2)) : "-"}
                         </td>
                       );
                     })}
                     
-                    {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
+                    {viewMode === "future" && fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                       const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
                         <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 w-[52px] min-w-[52px]">
@@ -719,7 +853,10 @@ export default function TeamAssistProjections() {
 
                     <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-[65px] min-w-[65px]">
                       <span className="text-sm md:text-lg font-bold text-blue-900">
-                        {(totalAssists.overallTotal + filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0)).toFixed(2)}
+                        {(() => {
+                          const grandTotal = totalAssists.overallTotal + filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
+                          return viewMode === "past" ? grandTotal : grandTotal.toFixed(2);
+                        })()}
                       </span>
                     </td>
                     
