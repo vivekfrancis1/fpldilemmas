@@ -16,6 +16,7 @@ interface FixtureDetail {
   opponent: string;
   isHome: boolean;
   assists: number;
+  source?: 'odds' | 'model';
 }
 
 interface TBCGoalProjection {
@@ -81,6 +82,13 @@ export default function TeamAssistProjections() {
     return set;
   }, [fixturesData, currentGameweek]);
 
+  // The last gameweek with real Odds API coverage — see the matching comment in team-goal-projections.tsx.
+  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
+    queryKey: ["/api/fixture-odds-max-gameweek"],
+    staleTime: 15 * 60 * 1000,
+  });
+  const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
+
   // Calculate dynamic gameweek ranges based on current gameweek
   const { defaultStart, defaultEnd } = useMemo(() => {
     const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
@@ -88,11 +96,17 @@ export default function TeamAssistProjections() {
     const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && range.startGameweek && currentGameweek < parseInt(range.startGameweek))
       ? String(currentGameweek)
       : range.startGameweek;
+    // Default the end to the last gameweek with real Odds API coverage.
+    const effectiveEnd = (hasTBCFixture && fixtureMode === 'base')
+      ? "39"
+      : (maxGameweekWithOdds !== null && effectiveStart && maxGameweekWithOdds >= parseInt(effectiveStart))
+        ? String(maxGameweekWithOdds)
+        : (range.endGameweek || "13");
     return {
       defaultStart: effectiveStart || "6",
-      defaultEnd: hasTBCFixture && fixtureMode === 'base' ? "39" : (range.endGameweek || "13")
+      defaultEnd: effectiveEnd
     };
-  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
+  }, [bootstrapData, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
 
   const availableGameweeks = useMemo(() => {
     const gws = getNextGameweeksForDropdown(bootstrapData?.events || [], totalWeeks);
@@ -278,6 +292,24 @@ export default function TeamAssistProjections() {
         }
       });
   }, [resolvedProjections, selectedTeams, sortBy, activeGameweeks, tbcAssistMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+
+  // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
+  // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
+  const gwSourceMap = useMemo(() => {
+    const map = new Map<number, 'odds' | 'model'>();
+    for (const team of resolvedProjections) {
+      for (const [gwStr, fixtures] of Object.entries((team as any).fixtureDetails || {})) {
+        const gwNumber = parseInt(gwStr);
+        const hasOdds = ((fixtures as any[]) || []).some((f: any) => f.source === 'odds');
+        if (hasOdds) {
+          map.set(gwNumber, 'odds');
+        } else if (!map.has(gwNumber)) {
+          map.set(gwNumber, 'model');
+        }
+      }
+    }
+    return map;
+  }, [resolvedProjections]);
 
   const totalAssists = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, averagePerGame: 0 };
@@ -475,6 +507,16 @@ export default function TeamAssistProjections() {
                 {filteredProjections.length} teams
               </Badge>
             </CardTitle>
+            <p className="text-[11px] text-gray-500 flex items-center gap-3 pt-1">
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Live odds (The Odds API)
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+                Internal model
+              </span>
+            </p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -484,19 +526,28 @@ export default function TeamAssistProjections() {
                     <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                       Team
                     </th>
-                    {activeGameweeks.map(gwNumber => (
-                      <th 
-                        key={gwNumber} 
+                    {activeGameweeks.map(gwNumber => {
+                      const gwSource = gwSourceMap.get(gwNumber);
+                      return (
+                      <th
+                        key={gwNumber}
                         className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]"
                         onClick={() => setSortBy(`gw${gwNumber}`)}
                       >
                         <div className="flex items-center justify-center gap-0.5">
+                          {gwSource && (
+                            <span
+                              title={gwSource === 'odds' ? 'Live betting-market odds (The Odds API)' : 'Internal projection model'}
+                              className={`h-1.5 w-1.5 rounded-full ${gwSource === 'odds' ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                            />
+                          )}
                           <span className="md:hidden">{gwNumber}</span>
                           <span className="hidden md:inline">GW{gwNumber}</span>
                           {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
-                    ))}
+                      );
+                    })}
                     {fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                       <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
                         GW39 (TBC)

@@ -7895,6 +7895,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // The last gameweek with real Odds API coverage — Team Projections pages default their
+  // visible range to this instead of a fixed week count. See getMaxGameweekWithOdds's docstring.
+  app.get("/api/fixture-odds-max-gameweek", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || CURRENT_SEASON;
+      const fixturesResponse = await internalFetch('api/fixtures');
+      const fixturesData = fixturesResponse.ok ? await fixturesResponse.json() : [];
+      const { getMaxGameweekWithOdds } = await import('./odds-service');
+      const maxGameweek = await getMaxGameweekWithOdds(season, fixturesData);
+      res.json({ season, maxGameweek });
+    } catch (error) {
+      console.error("Error computing max gameweek with odds:", error);
+      res.status(500).json({ error: "Failed to compute max gameweek with odds" });
+    }
+  });
+
   app.get("/api/fixture-odds-history/:eventId", async (req, res) => {
     try {
       const season = (req.query.season as string) || CURRENT_SEASON;
@@ -9399,13 +9415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         // Build fixtureDetails for DGW support (individual fixture breakdown)
-        const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
+        const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number; source?: 'odds' | 'model' }> } = {};
         if (tp.fixtureDetails) {
           Object.entries(tp.fixtureDetails).forEach(([gw, fixtures]: [string, any]) => {
             fixtureDetails[gw] = (fixtures || []).map((f: any) => ({
               opponent: f.opponent,
               isHome: f.isHome,
-              assists: Math.round((f.goals || 0) * assistRatio * 100) / 100
+              assists: Math.round((f.goals || 0) * assistRatio * 100) / 100,
+              source: f.source
             }));
           });
         }
@@ -9476,21 +9493,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
       const teamGoalProjectionsCS = await TeamGoalsServiceCS.getTeamGoalProjections(startGWforCS, endGameweek);
 
-      // Build actual season CS rate map from this season (2026/27) only, however many games
-      // each team has actually played — no 2025/26 blend and no league-average fallback. A
-      // team with 0 games played so far shows a 0 rate rather than a synthetic estimate.
-      const standingsResponse = await internalFetch("api/current-standings");
-      const standingsData = standingsResponse.ok ? await standingsResponse.json() : [];
-      const standingsTeams: any[] = standingsData.standings || standingsData || [];
-      const actualCSRateMap = new Map<number, number>();
-      teams.forEach((t: any) => {
-        const standingsEntry = standingsTeams.find((s: any) => s.id === t.id);
-        const thisSeasonRate = standingsEntry && standingsEntry.played > 0
-          ? (standingsEntry.cleanSheets || 0) / standingsEntry.played
-          : 0;
-        actualCSRateMap.set(t.id, thisSeasonRate);
-      });
-
       // Build goals-against maps by mirroring: home concedes what away scores and vice versa
       const teamGoalsAgainstMap = new Map();
       const teamGoalsAgainstDetailsMap = new Map();
@@ -9509,19 +9511,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const awayProj = teamGoalProjectionsCS.find((t: any) => t.teamId === fixture.team_a);
           const homeFixtures = homeProj?.fixtureDetails?.[gw] || [];
           const awayFixtures = awayProj?.fixtureDetails?.[gw] || [];
-          const homeGoals = homeFixtures.find((fd: any) => fd.opponent === awayTeam.short_name)?.goals
-            ?? (homeProj?.gameweekProjections?.[gw] ?? 1.5);
-          const awayGoals = awayFixtures.find((fd: any) => fd.opponent === homeTeam.short_name)?.goals
-            ?? (awayProj?.gameweekProjections?.[gw] ?? 1.5);
+          const homeFixtureMatch = homeFixtures.find((fd: any) => fd.opponent === awayTeam.short_name);
+          const awayFixtureMatch = awayFixtures.find((fd: any) => fd.opponent === homeTeam.short_name);
+          const homeGoals = homeFixtureMatch?.goals ?? (homeProj?.gameweekProjections?.[gw] ?? 1.5);
+          const awayGoals = awayFixtureMatch?.goals ?? (awayProj?.gameweekProjections?.[gw] ?? 1.5);
           const homeGA = teamGoalsAgainstDetailsMap.get(fixture.team_h);
           const awayGA = teamGoalsAgainstDetailsMap.get(fixture.team_a);
+          // Clean sheet against team X hinges on the OPPONENT's expected goals, so the source
+          // that matters for this cell is the opponent's own fixture-goal source.
           if (homeGA) {
             if (!homeGA[gw.toString()]) homeGA[gw.toString()] = [];
-            homeGA[gw.toString()].push({ opponent: awayTeam.short_name, isHome: true, goalsAgainst: Math.round(awayGoals * 100) / 100 });
+            homeGA[gw.toString()].push({ opponent: awayTeam.short_name, isHome: true, goalsAgainst: Math.round(awayGoals * 100) / 100, source: awayFixtureMatch?.source ?? 'model' });
           }
           if (awayGA) {
             if (!awayGA[gw.toString()]) awayGA[gw.toString()] = [];
-            awayGA[gw.toString()].push({ opponent: homeTeam.short_name, isHome: false, goalsAgainst: Math.round(homeGoals * 100) / 100 });
+            awayGA[gw.toString()].push({ opponent: homeTeam.short_name, isHome: false, goalsAgainst: Math.round(homeGoals * 100) / 100, source: homeFixtureMatch?.source ?? 'model' });
           }
         });
       
@@ -9567,12 +9571,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
           const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA blended 50:50 with team's actual season CS rate.
-          // formulaCS captures fixture difficulty (opponent attack strength).
-          // teamActualCSPct anchors the prediction to the defending team's real defensive quality.
-          const formulaCS = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
-          const teamActualCSPct = (actualCSRateMap.get(team.id) ?? 0) * 100;
-          let cleanSheetProbability = 0.5 * formulaCS + 0.5 * teamActualCSPct;
+          // POISSON DISTRIBUTION FORMULA — purely a function of this fixture's expected goals
+          // against (itself already derived from Team Goal Projections' odds/dynamic model).
+          // No longer blended with the team's own actual season CS rate; that blend double
+          // counted defensive quality that perGameGoalsAgainst already reflects (it comes from
+          // the opponent's attack strength on one side and this team's own defence on the other).
+          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
 
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -9583,7 +9587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isHome,
             cleanSheetOdds: Math.round(cleanSheetProbability * 10) / 10,
             expectedGoalsAgainst: perGameGoalsAgainst, // Team's Goals Against per game for this fixture
-            isActual: false // Flag to indicate this is projected data
+            isActual: false, // Flag to indicate this is projected data
+            source: matchingFixture?.source ?? 'model'
           };
         }).filter(Boolean);
         
@@ -9595,8 +9600,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For DGW: Sum CS odds for expected points (can score CS in each game)
         const gameweekProjections: { [gameweek: number]: number } = {};
         // NEW: fixtureDetails shows individual CS% per fixture (for DGW visibility)
-        const fixtureDetails: { [gameweek: number]: Array<{ opponent: string; isHome: boolean; cleanSheetOdds: number }> } = {};
-        
+        const fixtureDetails: { [gameweek: number]: Array<{ opponent: string; isHome: boolean; cleanSheetOdds: number; source?: 'odds' | 'model' }> } = {};
+
         projections.forEach((p: any) => {
           // Initialize fixture details array for this gameweek
           if (!fixtureDetails[p.gameweek]) {
@@ -9606,7 +9611,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixtureDetails[p.gameweek].push({
             opponent: p.opponent,
             isHome: p.isHome,
-            cleanSheetOdds: p.cleanSheetOdds
+            cleanSheetOdds: p.cleanSheetOdds,
+            source: p.source
           });
           
           // Sum CS odds for gameweek total (expected points)
@@ -13311,34 +13317,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const awayTeamFixtures = awayTeamScored.fixtureDetails?.[fixture.event] || [];
                 
                 // Find the specific fixture's goals for each team
-                const homeFixtureGoals = homeTeamFixtures.find((f: any) => f.opponent === awayTeam.short_name)?.goals;
-                const awayFixtureGoals = awayTeamFixtures.find((f: any) => f.opponent === homeTeam.short_name)?.goals;
-                
+                const homeFixtureMatch = homeTeamFixtures.find((f: any) => f.opponent === awayTeam.short_name);
+                const awayFixtureMatch = awayTeamFixtures.find((f: any) => f.opponent === homeTeam.short_name);
+                const homeFixtureGoals = homeFixtureMatch?.goals;
+                const awayFixtureGoals = awayFixtureMatch?.goals;
+
                 // Use fixture-specific goals if available, otherwise fall back to per-game average
                 const fixtureCount = homeTeamFixtures.length || 1;
-                const awayGoals = awayFixtureGoals !== undefined ? awayFixtureGoals : 
+                const awayGoals = awayFixtureGoals !== undefined ? awayFixtureGoals :
                   (awayTeamScored.gameweekProjections[fixture.event] / fixtureCount);
                 const homeGoals = homeFixtureGoals !== undefined ? homeFixtureGoals :
                   (homeTeamScored.gameweekProjections[fixture.event] / fixtureCount);
-                
+
                 if (awayGoals !== undefined && homeGoals !== undefined) {
                   // Direct mirror: home concedes what away scores, away concedes what home scores - SUM for DGW
                   homeTeamAgainst.gameweekProjections[fixture.event] = (homeTeamAgainst.gameweekProjections[fixture.event] || 0) + awayGoals;
                   awayTeamAgainst.gameweekProjections[fixture.event] = (awayTeamAgainst.gameweekProjections[fixture.event] || 0) + homeGoals;
-                  
-                  // Add fixture details for projected gameweeks
+
+                  // Add fixture details for projected gameweeks. Source reflects the OPPONENT's
+                  // goal-projection source, since that's what this team's goals-against depends on.
                   if (homeTeamAgainst.fixtureDetails[fixture.event]) {
                     homeTeamAgainst.fixtureDetails[fixture.event].push({
                       opponent: awayTeam.short_name,
                       isHome: true,
-                      goalsAgainst: Math.round(awayGoals * 100) / 100
+                      goalsAgainst: Math.round(awayGoals * 100) / 100,
+                      source: awayFixtureMatch?.source ?? 'model'
                     });
                   }
                   if (awayTeamAgainst.fixtureDetails[fixture.event]) {
                     awayTeamAgainst.fixtureDetails[fixture.event].push({
                       opponent: homeTeam.short_name,
                       isHome: false,
-                      goalsAgainst: Math.round(homeGoals * 100) / 100
+                      goalsAgainst: Math.round(homeGoals * 100) / 100,
+                      source: homeFixtureMatch?.source ?? 'model'
                     });
                   }
                 }

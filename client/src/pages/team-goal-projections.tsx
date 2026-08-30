@@ -263,6 +263,15 @@ export default function TeamGoalProjections() {
     return set;
   }, [fixturesData, currentGameweek]);
 
+  // The last gameweek with real Odds API coverage — the Projections tab defaults its visible
+  // end to this instead of a fixed week count, so the range only ever covers gameweeks bookmakers
+  // have actually opened lines for (e.g. "GW2-GW4" today, growing as more lines are posted).
+  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
+    queryKey: ["/api/fixture-odds-max-gameweek"],
+    staleTime: 15 * 60 * 1000,
+  });
+  const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
+
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
@@ -302,11 +311,18 @@ export default function TeamGoalProjections() {
         ? String(currentGameweek)
         : newRange.startGameweek;
       setStartGameweek(effectiveStart);
-      // Extend default end to GW39 only in base mode (expert/custom absorb TBC into a regular GW)
-      setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
+      // Extend default end to GW39 only in base mode (expert/custom absorb TBC into a regular GW).
+      // Otherwise default the end to the last gameweek with real Odds API coverage, so the range
+      // only ever spans what bookmakers have actually opened lines for.
+      const effectiveEnd = (hasTBCFixture && fixtureMode === 'base')
+        ? "39"
+        : (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart))
+          ? String(maxGameweekWithOdds)
+          : newRange.endGameweek;
+      setEndGameweek(effectiveEnd);
       setSelectedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks, maxGameweekWithOdds]);
 
   // When switching away from base mode, snap endGameweek back from GW39 to the regular range
   useEffect(() => {

@@ -21,6 +21,7 @@ interface FixtureDetail {
   opponent: string;
   isHome: boolean;
   goalsAgainst: number;
+  source?: 'odds' | 'model';
 }
 
 interface TeamGoalsAgainstHistory {
@@ -211,6 +212,13 @@ export default function TeamGoalsAgainstProjections() {
     return set;
   }, [fixturesData, currentGameweek]);
 
+  // The last gameweek with real Odds API coverage — see the matching comment in team-goal-projections.tsx.
+  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
+    queryKey: ["/api/fixture-odds-max-gameweek"],
+    staleTime: 15 * 60 * 1000,
+  });
+  const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
+
   // Toggle gameweek exclusion
   const toggleGameweekSelection = (gw: number) => {
     setSelectedGameweeks(prev => {
@@ -286,10 +294,17 @@ export default function TeamGoalsAgainstProjections() {
         ? String(currentGameweek)
         : newRange.startGameweek;
       setStartGameweek(effectiveStart);
-      setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
+      // Default the end to the last gameweek with real Odds API coverage — see the matching
+      // comment in team-goal-projections.tsx.
+      const effectiveEnd = (hasTBCFixture && fixtureMode === 'base')
+        ? "39"
+        : (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart))
+          ? String(maxGameweekWithOdds)
+          : newRange.endGameweek;
+      setEndGameweek(effectiveEnd);
       setSelectedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks, maxGameweekWithOdds]);
 
   // When switching away from base mode, snap endGameweek back from GW39
   useEffect(() => {
@@ -419,6 +434,26 @@ export default function TeamGoalsAgainstProjections() {
         }
       });
   }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+
+  // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
+  // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
+  const gwSourceMap = useMemo(() => {
+    const map = new Map<number, 'odds' | 'model'>();
+    if (viewMode !== "future") return map;
+    for (const team of resolvedProjections) {
+      const teamWithDetails = team as TeamGoalsAgainstProjection;
+      for (const [gwStr, fixtures] of Object.entries(teamWithDetails.fixtureDetails || {})) {
+        const gwNumber = parseInt(gwStr);
+        const hasOdds = (fixtures || []).some((f: any) => f.source === 'odds');
+        if (hasOdds) {
+          map.set(gwNumber, 'odds');
+        } else if (!map.has(gwNumber)) {
+          map.set(gwNumber, 'model');
+        }
+      }
+    }
+    return map;
+  }, [resolvedProjections, viewMode]);
 
   const totalGoalsAgainst = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -730,6 +765,18 @@ export default function TeamGoalsAgainstProjections() {
                   <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
                 </button>
               </CardTitle>
+              {viewMode === "future" && (
+                <p className="text-[11px] text-gray-500 flex items-center gap-3 pt-1">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Live odds (The Odds API)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+                    Internal model
+                  </span>
+                </p>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -739,19 +786,28 @@ export default function TeamGoalsAgainstProjections() {
                       <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                         Team
                       </th>
-                      {activeGameweeks.map(gwNumber => (
-                        <th 
-                          key={gwNumber} 
+                      {activeGameweeks.map(gwNumber => {
+                        const gwSource = gwSourceMap.get(gwNumber);
+                        return (
+                        <th
+                          key={gwNumber}
                           className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
                           onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
+                            {gwSource && (
+                              <span
+                                title={gwSource === 'odds' ? 'Live betting-market odds (The Odds API)' : 'Internal projection model'}
+                                className={`h-1.5 w-1.5 rounded-full ${gwSource === 'odds' ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                              />
+                            )}
                             <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
                             <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
                             {sortBy === `gw${gwNumber}` && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
                           </div>
                         </th>
-                      ))}
+                        );
+                      })}
                       {viewMode === "future" && fixtureMode !== 'expert' && tbcGAMap.size > 0 && (!activeGameweeks.includes(39) && (selectedGameweeks.size === 0 || selectedGameweeks.has(39)) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'}`}>
                           GW39 (TBC)

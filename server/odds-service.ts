@@ -10,6 +10,7 @@
 
 import { pool } from "./db";
 import { aggregateEventOdds, solveExpectedGoalsFromOdds, type OddsApiEvent } from "@shared/odds-utils";
+import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 const SPORT_KEY = "soccer_epl";
@@ -213,6 +214,33 @@ export async function listFixturesWithOddsHistory(season: string): Promise<Fixtu
     commenceTime: row.commence_time,
     snapshotCount: parseInt(row.snapshot_count, 10),
   }));
+}
+
+/**
+ * The last gameweek for which we currently hold real odds for at least one fixture — used to
+ * default the various Team Projections pages' visible range to "however far bookmakers have
+ * actually opened lines", rather than a fixed week count. Matches fixture_odds rows (keyed by
+ * team name + kickoff time, since that's all The Odds API gives us) against FPL fixtures (keyed
+ * by team id + event) via the shared team-name crosswalk. Returns null if no current fixture_odds
+ * rows match any known fixture (e.g. crosswalk gap, or the table is genuinely empty).
+ */
+export async function getMaxGameweekWithOdds(season: string, fixturesData: any[]): Promise<number | null> {
+  const oddsRows = await pool.query(
+    `SELECT home_team, away_team, commence_time FROM fixture_odds WHERE season = $1`,
+    [season]
+  );
+
+  let maxGameweek: number | null = null;
+  for (const row of oddsRows.rows) {
+    const homeId = oddsApiTeamNameToFplId(row.home_team);
+    const awayId = oddsApiTeamNameToFplId(row.away_team);
+    if (homeId === null || awayId === null) continue;
+    const fixture = fixturesData.find((f: any) => f.team_h === homeId && f.team_a === awayId);
+    if (fixture?.event && (maxGameweek === null || fixture.event > maxGameweek)) {
+      maxGameweek = fixture.event;
+    }
+  }
+  return maxGameweek;
 }
 
 export async function getFixtureOdds(season: string): Promise<StoredFixtureOdds[]> {
