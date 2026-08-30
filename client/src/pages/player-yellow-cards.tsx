@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ProtectedRoute from "@/components/protected-route";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
+import { computeCurrentGameweek } from "@shared/gameweek-utils";
 
 interface FixtureDetail {
   opponent: string;
@@ -76,12 +77,38 @@ export default function PlayerYellowCards() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  // Fetch GW39 data when TBC toggle is on (base mode) OR when in custom/expert mode for merging
+  const currentGameweek = computeCurrentGameweek((bootstrapData?.events || []) as any);
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages.
+  const currentGWHasUnstarted = Array.isArray(fixturesData) && currentGameweek > 0 &&
+    (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+
+  // Team SHORT codes whose own fixture in the current gameweek has kicked off or finished —
+  // their current-GW projection is a stale pre-match estimate and gets blanked client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
+  // Fetch GW39 data when TBC toggle is on (base mode) OR when in custom/expert mode for merging.
+  // Always calls the live endpoint directly (never the "/api/cached/..." wrapper) with an
+  // explicit, fold-in-aware startGameweek — the cached wrapper's backing DB table was removed
+  // and it always redirects to this same live endpoint with NO params (non-fold-in-aware
+  // default), so calling it directly here is both simpler and the only way to fold the current
+  // gameweek in.
   const needsGW39Data = (includeTBC && fixtureMode === 'base') || (fixtureMode !== 'base' && tbcTeamInfoMap.size > 0);
+  const ycStartGameweek = currentGWHasUnstarted && currentGameweek > 0 ? currentGameweek : currentGameweek + 1;
   const { data: yellowCardProjections, isLoading: isLoadingProjections } = useQuery<YellowCardProjection[]>({
-    queryKey: [needsGW39Data
-      ? "/api/player-yellow-cards-projections?endGameweek=39"
-      : "/api/cached/player-yellow-cards-projections"],
+    queryKey: [`/api/player-yellow-cards-projections?startGameweek=${ycStartGameweek}${needsGW39Data ? '&endGameweek=39' : ''}`],
+    enabled: currentGameweek >= 0,
     staleTime: needsGW39Data ? 10 * 60 * 1000 : 60 * 60 * 1000,
   });
 
@@ -102,12 +129,28 @@ export default function PlayerYellowCards() {
   
   const gameweekRange = displayGWs.length > 0 ? `${displayGWs[0]}-${displayGWs[displayGWs.length - 1]}` : "6-11";
 
+  // A decided team's current-GW projection is a stale pre-match estimate — strip the key
+  // entirely so it renders blank and is excluded from the total/average, same convention as the
+  // other Player Projection pages.
+  const blankedProjections = useMemo<YellowCardProjection[]>(() => {
+    const data = yellowCardProjections || [];
+    if (currentGameweek <= 0 || currentGWDecidedTeamShorts.size === 0) return data;
+    const gwKey = `gw${currentGameweek}`;
+    return data.map(p => {
+      if (!currentGWDecidedTeamShorts.has(p.teamName)) return p;
+      if (!(gwKey in (p.yellowCards || {})) && !(gwKey in (p.pointsFromYellowCards || {}))) return p;
+      const { [gwKey]: _omitYC, ...restYC } = p.yellowCards || {};
+      const { [gwKey]: _omitPts, ...restPts } = p.pointsFromYellowCards || {};
+      return { ...p, yellowCards: restYC, pointsFromYellowCards: restPts };
+    });
+  }, [yellowCardProjections, currentGameweek, currentGWDecidedTeamShorts]);
+
   // Resolve GW39 data: in custom/expert mode, absorb GW39 into the assigned GW
   const resolvedProjections = useMemo<YellowCardProjection[]>(() => {
-    if (!yellowCardProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
-      return yellowCardProjections || [];
+    if (!blankedProjections || tbcTeamInfoMap.size === 0 || fixtureMode === 'base') {
+      return blankedProjections || [];
     }
-    return yellowCardProjections.map((projection: YellowCardProjection) => {
+    return blankedProjections.map((projection: YellowCardProjection) => {
       const tbcInfo = tbcTeamInfoMap.get(projection.teamName);
       if (!tbcInfo) return projection;
       const gw39YC = projection.yellowCards['gw39'] || 0;
@@ -120,7 +163,16 @@ export default function PlayerYellowCards() {
       const newPointsFromYellowCards = { ...projection.pointsFromYellowCards, [gwKey]: (projection.pointsFromYellowCards[gwKey] || 0) + gw39Pts, 'gw39': 0 };
       return { ...projection, yellowCards: newYellowCards, pointsFromYellowCards: newPointsFromYellowCards };
     });
-  }, [yellowCardProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+  }, [blankedProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments]);
+
+  // Only counts gameweeks with a real (present) entry — a blanked current-GW cell isn't in the
+  // map at all, so it's correctly excluded from the average's denominator.
+  const getDisplayAverage = (values: { [key: string]: number }) => {
+    const presentGws = displayGWs.filter(gw => `gw${gw}` in (values || {}));
+    if (presentGws.length === 0) return 0;
+    const total = presentGws.reduce((sum, gw) => sum + (values[`gw${gw}`] || 0), 0);
+    return total / presentGws.length;
+  };
 
   const filteredProjections = resolvedProjections.filter((projection: YellowCardProjection) => {
     const matchesSearch = !searchTerm || 
@@ -425,7 +477,7 @@ export default function PlayerYellowCards() {
                             {displayTotalYC.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {displayGWs.length > 0 ? (displayTotalYC / displayGWs.length).toFixed(2) : '0.00'}
+                            {getDisplayAverage(projection.yellowCards).toFixed(2)}
                           </td>
                         </tr>
                         );
@@ -513,7 +565,7 @@ export default function PlayerYellowCards() {
                             {displayTotalPts.toFixed(2)}
                           </td>
                           <td className="text-center text-sm text-gray-600">
-                            {displayGWs.length > 0 ? (displayTotalPts / displayGWs.length).toFixed(2) : '0.00'}
+                            {getDisplayAverage(projection.pointsFromYellowCards).toFixed(2)}
                           </td>
                         </tr>
                         );
