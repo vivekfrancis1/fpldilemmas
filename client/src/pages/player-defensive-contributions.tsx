@@ -714,45 +714,45 @@ export default function PlayerDefensiveContributions() {
 
       <div className="fpl-section-spacing">
         {/* Quick Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6">
               <div className="flex items-center">
-                <Target className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">Players Analyzed</p>
-                  <p className="text-2xl font-bold text-blue-700">{filteredPlayers.length}</p>
+                <Target className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-[10px] sm:text-sm font-medium text-blue-900 truncate">Players Analyzed</p>
+                  <p className="text-base sm:text-2xl font-bold text-blue-700">{filteredPlayers.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6">
               <div className="flex items-center">
-                <Shield className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-green-900">Top Performer</p>
-                  <p className="text-lg font-bold text-green-700">
+                <Shield className="h-5 w-5 sm:h-8 sm:w-8 text-green-600 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-[10px] sm:text-sm font-medium text-green-900 truncate">Top Performer</p>
+                  <p className="text-sm sm:text-lg font-bold text-green-700 truncate">
                     {filteredPlayers.length > 0 ? filteredPlayers[0].playerName.split(' ').slice(-1)[0] : "None"}
                   </p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-[10px] sm:text-sm text-green-600">
                     {filteredPlayers.length > 0 ? (viewMode === "past" ? Math.round(filteredPlayers[0].totalDC) : filteredPlayers[0].totalDC.toFixed(1)) + " DC" : ""}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6">
               <div className="flex items-center">
-                <Filter className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-purple-900">Average DC</p>
-                  <p className="text-2xl font-bold text-purple-700">
-                    {filteredPlayers.length > 0 ? 
-                      viewMode === "past" 
+                <Filter className="h-5 w-5 sm:h-8 sm:w-8 text-purple-600 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-[10px] sm:text-sm font-medium text-purple-900 truncate">Average DC</p>
+                  <p className="text-base sm:text-2xl font-bold text-purple-700">
+                    {filteredPlayers.length > 0 ?
+                      viewMode === "past"
                         ? Math.round(filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length)
                         : (filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length).toFixed(1) : "0"}
                   </p>
@@ -760,15 +760,15 @@ export default function PlayerDefensiveContributions() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6">
               <div className="flex items-center">
-                <Clock className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-orange-900">Active Gameweeks</p>
-                  <p className="text-2xl font-bold text-orange-700">{activeGameweeks.length}</p>
-                  <p className="text-sm text-orange-600">
+                <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-orange-600 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-[10px] sm:text-sm font-medium text-orange-900 truncate">Active Gameweeks</p>
+                  <p className="text-base sm:text-2xl font-bold text-orange-700">{activeGameweeks.length}</p>
+                  <p className="text-[10px] sm:text-sm text-orange-600 truncate">
                     {activeGameweeks.length > 0 ? `${activeGameweeks.length} of ${gameweeks.length} GWs` : "Select range"}
                     {selectedGameweeks.size > 0 && ` (${selectedGameweeks.size} selected)`}
                   </p>

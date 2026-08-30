@@ -277,28 +277,28 @@ export default function PlayerMinutes() {
       <div className="fpl-section-spacing">
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6 mb-8">
           <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">
-                <Users className="h-8 w-8 mb-2" />
-                <div className="ml-4">
-                  <p className="text-blue-100 text-sm">Total Players</p>
-                  <p className="text-2xl font-bold">{filteredAndSortedData.length}</p>
+                <Users className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-blue-100 text-[10px] sm:text-sm truncate">Total Players</p>
+                  <p className="text-base sm:text-2xl font-bold">{filteredAndSortedData.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">
-                <Target className="h-8 w-8 mb-2" />
-                <div className="ml-4">
-                  <p className="text-green-100 text-sm">Avg Current Min/Game</p>
-                  <p className="text-2xl font-bold">
-                    {filteredAndSortedData.length > 0 ? 
-                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.currentMinutesPerGame, 0) / filteredAndSortedData.length) 
+                <Target className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-green-100 text-[10px] sm:text-sm truncate">Avg Current Min/Game</p>
+                  <p className="text-base sm:text-2xl font-bold">
+                    {filteredAndSortedData.length > 0 ?
+                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.currentMinutesPerGame, 0) / filteredAndSortedData.length)
                       : '0'}
                   </p>
                 </div>
@@ -307,14 +307,14 @@ export default function PlayerMinutes() {
           </Card>
 
           <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">
-                <Clock className="h-8 w-8 mb-2" />
-                <div className="ml-4">
-                  <p className="text-purple-100 text-sm">Avg Minutes/Game</p>
-                  <p className="text-2xl font-bold">
-                    {filteredAndSortedData.length > 0 ? 
-                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.expectedMinutesPerGame, 0) / filteredAndSortedData.length) 
+                <Clock className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-purple-100 text-[10px] sm:text-sm truncate">Avg Minutes/Game</p>
+                  <p className="text-base sm:text-2xl font-bold">
+                    {filteredAndSortedData.length > 0 ?
+                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.expectedMinutesPerGame, 0) / filteredAndSortedData.length)
                       : '0'}
                   </p>
                 </div>
@@ -323,12 +323,12 @@ export default function PlayerMinutes() {
           </Card>
 
           <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 mb-2" />
-                <div className="ml-4">
-                  <p className="text-orange-100 text-sm">Expected 60+ Min</p>
-                  <p className="text-2xl font-bold">
+                <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
+                <div className="ml-2 sm:ml-4 overflow-hidden">
+                  <p className="text-orange-100 text-[10px] sm:text-sm truncate">Expected 60+ Min</p>
+                  <p className="text-base sm:text-2xl font-bold">
                     {filteredAndSortedData.filter(p => p.expectedMinutesPerGame >= 60).length}
                   </p>
                 </div>
