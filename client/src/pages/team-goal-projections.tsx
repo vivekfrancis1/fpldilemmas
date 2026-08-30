@@ -475,6 +475,27 @@ export default function TeamGoalProjections() {
       });
   }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments]);
 
+  // Per-gameweek data source: 'odds' if ANY fixture in that gameweek (across every team) used
+  // live betting-market odds, 'model' if every fixture that gameweek fell through to the
+  // internal projection model — shown once per column rather than per cell.
+  const gwSourceMap = useMemo(() => {
+    const map = new Map<number, 'odds' | 'model'>();
+    if (viewMode !== "future") return map;
+    for (const team of resolvedProjections) {
+      const teamWithDetails = team as TeamGoalProjection;
+      for (const [gwStr, fixtures] of Object.entries(teamWithDetails.fixtureDetails || {})) {
+        const gwNumber = parseInt(gwStr);
+        const hasOdds = fixtures.some(f => f.source === 'odds');
+        if (hasOdds) {
+          map.set(gwNumber, 'odds');
+        } else if (!map.has(gwNumber)) {
+          map.set(gwNumber, 'model');
+        }
+      }
+    }
+    return map;
+  }, [resolvedProjections, viewMode]);
+
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -847,19 +868,28 @@ export default function TeamGoalProjections() {
                       <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
                         Team
                       </th>
-                      {activeGameweeks.map(gwNumber => (
-                        <th 
-                          key={gwNumber} 
+                      {activeGameweeks.map(gwNumber => {
+                        const gwSource = gwSourceMap.get(gwNumber);
+                        return (
+                        <th
+                          key={gwNumber}
                           className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
                           onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
+                            {gwSource && (
+                              <span
+                                title={gwSource === 'odds' ? 'Live betting-market odds (The Odds API)' : 'Internal projection model'}
+                                className={`h-1.5 w-1.5 rounded-full ${gwSource === 'odds' ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                              />
+                            )}
                             <span className="md:hidden">{gwNumber === 39 ? '39*' : gwNumber}</span>
                             <span className="hidden md:inline">{gwNumber === 39 ? 'GW39 (TBC)' : `GW${gwNumber}`}</span>
                             {sortBy === `gw${gwNumber}` && (sortDir === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />)}
                           </div>
                         </th>
-                      ))}
+                        );
+                      })}
                       {viewMode === "future" && fixtureMode !== 'expert' && fixtureMode !== 'base' && tbcGoalMap.size > 0 && (!activeGameweeks.includes(39) && (selectedGameweeks.size === 0 || selectedGameweeks.has(39)) && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
                         <th className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'}`}>
                           GW39 (TBC)
@@ -915,22 +945,8 @@ export default function TeamGoalProjections() {
                           const isDGW = fixtures.length > 1;
                           const teamOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                           
-                          const cellSource = fixtures.length === 1 ? fixtures[0].source : undefined;
-
                           const cellContent = (
-                            <div className="relative flex flex-col items-center">
-                              {cellSource && goals !== undefined && (
-                                <span
-                                  title={
-                                    cellSource === 'odds'
-                                      ? 'Live betting-market odds (The Odds API)'
-                                      : 'Internal projection model (no live odds for this fixture)'
-                                  }
-                                  className={`absolute -top-1 -right-1 md:-right-2 h-1.5 w-1.5 rounded-full ${
-                                    cellSource === 'odds' ? 'bg-emerald-500' : 'bg-gray-300'
-                                  }`}
-                                />
-                              )}
+                            <div className="flex flex-col items-center">
                               <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                               {showOpponent && (
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
