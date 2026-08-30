@@ -731,8 +731,12 @@ export default function TeamCSProjections() {
 
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
                           {(() => {
-                            // Calculate average CS% per fixture across all active gameweeks + unabsorbed TBC
-                            const allFixtures = activeGameweeks.flatMap(gw => team.fixtureDetails?.[gw.toString()] || []);
+                            // Average CS% = sum of each actual fixture's CS% ÷ number of fixtures —
+                            // excluding the current gameweek once this team's own fixture is decided
+                            // (that cell shows "-"; its raw backend value is a stale projection).
+                            const allFixtures = activeGameweeks
+                              .filter(gw => !(gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)))
+                              .flatMap(gw => team.fixtureDetails?.[gw.toString()] || []);
                             const tbcOdds = getUnabsorbedTBC(team.teamShort);
                             const totalOdds = allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) + tbcOdds;
                             const totalCount = allFixtures.length + (tbcOdds > 0 ? 1 : 0);
