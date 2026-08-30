@@ -1166,9 +1166,12 @@ export default function PlayerTotalPoints() {
 
   // One-time initialization when bootstrap data loads. Marks the page ready regardless of
   // whether the future range is valid (it isn't, between seasons) — the viewMode-aware reset
-  // effect below sets the actual start/end for whichever mode is active.
+  // effect below sets the actual start/end for whichever mode is active. Waits on fixturesData
+  // too — otherwise, on a cold cache, this can fire before fixturesData resolves, lock in
+  // currentGWHasUnstarted=false (its default while fixtures are still loading), and never
+  // reconsider once `initialized` gates it off.
   useEffect(() => {
-    if (!bootstrapData || initialized) return;
+    if (!bootstrapData || !fixturesData || initialized) return;
 
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
@@ -1182,7 +1185,7 @@ export default function PlayerTotalPoints() {
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized, currentGWHasUnstarted, currentGameweek]);
+  }, [bootstrapData, fixturesData, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Reset gameweek range when viewMode changes
   useEffect(() => {

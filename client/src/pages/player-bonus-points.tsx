@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded, computeNextRange } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,31 +88,75 @@ export default function PlayerBonusPoints() {
     return map;
   }, [fixturesData, bootstrapData]);
 
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 3;
+    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+    return currentEvent ? currentEvent.id : 3;
+  }, [bootstrapData]);
+
+  // True once the current gameweek has at least one fixture that's still to kick off — that's
+  // when it's worth folding into the default range, same convention as the other Player
+  // Projection pages.
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some(f => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+
+  // Team SHORT codes (player-bonus-points-projections' teamName field is already the short code)
+  // whose own fixture in the current gameweek has kicked off or finished — their current-GW
+  // projection is a stale pre-match estimate and gets blanked client-side.
+  const currentGWDecidedTeamShorts = useMemo(() => {
+    const set = new Set<string>();
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams || currentGameweek <= 0) return set;
+    (fixturesData as any[]).filter(f => f.event === currentGameweek && (f.started || f.finished || f.finished_provisional)).forEach(f => {
+      const homeTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_h);
+      const awayTeam = (bootstrapData.teams as any[]).find((t: any) => t.id === f.team_a);
+      if (homeTeam) set.add(homeTeam.short_name);
+      if (awayTeam) set.add(awayTeam.short_name);
+    });
+    return set;
+  }, [fixturesData, bootstrapData, currentGameweek]);
+
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
       return [];
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) gws.unshift(currentGameweek);
     if (fixtureMode === 'base' && tbcTeamInfoMap.size > 0 && !gws.includes(39)) gws.push(39);
     return gws;
-  }, [bootstrapData?.events, fixtureMode, tbcTeamInfoMap]);
+  }, [bootstrapData?.events, fixtureMode, tbcTeamInfoMap, currentGWHasUnstarted, currentGameweek]);
+
+  // Full-range fetch window for the backend query — folds the current gameweek in the same way
+  // as the dropdown, since the endpoint's own "default" (no explicit params) bucket always
+  // starts at currentGameweek + 1 regardless of whether that gameweek has actually started.
+  const fetchRange = useMemo(() => {
+    if (!bootstrapData?.events) return { start: 0, end: 0 };
+    const range = computeNextRange(bootstrapData.events, totalWeeks);
+    const start = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < range.start) ? currentGameweek : range.start;
+    return { start, end: range.end };
+  }, [bootstrapData?.events, totalWeeks, currentGWHasUnstarted, currentGameweek]);
 
   // Initialize gameweek range once bootstrap data is loaded. Marks the page ready regardless of
-  // whether the future range is valid (it isn't, between seasons).
+  // whether the future range is valid (it isn't, between seasons). Waits on fixturesData too —
+  // otherwise, on a cold cache, this can fire before fixturesData resolves, lock in
+  // currentGWHasUnstarted=false (its default while fixtures are still loading), and never
+  // reconsider once `initialized` gates it off.
   useEffect(() => {
-    if (!bootstrapData || initialized) return;
+    if (!bootstrapData || !fixturesData || initialized) return;
 
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < start) ? currentGameweek : start;
 
-    if (start > 0 && end > 0 && start <= end && end <= 39) {
-      setStartGameweek(start);
+    if (effectiveStart > 0 && end > 0 && effectiveStart <= end && end <= 39) {
+      setStartGameweek(effectiveStart);
       setEndGameweek(end);
     }
     setInitialized(true);
-  }, [bootstrapData, initialized]);
+  }, [bootstrapData, fixturesData, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
   useEffect(() => {
@@ -129,9 +173,17 @@ export default function PlayerBonusPoints() {
     }
   }, [fixtureMode, endGameweek, bootstrapData?.events]);
 
-  // Simplified API call for bonus points projections (now projects future gameweeks only)
+  // Simplified API call for bonus points projections (now projects future gameweeks only).
+  // Explicit params fold the current gameweek in when it hasn't started (the endpoint's own
+  // "default" bucket, used when no params are passed, always starts at currentGameweek + 1).
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery<BonusPointsProjection[]>({
-    queryKey: ["/api/player-bonus-points-projections"],
+    queryKey: ["/api/player-bonus-points-projections", fetchRange.start, fetchRange.end],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-bonus-points-projections?startGameweek=${fetchRange.start}&endGameweek=${fetchRange.end}`);
+      if (!response.ok) throw new Error("Failed to fetch player bonus points projections");
+      return response.json();
+    },
+    enabled: fetchRange.start > 0 && fetchRange.end > 0,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
@@ -140,13 +192,28 @@ export default function PlayerBonusPoints() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
+  // A decided team's current-GW projection is a stale pre-match estimate — strip the key
+  // entirely so it renders blank ("-") and is excluded from the total/average, same convention
+  // as the other Player Projection pages.
+  const blankedBonusData = useMemo<BonusPointsProjection[]>(() => {
+    if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
+    if (currentGameweek <= 0 || currentGWDecidedTeamShorts.size === 0) return bonusPointsProjections;
+    const gwKey = `gw${currentGameweek}`;
+    return bonusPointsProjections.map(p => {
+      if (!currentGWDecidedTeamShorts.has(p.teamName) || !(gwKey in (p.bonusPoints || {}))) return p;
+      const { [gwKey]: _omitBonus, ...restBonus } = p.bonusPoints || {};
+      const { [gwKey]: _omitPoints, ...restPoints } = p.pointsFromBonus || {};
+      return { ...p, bonusPoints: restBonus, pointsFromBonus: restPoints };
+    });
+  }, [bonusPointsProjections, currentGameweek, currentGWDecidedTeamShorts]);
+
   // resolvedBonusData: absorbs GW39 real data into assigned GW for expert/custom modes
   const resolvedBonusData = useMemo<BonusPointsProjection[]>(() => {
-    if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
-    if (tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return bonusPointsProjections;
+    if (!blankedBonusData || !Array.isArray(blankedBonusData)) return [];
+    if (tbcTeamInfoMap.size === 0 || fixtureMode === 'base') return blankedBonusData;
     const startGW = startGameweek ?? 0;
     const endGW = endGameweek ?? 39;
-    return bonusPointsProjections.map((p: BonusPointsProjection) => {
+    return blankedBonusData.map((p: BonusPointsProjection) => {
       const tbcInfo = tbcTeamInfoMap.get(p.teamName);
       if (!tbcInfo) return p;
       const gw39Bonus = p.bonusPoints?.['gw39'] || 0;
@@ -166,7 +233,7 @@ export default function PlayerBonusPoints() {
       const newFixtureDetails = { ...(p.fixtureDetails || {}), [assignedGW.toString()]: [...prevDetails, { opponent: tbcInfo.opponent, isHome: tbcInfo.isHome, bonusPoints: gw39Bonus }] };
       return { ...p, bonusPoints: newBonusPoints, fixtureDetails: newFixtureDetails };
     });
-  }, [bonusPointsProjections, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [blankedBonusData, tbcTeamInfoMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -180,12 +247,6 @@ export default function PlayerBonusPoints() {
 
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
-
-  const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3;
-    const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
-    return currentEvent ? currentEvent.id : 3;
-  }, [bootstrapData]);
 
   const teams = useMemo(() => {
     if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
@@ -643,14 +704,21 @@ export default function PlayerBonusPoints() {
                         
                         let adjustedTotal = 0;
                         let originalTotal = 0;
+                        // Only counts gameweeks with a real (present) entry — a blanked
+                        // current-GW cell isn't in projection.bonusPoints at all, so it's
+                        // correctly excluded from the average's denominator.
+                        let countedWeeks = 0;
                         dynamicGameweekColumns.forEach(gw => {
-                          const val = projection.bonusPoints?.[`gw${gw}`] || 0;
+                          const gwKey = `gw${gw}`;
+                          if (!(gwKey in (projection.bonusPoints || {}))) return;
+                          const val = projection.bonusPoints?.[gwKey] || 0;
                           const mult = gwMultipliers[gw] ?? 1;
                           adjustedTotal += val * mult;
                           originalTotal += val;
+                          countedWeeks += 1;
                         });
-                        const adjustedAverage = adjustedTotal / dynamicGameweekColumns.length;
-                        const originalAverage = originalTotal / dynamicGameweekColumns.length;
+                        const adjustedAverage = countedWeeks > 0 ? adjustedTotal / countedWeeks : 0;
+                        const originalAverage = countedWeeks > 0 ? originalTotal / countedWeeks : 0;
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>

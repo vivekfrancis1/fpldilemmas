@@ -298,9 +298,12 @@ export default function PlayerGoalsScoredProjections() {
     }
   }, [viewMode, bootstrapData?.events, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, currentGWHasUnstarted, currentGameweek]);
 
-  // One-time initialization when bootstrap data loads
+  // One-time initialization when bootstrap data loads. Waits on fixturesDataEarly too —
+  // otherwise, on a cold cache, this can fire before it resolves, lock in
+  // currentGWHasUnstarted=false (its default while fixtures are still loading), and never
+  // reconsider once `initialized` gates it off.
   useEffect(() => {
-    if (!bootstrapData || initialized) return;
+    if (!bootstrapData || !fixturesDataEarly || initialized) return;
 
     const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
@@ -315,7 +318,7 @@ export default function PlayerGoalsScoredProjections() {
       setEndGameweek(end);
       setInitialized(true);
     }
-  }, [bootstrapData, initialized, currentGWHasUnstarted, currentGameweek]);
+  }, [bootstrapData, fixturesDataEarly, initialized, currentGWHasUnstarted, currentGameweek]);
 
   // Auto-extend endGameweek to 39 in base mode when TBC fixture exists
   useEffect(() => {
