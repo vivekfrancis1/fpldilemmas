@@ -6925,6 +6925,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const netTransfersEvent = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
         const seasonNetTransfers = (player.transfers_in || 0) - (player.transfers_out || 0);
 
+        // Extrapolates the current per-hour rate forward to estimate when progress will cross the
+        // ±100% threshold that triggers a price change — null when already there, or when the rate
+        // is moving away from (not toward) the threshold, since extrapolating that gives a
+        // meaningless negative/undefined answer.
+        const rawHourlyRate = (predictedProgress - progress) / hoursRemaining;
+        const currentMagnitude = Math.abs(progress);
+        let hoursToThreshold: number | null = null;
+        if (currentMagnitude >= 100) {
+          hoursToThreshold = 0;
+        } else if (Math.abs(rawHourlyRate) > 0.0001) {
+          const movingTowardThreshold = (progress >= 0 && rawHourlyRate > 0) || (progress < 0 && rawHourlyRate < 0);
+          if (movingTowardThreshold) {
+            hoursToThreshold = (100 - currentMagnitude) / Math.abs(rawHourlyRate);
+          }
+        }
+
         return {
           player_id: player.id,
           player_name: player.web_name,
@@ -6936,8 +6952,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           predicted_progress: Math.round(predictedProgress * 10) / 10,
           // Rate of change toward tonight's update, matching the "Per hr" column LiveFPL/fpl.page
           // both show — (predicted - current progress) spread evenly over the hours remaining.
-          hourly_rate: Math.round(((predictedProgress - progress) / hoursRemaining) * 100) / 100,
+          hourly_rate: Math.round(rawHourlyRate * 100) / 100,
           hours_remaining: Math.round(hoursRemaining * 100) / 100,
+          hours_to_threshold: hoursToThreshold !== null ? Math.round(hoursToThreshold * 10) / 10 : null,
+          days_to_threshold: hoursToThreshold !== null ? Math.round((hoursToThreshold / 24) * 10) / 10 : null,
           likelihood,
           ownership_trend: netTransfersEvent > 0 ? "up" : netTransfersEvent < 0 ? "down" : "flat",
           ownership_percentage: parseFloat(player.selected_by_percent || "0"),

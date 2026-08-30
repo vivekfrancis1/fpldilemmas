@@ -26,6 +26,8 @@ interface PricePrediction {
   ownership_trend: 'up' | 'down' | 'flat';
   ownership_percentage: number;
   locked_until: string | null;
+  hours_to_threshold: number | null;
+  days_to_threshold: number | null;
 }
 
 type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'ownership_percentage' | 'current_price';
@@ -89,6 +91,7 @@ export default function RecentPriceChanges() {
   const [predictionSortDirection, setPredictionSortDirection] = useState<SortDirection>('desc');
   const [predictionMovementFilter, setPredictionMovementFilter] = useState<PredictionMovementFilter>('all');
   const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
+  const [predictionClubFilter, setPredictionClubFilter] = useState("all");
   const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
   const [secondsUntilPriceChange, setSecondsUntilPriceChange] = useState(() => getSecondsUntilNextPriceChange());
   const { toast } = useToast();
@@ -189,6 +192,13 @@ export default function RecentPriceChanges() {
     }));
   };
 
+  const getClubs = () => {
+    if (!bootstrapData) return [];
+    return [...bootstrapData.teams]
+      .sort((a: any, b: any) => a.short_name.localeCompare(b.short_name))
+      .map((team: any) => ({ id: team.id, name: team.short_name }));
+  };
+
   const resolveTeamName = (change: PriceChange): string => {
     if (!bootstrapData) return change.team_name;
     const player = bootstrapData.elements?.find((p: any) => p.id === change.player_id);
@@ -266,12 +276,13 @@ export default function RecentPriceChanges() {
       const matchesSearch = p.player_name.toLowerCase().includes(predictionSearchTerm.toLowerCase()) ||
                            p.team_name.toLowerCase().includes(predictionSearchTerm.toLowerCase());
       const matchesPosition = predictionPositionFilter === "all" || p.position === predictionPositionFilter;
+      const matchesClub = predictionClubFilter === "all" || p.team_name === predictionClubFilter;
       const matchesMovement = predictionMovementFilter === "all" ? true
         : predictionMovementFilter === "locked" ? !!p.locked_until
         : predictionMovementFilter === "rise" ? p.predicted_progress > 0
         : p.predicted_progress < 0;
       const matchesTeam = predictionTeamFilter === "all" || myTeamPlayerIds.has(p.player_id);
-      return matchesSearch && matchesPosition && matchesMovement && matchesTeam;
+      return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesTeam;
     })
     .sort((a: PricePrediction, b: PricePrediction) => {
       const aValue = a[predictionSortField] ?? 0;
@@ -334,12 +345,22 @@ export default function RecentPriceChanges() {
     }
   };
 
+  // Mirrors the same >100%/>=95% thresholds the Status column uses — a badge should only stand
+  // out (light or dark green/red) when a player is actually in "Likely"/"Very likely" territory,
+  // not for any nonzero progress (e.g. 87%/88% is real movement but still "Unlikely to change").
   const progressBadgeClass = (value: number): string => {
-    if (value >= 100) return "bg-green-700 text-white";
-    if (value > 0) return "bg-green-100 text-green-800";
-    if (value <= -100) return "bg-red-800 text-white";
-    if (value < 0) return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+    const magnitude = Math.abs(value);
+    if (magnitude < 95) return "bg-gray-100 text-gray-600";
+    const isRise = value >= 0;
+    if (magnitude > 100) return isRise ? "bg-green-700 text-white" : "bg-red-800 text-white";
+    return isRise ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700";
+  };
+
+  const formatEta = (prediction: PricePrediction): string => {
+    if (prediction.hours_to_threshold === null) return "-";
+    if (prediction.hours_to_threshold <= 0) return "Reached";
+    if (prediction.hours_to_threshold < 24) return `${prediction.hours_to_threshold.toFixed(1)}h`;
+    return `${prediction.days_to_threshold!.toFixed(1)}d`;
   };
 
   return (
@@ -425,6 +446,19 @@ export default function RecentPriceChanges() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={predictionClubFilter} onValueChange={setPredictionClubFilter}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-club-filter">
+                      <SelectValue placeholder="All Teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      {getClubs().map(club => (
+                        <SelectItem key={club.id} value={club.name}>
+                          {club.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={predictionMovementFilter} onValueChange={(v) => setPredictionMovementFilter(v as PredictionMovementFilter)}>
                     <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-movement-filter">
                       <SelectValue placeholder="Rise & drop" />
@@ -462,6 +496,7 @@ export default function RecentPriceChanges() {
                 </CardTitle>
                 <CardDescription>
                   Real-time progress toward each player's next price change, straight from FPL's own official data — updates as transfers happen, same numbers you'd see on fantasy.premierleague.com.
+                  {" "}Status: predicted progress past <strong>100%</strong> is "Very likely", <strong>95–100%</strong> is "Likely", anything below is "Unlikely to change".
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -521,6 +556,9 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
+                          <th className="hidden md:table-cell text-right p-3 font-medium" title="Time to reach the ±100% threshold at the current per-hour rate">
+                            Time to Change
+                          </th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
                             className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
@@ -567,6 +605,9 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right text-xs text-muted-foreground">
                               {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
+                            </td>
+                            <td className="hidden md:table-cell p-3 text-right text-xs text-muted-foreground">
+                              {formatEta(prediction)}
                             </td>
                             <td className="hidden md:table-cell p-3">
                               <div className="flex items-center justify-center gap-1">

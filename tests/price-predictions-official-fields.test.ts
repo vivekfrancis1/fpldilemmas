@@ -105,8 +105,44 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     expect(mover.hours_remaining).toBeGreaterThan(0);
     expect(mover.hours_remaining).toBeLessThanOrEqual(24);
 
+    // progress/predicted_progress/hours_remaining are all rounded before being returned, so
+    // recomputing the rate from them only approximates the server's unrounded internal math —
+    // allow a small margin rather than asserting to 2dp precision.
     const expectedRate = (mover.predicted_progress - mover.progress) / mover.hours_remaining;
-    expect(mover.hourly_rate).toBeCloseTo(expectedRate, 2);
+    expect(Math.abs(mover.hourly_rate - expectedRate)).toBeLessThan(0.05);
+  });
+
+  it('hours_to_threshold/days_to_threshold extrapolate the current hourly rate to the ±100% price-change threshold', () => {
+    // Already past the threshold: crossing is immediate.
+    const pastThreshold = predictions.find((p: any) => Math.abs(p.progress) >= 100);
+    expect(pastThreshold).toBeDefined();
+    expect(pastThreshold.hours_to_threshold).toBe(0);
+    expect(pastThreshold.days_to_threshold).toBe(0);
+
+    // Trending toward the threshold: hours_to_threshold should match a straight-line
+    // extrapolation of the current progress at the current hourly rate.
+    const trendingToward = predictions.find((p: any) => {
+      const magnitude = Math.abs(p.progress);
+      const movingToward = (p.progress >= 0 && p.hourly_rate > 0) || (p.progress < 0 && p.hourly_rate < 0);
+      return magnitude > 1 && magnitude < 100 && movingToward && Math.abs(p.hourly_rate) > 0.01;
+    });
+    expect(trendingToward).toBeDefined();
+    // progress/hourly_rate in the response are already rounded to 1-2dp, so recomputing from them
+    // only approximates the server's unrounded internal math — allow a generous margin rather than
+    // asserting exact equality.
+    const expectedHours = (100 - Math.abs(trendingToward.progress)) / Math.abs(trendingToward.hourly_rate);
+    expect(Math.abs(trendingToward.hours_to_threshold - expectedHours)).toBeLessThan(5);
+    expect(Math.abs(trendingToward.days_to_threshold - expectedHours / 24)).toBeLessThan(1);
+
+    // Trending away from the threshold (rate sign opposes progress sign): no meaningful ETA.
+    const trendingAway = predictions.find((p: any) => {
+      const magnitude = Math.abs(p.progress);
+      const movingAway = (p.progress >= 0 && p.hourly_rate < 0) || (p.progress < 0 && p.hourly_rate > 0);
+      return magnitude > 1 && magnitude < 100 && movingAway;
+    });
+    expect(trendingAway).toBeDefined();
+    expect(trendingAway.hours_to_threshold).toBeNull();
+    expect(trendingAway.days_to_threshold).toBeNull();
   });
 
   it('ownership_trend direction matches the sign of this gameweek\'s net transfers', () => {
