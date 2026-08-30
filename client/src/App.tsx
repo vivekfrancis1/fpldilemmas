@@ -96,29 +96,29 @@ function Router() {
       <Switch>
         <Route path="/" component={PlayerTotalPoints} />
         <Route path="/my-dashboard">
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute>
             <MyDashboard />
           </ProtectedRoute>
         </Route>
         <Route path="/projected-points">
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute>
             <ProjectedPoints />
           </ProtectedRoute>
         </Route>
         <Route path="/team-optimizer">
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute>
             <TeamOptimizer />
           </ProtectedRoute>
         </Route>
         <Route path="/transfer-recommendations">
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute>
             <TransferRecommendations />
           </ProtectedRoute>
         </Route>
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/transfer-planner">
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute>
             <TransferPlanner />
           </ProtectedRoute>
         </Route>

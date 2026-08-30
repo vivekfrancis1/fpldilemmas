@@ -104,12 +104,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "My FPL",
       items: [
-        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview", adminOnly: true },
-        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
-        { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
-        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false, adminOnly: true },
-        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false, adminOnly: true },
-        { path: "/pick-team", label: "Pick Team", icon: UserPlus, description: "Build a squad from scratch — no login or Manager ID needed", popular: false, mobileHidden: false, adminOnly: true }
+        { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
+        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false },
+        { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false },
+        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
+        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
       ]
     },
     ];
@@ -125,6 +124,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Admin Tools",
       items: [
+        { path: "/pick-team", label: "Pick Team", icon: UserPlus, description: "Build a squad from scratch — no login or Manager ID needed", popular: false },
         { path: "/projection-accuracy", label: "Projection Accuracy", icon: Target, description: "Compare projected vs actual results", popular: false },
         { path: "/admin-content-creators", label: "Content Creator Admin", icon: UserCog, description: "Manage FPL content creators", popular: false },
         { path: "/admin-cache-management", label: "Cache Management", icon: Database, description: "Refresh projection caches", popular: false },
@@ -167,7 +167,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // Filter out adminOnly items for non-admin users
   const filteredNavItems = navItems.map(section => ({
     ...section,
-    items: section.items.filter(item => !item.adminOnly || isAdmin)
+    items: section.items.filter(item => !(item as { adminOnly?: boolean }).adminOnly || isAdmin)
   }));
 
   // Combine filtered public and admin navigation items

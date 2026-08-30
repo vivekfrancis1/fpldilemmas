@@ -285,6 +285,7 @@ export const PlayerNameCell = ({
   ownership,
   className,
   playerId,
+  availabilityBadge,
 }: {
   name: string;
   position?: string;
@@ -295,20 +296,25 @@ export const PlayerNameCell = ({
   className?: string;
   /** When provided, the name navigates to that player's /player/:id detail page. */
   playerId?: number | string;
+  /** Rendered inline right after the name (e.g. <PlayerAvailabilityBadge />), not below it. */
+  availabilityBadge?: React.ReactNode;
 }) => {
   const [, navigate] = useLocation();
   return (
-    <div className={cn("flex items-start gap-1", className)}>
-      <JerseyIcon team={team} position={position} className="h-5 w-5 object-contain shrink-0 mt-0.5" />
+    <div className={cn("flex items-center gap-1", className)}>
+      <JerseyIcon team={team} position={position} className="h-7 w-7 object-contain shrink-0" />
       <div className="flex flex-col overflow-hidden">
-        <div
-          className={cn(
-            "font-semibold text-gray-900",
-            playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
-          )}
-          onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
-        >
-          {name}
+        <div className="flex items-center gap-0.5 flex-wrap">
+          <span
+            className={cn(
+              "font-semibold text-gray-900",
+              playerId != null && "cursor-pointer hover:text-purple-700 hover:underline"
+            )}
+            onClick={playerId != null ? () => navigate(`/player/${playerId}?from=${encodeURIComponent(window.location.pathname)}`) : undefined}
+          >
+            {name}
+          </span>
+          {availabilityBadge}
         </div>
         <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
           {(team || position) && (

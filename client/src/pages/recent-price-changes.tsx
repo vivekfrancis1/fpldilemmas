@@ -116,8 +116,13 @@ export default function RecentPriceChanges() {
     return () => clearInterval(interval);
   }, []);
 
-  const nextPriceChangeLocalTime = new Date(Date.now() + secondsUntilPriceChange * 1000)
-    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const nextPriceChangeDate = new Date(Date.now() + secondsUntilPriceChange * 1000);
+  const nextPriceChangeLocalTime = nextPriceChangeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Viewer's own local time zone abbreviation (e.g. "IST", "GMT+1", "PDT") — whatever the
+  // browser's own Intl data resolves to for their device, not a hardcoded zone.
+  const localTimeZoneAbbr = new Intl.DateTimeFormat([], { timeZoneName: 'short' })
+    .formatToParts(nextPriceChangeDate)
+    .find((part) => part.type === 'timeZoneName')?.value || '';
 
   const { data: myTeamData } = useQuery<MyTeamData>({
     queryKey: ["/api/manager", cachedManagerId, "team"],
@@ -459,7 +464,7 @@ export default function RecentPriceChanges() {
                   <div>
                     <p className="text-xs text-muted-foreground">Next Price Change at</p>
                     <p className="text-xl font-bold" data-testid="text-price-change-local-time">
-                      {nextPriceChangeLocalTime} <span className="text-sm font-normal text-muted-foreground">(Local Time)</span>
+                      {nextPriceChangeLocalTime} <span className="text-sm font-normal text-muted-foreground">{localTimeZoneAbbr}</span>
                     </p>
                   </div>
                 </div>

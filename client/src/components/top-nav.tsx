@@ -96,12 +96,11 @@ const navSections: NavSection[] = [
   {
     section: "My FPL",
     items: [
-      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, adminOnly: true },
-      { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
-      { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
-      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, adminOnly: true },
-      { path: "/transfer-planner", label: "Transfer Planner", icon: Target, adminOnly: true },
-      { path: "/pick-team", label: "Pick Team", icon: UserPlus, adminOnly: true },
+      { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
+      { path: "/projected-points", label: "Projected Points", icon: TrendingUp },
+      { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap },
+      { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft },
+      { path: "/transfer-planner", label: "Transfer Planner", icon: Target },
     ],
   },
 ];
@@ -109,6 +108,7 @@ const navSections: NavSection[] = [
 const adminSection: NavSection = {
   section: "Admin",
   items: [
+    { path: "/pick-team", label: "Pick Team", icon: UserPlus },
     { path: "/openfpl-projections", label: "OpenFPL Projections", icon: BarChart3 },
     { path: "/projection-accuracy", label: "Projection Accuracy", icon: Target },
     { path: "/admin-content-creators", label: "Content Creator Admin", icon: UserCog },

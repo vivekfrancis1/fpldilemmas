@@ -1065,8 +1065,8 @@ export default function PlayerDefensiveContributions() {
                   return (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 w-[130px] min-w-[130px]">
-                      <div className="flex items-start gap-1">
-                        <JerseyIcon team={player.teamName} position={player.position} className="h-5 w-5 md:h-6 md:w-6 object-contain shrink-0 mt-0.5" />
+                      <div className="flex items-center gap-1">
+                        <JerseyIcon team={player.teamName} position={player.position} className="h-7 w-7 object-contain shrink-0" />
                         <div className="flex flex-col overflow-hidden">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{viewMode === "future" ? ((playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName) : player.playerName}</span>

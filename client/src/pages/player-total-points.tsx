@@ -680,11 +680,11 @@ function createPlayerTotalPointsColumns(
       className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]',
       style: { width: '120px', minWidth: '80px', maxWidth: '140px' } as CSSProperties,
       render: (_, player) => (
-        <div className="flex items-start gap-1 w-[80px] md:w-[110px] overflow-hidden">
+        <div className="flex items-center gap-1 w-[80px] md:w-[110px] overflow-hidden">
           <JerseyIcon
             team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || ''}
             position={player.position}
-            className="h-6 w-6 object-contain shrink-0 mt-0.5"
+            className="h-7 w-7 object-contain shrink-0"
           />
           <div className="overflow-hidden">
             <div className="flex items-center gap-0.5 flex-wrap">
@@ -706,6 +706,25 @@ function createPlayerTotalPointsColumns(
             </div>
           </div>
         </div>
+      )
+    },
+    {
+      key: 'totalExpectedPoints',
+      header: `Total`,
+      sortable: true,
+      hideSortIcon: true,
+      align: 'center',
+      className: 'w-[68px] bg-green-50 border-r-2 border-gray-300 px-1 sticky left-[120px] z-[5] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      render: (_, player) => (
+        isPastMode ? (
+          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
+        ) : (
+          <RangeTotalBreakdownTooltip
+            player={player}
+            gameweekCount={gameweekRange.length}
+            excludedComponents={excludedComponents}
+          />
+        )
       )
     },
     {
@@ -812,25 +831,6 @@ function createPlayerTotalPointsColumns(
         );
       }
     }] : []),
-    {
-      key: 'totalExpectedPoints',
-      header: `Total`,
-      sortable: true,
-      hideSortIcon: true,
-      align: 'center',
-      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[272px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
-      render: (_, player) => (
-        isPastMode ? (
-          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
-        ) : (
-          <RangeTotalBreakdownTooltip 
-            player={player} 
-            gameweekCount={gameweekRange.length} 
-            excludedComponents={excludedComponents}
-          />
-        )
-      )
-    },
     {
       key: 'averageValue',
       header: 'Value',
