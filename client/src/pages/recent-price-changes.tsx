@@ -20,12 +20,14 @@ interface PricePrediction {
   status: string;
   progress: number;
   predicted_progress: number;
+  hourly_rate: number;
+  hours_remaining: number;
   likelihood: number;
   ownership_trend: 'up' | 'down' | 'flat';
   ownership_percentage: number;
 }
 
-type PredictionSortField = 'progress' | 'predicted_progress' | 'ownership_percentage' | 'current_price';
+type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'ownership_percentage' | 'current_price';
 
 interface PriceChange {
   player_id: number;
@@ -407,6 +409,17 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('hourly_rate')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Per Hr
+                              {predictionSortField === 'hourly_rate' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
                             className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
@@ -450,6 +463,9 @@ export default function RecentPriceChanges() {
                               <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${progressBadgeClass(prediction.predicted_progress)}`}>
                                 {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
                               </span>
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right text-xs text-muted-foreground">
+                              {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
                             </td>
                             <td className="hidden md:table-cell p-3">
                               <div className="flex items-center justify-center gap-1">

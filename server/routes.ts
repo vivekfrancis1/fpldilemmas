@@ -6889,17 +6889,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
 
-      // FPL's own price_change_projections[].likelihood is a -5..+5 confidence/direction scale
-      // (verified against live data: -5/+5 pairs with ~100%+ progress, 0 with a flat/stalled
-      // predicted progress) — status text is derived from this official field, not a guessed
-      // percentage threshold.
-      const statusFromLikelihood = (likelihood: number): string => {
-        if (likelihood >= 4) return "Very likely to rise";
-        if (likelihood >= 1) return "Likely to rise";
-        if (likelihood <= -4) return "Very likely to drop";
-        if (likelihood <= -1) return "Likely to drop";
+      // FPL's own price_change_projections[].likelihood (-5..+5) turned out too coarse for a
+      // sensible status label: likelihood=1 corresponds to only ~18-20% real progress, so a
+      // naive "any nonzero likelihood = Likely" mapping put over 80% of the entire player pool
+      // in "Likely to rise/drop" — useless for flagging genuinely notable movers. Status is
+      // derived instead from the real progress percentage itself, with our own transparent
+      // magnitude thresholds — not a guess at FPL's undisclosed internal boundary logic.
+      const statusFromProgress = (progress: number): string => {
+        const magnitude = Math.abs(progress);
+        const direction = progress >= 0 ? "rise" : "drop";
+        if (magnitude >= 95) return `Very likely to ${direction}`;
+        if (magnitude >= 50) return `Likely to ${direction}`;
+        if (magnitude >= 15) return direction === "rise" ? "Rising slowly" : "Falling slowly";
         return "Unlikely to change";
       };
+
+      // Hours remaining until FPL's next price update (00:00 UK time) — Europe/London so BST/GMT
+      // is handled automatically. Matches the "Per hr" rate LiveFPL/fpl.page both show.
+      const now = new Date();
+      const ukParts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      }).formatToParts(now);
+      const ukField = (type: string) => parseInt(ukParts.find((p) => p.type === type)?.value || "0", 10);
+      const secondsSinceUkMidnight = ukField("hour") * 3600 + ukField("minute") * 60 + ukField("second");
+      const hoursRemaining = Math.max((24 * 3600 - secondsSinceUkMidnight) / 3600, 1 / 60); // floor at 1 minute
 
       const predictions = elements.map((player: any) => {
         const progress = parseFloat(player.price_change_percent ?? "0") || 0;
@@ -6919,9 +6932,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
           position: positions.find((p: any) => p.id === player.element_type)?.singular_name_short || "Unknown",
           current_price: player.now_cost,
-          status: statusFromLikelihood(likelihood),
+          status: statusFromProgress(progress),
           progress: Math.round(progress * 10) / 10,
           predicted_progress: Math.round(predictedProgress * 10) / 10,
+          // Rate of change toward tonight's update, matching the "Per hr" column LiveFPL/fpl.page
+          // both show — (predicted - current progress) spread evenly over the hours remaining.
+          hourly_rate: Math.round(((predictedProgress - progress) / hoursRemaining) * 100) / 100,
+          hours_remaining: Math.round(hoursRemaining * 100) / 100,
           likelihood,
           ownership_trend: netTransfersEvent > 0 ? "up" : netTransfersEvent < 0 ? "down" : "flat",
           ownership_percentage: parseFloat(player.selected_by_percent || "0"),
@@ -6932,7 +6949,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transfers_out_event: player.transfers_out_event || 0,
           price_change_event: player.cost_change_event || 0,
           price_change_season: player.cost_change_start || 0,
-          hourly_rate: player.price_change_hourly_rate ?? 0,
           calibrating: !!player.price_change_calibrating,
           locked_until: player.price_change_locked_until || null,
         };

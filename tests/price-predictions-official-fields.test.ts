@@ -57,20 +57,47 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     expect(pred.predicted_progress).toBeCloseTo(parseFloat(officialOffset0.projected_percent), 5);
   });
 
-  it('status reflects the sign of the official likelihood field (rise/drop/no change), not a guessed threshold', () => {
-    const strongRiser = bootstrapElements.find(
-      (p: any) => p.price_change_projections?.[0]?.likelihood >= 4
-    );
-    const strongFaller = bootstrapElements.find(
-      (p: any) => p.price_change_projections?.[0]?.likelihood <= -4
-    );
+  // FPL's own price_change_projections[].likelihood (-5..+5) turned out to be too coarse for a
+  // sensible status label: 1 maps to only ~18-20% real progress, so a naive "any nonzero
+  // likelihood = Likely to rise/drop" mapping put over 80% of the whole player pool in
+  // "Likely to rise/drop" — nonsensical for a column meant to flag genuinely notable movers.
+  // Status is instead derived from the real progress percentage itself, with our own
+  // transparent magnitude thresholds (>=95% very likely, >=50% likely, >=15% slowly, else
+  // unlikely to change) — not a guess at FPL's undisclosed internal boundary logic.
+  it('status is derived from real progress magnitude, not the coarse likelihood scale', () => {
+    const barelyMoving = bootstrapElements.find((p: any) => {
+      const prog = Math.abs(parseFloat(p.price_change_percent) || 0);
+      return prog > 5 && prog < 15;
+    });
+    const strongRiser = bootstrapElements.find((p: any) => (parseFloat(p.price_change_percent) || 0) >= 95);
+    const strongFaller = bootstrapElements.find((p: any) => (parseFloat(p.price_change_percent) || 0) <= -95);
+    expect(barelyMoving).toBeDefined();
     expect(strongRiser).toBeDefined();
     expect(strongFaller).toBeDefined();
 
+    const barelyPred = predictions.find((p: any) => p.player_id === barelyMoving.id);
     const risePred = predictions.find((p: any) => p.player_id === strongRiser.id);
     const fallPred = predictions.find((p: any) => p.player_id === strongFaller.id);
-    expect(risePred.status.toLowerCase()).toContain('rise');
-    expect(fallPred.status.toLowerCase()).toContain('drop');
+
+    // A player barely off 0% must NOT be labeled "Likely" or "Very likely" — that's the
+    // exact over-eager mislabeling this fix corrects.
+    expect(barelyPred.status).toBe('Unlikely to change');
+    expect(risePred.status.toLowerCase()).toBe('very likely to rise');
+    expect(fallPred.status.toLowerCase()).toBe('very likely to drop');
+  });
+
+  it('hourly_rate is (predicted_progress - progress) / hours remaining until the next 00:00 UK price update', () => {
+    const mover = predictions.find((p: any) => Math.abs(p.progress) > 1);
+    expect(mover).toBeDefined();
+    expect(Number.isFinite(mover.hourly_rate)).toBe(true);
+
+    // hours_remaining is exposed alongside it so the math is independently checkable, and
+    // should always be between 0 and 24 (time until the next UK-midnight price update).
+    expect(mover.hours_remaining).toBeGreaterThan(0);
+    expect(mover.hours_remaining).toBeLessThanOrEqual(24);
+
+    const expectedRate = (mover.predicted_progress - mover.progress) / mover.hours_remaining;
+    expect(mover.hourly_rate).toBeCloseTo(expectedRate, 2);
   });
 
   it('ownership_trend direction matches the sign of this gameweek\'s net transfers', () => {
