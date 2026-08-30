@@ -365,7 +365,7 @@ export default function TeamAssistProjections() {
   const getRowStats = (team: TeamAssistProjection) => {
     const countedGws = activeGameweeks.filter(gw =>
       !(viewMode === "future" && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
-      (viewMode !== "past" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+      (viewMode === "future" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
     );
     const tbc = getUnabsorbedTBC(team.teamShort);
     const total = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
@@ -821,7 +821,7 @@ export default function TeamAssistProjections() {
                         // divided by the gameweeks actually counted, so the two always agree.
                         const countedGws = activeGameweeks.filter(gw =>
                           !(viewMode === "future" && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
-                          (viewMode !== "past" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+                          (viewMode === "future" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
                         );
                         const tbc = getUnabsorbedTBC(team.teamShort);
                         const rowTotal = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
