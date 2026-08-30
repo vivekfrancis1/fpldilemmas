@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { playerHistoryCache } from "../shared/schema";
-import { eq, sql, count } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 const FPL_ELEMENT_SUMMARY_URL = "https://fantasy.premierleague.com/api/element-summary";
 const PREFETCH_BATCH_SIZE = 10;
@@ -62,53 +62,51 @@ export async function prefetchAllPlayerHistories(playerIds: number[], finishedGW
     return;
   }
 
-  // Check if we already have fresh data for all players
+  // Precisely determine which players actually need a refresh — every requested player's own
+  // cache row, not a small sample standing in for the whole set (a handful of players happening
+  // to be up to date previously caused this to skip refreshing everyone else, silently leaving
+  // players with 0 current-season minutes stuck on stale/previous-season data indefinitely,
+  // since a skipped player is never re-checked until the next restart tries again).
+  let targetIds = playerIds;
   try {
     const cutoff = new Date(Date.now() - CACHE_MAX_AGE_HOURS * 60 * 60 * 1000);
-    const freshCount = await db
-      .select({ total: count() })
+    const cached = await db
+      .select({ playerId: playerHistoryCache.playerId, historyJson: playerHistoryCache.historyJson, updatedAt: playerHistoryCache.updatedAt })
       .from(playerHistoryCache)
-      .where(sql`${playerHistoryCache.updatedAt} > ${cutoff}`);
-    
-    const fresh = freshCount[0]?.total ?? 0;
-    if (fresh >= playerIds.length * 0.95) {
-      // Timestamps look fresh — but also verify GW coverage if finishedGW is provided.
-      // The cache can be "fresh" in time but missing the latest GW (e.g. updated before GW finished).
+      .where(sql`${playerHistoryCache.playerId} = ANY(ARRAY[${sql.raw(playerIds.join(","))}]::integer[])`);
+    const byId = new Map(cached.map(r => [r.playerId, r]));
+
+    targetIds = playerIds.filter(id => {
+      const row = byId.get(id);
+      if (!row) return true; // never cached
+      if (row.updatedAt < cutoff) return true; // stale by age
       if (finishedGW && finishedGW > 0) {
-        const sampleHistories = await getBulkPlayerHistories(playerIds.slice(0, 5));
-        let maxRoundInDb = 0;
-        for (const hist of Array.from(sampleHistories.values())) {
-          const m = Math.max(...hist.map((h: any) => h.round || 0), 0);
-          if (m > maxRoundInDb) maxRoundInDb = m;
-        }
-        if (maxRoundInDb < finishedGW) {
-          console.log(`🔄 Player history GW stale: DB max round=${maxRoundInDb}, finished GW=${finishedGW} — forcing refresh`);
-          // Fall through to full re-fetch below
-        } else {
-          console.log(`✅ Player history cache fresh: ${fresh}/${playerIds.length} players up to date through GW${maxRoundInDb} (skipping prefetch)`);
-          return;
-        }
-      } else {
-        console.log(`✅ Player history cache fresh: ${fresh}/${playerIds.length} players up to date (skipping prefetch)`);
-        return;
+        const hist = row.historyJson as any[];
+        const maxRound = Math.max(...hist.map((h: any) => h.round || 0), 0);
+        if (maxRound < finishedGW) return true; // stale by GW coverage
       }
-    } else {
-      console.log(`🔄 Player history cache stale: ${fresh}/${playerIds.length} fresh — running prefetch`);
+      return false;
+    });
+
+    if (targetIds.length === 0) {
+      console.log(`✅ Player history cache fresh: all ${playerIds.length} requested players up to date (skipping prefetch)`);
+      return;
     }
+    console.log(`🔄 Player history cache: ${targetIds.length}/${playerIds.length} players need a refresh`);
   } catch (e) {
-    console.log("⚠️ Could not check cache freshness, proceeding with prefetch");
+    console.log("⚠️ Could not check cache freshness, proceeding with full prefetch");
   }
 
   prefetchRunning = true;
   const startTime = Date.now();
-  console.log(`📚 Starting player history prefetch for ${playerIds.length} players...`);
+  console.log(`📚 Starting player history prefetch for ${targetIds.length} players...`);
 
   let saved = 0;
   let failed = 0;
 
   try {
-    for (let i = 0; i < playerIds.length; i += PREFETCH_BATCH_SIZE) {
-      const batch = playerIds.slice(i, i + PREFETCH_BATCH_SIZE);
+    for (let i = 0; i < targetIds.length; i += PREFETCH_BATCH_SIZE) {
+      const batch = targetIds.slice(i, i + PREFETCH_BATCH_SIZE);
 
       await Promise.all(
         batch.map(async (playerId) => {
@@ -132,7 +130,7 @@ export async function prefetchAllPlayerHistories(playerIds: number[], finishedGW
         })
       );
 
-      if (i + PREFETCH_BATCH_SIZE < playerIds.length) {
+      if (i + PREFETCH_BATCH_SIZE < targetIds.length) {
         await sleep(PREFETCH_BATCH_DELAY_MS);
       }
     }

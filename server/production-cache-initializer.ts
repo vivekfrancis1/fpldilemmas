@@ -208,9 +208,14 @@ export class ProductionCacheInitializer {
       executor: async () => {
         const response = await internalFetch("api/bootstrap-static");
         const bootstrapData = await response.json();
-        const playerIds: number[] = bootstrapData.elements
-          .filter((p: any) => (p.minutes || 0) >= 1)
-          .map((p: any) => p.id);
+        // Every player, not just ones with >=1 minute this season — a player who's played 0
+        // minutes so far (new signing, rotation option who hasn't debuted, promoted-team squad
+        // member) still needs their cache refreshed to reflect that correctly (an empty/short
+        // current-season history), otherwise they're silently excluded from every future
+        // refresh cycle and stay stuck on whatever was cached before — which, at initial
+        // pre-season setup, was their real *last* season's full history being read back as if
+        // it were current, since the current-season minutes threshold hadn't been met yet.
+        const playerIds: number[] = bootstrapData.elements.map((p: any) => p.id);
         const finishedGW: number = bootstrapData.events.filter((e: any) => e.finished).length;
         // When histories are GW-stale and fully re-fetched, clear the goal/assist share caches
         // and re-run the scoring cache so the next DB snapshot uses fresh player history data.
