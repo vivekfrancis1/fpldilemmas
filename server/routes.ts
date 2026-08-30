@@ -20568,7 +20568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const priceChange = `${change.old_price.toFixed(1)} → ${change.new_price.toFixed(1)}`;
           return `${playerInfo} ${priceChange}`;
         });
-        const footer = `\n\nhttps://fpldilemmas.com/recent-price-changes\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
+        const footer = `\n\nhttps://fpldilemmas.com/price-changes\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
         
         let tweet = header;
         for (const line of playerLines) {

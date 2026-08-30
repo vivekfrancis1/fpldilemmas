@@ -1,7 +1,7 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments, CURRENT_SEASON } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db, pool } from "./db";
-import { eq, sql, inArray, desc, and } from "drizzle-orm";
+import { eq, sql, inArray, desc, and, gte } from "drizzle-orm";
 import { computeCbitPoints } from "./fpl-scoring-cache-service";
 import { nameMatchKey } from "./player-history-blend-service";
 
@@ -1547,21 +1547,28 @@ export class DatabaseStorage implements IStorage {
 
   async getLatestPlayerPrice(playerId: number): Promise<{ price: number; date: string } | null> {
     try {
-      // Check price changes table for most recent recorded price
+      // price_changes has no season column, so rows from previous seasons linger in the table —
+      // and FPL reassigns playerId to a different player every season, so an unfiltered lookup by
+      // playerId here can return a stale price belonging to last season (or a different player
+      // entirely), producing nonsense old/new price gaps for this season's real single-day changes.
+      // Restrict to the current season using the same June 1 cutoff the read endpoint already uses.
+      const currentSeasonStartYear = parseInt(CURRENT_SEASON.split('/')[0], 10);
+      const currentSeasonCutoff = `${currentSeasonStartYear}-06-01`;
+
       const [latestChange] = await db.select()
         .from(priceChanges)
-        .where(eq(priceChanges.playerId, playerId))
+        .where(and(eq(priceChanges.playerId, playerId), gte(priceChanges.changeDate, currentSeasonCutoff)))
         .orderBy(desc(priceChanges.changeDate), desc(priceChanges.createdAt))
         .limit(1);
-        
+
       if (latestChange) {
         return {
           price: latestChange.newPrice,
           date: latestChange.changeDate
         };
       }
-      
-      // If no price changes recorded yet, return null so we don't track historical changes
+
+      // If no price changes recorded yet this season, return null so we don't track historical changes
       return null;
     } catch (error) {
       console.error(`Error getting latest price for player ${playerId}:`, error);

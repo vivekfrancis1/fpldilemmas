@@ -123,7 +123,7 @@ export class TwitterService {
     }
 
     const formattedDate = this.formatDateWithoutYear(date);
-    const footer = `\n\nhttps://fpldilemmas.com/recent-price-changes\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
+    const footer = `\n\nhttps://fpldilemmas.com/price-changes\n\n#FPL #FantasyPremierLeague #FPLCommunity`;
 
     const formatLine = (change: PriceChange) => {
       const teamAbbr = this.getTeamAbbreviation(change.team_name);
