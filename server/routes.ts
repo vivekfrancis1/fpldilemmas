@@ -8419,6 +8419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let teams: any[];
       let fixturesData: any[];
       let lastFinishedGW: number;
+      let bootstrapEventsGA: any[] = [];
 
       if (resolvedSeasonGA !== CURRENT_SEASON) {
         const archived = await pool.query(
@@ -8454,14 +8455,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapData = await bootstrapResponse.json();
         fixturesData = await fixturesResponse.json();
         teams = bootstrapData.teams;
+        bootstrapEventsGA = bootstrapData.events || [];
 
         lastFinishedGW = computeLastFinishedGW(fixturesData);
       }
 
+      // Fold the current gameweek's column in once any of its fixtures are underway or done —
+      // see the matching comment in /api/team-goals-history.
+      const currentGameweekGA = resolvedSeasonGA === CURRENT_SEASON ? computeCurrentGameweek(bootstrapEventsGA) : 0;
+      const currentGWDecidedGA = currentGameweekGA > lastFinishedGW &&
+        fixturesData.some((f: any) => f.event === currentGameweekGA && (isFixtureActuallyOver(f) || f.started));
+      const liveGameweekGA = currentGWDecidedGA ? currentGameweekGA : null;
+      const historyEndGWGA = liveGameweekGA ?? lastFinishedGW;
+
       const teamGoalsAgainstMap = new Map();
       teams.forEach((team: any) => {
         const gameweekGoals: { [key: number]: number | null } = {};
-        for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        for (let gw = 1; gw <= historyEndGWGA; gw++) {
           gameweekGoals[gw] = null;
         }
         teamGoalsAgainstMap.set(team.id, {
@@ -8474,25 +8484,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: team.position || 0
         });
       });
-      
+
       const teamGamesPlayedGA = new Map<number, number>();
+      const liveTeamIdsGA = new Set<number>();
       teams.forEach((team: any) => teamGamesPlayedGA.set(team.id, 0));
       fixturesData.forEach((fixture: any) => {
-        if (isFixtureActuallyOver(fixture) && fixture.event <= lastFinishedGW) {
-          const homeTeam = teamGoalsAgainstMap.get(fixture.team_h);
-          const awayTeam = teamGoalsAgainstMap.get(fixture.team_a);
+        if (fixture.event > historyEndGWGA) return;
+        const isOver = isFixtureActuallyOver(fixture);
+        const isLive = !isOver && !!fixture.started;
+        if (!isOver && !isLive) return;
 
-          // Home team concedes away team's goals
-          if (homeTeam && fixture.team_a_score !== null) {
-            homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+        const homeTeam = teamGoalsAgainstMap.get(fixture.team_h);
+        const awayTeam = teamGoalsAgainstMap.get(fixture.team_a);
+
+        // Home team concedes away team's goals
+        if (homeTeam && fixture.team_a_score !== null) {
+          homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+          if (isOver) {
             homeTeam.totalGoals += fixture.team_a_score;
             teamGamesPlayedGA.set(fixture.team_h, (teamGamesPlayedGA.get(fixture.team_h) || 0) + 1);
+          } else {
+            liveTeamIdsGA.add(fixture.team_h);
           }
-          // Away team concedes home team's goals
-          if (awayTeam && fixture.team_h_score !== null) {
-            awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+        }
+        // Away team concedes home team's goals
+        if (awayTeam && fixture.team_h_score !== null) {
+          awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+          if (isOver) {
             awayTeam.totalGoals += fixture.team_h_score;
             teamGamesPlayedGA.set(fixture.team_a, (teamGamesPlayedGA.get(fixture.team_a) || 0) + 1);
+          } else {
+            liveTeamIdsGA.add(fixture.team_a);
           }
         }
       });
@@ -8504,8 +8526,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
         };
       });
-      
-      res.json({ season: resolvedSeasonGA, lastFinishedGW, teams: result });
+
+      res.json({ season: resolvedSeasonGA, lastFinishedGW, liveGameweek: liveGameweekGA, liveTeamIds: Array.from(liveTeamIdsGA), teams: result });
     } catch (error) {
       console.error("Error fetching team goals against history:", error);
       res.status(500).json({ error: "Failed to fetch team goals against history" });

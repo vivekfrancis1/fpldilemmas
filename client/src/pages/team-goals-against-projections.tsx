@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
@@ -26,6 +26,8 @@ interface FixtureDetail {
 interface TeamGoalsAgainstHistory {
   season?: string;
   lastFinishedGW: number;
+  liveGameweek?: number | null;
+  liveTeamIds?: number[];
   teams: {
     id: number;
     team: string;
@@ -106,8 +108,9 @@ export default function TeamGoalsAgainstProjections() {
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past") {
-      // Past mode: default from GW 1 to latest finished gameweek
-      const lastFinished = historyData?.lastFinishedGW || 24;
+      // Past mode: default from GW 1 to latest finished gameweek — folding the current gameweek
+      // in (liveGameweek) once any of its fixtures are finished or live.
+      const lastFinished = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || 24;
       const startGW = 1;
       return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
     }
@@ -116,7 +119,7 @@ export default function TeamGoalsAgainstProjections() {
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -187,6 +190,27 @@ export default function TeamGoalsAgainstProjections() {
     return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
   }, [fixturesData]);
 
+  // Current (possibly in-progress) gameweek — see the matching comments in team-goal-projections.tsx.
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    return computeCurrentGameweek(bootstrapData.events);
+  }, [bootstrapData?.events]);
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+  const currentGWDecidedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return set;
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        set.add(f.team_h);
+        set.add(f.team_a);
+      }
+    });
+    return set;
+  }, [fixturesData, currentGameweek]);
+
   // Toggle gameweek exclusion
   const toggleGameweekSelection = (gw: number) => {
     setSelectedGameweeks(prev => {
@@ -229,35 +253,43 @@ export default function TeamGoalsAgainstProjections() {
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past") {
-      const lastFinished = historyData?.lastFinishedGW || 24;
+      const lastFinished = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 6); // Fallback
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see the reset effect below) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
     if (viewMode === "past" && historyData?.lastFinishedGW) {
-      const lastFinished = historyData.lastFinishedGW;
+      const lastFinished = (historyData?.liveGameweek ?? historyData?.lastFinishedGW);
       const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
       setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(newRange.startGameweek);
+      // Fold the current gameweek in when it still has an unstarted fixture.
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(newRange.startGameweek))
+        ? String(currentGameweek)
+        : newRange.startGameweek;
+      setStartGameweek(effectiveStart);
       setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
       setSelectedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks]);
 
   // When switching away from base mode, snap endGameweek back from GW39
   useEffect(() => {
@@ -269,10 +301,10 @@ export default function TeamGoalsAgainstProjections() {
   }, [fixtureMode]);
 
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError } = useQuery<TeamGoalsAgainstProjection[]>({
-    queryKey: ["/api/team-goals-against-projections"],
+    queryKey: [`/api/team-goals-against-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
     retry: 2,
     retryDelay: 1000,
-    enabled: viewMode === "future",
+    enabled: viewMode === "future" && !!startGameweek && !!endGameweek,
   });
 
   // Model-based TBC goal projections — goals against = opponent's goals
@@ -397,11 +429,15 @@ export default function TeamGoalsAgainstProjections() {
     
     const totalWeeks = activeGameweeks.length;
     
-    // Calculate totals for active gameweeks only (excluding excluded ones)
+    // Calculate totals for active gameweeks only (excluding excluded ones). Teams whose
+    // current-GW fixture has already kicked off are excluded from that column's total.
     for (const gwNumber of activeGameweeks) {
       const gwTotal = (gwNumber === 39 && viewMode === 'future' && fixtureMode === 'base')
         ? filteredProjections.reduce((sum, team) => sum + (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0), 0)
-        : filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+        : filteredProjections.reduce((sum, team) => {
+            if (viewMode === "future" && gwNumber === currentGameweek && currentGWDecidedTeamIds.has((team as any).id)) return sum;
+            return sum + (team.gameweekProjections[gwNumber] || 0);
+          }, 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
@@ -415,7 +451,7 @@ export default function TeamGoalsAgainstProjections() {
     const averagePerGame = totalWeeks > 0 ? overallTotal / totalWeeks : 0;
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
-  }, [filteredProjections, bootstrapData, activeGameweeks]);
+  }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, fixtureMode, tbcGAMap, currentGameweek, currentGWDecidedTeamIds]);
 
   const getGoalsAgainstColor = (goalsAgainst: number) => {
     // Lower goals against = better defense = green colors
@@ -765,12 +801,19 @@ export default function TeamGoalsAgainstProjections() {
                         {activeGameweeks.map(gwNumber => {
                           // Past mode: read directly from gameweekProjections (fixtureDetails not available)
                           if (viewMode === "past") {
-                            const value = team.gameweekProjections[gwNumber] ?? 0;
+                            const rawValue = team.gameweekProjections[gwNumber];
+                            const value = (rawValue !== undefined && rawValue !== null) ? rawValue : null;
                             const pastOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
+                            const isLiveCell = historyData?.liveGameweek === gwNumber && (historyData?.liveTeamIds || []).includes(team.id);
                             return (
-                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(value)}`}>
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(value ?? 0)}`}>
                                 <div className="flex flex-col items-center">
-                                  <span>{value}</span>
+                                  <span className="flex items-center gap-1">
+                                    {value !== null ? value : '-'}
+                                    {isLiveCell && (
+                                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" title="Match in progress" />
+                                    )}
+                                  </span>
                                   {showOpponent && (
                                     <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                       {pastOpponentInfos.length > 0 ? pastOpponentInfos.map(o => `${o.opponent}(${o.isHome ? 'H' : 'A'})`).join(' / ') : '\u00A0'}
@@ -801,9 +844,12 @@ export default function TeamGoalsAgainstProjections() {
                             );
                           }
 
-                          // Future mode: use fixtureDetails for DGW Popover and opponent info
+                          // Future mode: use fixtureDetails for DGW Popover and opponent info. The
+                          // current gameweek's cell is blanked once this team's own fixture has
+                          // kicked off — see isDecidedCurrentGW in team-goal-projections.tsx.
+                          const isDecidedCurrentGW = gwNumber === currentGameweek && currentGWDecidedTeamIds.has((team as any).id);
                           const teamWithDetails = team as TeamGoalsAgainstProjection;
-                          const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
+                          const fixtures = isDecidedCurrentGW ? [] : (teamWithDetails.fixtureDetails?.[gwNumber.toString()] || []);
                           const hasFixtures = fixtures.length > 0;
                           const isDGW = fixtures.length > 1;
                           const totalGA = hasFixtures ? fixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0) : 0;
