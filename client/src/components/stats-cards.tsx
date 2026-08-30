@@ -9,67 +9,68 @@ interface StatsCardsProps {
 }
 
 export default function StatsCards({ data, isLoading }: StatsCardsProps) {
+  // Ties are common for whole-number counting stats (goals, assists, points, DC) — especially
+  // early in a season — so list every player at the max, not just whichever one `reduce` happens
+  // to hit first. Names use FPL's own `web_name` (e.g. "Evanilson"), the short name FPL itself
+  // displays everywhere, rather than the unwieldy first_name + second_name combination.
+  const namesAtMax = (players: BootstrapData["elements"], valueFn: (p: any) => number): string => {
+    const maxValue = players.reduce((max, p) => Math.max(max, valueFn(p)), -Infinity);
+    return players
+      .filter((p) => valueFn(p) === maxValue)
+      .map((p) => p.web_name)
+      .join(", ");
+  };
+
   const calculateStats = (data: BootstrapData): StatsData => {
     const players = data.elements;
     const totalPlayers = players.length;
     // Find specific players for different stats
-    const mostOwnedPlayer = players.reduce((max, p) => 
+    const mostOwnedPlayer = players.reduce((max, p) =>
       parseFloat(p.selected_by_percent) > parseFloat(max.selected_by_percent) ? p : max
     );
-    
-    const bestValuePlayer = players.reduce((max, p) => 
+
+    const bestValuePlayer = players.reduce((max, p) =>
       (parseFloat(p.value_season) || 0) > (parseFloat(max.value_season) || 0) ? p : max
     );
-    
-    const mostPointsPlayer = players.reduce((max, p) => 
-      p.total_points > max.total_points ? p : max
-    );
-    
-    const mostGoalsPlayer = players.reduce((max, p) => 
-      p.goals_scored > max.goals_scored ? p : max
-    );
-    
-    const mostAssistsPlayer = players.reduce((max, p) => 
-      p.assists > max.assists ? p : max
-    );
-    
-    const mostDCPlayer = players.reduce((max, p) => 
-      ((p as any).defensive_contribution || 0) > ((max as any).defensive_contribution || 0) ? p : max
-    );
-    
-    const bestFormPlayer = players.reduce((max, p) => 
+
+    const mostPointsValue = players.reduce((max, p) => Math.max(max, p.total_points), -Infinity);
+    const mostGoalsValue = players.reduce((max, p) => Math.max(max, p.goals_scored), -Infinity);
+    const mostAssistsValue = players.reduce((max, p) => Math.max(max, p.assists), -Infinity);
+    const mostDCValue = players.reduce((max, p) => Math.max(max, (p as any).defensive_contribution || 0), -Infinity);
+
+    const bestFormPlayer = players.reduce((max, p) =>
       parseFloat(p.form) > parseFloat(max.form) ? p : max
     );
-    
+
     return {
       totalPlayers,
       mostOwned: {
         value: `${parseFloat(mostOwnedPlayer.selected_by_percent).toFixed(1)}%`,
-        player: `${mostOwnedPlayer.first_name} ${mostOwnedPlayer.second_name}`
+        player: mostOwnedPlayer.web_name
       },
       bestValue: {
         value: `${parseFloat(bestValuePlayer.value_season || '0').toFixed(1)} pts/£m`,
-        player: `${bestValuePlayer.first_name} ${bestValuePlayer.second_name}`
+        player: bestValuePlayer.web_name
       },
       mostPoints: {
-        value: `${mostPointsPlayer.total_points} pts`,
-        player: `${mostPointsPlayer.first_name} ${mostPointsPlayer.second_name}`
+        value: `${mostPointsValue} pts`,
+        player: namesAtMax(players, (p) => p.total_points)
       },
       mostGoals: {
-        value: `${mostGoalsPlayer.goals_scored} goals`,
-        player: `${mostGoalsPlayer.first_name} ${mostGoalsPlayer.second_name}`
+        value: `${mostGoalsValue} goals`,
+        player: namesAtMax(players, (p) => p.goals_scored)
       },
       mostAssists: {
-        value: `${mostAssistsPlayer.assists} assists`,
-        player: `${mostAssistsPlayer.first_name} ${mostAssistsPlayer.second_name}`
+        value: `${mostAssistsValue} assists`,
+        player: namesAtMax(players, (p) => p.assists)
       },
       mostDefensiveContributions: {
-        value: `${(mostDCPlayer as any).defensive_contribution || 0} DC`,
-        player: `${mostDCPlayer.first_name} ${mostDCPlayer.second_name}`
+        value: `${mostDCValue} DC`,
+        player: namesAtMax(players, (p) => (p as any).defensive_contribution || 0)
       },
       bestForm: {
         value: `${parseFloat(bestFormPlayer.form).toFixed(1)} avg`,
-        player: `${bestFormPlayer.first_name} ${bestFormPlayer.second_name}`
+        player: bestFormPlayer.web_name
       }
     };
   };
@@ -193,7 +194,7 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
                 {card.value}
               </p>
               {card.player && (
-                <p className="text-[10px] sm:text-xs text-gray-500 truncate" data-testid={`text-${card.testId}-player`}>
+                <p className="text-[10px] sm:text-xs text-gray-500" data-testid={`text-${card.testId}-player`}>
                   {card.player}
                 </p>
               )}
