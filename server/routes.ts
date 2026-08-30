@@ -8136,6 +8136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let teams: any[];
       let fixturesData: any[];
       let lastFinishedGW: number;
+      let bootstrapEvents: any[] = [];
 
       if (resolvedSeason !== CURRENT_SEASON) {
         // Durable archive (survives FPL resetting bootstrap-static/fixtures for the next season)
@@ -8172,12 +8173,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapData = await bootstrapResponse.json();
         fixturesData = await fixturesResponse.json();
         teams = bootstrapData.teams;
+        bootstrapEvents = bootstrapData.events || [];
 
         lastFinishedGW = computeLastFinishedGW(fixturesData);
       }
 
-      console.log(`DEBUG: Season ${resolvedSeason}, last finished gameweek: ${lastFinishedGW}`);
-      
+      // Fold the current gameweek's column in once any of its fixtures are underway or done,
+      // even though it isn't "lastFinishedGW" yet (that requires every fixture finished) — a
+      // team whose own fixture in it hasn't started yet still shows blank (null), same as any
+      // future gameweek. liveGameweek/liveTeamIds tell the frontend which cells to badge LIVE.
+      const currentGameweek = resolvedSeason === CURRENT_SEASON ? computeCurrentGameweek(bootstrapEvents) : 0;
+      const currentGWDecided = currentGameweek > lastFinishedGW &&
+        fixturesData.some((f: any) => f.event === currentGameweek && (isFixtureActuallyOver(f) || f.started));
+      const liveGameweek = currentGWDecided ? currentGameweek : null;
+      const historyEndGW = liveGameweek ?? lastFinishedGW;
+
+      console.log(`DEBUG: Season ${resolvedSeason}, last finished gameweek: ${lastFinishedGW}, history end: ${historyEndGW}, live GW: ${liveGameweek ?? 'none'}`);
+
       // Initialize team goals data structure. Each gameweek starts as null ("not played yet" —
       // rendered blank client-side and excluded from the average) rather than 0, so a team that
       // hasn't played the latest, still-in-progress gameweek is visually distinct from a team
@@ -8185,7 +8197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamGoalsMap = new Map();
       teams.forEach((team: any) => {
         const gameweekGoals: { [key: number]: number | null } = {};
-        for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        for (let gw = 1; gw <= historyEndGW; gw++) {
           gameweekGoals[gw] = null;
         }
         teamGoalsMap.set(team.id, {
@@ -8198,26 +8210,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: team.position || 0
         });
       });
-      
+
       // Populate actual goals from finished fixtures, tracking each team's own real games-played
       // count (not the number of gameweek columns shown) so a team that hasn't played its
       // fixture in the latest, still-in-progress gameweek isn't divided by a game it hasn't played.
+      // Live (started but not yet over) fixtures populate the cell with the current live score for
+      // display, but deliberately don't count toward totalGoals/gamesPlayed/the average until the
+      // match is actually final — a mid-match score is provisional and shouldn't skew a season stat.
       const teamGamesPlayed = new Map<number, number>();
+      const liveTeamIds = new Set<number>();
       teams.forEach((team: any) => teamGamesPlayed.set(team.id, 0));
       fixturesData.forEach((fixture: any) => {
-        if (isFixtureActuallyOver(fixture) && fixture.event <= lastFinishedGW) {
-          const homeTeam = teamGoalsMap.get(fixture.team_h);
-          const awayTeam = teamGoalsMap.get(fixture.team_a);
+        if (fixture.event > historyEndGW) return;
+        const isOver = isFixtureActuallyOver(fixture);
+        const isLive = !isOver && !!fixture.started;
+        if (!isOver && !isLive) return;
 
-          if (homeTeam && fixture.team_h_score !== null) {
-            homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+        const homeTeam = teamGoalsMap.get(fixture.team_h);
+        const awayTeam = teamGoalsMap.get(fixture.team_a);
+
+        if (homeTeam && fixture.team_h_score !== null) {
+          homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+          if (isOver) {
             homeTeam.totalGoals += fixture.team_h_score;
             teamGamesPlayed.set(fixture.team_h, (teamGamesPlayed.get(fixture.team_h) || 0) + 1);
+          } else {
+            liveTeamIds.add(fixture.team_h);
           }
-          if (awayTeam && fixture.team_a_score !== null) {
-            awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+        }
+        if (awayTeam && fixture.team_a_score !== null) {
+          awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+          if (isOver) {
             awayTeam.totalGoals += fixture.team_a_score;
             teamGamesPlayed.set(fixture.team_a, (teamGamesPlayed.get(fixture.team_a) || 0) + 1);
+          } else {
+            liveTeamIds.add(fixture.team_a);
           }
         }
       });
@@ -8230,10 +8257,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
         };
       });
-      
+
       res.json({
         season: resolvedSeason,
         lastFinishedGW,
+        liveGameweek,
+        liveTeamIds: Array.from(liveTeamIds),
         teams: result
       });
     } catch (error) {
@@ -9310,8 +9339,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // showed one extra (always-empty, since GW39 has no real fixtures without an actual TBC
       // fixture) gameweek that goals didn't.
       const { computeNextRange } = await import("../shared/gameweek-utils");
-      const { start: startGameweek, end: endGameweek, currentGameweek } = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
-      console.log(`DEBUG: Team Assist Projections - Limiting to next ${projectionWindowSettings.totalWeeks} gameweeks: GW${startGameweek}-${endGameweek}`);
+      const defaultRangeAssist = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
+      // Explicit startGameweek/endGameweek override — see matching comment in
+      // /api/team-goal-projections. Opt-in only; every caller that doesn't pass these is unaffected.
+      const queryStartAssist = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+      const queryEndAssist = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+      const hasExplicitRangeAssist = !isNaN(queryStartAssist) && !isNaN(queryEndAssist) && queryStartAssist > 0 && queryEndAssist >= queryStartAssist;
+      const startGameweek = hasExplicitRangeAssist ? queryStartAssist : defaultRangeAssist.start;
+      const endGameweek = hasExplicitRangeAssist ? queryEndAssist : defaultRangeAssist.end;
+      const currentGameweek = defaultRangeAssist.currentGameweek;
+      console.log(`DEBUG: Team Assist Projections - GW${startGameweek}-${endGameweek} (${hasExplicitRangeAssist ? 'explicit range' : 'default'})`);
 
       // Use TeamGoalsService directly (not HTTP call) as architect specified
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -13134,7 +13171,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireReadiness(['bootstrap-data'], 'team-goals-against-projections'),
     async (req, res) => {
     try {
-      if (teamGoalsAgainstCache && (Date.now() - teamGoalsAgainstCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
+      // Explicit startGameweek/endGameweek override — see matching comment in
+      // /api/team-goal-projections. Opt-in only; every caller that doesn't pass these is
+      // unaffected, and the unkeyed cache below (scoped to the default range) is bypassed
+      // entirely for a custom-range request rather than risking a mismatched cached range.
+      const queryStartGA = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+      const queryEndGA = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+      const hasExplicitRangeGA = !isNaN(queryStartGA) && !isNaN(queryEndGA) && queryStartGA > 0 && queryEndGA >= queryStartGA;
+
+      if (!hasExplicitRangeGA && teamGoalsAgainstCache && (Date.now() - teamGoalsAgainstCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
         return res.json(teamGoalsAgainstCache.data);
       }
       console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
@@ -13156,8 +13201,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Initialize goals against with zeros for all teams - LIMIT TO NEXT 12 GAMEWEEKS
       const teamsGoalsAgainst = new Map();
-      const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
+      const startGameweek = hasExplicitRangeGA ? queryStartGA : currentGameweek + 1;
+      const endGameweek = hasExplicitRangeGA ? queryEndGA : Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       
       // Call TeamGoalsService directly — has its own 30-min cache + in-flight dedup, no HTTP round-trip
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -13292,7 +13337,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: index + 1
         }));
 
-      teamGoalsAgainstCache = { data: finalProjections, timestamp: Date.now() };
+      if (!hasExplicitRangeGA) {
+        teamGoalsAgainstCache = { data: finalProjections, timestamp: Date.now() };
+      }
       res.json(finalProjections);
     } catch (error) {
       console.error("Error generating team goals against projections:", error);

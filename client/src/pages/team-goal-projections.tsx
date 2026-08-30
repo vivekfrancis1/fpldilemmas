@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Target, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
@@ -37,6 +37,8 @@ interface TBCGoalProjection {
 interface TeamGoalsHistory {
   season?: string;
   lastFinishedGW: number;
+  liveGameweek?: number | null;
+  liveTeamIds?: number[];
   teams: {
     id: number;
     team: string;
@@ -140,8 +142,9 @@ export default function TeamGoalProjections() {
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
-      // Past modes: default from GW 1 to latest finished gameweek
-      const lastFinished = historyData?.lastFinishedGW || 24;
+      // Past modes: default from GW 1 to latest finished gameweek — folding the current
+      // gameweek in (liveGameweek) once any of its fixtures are finished or live.
+      const lastFinished = (viewMode === "past" ? (historyData?.liveGameweek ?? historyData?.lastFinishedGW) : historyData?.lastFinishedGW) || 24;
       const startGW = 1;
       return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
     }
@@ -151,7 +154,7 @@ export default function TeamGoalProjections() {
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -235,11 +238,36 @@ export default function TeamGoalProjections() {
     return (fixturesData as any[]).some((f: any) => f.event === null || f.event === undefined);
   }, [fixturesData]);
 
+  // Current (possibly in-progress) gameweek — the default future range normally starts the
+  // gameweek AFTER this one, so it's folded back in below whenever it still has an unstarted
+  // fixture. currentGWDecidedTeamIds is the flip side: teams whose current-GW fixture has
+  // already kicked off (finished, provisionally finished, or live) get that cell blanked in the
+  // Projections tab, since a match already underway isn't a genuine prediction any more.
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    return computeCurrentGameweek(bootstrapData.events);
+  }, [bootstrapData?.events]);
+  const currentGWHasUnstarted = useMemo(() => {
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return false;
+    return (fixturesData as any[]).some((f: any) => f.event === currentGameweek && !f.started);
+  }, [fixturesData, currentGameweek]);
+  const currentGWDecidedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!Array.isArray(fixturesData) || currentGameweek <= 0) return set;
+    (fixturesData as any[]).forEach((f: any) => {
+      if (f.event === currentGameweek && (f.finished || f.finished_provisional || f.started)) {
+        set.add(f.team_h);
+        set.add(f.team_a);
+      }
+    });
+    return set;
+  }, [fixturesData, currentGameweek]);
+
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past" || viewMode === "pastXg") {
       // Past modes: GW1 to last finished gameweek
-      const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
+      const lastFinished = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || xgHistoryData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
     // Future mode: next 12 gameweeks
@@ -247,29 +275,38 @@ export default function TeamGoalProjections() {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see the reset effect above) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     // GW39 only appears in base mode — expert/custom modes absorb TBC into a regular GW
     if (hasTBCFixture && fixtureMode === 'base' && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
     if ((viewMode === "past" || viewMode === "pastXg") && (historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW)) {
-      const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
+      const lastFinished = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || xgHistoryData?.lastFinishedGW || 24;
       const startGW = 1;
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
       setSelectedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(newRange.startGameweek);
+      // Fold the current gameweek in when it still has an unstarted fixture — the default
+      // range normally starts the gameweek after the current one.
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(newRange.startGameweek))
+        ? String(currentGameweek)
+        : newRange.startGameweek;
+      setStartGameweek(effectiveStart);
       // Extend default end to GW39 only in base mode (expert/custom absorb TBC into a regular GW)
       setEndGameweek(hasTBCFixture && fixtureMode === 'base' ? "39" : newRange.endGameweek);
       setSelectedGameweeks(new Set());
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks]);
 
   // When switching away from base mode, snap endGameweek back from GW39 to the regular range
   useEffect(() => {
@@ -337,13 +374,15 @@ export default function TeamGoalProjections() {
     return map;
   }, [tbcGoalData]);
 
-  // Use live endpoint to get fixtureDetails for DGW display
+  // Use live endpoint to get fixtureDetails for DGW display. Explicit startGameweek/endGameweek
+  // (rather than letting the backend use its own default range) is what actually lets the
+  // current gameweek's projections through when it's been folded in above.
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
-    queryKey: ["/api/team-goal-projections"],
+    queryKey: [`/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 2,
     retryDelay: 1000,
-    enabled: viewMode === "future",
+    enabled: viewMode === "future" && !!startGameweek && !!endGameweek,
   });
 
   // Unified data for display - adapts based on view mode
@@ -502,9 +541,14 @@ export default function TeamGoalProjections() {
     
     const totalWeeks = activeGameweeks.length;
     
-    // Calculate totals for active gameweeks only (excluding excluded ones)
+    // Calculate totals for active gameweeks only (excluding excluded ones). Teams whose current-GW
+    // fixture has already kicked off are excluded from that column's total — see isDecidedCurrentGW
+    // in the per-cell rendering below for why that cell is blanked rather than a stale projection.
     for (const gwNumber of activeGameweeks) {
-      const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
+      const gwTotal = filteredProjections.reduce((sum, team) => {
+        if (viewMode === "future" && gwNumber === currentGameweek && currentGWDecidedTeamIds.has((team as any).id)) return sum;
+        return sum + (team.gameweekProjections[gwNumber] || 0);
+      }, 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
     }
@@ -518,7 +562,7 @@ export default function TeamGoalProjections() {
     const averagePerGame = totalWeeks > 0 ? overallTotal / totalWeeks : 0;
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
-  }, [filteredProjections, bootstrapData, activeGameweeks]);
+  }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, currentGameweek, currentGWDecidedTeamIds]);
 
   const getGoalsColor = (goals: number) => {
     if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
@@ -725,7 +769,7 @@ export default function TeamGoalProjections() {
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
                       <span className="text-xs text-gray-500">Quick:</span>
                       {[6, 8, 12].map(n => {
-                        const last = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
+                        const last = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || xgHistoryData?.lastFinishedGW || 24;
                         const start = Math.max(1, last - n + 1);
                         return (
                           <button
@@ -738,7 +782,7 @@ export default function TeamGoalProjections() {
                         );
                       })}
                       <button
-                        onClick={() => { const last = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24; setStartGameweek("1"); setEndGameweek(String(last)); }}
+                        onClick={() => { const last = (historyData?.liveGameweek ?? historyData?.lastFinishedGW) || xgHistoryData?.lastFinishedGW || 24; setStartGameweek("1"); setEndGameweek(String(last)); }}
                         className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
                       >
                         All GWs
@@ -934,16 +978,31 @@ export default function TeamGoalProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const rawGoals = team.gameweekProjections[gwNumber.toString()];
-                          // GW39 is a provisional TBC fixture — only MCI/CRY have data; treat 0 as no fixture
-                          const goals = (gwNumber === 39 && (rawGoals === undefined || rawGoals === 0)) ? undefined : rawGoals;
+                          // GW39 is a provisional TBC fixture — only MCI/CRY have data; treat 0 as no fixture.
+                          // The current gameweek's cell is blanked once this team's own fixture has kicked
+                          // off — the backend still returns a projection number for it (it doesn't track
+                          // per-fixture start status), but that number isn't a live prediction any more.
+                          const isDecidedCurrentGW = viewMode === "future" && gwNumber === currentGameweek && currentGWDecidedTeamIds.has(team.id);
+                          const goals = (gwNumber === 39 && (rawGoals === undefined || rawGoals === 0)) || isDecidedCurrentGW ? undefined : rawGoals;
                           const teamWithDetails = team as TeamGoalProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const isDGW = fixtures.length > 1;
                           const teamOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
-                          
+                          // Goals History: this team's fixture in the (partially in-progress) current
+                          // gameweek is underway but not yet final — badge it LIVE next to the running score.
+                          const isLiveCell = viewMode === "past" && historyData?.liveGameweek === gwNumber && (historyData?.liveTeamIds || []).includes(team.id);
+
                           const cellContent = (
                             <div className="flex flex-col items-center">
-                              <span>{(goals !== undefined && goals !== null) ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
+                              <span className="flex items-center gap-1">
+                                {(goals !== undefined && goals !== null) ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}
+                                {isLiveCell && (
+                                  <span
+                                    className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"
+                                    title="Match in progress"
+                                  />
+                                )}
+                              </span>
                               {showOpponent && (
                                 <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">
                                   {fixtures.length > 0
