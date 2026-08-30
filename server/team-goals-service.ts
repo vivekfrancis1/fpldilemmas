@@ -1058,35 +1058,26 @@ export class TeamGoalsService {
   }
 
   /**
-   * Get team's average goals scored per game: 50% this season (2026/27) + 50% last season
-   * (2025/26), falling back to whichever side is actually available. Both sides missing
-   * (shouldn't happen — every team has either an archive entry or a promoted-team entry)
-   * still throws, same as before, so the caller's existing per-fixture error isolation applies.
+   * Get team's average goals scored per game: this season (2026/27) only, straight from
+   * however many fixtures they've actually completed so far — no 2025/26 blend. Each team's
+   * own "played" count advances independently as its individual fixtures finish (current-
+   * standings counts per-fixture, not per-gameweek), so a team that's completed its GW2 match
+   * already uses 2 games' worth of data while one that hasn't yet still uses 1 — no special-
+   * casing needed here for that. Deliberately un-smoothed: a small sample early in the season
+   * is taken at face value rather than diluted by last season's form (see
+   * team-goal-projection-preseason-signal.test.ts for the historical/pre-season case this
+   * replaced, and the rationale for choosing this over sample-size dampening).
+   * Throws if the team has genuinely played 0 games yet (true pre-season) — same per-team
+   * error isolation as before applies at the call site, no fabricated fallback number.
    */
   static async getTeamAverageGoals(teamId: number): Promise<number> {
     try {
-      const { TEAMS_BY_ID } = await import("@shared/schema");
-      const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
-
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      const thisSeasonAvg = teamData && teamData.played > 0 ? teamData.goalsFor / teamData.played : undefined;
-
-      const lastSeasonMap = await TeamGoalsService.fetchLastSeasonTeamGoals();
-      const lastSeasonEntry = teamName ? lastSeasonMap.get(teamName) : undefined;
-      const lastSeasonAvg = lastSeasonEntry && lastSeasonEntry.played > 0 ? lastSeasonEntry.goalsFor / lastSeasonEntry.played : undefined;
-
-      if (thisSeasonAvg !== undefined && lastSeasonAvg !== undefined) {
-        return thisSeasonAvg * 0.5 + lastSeasonAvg * 0.5;
+      if (teamData && teamData.played > 0) {
+        return teamData.goalsFor / teamData.played;
       }
-      if (lastSeasonAvg !== undefined) {
-        return lastSeasonAvg;
-      }
-      if (thisSeasonAvg !== undefined) {
-        return thisSeasonAvg;
-      }
-
-      throw new Error(`No team data found for team ${teamId} in current standings or last-season archive`);
+      throw new Error(`No current-season data found for team ${teamId} (0 games played)`);
     } catch (error) {
       console.error(`Failed to fetch team average goals for team ${teamId}:`, error);
       throw error;
@@ -1094,33 +1085,17 @@ export class TeamGoalsService {
   }
 
   /**
-   * Get team's average goals conceded per game: same 50/50 this-season/last-season blend
-   * as getTeamAverageGoals, using goalsAgainst instead of goalsFor.
+   * Get team's average goals conceded per game: same this-season-only basis as
+   * getTeamAverageGoals, using goalsAgainst instead of goalsFor.
    */
   static async getTeamAverageGoalsConceded(teamId: number): Promise<number> {
     try {
-      const { TEAMS_BY_ID } = await import("@shared/schema");
-      const teamName = (TEAMS_BY_ID as any)[teamId]?.name;
-
       const standingsData = await TeamGoalsService.fetchCurrentStandings();
       const teamData = standingsData.find((team: any) => team.id === teamId);
-      const thisSeasonAvg = teamData && teamData.played > 0 ? teamData.goalsAgainst / teamData.played : undefined;
-
-      const lastSeasonMap = await TeamGoalsService.fetchLastSeasonTeamGoals();
-      const lastSeasonEntry = teamName ? lastSeasonMap.get(teamName) : undefined;
-      const lastSeasonAvg = lastSeasonEntry && lastSeasonEntry.played > 0 ? lastSeasonEntry.goalsAgainst / lastSeasonEntry.played : undefined;
-
-      if (thisSeasonAvg !== undefined && lastSeasonAvg !== undefined) {
-        return thisSeasonAvg * 0.5 + lastSeasonAvg * 0.5;
+      if (teamData && teamData.played > 0) {
+        return teamData.goalsAgainst / teamData.played;
       }
-      if (lastSeasonAvg !== undefined) {
-        return lastSeasonAvg;
-      }
-      if (thisSeasonAvg !== undefined) {
-        return thisSeasonAvg;
-      }
-
-      throw new Error(`No team data found for team ${teamId} in current standings or last-season archive`);
+      throw new Error(`No current-season data found for team ${teamId} (0 games played)`);
     } catch (error) {
       console.error(`Failed to fetch team average goals conceded for team ${teamId}:`, error);
       throw error;
