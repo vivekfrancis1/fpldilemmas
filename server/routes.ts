@@ -8067,8 +8067,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // `events.find(is_current)?.id || 2` which hits its hardcoded fallback every time
       // pre-season, not just as a rare edge case (that was skipping straight to GW3).
       const { computeNextRange } = await import("../shared/gameweek-utils");
-      const { start: startGameweek, end: endGameweek, currentGameweek } = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
-      console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
+      const defaultRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
+
+      // Explicit startGameweek/endGameweek query params override the default range — used by
+      // Match Predictions (projected-goals-cs.tsx) to fetch the CURRENT gameweek's projections
+      // (e.g. GW2, while the default range starts at GW3) for fixtures that haven't kicked off
+      // yet. Deliberately opt-in via explicit params rather than changing computeNextRange
+      // itself, which many other projection endpoints share — this keeps that shared default
+      // behavior, and every caller that doesn't pass these params, completely unaffected.
+      const queryStart = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+      const queryEnd = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+      const hasExplicitRange = !isNaN(queryStart) && !isNaN(queryEnd) && queryStart > 0 && queryEnd >= queryStart;
+
+      const startGameweek = hasExplicitRange ? queryStart : defaultRange.start;
+      const endGameweek = hasExplicitRange ? queryEnd : defaultRange.end;
+      const currentGameweek = defaultRange.currentGameweek;
+      console.log(`DEBUG: Processing GW${startGameweek}-${endGameweek} for team goal projections (${hasExplicitRange ? 'explicit range' : 'default 12 gameweeks'}), current GW: ${currentGameweek}`);
 
       // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -9358,7 +9372,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint with caching
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      if (teamCSCache && (Date.now() - teamCSCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
+      // Explicit startGameweek/endGameweek query params override the default range — see the
+      // matching comment in /api/team-goal-projections. The unkeyed cache below is scoped to
+      // the DEFAULT range only, so a custom-range request always bypasses it (both read and
+      // write) rather than risking a mismatched range being served from cache.
+      const queryStartCS = req.query.startGameweek !== undefined ? parseInt(req.query.startGameweek as string) : NaN;
+      const queryEndCS = req.query.endGameweek !== undefined ? parseInt(req.query.endGameweek as string) : NaN;
+      const hasExplicitRangeCS = !isNaN(queryStartCS) && !isNaN(queryEndCS) && queryStartCS > 0 && queryEndCS >= queryStartCS;
+
+      if (!hasExplicitRangeCS && teamCSCache && (Date.now() - teamCSCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
         return res.json(teamCSCache.data);
       }
       console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks`);
@@ -9386,10 +9408,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // gameweek that nothing else in the app agreed with.
       const { computeProjectionRangeWithTBC } = await import("../shared/gameweek-utils");
       const csRange = computeProjectionRangeWithTBC(bootstrapData.events, rawFixturesDataCS, projectionWindowSettings.totalWeeks);
-      const endGameweek = csRange.end;
-      const startGWforCS = currentGameweek + 1;
+      const endGameweek = hasExplicitRangeCS ? queryEndCS : csRange.end;
+      const startGWforCS = hasExplicitRangeCS ? queryStartCS : currentGameweek + 1;
 
-      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${startGWforCS} to GW${endGameweek}), current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing GW${startGWforCS}-${endGameweek} for clean sheets (${hasExplicitRangeCS ? 'explicit range' : 'default 12 gameweeks'}), current GW: ${currentGameweek}`);
       
       // Get team goal projections directly — no HTTP round-trip, no readiness gate dependency
       const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
@@ -9449,11 +9471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = teamService.getBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // Get fixtures for this team across next 12 gameweeks
+        // Get fixtures for this team across the requested gameweek range
         const allFixtures = fixturesData
-          .filter((f: any) => 
-            (f.team_h === team.id || f.team_a === team.id) && 
-            f.event >= currentGameweek + 1 && f.event <= endGameweek
+          .filter((f: any) =>
+            (f.team_h === team.id || f.team_a === team.id) &&
+            f.event >= startGWforCS && f.event <= endGameweek
           );
         
         const projections = allFixtures.map((fixture: any) => {
@@ -9555,7 +9577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         team.position = index + 1;
       });
       
-      teamCSCache = { data: teamProjections, timestamp: Date.now() };
+      if (!hasExplicitRangeCS) {
+        teamCSCache = { data: teamProjections, timestamp: Date.now() };
+      }
       res.json(teamProjections);
     } catch (error) {
       console.error("Error generating team clean sheet projections:", error);

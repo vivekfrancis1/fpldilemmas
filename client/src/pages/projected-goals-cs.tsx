@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
@@ -21,6 +21,7 @@ interface MatchProjection {
   gameweek: number;
   kickoffTime: string;
   finished: boolean;
+  isLive: boolean;
   matchResult: string;
   homeTeam: {
     id: number;
@@ -75,23 +76,51 @@ export default function ProjectedGoalsCS() {
   const lastFinishedGW = useMemo(() => {
     if (!bootstrapData?.events) return 24;
     const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
-    return finishedEvents.length > 0 
+    return finishedEvents.length > 0
       ? Math.max(...finishedEvents.map((e: any) => e.id))
       : 0;
   }, [bootstrapData?.events]);
 
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    return computeCurrentGameweek(bootstrapData.events);
+  }, [bootstrapData?.events]);
+
+  // Raw current-gameweek fixtures (shares the /api/fixtures cache, no extra request) — used to
+  // decide whether the current gameweek should be folded into Match Predictions (any fixture
+  // not yet started) and/or Match Results (any fixture finished or live), since the shared
+  // getDefaultGameweekRange/lastFinishedGW logic deliberately excludes an in-progress gameweek
+  // entirely until every one of its fixtures is done.
+  const { data: currentGWFixtures } = useQuery<any[]>({
+    queryKey: [`/api/fixtures`],
+    select: (data) => data.filter((f: any) => f.event === currentGameweek),
+    enabled: !!bootstrapData?.events && currentGameweek > 0,
+  });
+  const currentGWHasUnstarted = (currentGWFixtures || []).some((f: any) => !f.started);
+  const currentGWHasFinishedOrLive = (currentGWFixtures || []).some((f: any) => f.finished || f.finished_provisional || f.started);
+
+  // Fold the current gameweek into Match Results once any of its fixtures are underway or done,
+  // even though it isn't "lastFinishedGW" yet (that requires every fixture finished).
+  const resultsEndGW = (currentGWHasFinishedOrLive && currentGameweek > lastFinishedGW) ? currentGameweek : lastFinishedGW;
+
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past") {
-      const startGW = Math.max(1, lastFinishedGW - 5);
-      return { startGameweek: String(startGW), endGameweek: String(lastFinishedGW) };
+      const startGW = Math.max(1, resultsEndGW - 5);
+      return { startGameweek: String(startGW), endGameweek: String(resultsEndGW) };
     }
     if (!bootstrapData?.events) {
       return { startGameweek: "7", endGameweek: "14" }; // Fallback to likely next 8 gameweeks
     }
     debugGameweekCalculation(bootstrapData.events);
-    return getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
-  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
+    const defaultRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+    // Fold the current gameweek into Match Predictions when it still has an unstarted fixture —
+    // the default range normally starts the gameweek AFTER the current one.
+    if (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(defaultRange.startGameweek)) {
+      return { ...defaultRange, startGameweek: String(currentGameweek) };
+    }
+    return defaultRange;
+  }, [bootstrapData?.events, viewMode, resultsEndGW, defaultWeeks, currentGameweek, currentGWHasUnstarted]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -121,28 +150,36 @@ export default function ProjectedGoalsCS() {
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
     if (viewMode === "past") {
-      return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
+      return Array.from({ length: resultsEndGW }, (_, i) => i + 1);
     }
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 7);
     }
     const gws = getNextGameweeksForDropdown(bootstrapData.events, totalWeeks);
+    // Fold the current gameweek in (see defaultGameweekRange) when it still has an unstarted fixture.
+    if (currentGWHasUnstarted && currentGameweek > 0 && !gws.includes(currentGameweek)) {
+      gws.unshift(currentGameweek);
+    }
     // Only add GW39 in base mode (expert/custom remap TBC to a regular GW)
     if (fixtureMode === 'base' && hasTBCFixture && !gws.includes(39)) {
       return [...gws, 39];
     }
     return gws;
-  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture, fixtureMode]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
   // Update state when bootstrap data, view mode, or fixture mode changes
   useEffect(() => {
-    if (viewMode === "past" && lastFinishedGW > 0) {
-      const startGW = Math.max(1, lastFinishedGW - 5);
+    if (viewMode === "past" && resultsEndGW > 0) {
+      const startGW = Math.max(1, resultsEndGW - 5);
       setStartGameweek(String(startGW));
-      setEndGameweek(String(lastFinishedGW));
+      setEndGameweek(String(resultsEndGW));
     } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
-      setStartGameweek(newRange.startGameweek);
+      // Fold the current gameweek in (see defaultGameweekRange) when it still has an unstarted fixture.
+      const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(newRange.startGameweek))
+        ? String(currentGameweek)
+        : newRange.startGameweek;
+      setStartGameweek(effectiveStart);
       // In base mode extend to GW39 when TBC exists; in expert/custom use remapped GW
       if (hasTBCFixture && tbcEffectiveGW !== null) {
         setEndGameweek(String(tbcEffectiveGW));
@@ -150,7 +187,7 @@ export default function ProjectedGoalsCS() {
         setEndGameweek(newRange.endGameweek);
       }
     }
-  }, [bootstrapData?.events, viewMode, lastFinishedGW, hasTBCFixture, tbcEffectiveGW]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, defaultWeeks, currentGameweek, currentGWHasUnstarted]);
 
   // Pre-season: nothing has finished yet, so "Match Results" has no real data to fetch or
   // show (see the early-return notice below) — skip these fetches entirely in that case.
@@ -189,7 +226,19 @@ export default function ProjectedGoalsCS() {
           }
           return { ...fixture, event: assignedGW };
         })
-        .filter((fixture: any) => fixture.event >= startGW && fixture.event <= endGW);
+        .filter((fixture: any) => {
+          if (fixture.event < startGW || fixture.event > endGW) return false;
+          // The current (possibly in-progress) gameweek needs special handling: Match
+          // Predictions should only show its fixtures that haven't kicked off, while Match
+          // Results should only show the ones that have (finished, provisionally finished
+          // pending bonus points, or live). Every other gameweek in range is unambiguous —
+          // fully future or fully past — so this only applies to fixture.event === currentGameweek.
+          if (fixture.event === currentGameweek) {
+            const isDecided = fixture.finished || fixture.finished_provisional || fixture.started;
+            return viewMode === 'future' ? !isDecided : isDecided;
+          }
+          return true;
+        });
     },
   });
 
@@ -248,31 +297,40 @@ export default function ProjectedGoalsCS() {
 
       if (homeTeam && awayTeam) {
         const gwKey = fixture.event.toString();
-        
+
+        // A fixture can sit in a "finished_provisional" state for up to an hour after the final
+        // whistle, pending official bonus-point confirmation — fixture.finished alone stays
+        // false that whole time, which would wrongly fall through to the projection branch
+        // below for a match that's actually already over.
+        const isResult = fixture.finished || fixture.finished_provisional;
+        const isLive = !isResult && !!fixture.started;
+        const isDecided = viewMode === "past" && (isResult || isLive);
+
         // Get individual fixture goals from fixtureDetails (for DGW accuracy)
         const homeGoalFixtures = goalFixtureDetailsMap.get(homeTeam.id)?.[gwKey] || [];
         const awayGoalFixtures = goalFixtureDetailsMap.get(awayTeam.id)?.[gwKey] || [];
         const homeGoalFixture = homeGoalFixtures.find((f: any) => f.opponent === awayTeam.short_name);
         const awayGoalFixture = awayGoalFixtures.find((f: any) => f.opponent === homeTeam.short_name);
-        
+
         // Get individual fixture CS% from fixtureDetails (for DGW accuracy)
         const homeCSFixtures = csFixtureDetailsMap.get(homeTeam.id)?.[gwKey] || [];
         const awayCSFixtures = csFixtureDetailsMap.get(awayTeam.id)?.[gwKey] || [];
         const homeCSFixture = homeCSFixtures.find((f: any) => f.opponent === awayTeam.short_name);
         const awayCSFixture = awayCSFixtures.find((f: any) => f.opponent === homeTeam.short_name);
 
-        // For past mode with finished fixtures, use actual goals; otherwise use individual fixture projections
-        const homeExpectedGoals = (viewMode === "past" && fixture.finished) 
+        // For past mode with a decided (finished or live) fixture, use the actual/live score;
+        // otherwise use individual fixture projections.
+        const homeExpectedGoals = isDecided
           ? (fixture.team_h_score ?? 0)
           : (homeGoalFixture?.goals ?? goalMap.get(homeTeam.id)?.[gwKey] ?? 0);
-        const awayExpectedGoals = (viewMode === "past" && fixture.finished)
+        const awayExpectedGoals = isDecided
           ? (fixture.team_a_score ?? 0)
           : (awayGoalFixture?.goals ?? goalMap.get(awayTeam.id)?.[gwKey] ?? 0);
-        // For past mode with finished fixtures, actual clean sheet is 1 if opponent scored 0, else 0
-        const homeCleanSheetOdds = (viewMode === "past" && fixture.finished)
+        // Clean sheet is only meaningful once the match is actually over (isResult), not mid-game.
+        const homeCleanSheetOdds = (viewMode === "past" && isResult)
           ? (fixture.team_a_score === 0 ? 1 : 0)
           : (homeCSFixture?.cleanSheetOdds ?? csMap.get(homeTeam.id)?.[gwKey] ?? 0);
-        const awayCleanSheetOdds = (viewMode === "past" && fixture.finished)
+        const awayCleanSheetOdds = (viewMode === "past" && isResult)
           ? (fixture.team_h_score === 0 ? 1 : 0)
           : (awayCSFixture?.cleanSheetOdds ?? csMap.get(awayTeam.id)?.[gwKey] ?? 0);
 
@@ -280,18 +338,19 @@ export default function ProjectedGoalsCS() {
           id: fixture.id,
           gameweek: fixture.event,
           kickoffTime: fixture.kickoff_time,
-          finished: fixture.finished,
-          matchResult: fixture.finished ? `${fixture.team_h_score}-${fixture.team_a_score}` : 'TBD',
+          finished: isResult,
+          isLive,
+          matchResult: isDecided ? `${fixture.team_h_score}-${fixture.team_a_score}` : 'TBD',
           homeTeam: {
             id: homeTeam.id,
             name: homeTeam.name,
             shortName: homeTeam.short_name,
             expectedGoals: homeExpectedGoals,
             cleanSheetOdds: homeCleanSheetOdds,
-            result: fixture.finished 
-              ? (fixture.team_h_score > fixture.team_a_score ? 'win' : 
+            result: isResult
+              ? (fixture.team_h_score > fixture.team_a_score ? 'win' :
                  fixture.team_h_score < fixture.team_a_score ? 'loss' : 'draw')
-              : 'TBD'
+              : (isLive ? 'live' : 'TBD')
           },
           awayTeam: {
             id: awayTeam.id,
@@ -299,10 +358,10 @@ export default function ProjectedGoalsCS() {
             shortName: awayTeam.short_name,
             expectedGoals: awayExpectedGoals,
             cleanSheetOdds: awayCleanSheetOdds,
-            result: fixture.finished 
-              ? (fixture.team_a_score > fixture.team_h_score ? 'win' : 
+            result: isResult
+              ? (fixture.team_a_score > fixture.team_h_score ? 'win' :
                  fixture.team_a_score < fixture.team_h_score ? 'loss' : 'draw')
-              : 'TBD'
+              : (isLive ? 'live' : 'TBD')
           },
           totalExpectedGoals: homeExpectedGoals + awayExpectedGoals,
           confidence: 'Medium' as const
@@ -363,6 +422,7 @@ export default function ProjectedGoalsCS() {
     if (result === 'win') return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300';
     if (result === 'loss') return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300';
     if (result === 'draw') return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
+    if (result === 'live') return 'bg-red-100 text-red-800 border border-red-300 animate-pulse';
     if (result === 'projected_win') return 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 border border-emerald-300';
     if (result === 'projected_loss') return 'bg-gradient-to-r from-rose-100 to-rose-200 text-rose-800 border border-rose-300';
     if (result === 'projected_draw') return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
@@ -373,6 +433,7 @@ export default function ProjectedGoalsCS() {
     if (result === 'win') return 'W';
     if (result === 'loss') return 'L';
     if (result === 'draw') return 'D';
+    if (result === 'live') return 'LIVE';
     if (result === 'projected_win') return 'PW';
     if (result === 'projected_loss') return 'PL';
     if (result === 'projected_draw') return 'PD';
@@ -654,12 +715,12 @@ export default function ProjectedGoalsCS() {
                           <div className="text-center w-[45px]">
                             <span className="text-xs font-bold text-gray-600">GOALS</span>
                           </div>
-                          {projections.some(p => !p.finished) && (
+                          {projections.some(p => !p.finished && !p.isLive) && (
                             <div className="text-center w-[45px]">
                               <span className="text-xs font-bold text-gray-600">CS%</span>
                             </div>
                           )}
-                          {projections.some(p => p.finished) && (
+                          {projections.some(p => p.finished || p.isLive) && (
                             <div className="text-center w-[45px]">
                               <span className="text-xs font-bold text-gray-600">RESULT</span>
                             </div>
@@ -673,12 +734,12 @@ export default function ProjectedGoalsCS() {
                               <div className="text-center w-[45px]">
                                 <span className="text-xs font-bold text-gray-600">GOALS</span>
                               </div>
-                              {projections.some(p => !p.finished) && (
+                              {projections.some(p => !p.finished && !p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
                                 </div>
                               )}
-                              {projections.some(p => p.finished) && (
+                              {projections.some(p => p.finished || p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">RESULT</span>
                                 </div>
@@ -695,12 +756,12 @@ export default function ProjectedGoalsCS() {
                               <div className="text-center w-[45px]">
                                 <span className="text-xs font-bold text-gray-600">GOALS</span>
                               </div>
-                              {projections.some(p => !p.finished) && (
+                              {projections.some(p => !p.finished && !p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
                                 </div>
                               )}
-                              {projections.some(p => p.finished) && (
+                              {projections.some(p => p.finished || p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">RESULT</span>
                                 </div>
@@ -710,12 +771,12 @@ export default function ProjectedGoalsCS() {
                               <div className="text-center w-[45px]">
                                 <span className="text-xs font-bold text-gray-600">GOALS</span>
                               </div>
-                              {projections.some(p => !p.finished) && (
+                              {projections.some(p => !p.finished && !p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
                                 </div>
                               )}
-                              {projections.some(p => p.finished) && (
+                              {projections.some(p => p.finished || p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">RESULT</span>
                                 </div>
@@ -788,14 +849,14 @@ export default function ProjectedGoalsCS() {
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
-                                      {!match1.finished && (
+                                      {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
                                             {Math.round(match1.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
-                                      {match1.finished && (
+                                      {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getResultColor(match1.homeTeam.result)}`}>
                                             {getResultText(match1.homeTeam.result)}
@@ -834,14 +895,14 @@ export default function ProjectedGoalsCS() {
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
-                                      {!match1.finished && (
+                                      {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
                                             {Math.round(match1.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
-                                      {match1.finished && (
+                                      {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getResultColor(match1.awayTeam.result)}`}>
                                             {getResultText(match1.awayTeam.result)}
@@ -908,14 +969,14 @@ export default function ProjectedGoalsCS() {
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
-                                      {!match2.finished && (
+                                      {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
                                             {Math.round(match2.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
-                                      {match2.finished && (
+                                      {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getResultColor(match2.homeTeam.result)}`}>
                                             {getResultText(match2.homeTeam.result)}
@@ -954,14 +1015,14 @@ export default function ProjectedGoalsCS() {
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
-                                      {!match2.finished && (
+                                      {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
                                             {Math.round(match2.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
-                                      {match2.finished && (
+                                      {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getResultColor(match2.awayTeam.result)}`}>
                                             {getResultText(match2.awayTeam.result)}
