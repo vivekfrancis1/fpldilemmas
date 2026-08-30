@@ -10193,6 +10193,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
     const realGoalsByPlayerId = new Map<number, number>();
+    // null (not 0) marks "no real xG data exists for this player" — a promoted team's previous
+    // (Championship) season, per fetchProjectedShareInputs's docstring. Blending a fake 0 in
+    // would halve their goalShare relative to the goals-only shareDenominator used for promoted
+    // teams below; null keeps their share computed off real goals alone, undiluted, instead.
+    const realXGByPlayerId = new Map<number, number | null>();
     const gamesByTeamId = new Map<number, number>();
 
     if (season === PREVIOUS_SEASON) {
@@ -10202,9 +10207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (team && promotedTeamNames.has(team.name)) {
           const entry = PROMOTED_TEAM_PLAYER_LAST_SEASON[team.name][player.web_name];
           realGoalsByPlayerId.set(player.id, entry?.goals ?? 0);
+          realXGByPlayerId.set(player.id, null);
         } else {
           const row = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
           realGoalsByPlayerId.set(player.id, row?.goalsScored ?? 0);
+          realXGByPlayerId.set(player.id, row?.expectedGoals ?? 0);
         }
       }));
       bootstrapData.teams.forEach((team: any) => {
@@ -10213,7 +10220,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
-      const finishedFixtures = allFixtures.filter((f: any) => f.finished);
+      // See isFixtureActuallyOver's docstring — the strict `finished` flag stays false for up to
+      // ~1hr after full time pending bonus points, which silently dropped the latest gameweek.
+      const finishedFixtures = allFixtures.filter((f: any) => isFixtureActuallyOver(f));
       const fixtureTeamMap = new Map<number, { home: number; away: number }>();
       finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
 
@@ -10228,7 +10237,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return fix && (fix.home === player.team || fix.away === player.team);
         });
         const goals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
+        const xg = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
         realGoalsByPlayerId.set(player.id, goals);
+        realXGByPlayerId.set(player.id, xg);
       });
 
       bootstrapData.teams.forEach((team: any) => {
@@ -10242,17 +10253,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
       const teamGoalsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realGoalsByPlayerId.get(p.id) || 0), 0);
+      const teamXGTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realXGByPlayerId.get(p.id) || 0), 0);
+      const teamCombinedTotal = 0.5 * teamGoalsTotal + 0.5 * teamXGTotal;
       const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
       // Promoted teams' goal share is measured against the REAL Championship total (a real
       // ratio needs a real total, not the incomplete sum of just the players individually
       // listed in PROMOTED_TEAM_PLAYER_LAST_SEASON) — no assumed/regressed conversion to a
       // "Premier-League-appropriate" figure; projectedGoals is just the player's real goals.
+      // No Championship xG exists, so the promoted-team denominator stays goals-only.
       const actualChampionshipGoals = isPromoted ? PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS[team.name] : undefined;
-      const shareDenominator = (isPromoted && actualChampionshipGoals !== undefined) ? actualChampionshipGoals : teamGoalsTotal;
+      const shareDenominator = (isPromoted && actualChampionshipGoals !== undefined) ? actualChampionshipGoals : teamCombinedTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const goals = realGoalsByPlayerId.get(p.id) || 0;
-        const goalShare = shareDenominator > 0 ? (goals / shareDenominator) * 100 : 0;
+        const xgRaw = realXGByPlayerId.get(p.id);
+        // No xG data (promoted-team Championship season): use goals undiluted rather than
+        // blending in a fake 0, since the shareDenominator for that case is also goals-only.
+        const combined = (xgRaw === null || xgRaw === undefined) ? goals : (0.5 * goals + 0.5 * xgRaw);
+        const goalShare = shareDenominator > 0 ? (combined / shareDenominator) * 100 : 0;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
@@ -10260,6 +10278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position,
           goalShare: Math.round(goalShare * 100) / 100,
           projectedGoals: Math.round(goals * 100) / 100,
+          xG: Math.round((xgRaw ?? 0) * 100) / 100,
+          combinedGoals: Math.round(combined * 100) / 100,
         };
       }).sort((a: any, b: any) => b.goalShare - a.goalShare);
 
@@ -10270,6 +10290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         season,
         games: gamesByTeamId.get(team.id) || 0,
         expectedGoals: Math.round((isPromoted && actualChampionshipGoals !== undefined ? actualChampionshipGoals : teamGoalsTotal) * 100) / 100,
+        teamXG: Math.round(teamXGTotal * 100) / 100,
+        teamCombinedGoals: Math.round((isPromoted && actualChampionshipGoals !== undefined ? actualChampionshipGoals : teamCombinedTotal) * 100) / 100,
         players,
       });
     });
@@ -10288,6 +10310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const promotedTeamNames = new Set(Object.keys(PROMOTED_TEAM_PLAYER_LAST_SEASON));
 
     const realAssistsByPlayerId = new Map<number, number>();
+    // null (not 0) marks "no real xA data exists for this player" — see goalShare's matching
+    // Championship-xG comment for why a fake 0 would wrongly halve their share.
+    const realXAByPlayerId = new Map<number, number | null>();
     const gamesByTeamId = new Map<number, number>();
 
     if (season === PREVIOUS_SEASON) {
@@ -10297,9 +10322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (team && promotedTeamNames.has(team.name)) {
           const entry = PROMOTED_TEAM_PLAYER_LAST_SEASON[team.name][player.web_name];
           realAssistsByPlayerId.set(player.id, entry?.assists ?? 0);
+          realXAByPlayerId.set(player.id, null);
         } else {
           const row = await getLastSeasonPlayerRow(player.first_name, player.second_name, player.element_type);
           realAssistsByPlayerId.set(player.id, row?.assists ?? 0);
+          realXAByPlayerId.set(player.id, row?.expectedAssists ?? 0);
         }
       }));
       bootstrapData.teams.forEach((team: any) => {
@@ -10308,7 +10335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
-      const finishedFixtures = allFixtures.filter((f: any) => f.finished);
+      // See isFixtureActuallyOver's docstring — the strict `finished` flag stays false for up to
+      // ~1hr after full time pending bonus points, which silently dropped the latest gameweek.
+      const finishedFixtures = allFixtures.filter((f: any) => isFixtureActuallyOver(f));
       const fixtureTeamMap = new Map<number, { home: number; away: number }>();
       finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
 
@@ -10323,7 +10352,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return fix && (fix.home === player.team || fix.away === player.team);
         });
         const assists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
+        const xa = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
         realAssistsByPlayerId.set(player.id, assists);
+        realXAByPlayerId.set(player.id, xa);
       });
 
       bootstrapData.teams.forEach((team: any) => {
@@ -10341,13 +10372,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     bootstrapData.teams.forEach((team: any) => {
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === team.id);
       const teamAssistsTotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realAssistsByPlayerId.get(p.id) || 0), 0);
+      const teamXATotal = teamPlayersList.reduce((sum: number, p: any) => sum + (realXAByPlayerId.get(p.id) || 0), 0);
+      const teamCombinedTotal = 0.5 * teamAssistsTotal + 0.5 * teamXATotal;
       const isPromoted = season === PREVIOUS_SEASON && promotedTeamNames.has(team.name);
       const actualChampionshipAssists = isPromoted ? PROMOTED_TEAM_ACTUAL_CHAMPIONSHIP_GOALS[team.name] * 0.85 : undefined;
-      const shareDenominator = (isPromoted && actualChampionshipAssists !== undefined) ? actualChampionshipAssists : teamAssistsTotal;
+      const shareDenominator = (isPromoted && actualChampionshipAssists !== undefined) ? actualChampionshipAssists : teamCombinedTotal;
 
       const players = teamPlayersList.map((p: any) => {
         const assists = realAssistsByPlayerId.get(p.id) || 0;
-        const assistShare = shareDenominator > 0 ? (assists / shareDenominator) * 100 : 0;
+        const xaRaw = realXAByPlayerId.get(p.id);
+        // No xA data (promoted-team Championship season): use assists undiluted rather than
+        // blending in a fake 0, since the shareDenominator for that case is also assists-only.
+        const combined = (xaRaw === null || xaRaw === undefined) ? assists : (0.5 * assists + 0.5 * xaRaw);
+        const assistShare = shareDenominator > 0 ? (combined / shareDenominator) * 100 : 0;
         const position = bootstrapData.element_types.find((pos: any) => pos.id === p.element_type)?.singular_name || 'Unknown';
         return {
           playerId: p.id,
@@ -10355,6 +10392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position,
           assistShare: Math.round(assistShare * 100) / 100,
           projectedAssists: Math.round(assists * 100) / 100,
+          xA: Math.round((xaRaw ?? 0) * 100) / 100,
+          combinedAssists: Math.round(combined * 100) / 100,
         };
       }).sort((a: any, b: any) => b.assistShare - a.assistShare);
 
@@ -10364,6 +10403,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamShort: team.short_name,
         season,
         games: gamesByTeamId.get(team.id) || 0,
+        teamXA: Math.round(teamXATotal * 100) / 100,
+        teamCombinedAssists: Math.round((isPromoted && actualChampionshipAssists !== undefined ? actualChampionshipAssists : teamCombinedTotal) * 100) / 100,
         expectedAssists: Math.round((isPromoted && actualChampionshipAssists !== undefined ? actualChampionshipAssists : teamAssistsTotal) * 100) / 100,
         players,
       });
@@ -10384,7 +10425,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const fixturesRes = await fetch("https://fantasy.premierleague.com/api/fixtures/");
     const allFixtures: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
-    const finishedFixtures = allFixtures.filter((f: any) => f.finished);
+    // A just-finished fixture stays `finished: false` for up to ~1hr while bonus points are
+    // pending (finished_provisional flips immediately at full time) — using the strict flag here
+    // silently dropped the most recent gameweek's goals/xG/assists from goal/assist share entirely
+    // until FPL confirmed bonus, understating every player who'd played in it (and every team's
+    // games-played denominator) for that whole window. See isFixtureActuallyOver's docstring.
+    const finishedFixtures = allFixtures.filter((f: any) => isFixtureActuallyOver(f));
     const fixtureTeamMap = new Map<number, { home: number; away: number }>();
     finishedFixtures.forEach((f: any) => fixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a }));
     const allPlayerIds = bootstrapData.elements.map((p: any) => p.id);
@@ -12893,7 +12939,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fixturesRes = await internalFetch("api/fixtures");
           if (fixturesRes.ok) {
             const allFixtures: any[] = await fixturesRes.json();
-            allFixtures.filter((f: any) => f.finished).forEach((f: any) => {
+            // See isFixtureActuallyOver's docstring — the strict `finished` flag stays false for
+            // up to ~1hr after full time pending bonus points, which silently dropped the latest
+            // gameweek from recentP60's current-club-games correction for blend-eligible players.
+            allFixtures.filter((f: any) => isFixtureActuallyOver(f)).forEach((f: any) => {
               minutesFixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a });
             });
             // GW39 TBC: collect team IDs with event=null fixtures
@@ -12904,7 +12953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { computeBlendMap: computeMinutesBlendMap } = await import('./blend-eligible-service');
             minutesBlendMap = computeMinutesBlendMap(
               bootstrapData.elements,
-              allFixtures.filter((f: any) => f.finished),
+              allFixtures.filter((f: any) => isFixtureActuallyOver(f)),
               dbHistories
             );
             console.log(`🔀 Minutes blend map computed: ${minutesBlendMap.size} blend-eligible players, TBC teams: ${tbcTeamIds.size}`);
@@ -13568,8 +13617,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const completeGameweeks = new Set();
       for (let gw = 1; gw <= endGameweek; gw++) {
         const gameweekFixtures = fixturesData.filter((f: any) => f.event === gw);
-        const finishedFixtures = gameweekFixtures.filter((f: any) => f.finished);
-        
+        // See isFixtureActuallyOver's docstring — the strict `finished` flag stays false for up
+        // to ~1hr after full time pending bonus points, which kept a gameweek that had actually
+        // finished falling back to projected (rather than real) goals-against for that long.
+        const finishedFixtures = gameweekFixtures.filter((f: any) => isFixtureActuallyOver(f));
+
         if (gameweekFixtures.length > 0 && finishedFixtures.length === gameweekFixtures.length) {
           completeGameweeks.add(gw);
         }
@@ -18436,14 +18488,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // and promoted-team players (with genuine 0 current-season starts) still get a
         // projection via their 2025/26 rate or the position league-average fallback.
         const activePlayers = fplData.elements;
-        const finishedGWs = fplData.events.filter((e: any) => e.finished).length;
+        // bootstrap's own event.finished lags the same way fixture.finished does (stays false
+        // for up to ~1hr after full time pending bonus points) — derive "how many gameweeks are
+        // fully done" from the fixtures themselves instead, same as the completeGameweeks pattern
+        // in the goals-against endpoint, so a just-finished gameweek isn't excluded from the
+        // bonus-per-fixture rate for that long.
+        const fixturesByEvent = new Map<number, any[]>();
+        allFixtures.forEach((f: any) => {
+          if (!f.event) return;
+          const arr = fixturesByEvent.get(f.event) || [];
+          arr.push(f);
+          fixturesByEvent.set(f.event, arr);
+        });
+        let finishedGWs = 0;
+        for (const gw of Array.from(fixturesByEvent.keys()).sort((a, b) => a - b)) {
+          const gwFixtures = fixturesByEvent.get(gw)!;
+          if (gwFixtures.length > 0 && gwFixtures.every((f: any) => isFixtureActuallyOver(f))) {
+            finishedGWs = gw;
+          } else {
+            break;
+          }
+        }
 
         const { MIN_STARTS_FOR_RATE } = await import("./player-history-blend-service");
 
         // Count finished fixtures per team (accounts for DGWs)
         const teamFixturesPlayed = new Map<number, number>();
         allFixtures.forEach((f: any) => {
-          if (f.finished && f.event && f.event <= finishedGWs) {
+          if (isFixtureActuallyOver(f) && f.event && f.event <= finishedGWs) {
             teamFixturesPlayed.set(f.team_h, (teamFixturesPlayed.get(f.team_h) || 0) + 1);
             teamFixturesPlayed.set(f.team_a, (teamFixturesPlayed.get(f.team_a) || 0) + 1);
           }

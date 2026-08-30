@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { SeasonSelector } from "@/components/season-selector";
+import { CURRENT_SEASON } from "@shared/schema";
 
 interface SeasonAssistShareData {
   teamId: number;
@@ -16,12 +17,16 @@ interface SeasonAssistShareData {
   season: string;
   games: number; // games the team total is based on (38, or 46 for a promoted team's 2025/26 Championship season)
   expectedAssists: number; // Real team assist total for the season
+  teamXA: number; // Real team xA total for the season
+  teamCombinedAssists: number; // 0.5*expectedAssists + 0.5*teamXA (or the promoted-team assumed total)
   players: {
     playerId: number;
     playerName: string;
     position: string;
-    assistShare: number; // Percentage of team's assists
-    projectedAssists: number; // assistShare applied to expectedAssists
+    assistShare: number; // Percentage of team's combined (0.5*A + 0.5*xA) total
+    projectedAssists: number; // player's real assists for the season
+    xA: number; // player's real xA for the season
+    combinedAssists: number; // 0.5*projectedAssists + 0.5*xA
   }[];
 }
 
@@ -29,7 +34,7 @@ export default function AssistShare() {
   const queryClient = useQueryClient();
 
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedSeason, setSelectedSeason] = useState<string>(PREVIOUS_SEASON);
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
@@ -132,6 +137,11 @@ export default function AssistShare() {
             </div>
           </div>
 
+          {/* Season selector — kept outside the collapsible filters so it's always visible */}
+          <div className="mb-4">
+            <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+          </div>
+
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card className="mb-6">
@@ -152,8 +162,6 @@ export default function AssistShare() {
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
                   <div className="flex flex-wrap gap-4 items-center">
-                    <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
-
                     <div className="flex items-center gap-2">
                       <Filter className="h-5 w-5 text-green-600" />
                       <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -201,7 +209,9 @@ export default function AssistShare() {
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      Assists ({teamData.games} games): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(0)}</span>
+                      ({teamData.games} games) A: <span className="font-bold">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
+                      {" · "}xA: <span className="font-bold">{(teamData?.teamXA || 0).toFixed(1)}</span>
+                      {" · "}A+xA: <span className="font-bold">{(teamData?.teamCombinedAssists || 0).toFixed(1)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -222,7 +232,19 @@ export default function AssistShare() {
                               <div className="text-xs text-gray-500">{player.position}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">A</div>
+                              <div className="text-xs font-semibold text-gray-700">{(player.projectedAssists || 0).toFixed(1)}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">xA</div>
+                              <div className="text-xs font-semibold text-gray-700">{(player.xA || 0).toFixed(1)}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">A+xA</div>
+                              <div className="text-xs font-semibold text-gray-700">{(player.combinedAssists || 0).toFixed(1)}</div>
+                            </div>
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               player.assistShare >= 20 ? 'bg-green-100 text-green-800' :
                               player.assistShare >= 15 ? 'bg-blue-100 text-blue-800' :
@@ -230,9 +252,6 @@ export default function AssistShare() {
                               'bg-gray-100 text-gray-800'
                             }`}>
                               {(player.assistShare || 0).toFixed(1)}%
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {(player.projectedAssists || 0).toFixed(1)} total
                             </span>
                           </div>
                         </div>
@@ -264,7 +283,7 @@ export default function AssistShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Formula: Player's real assists ÷ team's real assists × 100</li>
+                    <li>• Formula: Player's (0.5×Assists + 0.5×xA) ÷ team's (0.5×Assists + 0.5×xA) × 100</li>
                     <li>• Switch season above to view real 2025/26 or 2026/27 data</li>
                     <li>• Promoted teams (Coventry/Ipswich/Hull) use their real 2025/26 Championship figures</li>
                     <li>• All players in a team total 100%</li>

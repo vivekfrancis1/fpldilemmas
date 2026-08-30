@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { SeasonSelector } from "@/components/season-selector";
+import { CURRENT_SEASON } from "@shared/schema";
 
 interface SeasonGoalShareData {
   teamId: number;
@@ -16,12 +17,16 @@ interface SeasonGoalShareData {
   season: string;
   games: number; // games the team total is based on (38, or 46 for a promoted team's 2025/26 Championship season)
   expectedGoals: number; // Real team goal total for the season
+  teamXG: number; // Real team xG total for the season
+  teamCombinedGoals: number; // 0.5*expectedGoals + 0.5*teamXG (or the promoted-team assumed total)
   players: {
     playerId: number;
     playerName: string;
     position: string;
-    goalShare: number; // Percentage of team's goals
+    goalShare: number; // Percentage of team's combined (0.5*G + 0.5*xG) total
     projectedGoals: number; // player's real goals for the season
+    xG: number; // player's real xG for the season
+    combinedGoals: number; // 0.5*projectedGoals + 0.5*xG
   }[];
 }
 
@@ -29,7 +34,7 @@ export default function GoalShare() {
   const queryClient = useQueryClient();
 
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedSeason, setSelectedSeason] = useState<string>(PREVIOUS_SEASON);
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
@@ -132,6 +137,11 @@ export default function GoalShare() {
             </div>
           </div>
 
+          {/* Season selector — kept outside the collapsible filters so it's always visible */}
+          <div className="mb-4">
+            <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
+          </div>
+
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card className="mb-6">
@@ -152,7 +162,6 @@ export default function GoalShare() {
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
                   <div className="flex flex-wrap gap-4 items-center">
-                    <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
                     <div className="flex items-center gap-2">
                       <Filter className="h-5 w-5 text-blue-600" />
                       <label className="text-sm font-medium text-gray-700">Team:</label>
@@ -209,7 +218,9 @@ export default function GoalShare() {
                         <div>
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
-                            Goals ({team.games} games): <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(0)}</span>
+                            ({team.games} games) G: <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(1)}</span>
+                            {" · "}xG: <span className="font-semibold text-gray-700">{team.teamXG.toFixed(1)}</span>
+                            {" · "}G+xG: <span className="font-semibold text-gray-700">{team.teamCombinedGoals.toFixed(1)}</span>
                           </p>
                         </div>
                       </div>
@@ -231,20 +242,25 @@ export default function GoalShare() {
                               <p className="text-xs text-gray-500">{player.position}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200 font-bold"
-                              >
-                                {player.goalShare.toFixed(1)}%
-                              </Badge>
-                              <div className="flex flex-col items-end">
-                                <span className="text-xs text-gray-500 font-medium">
-                                  {player.projectedGoals.toFixed(1)} total
-                                </span>
-                              </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">G</div>
+                              <div className="text-xs font-semibold text-gray-700">{player.projectedGoals.toFixed(1)}</div>
                             </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">xG</div>
+                              <div className="text-xs font-semibold text-gray-700">{player.xG.toFixed(1)}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 font-medium">G+xG</div>
+                              <div className="text-xs font-semibold text-gray-700">{player.combinedGoals.toFixed(1)}</div>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200 font-bold"
+                            >
+                              {player.goalShare.toFixed(1)}%
+                            </Badge>
                           </div>
                         </div>
                       ))}
@@ -267,7 +283,7 @@ export default function GoalShare() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Formula: Player's real goals ÷ team's real goals × 100</li>
+                    <li>• Formula: Player's (0.5×Goals + 0.5×xG) ÷ team's (0.5×Goals + 0.5×xG) × 100</li>
                     <li>• Switch season above to view real 2025/26 or 2026/27 data</li>
                     <li>• Promoted teams (Coventry/Ipswich/Hull) use their real 2025/26 Championship figures, with an admin-configured assumed team total for projections</li>
                     <li>• All players in a team total 100%</li>

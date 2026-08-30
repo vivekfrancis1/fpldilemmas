@@ -80,10 +80,22 @@ export async function prefetchAllPlayerHistories(playerIds: number[], finishedGW
       const row = byId.get(id);
       if (!row) return true; // never cached
       if (row.updatedAt < cutoff) return true; // stale by age
+      const hist = row.historyJson as any[];
       if (finishedGW && finishedGW > 0) {
-        const hist = row.historyJson as any[];
         const maxRound = Math.max(...hist.map((h: any) => h.round || 0), 0);
         if (maxRound < finishedGW) return true; // stale by GW coverage
+      }
+      // FPL's element-summary includes a placeholder entry for a player's upcoming fixture ahead
+      // of kickoff (round/fixture populated, score null) — completely normal right up until that
+      // match is actually played. But a gameweek can span several days, so a player whose OWN
+      // match already finished shouldn't have to wait for finishedGW to advance for the whole
+      // gameweek (every other fixture in it too) before getting refreshed. Check independently:
+      // if their latest entry is still a null-score placeholder well after its own kickoff time
+      // (2hr buffer covers stoppage time + the FPL API's own lag), it's actually stale.
+      const latestByRound = [...hist].sort((a: any, b: any) => (b.round || 0) - (a.round || 0))[0];
+      if (latestByRound && latestByRound.team_h_score === null && latestByRound.kickoff_time) {
+        const kickoffPlusBuffer = new Date(latestByRound.kickoff_time).getTime() + 2 * 60 * 60 * 1000;
+        if (kickoffPlusBuffer < Date.now()) return true;
       }
       return false;
     });

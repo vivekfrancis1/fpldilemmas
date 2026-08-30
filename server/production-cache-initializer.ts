@@ -216,7 +216,35 @@ export class ProductionCacheInitializer {
         // pre-season setup, was their real *last* season's full history being read back as if
         // it were current, since the current-season minutes threshold hadn't been met yet.
         const playerIds: number[] = bootstrapData.elements.map((p: any) => p.id);
-        const finishedGW: number = bootstrapData.events.filter((e: any) => e.finished).length;
+        // bootstrap's own event.finished lags fixture.finished_provisional by up to ~1hr (pending
+        // bonus-point confirmation) — computing "how many gameweeks are actually done" from that
+        // flag meant a just-finished gameweek's players kept failing the "stale by GW coverage"
+        // check below (their history row already had a round entry for it — just a pre-kickoff
+        // placeholder with null score/0 minutes — so it wasn't re-fetched once the real match
+        // data became available, sometimes for hours). Derive it from the fixtures instead.
+        let finishedGW = 0;
+        try {
+          const fixturesResponse = await internalFetch("api/fixtures");
+          const allFixtures: any[] = fixturesResponse.ok ? await fixturesResponse.json() : [];
+          const fixturesByEvent = new Map<number, any[]>();
+          allFixtures.forEach((f: any) => {
+            if (!f.event) return;
+            const arr = fixturesByEvent.get(f.event) || [];
+            arr.push(f);
+            fixturesByEvent.set(f.event, arr);
+          });
+          for (const gw of Array.from(fixturesByEvent.keys()).sort((a, b) => a - b)) {
+            const gwFixtures = fixturesByEvent.get(gw)!;
+            if (gwFixtures.length > 0 && gwFixtures.every((f: any) => f.finished || f.finished_provisional)) {
+              finishedGW = gw;
+            } else {
+              break;
+            }
+          }
+        } catch (e) {
+          // Fall back to the (laggier but still directionally correct) bootstrap flag
+          finishedGW = bootstrapData.events.filter((e: any) => e.finished).length;
+        }
         // When histories are GW-stale and fully re-fetched, clear the goal/assist share caches
         // and re-run the scoring cache so the next DB snapshot uses fresh player history data.
         const onHistoryRefreshComplete = () => {
