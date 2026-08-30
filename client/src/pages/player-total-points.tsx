@@ -833,7 +833,7 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[272px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[340px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
       render: (_, player) => (
         isPastMode ? (
           <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
@@ -844,6 +844,26 @@ function createPlayerTotalPointsColumns(
             excludedComponents={excludedComponents}
           />
         )
+      )
+    },
+    {
+      key: 'averagePerGameweek',
+      header: 'Avg',
+      sortable: true,
+      hideSortIcon: true,
+      align: 'center',
+      // Excludes blanked gameweeks from the denominator (a player's own decided current-GW in
+      // Projections, or a not-yet-played current-GW in History) — see the averagePerGameweek
+      // computation in totalPointsData/adjustedPlayerData above, same convention as the Team
+      // Projections pages' Average column.
+      className: 'hidden md:table-cell md:w-[68px] bg-emerald-50 border-l border-gray-300 px-1 md:sticky md:right-[272px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      render: (value) => (
+        <ValueCell
+          value={value || 0}
+          format="number"
+          decimals={1}
+          className="font-bold text-emerald-800 text-sm"
+        />
       )
     },
     {
