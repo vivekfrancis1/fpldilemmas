@@ -26,6 +26,8 @@ interface OddsSnapshotPoint {
   over25Prob: number | null;
   expectedHomeGoals: number | null;
   expectedAwayGoals: number | null;
+  homeCleanSheetPct: number | null;
+  awayCleanSheetPct: number | null;
 }
 
 interface FixtureOddsHistory {
@@ -64,11 +66,16 @@ export default function MatchOddsHistory() {
   // fixture at some snapshot — some snapshots (e.g. totals-only market gaps) can be missing it.
   const hasWinDrawLossData = chartData.some((d) => d.homeWinProb !== null && d.drawProb !== null && d.awayWinProb !== null);
 
+  // Clean sheet % is derived from the same solved xG as the chart above (a team's clean sheet
+  // chance depends on the OPPONENT's expected goals), computed server-side in odds-service.ts —
+  // so it's available whenever expectedHomeGoals/expectedAwayGoals are.
+  const hasCleanSheetData = chartData.some((d) => d.homeCleanSheetPct !== null && d.awayCleanSheetPct !== null);
+
   // Indices worth labeling with their actual value on the chart, rather than leaving every
   // point as a bare dot: the first and last snapshots (where the line started/currently stands)
   // and the lowest/highest points reached (how far the market swung), per series independently
   // since home and away xG don't necessarily peak at the same snapshot.
-  const getHighlightIndices = (key: "expectedHomeGoals" | "expectedAwayGoals" | "homeWinPct" | "drawPct" | "awayWinPct"): Set<number> => {
+  const getHighlightIndices = (key: "expectedHomeGoals" | "expectedAwayGoals" | "homeWinPct" | "drawPct" | "awayWinPct" | "homeCleanSheetPct" | "awayCleanSheetPct"): Set<number> => {
     const indices = new Set<number>();
     const values = chartData
       .map((d, i) => ({ v: d[key], i }))
@@ -240,6 +247,59 @@ export default function MatchOddsHistory() {
               )}
             </CardContent>
           </Card>
+
+          {hasCleanSheetData && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-base">Clean Sheet Probability Over Time</CardTitle>
+                <p className="text-xs text-gray-500">
+                  Inversely proportional to the opponent's expected goals above — same clean sheet
+                  formula used across the app, applied to this match's odds-implied xG.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {chartData.length < 2 ? (
+                  <p className="text-sm text-gray-500 py-6 text-center">
+                    Only {chartData.length} snapshot{chartData.length === 1 ? "" : "s"} collected so far —
+                    check back after a few more refreshes (every 4 hours) to see the trend.
+                  </p>
+                ) : (
+                  <div className="h-72 sm:h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={24} />
+                        <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip
+                          formatter={(value: number, name: string) => [value !== null && value !== undefined ? `${value.toFixed(0)}%` : "-", name]}
+                          labelFormatter={(label) => `Snapshot: ${label}`}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="homeCleanSheetPct"
+                          name={`${data.homeTeam} CS%`}
+                          stroke="#059669"
+                          strokeWidth={2}
+                          dot={renderAnnotatedDot("#059669", getHighlightIndices("homeCleanSheetPct"), true, (v) => `${v.toFixed(0)}%`)}
+                          connectNulls
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="awayCleanSheetPct"
+                          name={`${data.awayTeam} CS%`}
+                          stroke="#2563eb"
+                          strokeWidth={2}
+                          dot={renderAnnotatedDot("#2563eb", getHighlightIndices("awayCleanSheetPct"), false, (v) => `${v.toFixed(0)}%`)}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {hasWinDrawLossData && (
             <Card className="mb-4">

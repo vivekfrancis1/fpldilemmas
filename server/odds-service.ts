@@ -11,6 +11,7 @@
 import { pool } from "./db";
 import { aggregateEventOdds, solveExpectedGoalsFromOdds, type OddsApiEvent } from "@shared/odds-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
+import { getAdminGoalSettings } from "./team-config";
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 const SPORT_KEY = "soccer_epl";
@@ -124,6 +125,8 @@ export interface FixtureOddsSnapshotPoint {
   over25Prob: number | null;
   expectedHomeGoals: number | null;
   expectedAwayGoals: number | null;
+  homeCleanSheetPct: number | null;
+  awayCleanSheetPct: number | null;
 }
 
 export interface FixtureOddsHistory {
@@ -150,6 +153,14 @@ export async function getFixtureOddsHistory(season: string, oddsApiEventId: stri
 
   if (result.rows.length === 0) return null;
 
+  // Same clean-sheet formula as team-cs-projections (exp(-opponent's xG * exponent) * multiplier)
+  // — applied here to the odds-implied xG for each snapshot instead of a season average, so a
+  // team's clean sheet chance for this specific match is one team's own probability against the
+  // OTHER team's expected goals.
+  const { cleanSheetExponent, cleanSheetMultiplier } = getAdminGoalSettings();
+  const cleanSheetPct = (opponentXG: number | null): number | null =>
+    opponentXG !== null ? Math.exp(-opponentXG * cleanSheetExponent) * cleanSheetMultiplier : null;
+
   const first = result.rows[0];
   const snapshots: FixtureOddsSnapshotPoint[] = result.rows.map((row: any) => {
     const homeWinProb = row.home_win_prob !== null ? parseFloat(row.home_win_prob) : null;
@@ -160,6 +171,8 @@ export async function getFixtureOddsHistory(season: string, oddsApiEventId: stri
     const solved = homeWinProb !== null && drawProb !== null && awayWinProb !== null && over25Prob !== null
       ? solveExpectedGoalsFromOdds(homeWinProb, drawProb, awayWinProb, over25Prob)
       : null;
+    const expectedHomeGoals = solved?.lambdaHome ?? null;
+    const expectedAwayGoals = solved?.lambdaAway ?? null;
 
     return {
       snapshotAt: row.snapshot_at,
@@ -168,8 +181,11 @@ export async function getFixtureOddsHistory(season: string, oddsApiEventId: stri
       drawProb,
       awayWinProb,
       over25Prob,
-      expectedHomeGoals: solved?.lambdaHome ?? null,
-      expectedAwayGoals: solved?.lambdaAway ?? null,
+      expectedHomeGoals,
+      expectedAwayGoals,
+      // Home team's clean sheet depends on the AWAY team's expected goals, and vice versa.
+      homeCleanSheetPct: cleanSheetPct(expectedAwayGoals),
+      awayCleanSheetPct: cleanSheetPct(expectedHomeGoals),
     };
   });
 
