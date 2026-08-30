@@ -92,6 +92,7 @@ export default function RecentPriceChanges() {
   const [predictionMovementFilter, setPredictionMovementFilter] = useState<PredictionMovementFilter>('all');
   const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
   const [predictionClubFilter, setPredictionClubFilter] = useState("all");
+  const [predictionStatusFilter, setPredictionStatusFilter] = useState("all");
   const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
   const [secondsUntilPriceChange, setSecondsUntilPriceChange] = useState(() => getSecondsUntilNextPriceChange());
   const { toast } = useToast();
@@ -281,8 +282,9 @@ export default function RecentPriceChanges() {
         : predictionMovementFilter === "locked" ? !!p.locked_until
         : predictionMovementFilter === "rise" ? p.predicted_progress > 0
         : p.predicted_progress < 0;
+      const matchesStatus = predictionStatusFilter === "all" || p.status === predictionStatusFilter;
       const matchesTeam = predictionTeamFilter === "all" || myTeamPlayerIds.has(p.player_id);
-      return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesTeam;
+      return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesStatus && matchesTeam;
     })
     .sort((a: PricePrediction, b: PricePrediction) => {
       // hours_to_threshold is null when there's no meaningful ETA (already crossed uses 0, not
@@ -368,19 +370,20 @@ export default function RecentPriceChanges() {
     return isRise ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700";
   };
 
+  // Price changes only actually happen once every 24h at the same local cutoff time, so instead of
+  // a vague "Tonight"/"Tomorrow"/raw duration, name the actual calendar cutoff a player will cross
+  // by — "Monday 4:30 AM", "Tuesday 4:30 AM", etc. — for up to a week out; beyond that a named day
+  // stops being useful (which Monday?) so it falls back to "> 7 days".
   const formatEta = (prediction: PricePrediction): string => {
     if (prediction.hours_to_threshold === null) return "-";
-    // Price changes only actually happen once every 24h, so a player already past the threshold
-    // is still waiting for tonight's update, same as one about to cross it — both show "Tonight".
-    if (prediction.hours_to_threshold <= 0) return "Tonight";
-    // Anything crossing before tonight's cutoff is "Tonight"; anything crossing before the
-    // following night's cutoff (tonight's cutoff + 25h, matching how far a full extra day of
-    // momentum could carry it) is "Tomorrow" — more useful at a glance than a raw hour count.
     const hoursUntilTonightCutoff = secondsUntilPriceChange / 3600;
-    if (prediction.hours_to_threshold <= hoursUntilTonightCutoff) return "Tonight";
-    if (prediction.hours_to_threshold <= hoursUntilTonightCutoff + 25) return "Tomorrow";
-    if (prediction.hours_to_threshold < 24) return `${prediction.hours_to_threshold.toFixed(1)}h`;
-    return `${prediction.days_to_threshold!.toFixed(1)}d`;
+    const hours = Math.max(prediction.hours_to_threshold, 0); // already-crossed still waits for tonight's cutoff
+    const dayOffset = hours <= hoursUntilTonightCutoff ? 0 : Math.ceil((hours - hoursUntilTonightCutoff) / 24);
+    if (dayOffset > 6) return "> 7 days";
+    const cutoffDate = new Date(Date.now() + (hoursUntilTonightCutoff + dayOffset * 24) * 3600 * 1000);
+    const weekday = cutoffDate.toLocaleDateString([], { weekday: 'long' });
+    const time = cutoffDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `${weekday} ${time}`;
   };
 
   return (
@@ -497,6 +500,19 @@ export default function RecentPriceChanges() {
                       <SelectItem value="rise">Rise</SelectItem>
                       <SelectItem value="drop">Drop</SelectItem>
                       <SelectItem value="locked">Locked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={predictionStatusFilter} onValueChange={setPredictionStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48" data-testid="select-prediction-status-filter">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="Very likely to rise">Very likely to rise</SelectItem>
+                      <SelectItem value="Likely to rise">Likely to rise</SelectItem>
+                      <SelectItem value="Unlikely to change">Unlikely to change</SelectItem>
+                      <SelectItem value="Likely to drop">Likely to drop</SelectItem>
+                      <SelectItem value="Very likely to drop">Very likely to drop</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
