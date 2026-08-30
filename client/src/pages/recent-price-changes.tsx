@@ -371,6 +371,12 @@ export default function RecentPriceChanges() {
   const formatEta = (prediction: PricePrediction): string => {
     if (prediction.hours_to_threshold === null) return "-";
     if (prediction.hours_to_threshold <= 0) return "Reached";
+    // Anything crossing before tonight's cutoff is "Tonight"; anything crossing before the
+    // following night's cutoff (tonight's cutoff + 25h, matching how far a full extra day of
+    // momentum could carry it) is "Tomorrow" — more useful at a glance than a raw hour count.
+    const hoursUntilTonightCutoff = secondsUntilPriceChange / 3600;
+    if (prediction.hours_to_threshold <= hoursUntilTonightCutoff) return "Tonight";
+    if (prediction.hours_to_threshold <= hoursUntilTonightCutoff + 25) return "Tomorrow";
     if (prediction.hours_to_threshold < 24) return `${prediction.hours_to_threshold.toFixed(1)}h`;
     return `${prediction.days_to_threshold!.toFixed(1)}d`;
   };
