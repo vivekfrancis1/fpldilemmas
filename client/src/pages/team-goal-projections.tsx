@@ -160,7 +160,7 @@ export default function TeamGoalProjections() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("total");
+  const [sortBy, setSortBy] = useState<string>("average");
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const handleSort = (col: string) => {
@@ -496,9 +496,22 @@ export default function TeamGoalProjections() {
     return tbcGoalMap.get(teamShort)?.goals || 0;
   };
 
+  // Same total/average math as the displayed Total and Avg cells (excluding a decided
+  // current-GW team's stale projection) — so sorting by either always matches what's shown.
+  const getRowStats = (team: TeamGoalProjection) => {
+    const countedGws = activeGameweeks.filter(gw =>
+      !(viewMode === "future" && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
+      (viewMode !== "past" || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+    );
+    const tbc = getUnabsorbedTBC(team.teamShort);
+    const total = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
+    const countedWeeks = countedGws.length + (tbc > 0 ? 1 : 0);
+    return { total, avg: countedWeeks > 0 ? total / countedWeeks : 0 };
+  };
+
   const filteredProjections = useMemo(() => {
     if (!resolvedProjections.length) return [];
-    
+
     const dir = sortDir === 'asc' ? -1 : 1;
     return resolvedProjections
       .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
@@ -509,22 +522,16 @@ export default function TeamGoalProjections() {
           const bValue = b.gameweekProjections[gwNumber] || 0;
           return (bValue - aValue) * dir;
         }
-        
+
         switch (sortBy) {
-          case "total": {
-            const aPeriodTotal = activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0)
-              + getUnabsorbedTBC(a.teamShort);
-            const bPeriodTotal = activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0)
-              + getUnabsorbedTBC(b.teamShort);
-            return (bPeriodTotal - aPeriodTotal) * dir;
-          }
+          case "total": return (getRowStats(b).total - getRowStats(a).total) * dir;
           case "season": return (b.totalProjectedGoals - a.totalProjectedGoals) * dir;
-          case "average": return (b.averageGoalsPerGame - a.averageGoalsPerGame) * dir;
+          case "average": return (getRowStats(b).avg - getRowStats(a).avg) * dir;
           case "position": return (a.position - b.position) * dir;
           default: return (b.totalProjectedGoals - a.totalProjectedGoals) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments, currentGameweek, currentGWDecidedTeamIds]);
 
   // Per-gameweek data source: 'odds' if ANY fixture in that gameweek (across every team) used
   // live betting-market odds, 'model' if every fixture that gameweek fell through to the

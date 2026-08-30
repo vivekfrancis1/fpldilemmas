@@ -101,8 +101,11 @@ export default function MatchOddsHistory() {
     );
   };
 
-  const commenceTimeLabel = data?.commenceTime
-    ? new Date(data.commenceTime).toLocaleString(undefined, {
+  // Viewer's own local time zone abbreviation (e.g. "IST", "GMT+1", "PDT") — whatever the
+  // browser's own Intl data resolves to for their device, not a hardcoded zone.
+  const commenceDate = data?.commenceTime ? new Date(data.commenceTime) : null;
+  const commenceTimeLabel = commenceDate
+    ? commenceDate.toLocaleString(undefined, {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -110,6 +113,11 @@ export default function MatchOddsHistory() {
         minute: "2-digit",
       })
     : null;
+  const commenceTimeZoneAbbr = commenceDate
+    ? new Intl.DateTimeFormat([], { timeZoneName: "short" })
+        .formatToParts(commenceDate)
+        .find((part) => part.type === "timeZoneName")?.value || ""
+    : "";
 
   return (
     <div className="fpl-page-container">
@@ -163,7 +171,7 @@ export default function MatchOddsHistory() {
               <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                 <span>{data.homeTeam} vs {data.awayTeam}</span>
                 {commenceTimeLabel && (
-                  <span className="text-sm font-normal text-gray-500">Kickoff: {commenceTimeLabel}</span>
+                  <span className="text-sm font-normal text-gray-500">Kickoff: {commenceTimeLabel} {commenceTimeZoneAbbr}</span>
                 )}
               </CardTitle>
             </CardHeader>

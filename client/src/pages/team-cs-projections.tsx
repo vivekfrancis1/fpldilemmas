@@ -297,26 +297,27 @@ export default function TeamCSProjections() {
           return (bValue - aValue) * dir;
         }
         
+        // Same average math as the displayed Avg CS% cell (sum of each actual fixture's CS%
+        // divided by number of fixtures, excluding a decided current-GW team's stale value) —
+        // so sorting by average always matches what's shown.
+        const getRowAvg = (team: typeof a) => {
+          const allFixtures = activeGameweeks
+            .filter(gw => !(gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)))
+            .flatMap(gw => team.fixtureDetails?.[gw.toString()] || []);
+          const tbcOdds = getUnabsorbedTBC(team.teamShort);
+          const totalOdds = allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) + tbcOdds;
+          const totalCount = allFixtures.length + (tbcOdds > 0 ? 1 : 0);
+          return totalCount > 0 ? totalOdds / totalCount : 0;
+        };
+
         switch (sortBy) {
-          case "average": {
-            const aTBC = getUnabsorbedTBC(a.teamShort);
-            const bTBC = getUnabsorbedTBC(b.teamShort);
-            const aLen = activeGameweeks.length + (aTBC > 0 ? 1 : 0);
-            const bLen = activeGameweeks.length + (bTBC > 0 ? 1 : 0);
-            const aPeriodAvg = aLen > 0
-              ? (activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) + aTBC) / aLen
-              : 0;
-            const bPeriodAvg = bLen > 0
-              ? (activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) + bTBC) / bLen
-              : 0;
-            return (bPeriodAvg - aPeriodAvg) * dir;
-          }
+          case "average": return (getRowAvg(b) - getRowAvg(a)) * dir;
           case "season": return (b.averageCSProbability - a.averageCSProbability) * dir;
           case "position": return (a.position - b.position) * dir;
           default: return (b.averageCSProbability - a.averageCSProbability) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcCSMap, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcCSMap, fixtureMode, tbcAssignments, startGameweek, endGameweek, currentGameweek, currentGWDecidedTeamIds]);
 
   // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
   // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.

@@ -126,7 +126,7 @@ export default function TeamGoalsAgainstProjections() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("total");
+  const [sortBy, setSortBy] = useState<string>("average");
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const handleSort = (col: string) => {
@@ -414,26 +414,33 @@ export default function TeamGoalsAgainstProjections() {
           return (aValue - bValue) * dir;
         }
         
+        // Same total/average math as the displayed Total and Avg cells (excluding a decided
+        // current-GW team's stale projection, and a not-yet-played history gameweek) — so
+        // sorting by either always matches what's shown.
+        const getRowStats = (team: typeof a) => {
+          const countedRegularGws = activeGameweeks.filter(gw =>
+            gw !== 39 &&
+            !(viewMode === 'future' && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
+            (viewMode !== 'past' || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+          );
+          const regularGA = countedRegularGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+          const tbcGA = (activeGameweeks.includes(39) && viewMode === 'future' && fixtureMode === 'base')
+            ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
+            : ((activeGameweeks.includes(39) || (selectedGameweeks.size > 0 && !selectedGameweeks.has(39))) ? 0 : getUnabsorbedTBC(team.teamShort));
+          const total = regularGA + tbcGA;
+          const countedWeeks = countedRegularGws.length + (tbcGA > 0 ? 1 : 0);
+          return { total, avg: countedWeeks > 0 ? total / countedWeeks : 0 };
+        };
+
         switch (sortBy) {
-          case "total": {
-            const computeTotal = (team: typeof a) => {
-              const regularGA = activeGameweeks
-                .filter(gw => gw !== 39)
-                .reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
-              const tbcGA = (activeGameweeks.includes(39) && viewMode === 'future' && fixtureMode === 'base')
-                ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
-                : ((activeGameweeks.includes(39) || (selectedGameweeks.size > 0 && !selectedGameweeks.has(39))) ? 0 : getUnabsorbedTBC(team.teamShort));
-              return regularGA + tbcGA;
-            };
-            return (computeTotal(a) - computeTotal(b)) * dir;
-          }
+          case "total": return (getRowStats(a).total - getRowStats(b).total) * dir;
           case "season": return (a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst) * dir;
-          case "average": return (a.averageGoalsAgainstPerGame - b.averageGoalsAgainstPerGame) * dir;
+          case "average": return (getRowStats(a).avg - getRowStats(b).avg) * dir;
           case "position": return (a.position - b.position) * dir;
           default: return (a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst) * dir;
         }
       });
-  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek]);
+  }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek, currentGameweek, currentGWDecidedTeamIds, selectedGameweeks]);
 
   // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
   // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
