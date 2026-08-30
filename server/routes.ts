@@ -6874,282 +6874,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get price predictions (simulated data for demo)
   app.get("/api/price-predictions", async (req, res) => {
     try {
-      // Generate predictions based on real player data
+      // FPL added real, official price-change-progress fields directly to the public
+      // bootstrap-static response for 2026/27 (price_change_percent, price_change_projections,
+      // price_change_hourly_rate) — no login, no scraping, no heuristic threshold-guessing
+      // needed. This mirrors what FPL's own site and third-party trackers (LiveFPL, fpl.page —
+      // both explicitly state their price progress "comes directly from FPL") actually show.
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
-      
+
       const bootstrapData = await bootstrapResponse.json();
       const elements = bootstrapData.elements;
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
-      
-      // Advanced price prediction algorithm based on authentic FPL mechanics and data
-      const validPredictions = [];
-      
-      // Process all players to show comprehensive price tracking data
-      for (const player of elements) {
-        try {
-          // Get authentic transfer data - use gameweek data for price predictions but include both
-          let transfersInEvent = player.transfers_in_event || 0;
-          let transfersOutEvent = player.transfers_out_event || 0;
-          
-          // Calculate gameweek net transfers for price prediction algorithm
-          const netTransfers = transfersInEvent - transfersOutEvent;
-          
-          // Calculate season net transfers for display
-          const seasonNetTransfers = (player.transfers_in || 0) - (player.transfers_out || 0);
-          const ownership = parseFloat(player.selected_by_percent || "0");
-          const currentPrice = player.now_cost;
-          
-          // Calculate price prediction using FPL's authentic mechanics
-          // Official FPL price change limits: 0.1m max per day, 0.3m max per gameweek
-          const totalPlayers = 10000000; // Approximate total FPL players
-          
-          // Ownership-based thresholds (percentage of ownership with minimums)
-          const ownershipThresholdMultiplier = 0.05; // 5% of owned players need to transfer
-          const ownedPlayers = (ownership / 100) * totalPlayers;
-          
-          // Use fixed thresholds (community research averages)
-          const riseCoefficient = 0.05; // 5% average for rises
-          const fallCoefficient = 0.04; // 4% average for falls
-          
-          let riseThreshold = ownedPlayers * riseCoefficient;
-          let fallThreshold = ownedPlayers * fallCoefficient;
-          
-          // Minimum thresholds for very low ownership players
-          riseThreshold = Math.max(riseThreshold, 10000); // 10k minimum transfers
-          fallThreshold = Math.max(fallThreshold, 8000); // 8k minimum transfers
-          
-          // Apply FPL's official price change limits
-          // Price changes are capped at 0.1m (1 unit) per day, 0.3m (3 units) per gameweek
-          const maxDailyChange = 1; // 0.1m = 1 price unit
-          const maxGameweekChange = 3; // 0.3m = 3 price units
-          
-          // Adjust thresholds based on price tier (fixed multipliers)
-          const priceMultiplier = currentPrice < 60 ? 0.85 : // Budget players easier
-                                 currentPrice < 100 ? 1.0 : // Mid-price normal
-                                 currentPrice < 130 ? 1.2 : // Premium slightly harder
-                                 1.4; // Super premium harder
-          
-          riseThreshold *= priceMultiplier;
-          fallThreshold *= priceMultiplier;
-          
-          // Consider transfer rate (assume 24-hour window for gameweek transfers)
-          // Higher velocity increases probability
-          const transferVelocity = Math.abs(netTransfers) / 24; // Transfers per hour estimate
-          const velocityBonus = transferVelocity > 5000 ? 1.2 : // High velocity
-                               transferVelocity > 2000 ? 1.1 : // Medium velocity  
-                               1.0; // Normal velocity
-          
-          // Predict price change
-          let predictedChange = 0;
-          let probability = "Low";
-          let confidence = 0;
-          let reason = "Stable transfer activity";
-          
-          // Apply velocity bonus to thresholds (higher velocity = easier to trigger)
-          const adjustedRiseThreshold = riseThreshold / velocityBonus;
-          const adjustedFallThreshold = fallThreshold / velocityBonus;
-          
-          if (netTransfers > adjustedRiseThreshold) {
-            // Predict price rise (max 0.1m per day, 0.3m per gameweek)
-            predictedChange = Math.min(maxDailyChange, maxGameweekChange);
-            const excess = netTransfers - adjustedRiseThreshold;
-            const baseConfidence = 50 + (excess / adjustedRiseThreshold) * 30;
-            confidence = Math.min(95, baseConfidence * velocityBonus);
-            
-            if (excess > adjustedRiseThreshold * 0.6) {
-              probability = "Very High";
-              reason = `Massive inflow: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) vs ${ownership}% owned (0.1m rise expected)`;
-            } else if (excess > adjustedRiseThreshold * 0.3) {
-              probability = "High";
-              reason = `Strong demand: ${(netTransfers/1000).toFixed(0)}k net exceeds ${(adjustedRiseThreshold/1000).toFixed(0)}k threshold (0.1m rise likely)`;
-            } else {
-              probability = "Medium";
-              reason = `Rising: ${(netTransfers/1000).toFixed(0)}k crosses ${ownership}%-based threshold (0.1m rise possible)`;
-            }
-          } else if (netTransfers < -adjustedFallThreshold) {
-            // Predict price fall (max 0.1m per day, 0.3m per gameweek)
-            predictedChange = -Math.min(maxDailyChange, maxGameweekChange);
-            const excess = Math.abs(netTransfers) - adjustedFallThreshold;
-            const baseConfidence = 50 + (excess / adjustedFallThreshold) * 30;
-            confidence = Math.min(95, baseConfidence * velocityBonus);
-            
-            if (excess > adjustedFallThreshold * 0.6) {
-              probability = "Very High";
-              reason = `Mass exodus: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) from ${ownership}% owned (0.1m fall expected)`;
-            } else if (excess > adjustedFallThreshold * 0.3) {
-              probability = "High";
-              reason = `Heavy selling: ${(netTransfers/1000).toFixed(0)}k exceeds ${(adjustedFallThreshold/1000).toFixed(0)}k threshold (0.1m fall likely)`;
-            } else {
-              probability = "Medium";
-              reason = `Falling: ${(netTransfers/1000).toFixed(0)}k crosses ownership threshold (0.1m fall possible)`;
-            }
-          } else {
-            // Calculate how close to adjusted thresholds
-            const riseProgress = Math.max(0, netTransfers / adjustedRiseThreshold);
-            const fallProgress = Math.max(0, Math.abs(netTransfers) / adjustedFallThreshold);
-            const maxProgress = Math.max(riseProgress, fallProgress);
-            
-            // Apply velocity bonus to confidence
-            const velocityAdjustedProgress = maxProgress * velocityBonus;
-            
-            if (velocityAdjustedProgress > 0.8) {
-              probability = "Medium";
-              confidence = Math.round(Math.min(95, velocityAdjustedProgress * 45));
-              reason = netTransfers > 0 ? 
-                `Near rise: ${(netTransfers/1000).toFixed(0)}k of ${(adjustedRiseThreshold/1000).toFixed(0)}k (${((riseProgress*100)).toFixed(0)}% + velocity bonus)` :
-                `Near fall: ${(netTransfers/1000).toFixed(0)}k of ${(adjustedFallThreshold/1000).toFixed(0)}k (${((fallProgress*100)).toFixed(0)}% + velocity bonus)`;
-            } else if (velocityAdjustedProgress > 0.5) {
-              probability = "Low";
-              confidence = Math.round(velocityAdjustedProgress * 35);
-              reason = `Moderate activity: ${(netTransfers/1000).toFixed(0)}k (${(transferVelocity/1000).toFixed(1)}k/hr) for ${ownership}% owned`;
-            } else {
-              confidence = Math.round(velocityAdjustedProgress * 25);
-              reason = `Stable: ${(netTransfers/1000).toFixed(0)}k insufficient vs ${ownership}% ownership (${(adjustedRiseThreshold/1000).toFixed(0)}k rise / ${(adjustedFallThreshold/1000).toFixed(0)}k fall needed)`;
-            }
-          }
-          
-          // Calculate current progress percentage (can exceed 100%)
-          let currentProgressPercentage = 0;
-          let tonightProgressPercentage = 0;
-          let progressDirection = "neutral";
-          let hourlyChangeRate = 0;
-          let estimatedTime = "Stable";
-          
-          if (netTransfers > 0) {
-            // Rising progress (can exceed 100%) - realistic calculation
-            currentProgressPercentage = (netTransfers / adjustedRiseThreshold) * 100;
-            progressDirection = "rise";
-            
-            // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedRiseThreshold * 100; // % per hour
-            
-            // Calculate expected progress by 7AM IST (next price update)
-            const now = new Date();
-            const nextUpdate = new Date();
-            nextUpdate.setUTCHours(1, 30, 0, 0); // 7AM IST = 1:30 AM UTC
-            if (nextUpdate <= now) {
-              nextUpdate.setDate(nextUpdate.getDate() + 1); // Next day if already passed
-            }
-            const hoursUntilUpdate = (nextUpdate.getTime() - now.getTime()) / (1000 * 60 * 60);
-            tonightProgressPercentage = currentProgressPercentage + (hourlyChangeRate * hoursUntilUpdate);
-            
-            // Estimate time to price change
-            if (currentProgressPercentage >= 100) {
-              estimatedTime = "Tonight (7AM IST)";
-            } else if (tonightProgressPercentage >= 100) {
-              estimatedTime = "Tonight (7AM IST)";
-            } else if (hourlyChangeRate > 0) {
-              const hoursToReach100 = (100 - currentProgressPercentage) / hourlyChangeRate;
-              if (hoursToReach100 <= 24) {
-                estimatedTime = `${Math.ceil(hoursToReach100)}h remaining`;
-              } else if (hoursToReach100 <= 168) {
-                estimatedTime = `${Math.ceil(hoursToReach100 / 24)} days`;
-              } else {
-                estimatedTime = "Low probability";
-              }
-            } else {
-              estimatedTime = "No momentum";
-            }
-          } else if (netTransfers < 0) {
-            // Falling progress (can exceed 100%) - realistic calculation
-            currentProgressPercentage = (Math.abs(netTransfers) / adjustedFallThreshold) * 100;
-            progressDirection = "fall";
-            
-            // Calculate hourly change rate
-            hourlyChangeRate = transferVelocity / adjustedFallThreshold * 100; // % per hour
-            
-            // Calculate expected progress by 7AM IST
-            const now = new Date();
-            const nextUpdate = new Date();
-            nextUpdate.setUTCHours(1, 30, 0, 0); // 7AM IST = 1:30 AM UTC
-            if (nextUpdate <= now) {
-              nextUpdate.setDate(nextUpdate.getDate() + 1);
-            }
-            const hoursUntilUpdate = (nextUpdate.getTime() - now.getTime()) / (1000 * 60 * 60);
-            tonightProgressPercentage = currentProgressPercentage + (hourlyChangeRate * hoursUntilUpdate);
-            
-            // Estimate time to price change
-            if (currentProgressPercentage >= 100) {
-              estimatedTime = "Tonight (7AM IST)";
-            } else if (tonightProgressPercentage >= 100) {
-              estimatedTime = "Tonight (7AM IST)";
-            } else if (hourlyChangeRate > 0) {
-              const hoursToReach100 = (100 - currentProgressPercentage) / hourlyChangeRate;
-              if (hoursToReach100 <= 24) {
-                estimatedTime = `${Math.ceil(hoursToReach100)}h remaining`;
-              } else if (hoursToReach100 <= 168) {
-                estimatedTime = `${Math.ceil(hoursToReach100 / 24)} days`;
-              } else {
-                estimatedTime = "Low probability";
-              }
-            } else {
-              estimatedTime = "No momentum";
-            }
-          } else {
-            // No significant activity
-            currentProgressPercentage = 0;
-            tonightProgressPercentage = 0;
-            hourlyChangeRate = 0;
-            estimatedTime = "Stable";
-          }
-          
-          const prediction = {
-            player_id: player.id,
-            player_name: player.web_name,
-            team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
-            position: positions.find((p: any) => p.id === player.element_type)?.singular_name_short || "Unknown",
-            current_price: currentPrice,
-            predicted_change: predictedChange,
-            confidence: Math.round(confidence),
-            ownership_percentage: ownership,
-            net_transfers: seasonNetTransfers,  // Season net transfers for display
-            transfers_in: player.transfers_in || 0,  // Season total transfers in
-            transfers_out: player.transfers_out || 0,  // Season total transfers out
-            transfers_in_event: player.transfers_in_event || 0,  // Gameweek transfers in
-            transfers_out_event: player.transfers_out_event || 0,  // Gameweek transfers out
-            // Price change data from FPL API
-            price_change_event: player.cost_change_event || 0,  // Price change this gameweek
-            price_change_season: player.cost_change_start || 0,  // Total price change this season
-            reason: reason,
-            probability: probability,
-            rise_threshold: Math.round(adjustedRiseThreshold),
-            fall_threshold: Math.round(adjustedFallThreshold),
-            transfer_velocity: Math.round(transferVelocity),
-            current_progress: Math.round(currentProgressPercentage * 100) / 100,
-            tonight_progress: Math.round(tonightProgressPercentage * 100) / 100,
-            progress_direction: progressDirection,
-            hourly_change_rate: Math.round(hourlyChangeRate * 100) / 100,
-            estimated_time: estimatedTime,
-            expected_date: estimatedTime
-          };
-          
-          validPredictions.push(prediction);
-        } catch (error) {
-          // Skip individual player errors and continue
-          console.error(`Error processing prediction for player ${player.id}:`, error);
-        }
-      }
-      
-      // Return all 705 players with progress bars and comprehensive data
-      const finalPredictions = validPredictions
-        .sort((a: any, b: any) => {
-          // Sort by progress percentage (closest to price change), then confidence, then transfer volume
-          const aProgress = Math.abs(a.progress_percentage || 0);
-          const bProgress = Math.abs(b.progress_percentage || 0);
-          
-          if (bProgress !== aProgress) return bProgress - aProgress;
-          if (Math.abs(b.predicted_change) !== Math.abs(a.predicted_change)) {
-            return Math.abs(b.predicted_change) - Math.abs(a.predicted_change);
-          }
-          if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-          return Math.abs(b.net_transfers) - Math.abs(a.net_transfers);
-        });
-      
-      res.json(finalPredictions);
+
+      // FPL's own price_change_projections[].likelihood is a -5..+5 confidence/direction scale
+      // (verified against live data: -5/+5 pairs with ~100%+ progress, 0 with a flat/stalled
+      // predicted progress) — status text is derived from this official field, not a guessed
+      // percentage threshold.
+      const statusFromLikelihood = (likelihood: number): string => {
+        if (likelihood >= 4) return "Very likely to rise";
+        if (likelihood >= 1) return "Likely to rise";
+        if (likelihood <= -4) return "Very likely to drop";
+        if (likelihood <= -1) return "Likely to drop";
+        return "Unlikely to change";
+      };
+
+      const predictions = elements.map((player: any) => {
+        const progress = parseFloat(player.price_change_percent ?? "0") || 0;
+        const projections: Array<{ offset: number; projected_percent: string; likelihood: number }> =
+          player.price_change_projections || [];
+        // offset 0 = FPL's projection for tonight's update (the next price-change point)
+        const offset0 = projections.find((p) => p.offset === 0) ?? projections[0];
+        const predictedProgress = offset0 ? (parseFloat(offset0.projected_percent) || 0) : progress;
+        const likelihood = offset0?.likelihood ?? 0;
+
+        const netTransfersEvent = (player.transfers_in_event || 0) - (player.transfers_out_event || 0);
+        const seasonNetTransfers = (player.transfers_in || 0) - (player.transfers_out || 0);
+
+        return {
+          player_id: player.id,
+          player_name: player.web_name,
+          team_name: teams.find((t: any) => t.id === player.team)?.short_name || "Unknown",
+          position: positions.find((p: any) => p.id === player.element_type)?.singular_name_short || "Unknown",
+          current_price: player.now_cost,
+          status: statusFromLikelihood(likelihood),
+          progress: Math.round(progress * 10) / 10,
+          predicted_progress: Math.round(predictedProgress * 10) / 10,
+          likelihood,
+          ownership_trend: netTransfersEvent > 0 ? "up" : netTransfersEvent < 0 ? "down" : "flat",
+          ownership_percentage: parseFloat(player.selected_by_percent || "0"),
+          net_transfers: seasonNetTransfers,
+          transfers_in: player.transfers_in || 0,
+          transfers_out: player.transfers_out || 0,
+          transfers_in_event: player.transfers_in_event || 0,
+          transfers_out_event: player.transfers_out_event || 0,
+          price_change_event: player.cost_change_event || 0,
+          price_change_season: player.cost_change_start || 0,
+          hourly_rate: player.price_change_hourly_rate ?? 0,
+          calibrating: !!player.price_change_calibrating,
+          locked_until: player.price_change_locked_until || null,
+        };
+      });
+
+      // Biggest movers (either direction) first, matching FPL's own "Rise & drop" default sort.
+      predictions.sort((a: any, b: any) => Math.abs(b.progress) - Math.abs(a.progress));
+
+      res.json(predictions);
     } catch (error) {
       console.error("Error generating price predictions:", error);
       res.status(500).json({

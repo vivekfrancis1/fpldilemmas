@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 
 interface PricePrediction {
@@ -17,15 +17,15 @@ interface PricePrediction {
   team_name: string;
   position: string;
   current_price: number;
-  predicted_change: number;
-  confidence: number;
+  status: string;
+  progress: number;
+  predicted_progress: number;
+  likelihood: number;
+  ownership_trend: 'up' | 'down' | 'flat';
   ownership_percentage: number;
-  reason: string;
-  probability: string;
-  estimated_time: string;
 }
 
-type PredictionSortField = 'confidence' | 'predicted_change' | 'ownership_percentage' | 'current_price';
+type PredictionSortField = 'progress' | 'predicted_progress' | 'ownership_percentage' | 'current_price';
 
 interface PriceChange {
   player_id: number;
@@ -57,7 +57,7 @@ export default function RecentPriceChanges() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [predictionSearchTerm, setPredictionSearchTerm] = useState("");
   const [predictionPositionFilter, setPredictionPositionFilter] = useState("all");
-  const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('confidence');
+  const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('progress');
   const [predictionSortDirection, setPredictionSortDirection] = useState<SortDirection>('desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -200,15 +200,12 @@ export default function RecentPriceChanges() {
       return 0;
     }) : [];
 
-  // Only players the algorithm actually expects to move — during pre-season (or any point
-  // with no gameweek transfer activity yet) every player's net transfers sit at 0, so nothing
-  // crosses a rise/fall threshold and this list is legitimately empty. That's shown to the user
-  // as an empty state below, not treated as an error.
-  const meaningfulPredictions = Array.isArray(predictionsData)
-    ? predictionsData.filter((p: PricePrediction) => p.predicted_change !== 0)
-    : [];
+  // FPL's own price-change page shows every player, sortable by progress toward the next
+  // change — real official data (not a guessed threshold), so a player sitting at 0% is a
+  // real, meaningful data point too, not something to filter out.
+  const allPredictions = Array.isArray(predictionsData) ? predictionsData : [];
 
-  const filteredAndSortedPredictions = meaningfulPredictions
+  const filteredAndSortedPredictions = allPredictions
     .filter((p: PricePrediction) => {
       const matchesSearch = p.player_name.toLowerCase().includes(predictionSearchTerm.toLowerCase()) ||
                            p.team_name.toLowerCase().includes(predictionSearchTerm.toLowerCase());
@@ -218,7 +215,7 @@ export default function RecentPriceChanges() {
     .sort((a: PricePrediction, b: PricePrediction) => {
       const aValue = a[predictionSortField] ?? 0;
       const bValue = b[predictionSortField] ?? 0;
-      const result = predictionSortField === 'predicted_change'
+      const result = (predictionSortField === 'progress' || predictionSortField === 'predicted_progress')
         ? Math.abs(aValue) - Math.abs(bValue)
         : aValue - bValue;
       return predictionSortDirection === 'asc' ? result : -result;
@@ -267,6 +264,25 @@ export default function RecentPriceChanges() {
     return `£${(numPrice / 10).toFixed(1)}m`;
   };
 
+  // Colors mirror FPL's own price-changes page: darker/more saturated = closer to certain.
+  const statusBadgeClass = (status: string): string => {
+    switch (status) {
+      case "Very likely to rise": return "bg-green-700 text-white";
+      case "Likely to rise": return "bg-green-100 text-green-800";
+      case "Very likely to drop": return "bg-red-800 text-white";
+      case "Likely to drop": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-600"; // Unlikely to change
+    }
+  };
+
+  const progressBadgeClass = (value: number): string => {
+    if (value >= 100) return "bg-green-700 text-white";
+    if (value > 0) return "bg-green-100 text-green-800";
+    if (value <= -100) return "bg-red-800 text-white";
+    if (value < 0) return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-600";
+  };
+
   return (
     <div className="fpl-page-container">
       {/* Unified Page Header */}
@@ -299,16 +315,6 @@ export default function RecentPriceChanges() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Unable to load price predictions from FPL API. Please check your connection and try again.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {!isLoadingPredictions && !predictionsError && meaningfulPredictions.length === 0 && (
-              <Alert className="mb-6" data-testid="alert-no-predictions">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  No predicted price changes right now — this shows up once real transfer activity for the {" "}
-                  {bootstrapData?.events?.find((e: any) => e.is_current) ? "current gameweek" : "2026/27 season"} builds up enough momentum to cross a rise or fall threshold. Check back closer to (or after) the season kicks off.
                 </AlertDescription>
               </Alert>
             )}
@@ -352,7 +358,7 @@ export default function RecentPriceChanges() {
                   Predicted Price Changes
                 </CardTitle>
                 <CardDescription>
-                  Players projected to rise or fall based on transfer momentum vs. ownership-scaled thresholds
+                  Real-time progress toward each player's next price change, straight from FPL's own official data — updates as transfers happen, same numbers you'd see on fantasy.premierleague.com.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -378,51 +384,43 @@ export default function RecentPriceChanges() {
                       <thead>
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-2 sm:p-3 font-medium">Player</th>
+                          <th className="hidden sm:table-cell text-left p-3 font-medium">Status</th>
+                          <th
+                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('progress')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Progress
+                              {predictionSortField === 'progress' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('predicted_progress')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Predicted
+                              {predictionSortField === 'predicted_progress' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
                             className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('current_price')}
                           >
                             <div className="flex items-center justify-end gap-1">
-                              Price
+                              Current Price
                               {predictionSortField === 'current_price' && (
                                 predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                               )}
                             </div>
                           </th>
-                          <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('ownership_percentage')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Own%
-                              {predictionSortField === 'ownership_percentage' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('predicted_change')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Predicted
-                              {predictionSortField === 'predicted_change' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
-                          <th
-                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('confidence')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Confidence
-                              {predictionSortField === 'confidence' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
-                          <th className="hidden md:table-cell text-left p-3 font-medium">Reason</th>
+                          <th className="hidden lg:table-cell text-right p-3 font-medium">Purchase Price</th>
+                          <th className="hidden lg:table-cell text-right p-3 font-medium">Selling Price</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -433,44 +431,50 @@ export default function RecentPriceChanges() {
                             data-testid={`prediction-${prediction.player_id}`}
                           >
                             <td className="p-2 sm:p-3">
-                              <div className="flex items-center gap-1.5">
-                                {prediction.predicted_change > 0 ? (
-                                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
+                              <div>
+                                <p className="font-medium text-xs sm:text-sm leading-tight">{prediction.player_name}</p>
+                                <p className="text-xs text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
+                              </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusBadgeClass(prediction.status)}`}>
+                                {prediction.status}
+                              </span>
+                            </td>
+                            <td className="p-2 sm:p-3 text-right">
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${progressBadgeClass(prediction.progress)}`}>
+                                {prediction.progress > 0 ? "+" : ""}{prediction.progress.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="p-2 sm:p-3 text-right">
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${progressBadgeClass(prediction.predicted_progress)}`}>
+                                {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="hidden md:table-cell p-3">
+                              <div className="flex items-center justify-center gap-1">
+                                {prediction.ownership_trend === 'up' ? (
+                                  <TrendingUp className="h-4 w-4 text-green-600" />
+                                ) : prediction.ownership_trend === 'down' ? (
+                                  <TrendingDown className="h-4 w-4 text-red-600" />
                                 ) : (
-                                  <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 shrink-0" />
+                                  <span className="h-4 w-4" />
                                 )}
-                                <div>
-                                  <p className="font-medium text-xs sm:text-sm leading-tight">{prediction.player_name}</p>
-                                  <p className="text-xs text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
-                                </div>
+                                <span className="text-xs text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right font-medium">
-                              {prediction.ownership_percentage?.toFixed(1) || "0.0"}%
-                            </td>
-                            <td className="p-2 sm:p-3 text-right">
-                              <Badge variant={prediction.predicted_change > 0 ? "success" : "destructive"}>
-                                {prediction.predicted_change > 0 ? "+" : ""}{formatPrice(Math.abs(prediction.predicted_change))}
-                              </Badge>
-                            </td>
-                            <td className="p-2 sm:p-3 text-right">
-                              <div className="text-sm font-medium">{prediction.confidence}%</div>
-                              <div className="text-xs text-muted-foreground">{prediction.probability}</div>
-                            </td>
-                            <td className="hidden md:table-cell p-3">
-                              <div className="text-xs text-muted-foreground max-w-xs">{prediction.reason}</div>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                                <Clock className="h-3 w-3" />
-                                {prediction.estimated_time}
-                              </div>
-                            </td>
+                            <td className="hidden lg:table-cell p-3 text-right text-muted-foreground">-</td>
+                            <td className="hidden lg:table-cell p-3 text-right text-muted-foreground">-</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    <p className="text-xs text-muted-foreground mt-3 px-1">
+                      Purchase/Selling Price only apply to players in your own squad — link your team to see those here.
+                    </p>
                   </div>
                 ) : !isLoadingPredictions && !predictionsError ? null : (
                   <div className="text-center py-8 text-muted-foreground">
