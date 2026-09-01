@@ -17790,23 +17790,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { computeNextRange: computeNextRangeDC } = await import("../shared/gameweek-utils");
 
-      // Get FPL bootstrap data, fixtures, standings, and per-GW reallocation-aware availability
-      // ratios (see server/xmins-reallocation.ts) from cached internal endpoints
-      const [fplResponse, fixturesResponse, standingsResponse, minutesResponse] = await Promise.all([
+      // Get FPL bootstrap data, fixtures, and standings from cached internal endpoints. No
+      // availability/chance-of-playing adjustment here — DC projections are per-player-per-game
+      // rates already grounded in how much this player has actually featured this season
+      // (dcPerGame below is 0 for anyone with 0 minutes), so a separate availability multiplier
+      // was double-discounting rather than adding signal.
+      const [fplResponse, fixturesResponse, standingsResponse] = await Promise.all([
         internalFetch("api/bootstrap-static"),
         internalFetch("api/fixtures"),
-        internalFetch("api/current-standings?venue=all"),
-        internalFetch("api/player-minutes-projections")
+        internalFetch("api/current-standings?venue=all")
       ]);
       const fplData = await fplResponse.json();
       const fixturesData = await fixturesResponse.json();
-      const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
-      if (minutesResponse.ok) {
-        const minutesData = await minutesResponse.json();
-        for (const m of minutesData) {
-          if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
-        }
-      }
       const currentGameweek = computeCurrentGameweek(fplData.events);
       // Fold the current gameweek in when it still has an unstarted fixture — mirrors the
       // fold-in already applied to Team Projections / Player Points; without this, the loop
@@ -17929,8 +17924,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // needed a per-player live history fetch).
           const chanceOfHittingThreshold = poissonProbAtLeastDC(dcPerGame, threshold);
 
-          const dcEvents: BootstrapEvent[] = fplData.events || [];
-          
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
             // Find fixture for this team in this gameweek (handles GW39 TBC fixture where event=null)
@@ -17946,21 +17939,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Opponent's DCC per game (this season only)
             const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0;
-            
-            // Reallocation-aware ratio (see server/xmins-reallocation.ts) instead of flat minutesMultiplier
-            const availabilityProb = availabilityRatioByPlayerId.get(player.id)?.[`gw${gw}`]
-              ?? calculateAvailabilityProbability(player, gw, currentGameweek, dcEvents);
-            
-            // Apply formula: Projected DC = ((Current DC/game + Threshold) / 2) × (Opponent DCC / 80) × availability
-            const projectedDC = ((dcPerGame + threshold) / 2) * (opponentDCC / 80) * availabilityProb;
-            
+
+            // Projected DC = this player's own DC/game rate × (Opponent DCC / 80), where 80 is
+            // the league-average DCC/game baseline — no availability multiplier (see the
+            // docstring above computeNextRangeDC) and no threshold-averaging: a player's own
+            // dcPerGame is the estimate, not something to be pulled halfway toward the position's
+            // scoring threshold regardless of how little they've actually contributed.
+            const projectedDC = dcPerGame * (opponentDCC / 80);
+
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
-            
-            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2 × availability
+
+            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
             // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
             // Cap at maximum 2 points (FPL maximum for DC in a single gameweek)
-            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2 * availabilityProb, 2);
+            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
             // Goalkeepers don't get points from defensive contributions
             if (player.element_type === 1) {
               points = 0;
