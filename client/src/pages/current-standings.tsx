@@ -117,8 +117,8 @@ export default function CurrentStandings() {
   // Transform data based on stats view (totals vs per-game)
   const displayData = (standingsData || []).map(team => {
     // Calculate AGR and AGAR based on statsView
-    // For totals: AGR = 0.5 * (Goals For + xGF)
-    // For per-game: AGR = 0.5 * (Goals For + xGF) / played
+    // For totals: AGR = 0.5 * (Goals For + xG)
+    // For per-game: AGR = 0.5 * (Goals For + xG) / played
     const adjustedGoalRate = statsView === 'per-game' && team.played > 0
       ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played
       : 0.5 * (team.goalsFor + team.expectedGoalsFor);
@@ -255,7 +255,7 @@ export default function CurrentStandings() {
     return Math.round(value);
   };
 
-  // xGF/xGA are inherently fractional (a statistical model, not a countable event like goals or
+  // xG/xGC are inherently fractional (a statistical model, not a countable event like goals or
   // cards), so unlike formatStat they always keep 2 decimals, even in the season-totals view.
   const formatXg = (value: number) => value.toFixed(2);
 
@@ -507,24 +507,24 @@ export default function CurrentStandings() {
                     </th>
                     
                     {/* Expected Goals - After Points */}
-                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances" normalCase>xGF</SortableHeader>
-                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded" normalCase>xGA</SortableHeader>
-                    <SortableHeader 
-                      field="adjustedGoalRate" 
-                      tooltip={statsView === 'per-game' 
-                        ? "Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game" 
-                        : "Adjusted Goal Rate: 0.5 × (Goals For + xGF) season total"}>
+                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals - statistical model of scoring chances" normalCase>xG</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Conceded - statistical model of chances conceded" normalCase>xGC</SortableHeader>
+                    <SortableHeader
+                      field="adjustedGoalRate"
+                      tooltip={statsView === 'per-game'
+                        ? "Adjusted Goal Rate: 0.5 × (Goals For + xG) per game"
+                        : "Adjusted Goal Rate: 0.5 × (Goals For + xG) season total"}>
                       AGR
                     </SortableHeader>
-                    <SortableHeader 
-                      field="adjustedGoalsAgainstRate" 
+                    <SortableHeader
+                      field="adjustedGoalsAgainstRate"
                       tooltip={statsView === 'per-game'
-                        ? "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game"
-                        : "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) season total"}>
+                        ? "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGC) per game"
+                        : "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGC) season total"}>
                       AGAR
                     </SortableHeader>
-                    
-                    {/* Defensive Stats - After xGA */}
+
+                    {/* Defensive Stats - After xGC */}
                     <SortableHeader field="defensiveContributions" tooltip="Defensive Contributions (CBI + Tackles + Recoveries, position-weighted)">DC</SortableHeader>
                     <SortableHeader field="defensiveContributionsConceded" tooltip="Defensive Contributions Conceded - opponent's defensive contributions across all matches">DCC</SortableHeader>
                     
@@ -636,7 +636,7 @@ export default function CurrentStandings() {
                         {team.adjustedGoalsAgainstRate ? team.adjustedGoalsAgainstRate.toFixed(2) : '0.00'}
                       </td>
                       
-                      {/* Defensive Stats - After xGA */}
+                      {/* Defensive Stats - After xGC */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-700" data-testid={`defensive-contributions-${team.shortName}`}>
                         {formatStat(team.defensiveContributions)}
                       </td>
@@ -807,9 +807,9 @@ export default function CurrentStandings() {
                   <li><strong>PS:</strong> Penalties saved</li>
                   <li><strong>OG:</strong> Own goals</li>
                   <li><strong>PM:</strong> Penalties missed</li>
-                  <li><strong>xGF/xGA:</strong> Expected Goals For/Against</li>
-                  <li><strong>AGR:</strong> Adjusted Goal Rate (0.5 × (GF+xGF)/Games)</li>
-                  <li><strong>AGAR:</strong> Adjusted Goals Against Rate (0.5 × (GA+xGA)/Games)</li>
+                  <li><strong>xG/xGC:</strong> Expected Goals / Expected Goals Conceded</li>
+                  <li><strong>AGR:</strong> Adjusted Goal Rate (0.5 × (GF+xG)/Games)</li>
+                  <li><strong>AGAR:</strong> Adjusted Goals Against Rate (0.5 × (GA+xGC)/Games)</li>
                   <li><strong>T:</strong> Tackles</li>
                   <li><strong>DA:</strong> Defensive actions</li>
                   <li><strong>DC:</strong> Defensive Contributions (position-weighted: CBI + Tackles + Recoveries)</li>
