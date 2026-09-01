@@ -121,7 +121,10 @@ function Router() {
         <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
         <Route path="/match-odds-history/:eventId" component={MatchOddsHistory} />
         <Route path="/projected-standings" component={ProjectedStandings} />
-        <Route path="/current-standings" component={CurrentStandings} />
+        <Route path="/team-statistics" component={CurrentStandings} />
+        <Route path="/current-standings">
+          <Redirect to="/team-statistics" />
+        </Route>
         <Route path="/predicted-scores" component={PredictedScores} />
         <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
         <Route path="/match-stats/:fixtureId" component={MatchStats} />

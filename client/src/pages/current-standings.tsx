@@ -94,7 +94,7 @@ export default function CurrentStandings() {
       }
       const data = await response.json();
 
-      // Return raw data, AGR and AGAR will be calculated based on statsView
+      // Return raw data, AGR and AGCR will be calculated based on statsView
       return data;
     },
   });
@@ -116,7 +116,7 @@ export default function CurrentStandings() {
 
   // Transform data based on stats view (totals vs per-game)
   const displayData = (standingsData || []).map(team => {
-    // Calculate AGR and AGAR based on statsView
+    // Calculate AGR and AGCR based on statsView
     // For totals: AGR = 0.5 * (Goals For + xG)
     // For per-game: AGR = 0.5 * (Goals For + xG) / played
     const adjustedGoalRate = statsView === 'per-game' && team.played > 0
@@ -519,9 +519,9 @@ export default function CurrentStandings() {
                     <SortableHeader
                       field="adjustedGoalsAgainstRate"
                       tooltip={statsView === 'per-game'
-                        ? "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGC) per game"
-                        : "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGC) season total"}>
-                      AGAR
+                        ? "Adjusted Goals Conceded Rate: 0.5 × (Goals Against + xGC) per game"
+                        : "Adjusted Goals Conceded Rate: 0.5 × (Goals Against + xGC) season total"}>
+                      AGCR
                     </SortableHeader>
 
                     {/* Defensive Stats - After xGC */}
@@ -809,7 +809,7 @@ export default function CurrentStandings() {
                   <li><strong>PM:</strong> Penalties missed</li>
                   <li><strong>xG/xGC:</strong> Expected Goals / Expected Goals Conceded</li>
                   <li><strong>AGR:</strong> Adjusted Goal Rate (0.5 × (GF+xG)/Games)</li>
-                  <li><strong>AGAR:</strong> Adjusted Goals Against Rate (0.5 × (GA+xGC)/Games)</li>
+                  <li><strong>AGCR:</strong> Adjusted Goals Conceded Rate (0.5 × (GA+xGC)/Games)</li>
                   <li><strong>T:</strong> Tackles</li>
                   <li><strong>DA:</strong> Defensive actions</li>
                   <li><strong>DC:</strong> Defensive Contributions (position-weighted: CBI + Tackles + Recoveries)</li>

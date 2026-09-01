@@ -50,7 +50,7 @@ const navSections: NavSection[] = [
     section: "Statistics",
     items: [
       { path: "/player-statistics", label: "Player Stats", icon: BarChart3 },
-      { path: "/current-standings", label: "Team Stats", icon: Trophy },
+      { path: "/team-statistics", label: "Team Stats", icon: Trophy },
       { path: "/results-and-fixtures", label: "Match Stats", icon: Trophy },
     ],
   },

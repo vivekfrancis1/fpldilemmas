@@ -177,7 +177,7 @@ export default function TeamDetail() {
   const teamName = decodeURIComponent(params.name || '');
   const returnPath = (() => {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('from') || '/current-standings';
+    return urlParams.get('from') || '/team-statistics';
   })();
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
