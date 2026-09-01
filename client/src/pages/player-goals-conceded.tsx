@@ -328,7 +328,7 @@ export default function PlayerGoalsConceded() {
                         return (
                           <button key={pos}
                             onClick={() => setPositionFilter(positionFilter === value && value !== 'all' ? 'all' : value)}
-                            className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                             {pos}
                           </button>
                         );
@@ -339,13 +339,13 @@ export default function PlayerGoalsConceded() {
                   <TabsContent value="teams" className="mt-0">
                     <div className="flex flex-wrap gap-0.5 sm:gap-1">
                       <button onClick={() => setTeamFilter('all')}
-                        className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${teamFilter === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                         All
                       </button>
                       {Array.from(new Set<string>(((goalsConcededProjections as GoalsConcededProjection[]) || []).map((p: any) => p.teamName))).sort().map(team => (
                         <button key={team}
                           onClick={() => setTeamFilter(teamFilter === team ? 'all' : team)}
-                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                          className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${teamFilter === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                           {team}
                         </button>
                       ))}
@@ -382,7 +382,7 @@ export default function PlayerGoalsConceded() {
                       </div>
                       <button
                         onClick={() => setIncludeTBC(!includeTBC)}
-                        className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                         GW39 (TBC)
                       </button>
                     </div>
@@ -396,7 +396,7 @@ export default function PlayerGoalsConceded() {
                               if (isIncluded) newSet.add(gw); else newSet.delete(gw);
                               setExcludedGWs(newSet);
                             }}
-                            className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? (gw === 39 ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-purple-100 text-purple-700 border-purple-300') : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isIncluded ? (gw === 39 ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-purple-100 text-purple-700 border-purple-300') : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                             {gw === 39 ? 'TBC' : `GW${gw}`}
                           </button>
                         );

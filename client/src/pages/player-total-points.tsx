@@ -2327,8 +2327,8 @@ export default function PlayerTotalPoints() {
                       Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                     </span>
                     <div className="flex flex-wrap items-center gap-1">
-                      <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
-                      <button onClick={() => setSelectedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
+                      <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
+                      <button onClick={() => setSelectedGameweeks(prev => new Set(fullGameweekRange.filter(gw => !prev.has(gw))))} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -2338,7 +2338,7 @@ export default function PlayerTotalPoints() {
                         <button
                           key={gw}
                           onClick={() => toggleGameweekSelection(gw)}
-                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                          className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-gw-${gw}`}
                         >
                           GW{gw}
@@ -2354,8 +2354,8 @@ export default function PlayerTotalPoints() {
                       Position{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setSelectedPositions(new Set())} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
-                      <button onClick={() => setSelectedPositions(prev => new Set(positions.filter(p => !prev.has(p))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
+                      <button onClick={() => setSelectedPositions(new Set())} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
+                      <button onClick={() => setSelectedPositions(prev => new Set(positions.filter(p => !prev.has(p))))} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-positions">Invert</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -2366,7 +2366,7 @@ export default function PlayerTotalPoints() {
                         <button
                           key={position}
                           onClick={() => togglePositionSelection(position)}
-                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                          className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-position-${position}`}
                         >
                           {shortForm}
@@ -2382,8 +2382,8 @@ export default function PlayerTotalPoints() {
                       Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setSelectedTeams(new Set())} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
-                      <button onClick={() => setSelectedTeams(prev => new Set(allTeamShortNames.filter(t => !prev.has(t))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
+                      <button onClick={() => setSelectedTeams(new Set())} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
+                      <button onClick={() => setSelectedTeams(prev => new Set(allTeamShortNames.filter(t => !prev.has(t))))} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-teams">Invert</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -2394,7 +2394,7 @@ export default function PlayerTotalPoints() {
                         <button
                           key={team}
                           onClick={() => toggleTeamSelection(team)}
-                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                          className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
                           data-testid={`button-toggle-team-${team}`}
                         >
                           {shortName}
@@ -2410,9 +2410,9 @@ export default function PlayerTotalPoints() {
                       Scoring{excludedComponents.size > 0 && ` (${excludedComponents.size})`}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button onClick={includeAllComponents} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
-                      <button onClick={() => setExcludedComponents(prev => new Set(POINT_COMPONENTS.map(c => c.key).filter(k => !prev.has(k))))} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-components">Invert</button>
-                      <button onClick={excludeAllComponents} className="chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
+                      <button onClick={includeAllComponents} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
+                      <button onClick={() => setExcludedComponents(prev => new Set(POINT_COMPONENTS.map(c => c.key).filter(k => !prev.has(k))))} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-components">Invert</button>
+                      <button onClick={excludeAllComponents} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -2422,7 +2422,7 @@ export default function PlayerTotalPoints() {
                         <button
                           key={component.key}
                           onClick={() => toggleComponentExclusion(component.key)}
-                          className={`chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-blue-100 text-blue-700 border-blue-300'}`}
+                          className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-blue-100 text-blue-700 border-blue-300'}`}
                           data-testid={`button-toggle-component-${component.key}`}
                         >
                           {component.label}
