@@ -35,6 +35,8 @@ interface RedCardProjection {
   totalPoints: number;
   averagePerGameweek: number;
   fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
+  playerAppearances?: number;
+  teamGamesPlayed?: number;
 }
 
 export default function PlayerRedCards() {
@@ -45,6 +47,9 @@ export default function PlayerRedCards() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
   const [includeTBC, setIncludeTBC] = useState(true);
+  // Default view hides players who've appeared in under half their team's games played (a
+  // more meaningful signal than an arbitrary minutes floor) — togglable to see everyone.
+  const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
   const [excludedGWs, setExcludedGWs] = useState<Set<number>>(new Set());
@@ -175,14 +180,18 @@ export default function PlayerRedCards() {
   };
 
   const filteredProjections = resolvedProjections.filter((projection: RedCardProjection) => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesPosition = positionFilter === "all" || projection.position === positionFilter;
     const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
-    
-    return matchesSearch && matchesPosition && matchesTeam;
+
+    // Default: hide players who've appeared in under half their team's games played so far.
+    const matchesAppearanceRate = showAllPlayers || !projection.teamGamesPlayed ||
+      (projection.playerAppearances || 0) / projection.teamGamesPlayed >= 0.5;
+
+    return matchesSearch && matchesPosition && matchesTeam && matchesAppearanceRate;
   }).sort((a: RedCardProjection, b: RedCardProjection) => {
     let aValue: number;
     let bValue: number;
@@ -256,6 +265,16 @@ export default function PlayerRedCards() {
           <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
+
+      <div className="flex justify-center mb-3">
+        <button
+          onClick={() => setShowAllPlayers(!showAllPlayers)}
+          title="By default, players who've appeared in under 50% of their team's games are hidden"
+          className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-xs font-medium px-3 py-1 leading-none cursor-pointer transition-colors ${showAllPlayers ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+        >
+          {showAllPlayers ? 'Showing: All Players' : 'Showing: 50%+ Appearances'}
+        </button>
+      </div>
 
       <div className="fpl-section-spacing">
         {/* Filters */}

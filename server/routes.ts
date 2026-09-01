@@ -17636,14 +17636,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
 
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
-          // (player.saves/minutes otherwise still reflect 2025/26's frozen pre-kickoff carryover)
-          // and once the player has enough minutes that a per-90 extrapolation isn't dominated
-          // by small-sample noise. Goalkeepers rarely get subbed off early, so a single full
-          // appearance (~90 min) is already a reasonably reliable sample — unlike outfield
-          // per-90 rates elsewhere, which use the higher MIN_MINUTES_FOR_RATE (270) threshold.
-          const MIN_MINUTES_FOR_SAVES_RATE = 90;
+          // (player.saves/minutes otherwise still reflect 2025/26's frozen pre-kickoff
+          // carryover) — no separate minimum-minutes gate beyond that. A keeper with only a
+          // handful of minutes gets a noisier rate, not a suppressed one; the client's own
+          // appearance-rate filter (hide players below 50% of their team's games played,
+          // toggleable) is what protects the view from tiny-sample noise, not this formula.
           const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0');
-          const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_SAVES_RATE
+          const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) > 0
             ? (savesPer90FromAPI > 0 ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI : savesPerTeamGame)
             : undefined;
 
@@ -17729,7 +17728,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3)),
             savesPerTeamGame: savesPerTeamGame, // Include for verification
             teamGamesPlayed: teamGamesPlayed, // Include for verification
-            seasonTotalSaves: currentSeasonSaves // Include raw saves value
+            seasonTotalSaves: currentSeasonSaves, // Include raw saves value
+            playerAppearances: player.starts || 0 // For the client's appearance-rate filter (starts / teamGamesPlayed)
           };
         })
       );
@@ -17824,8 +17824,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, finished GWs: ${finishedGWCount}, starting projections from GW${nextGameweek}`);
       const standingsData = await standingsResponse.json();
 
-      const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
-
       // This season's DCC per game for every team, computed once — only trusted once real
       // fixtures are completed (team.played > 0); 0 otherwise.
       const teamDCCPerGameMap = new Map<number, number>();
@@ -17914,15 +17912,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
           // (player.minutes/defensive_contribution otherwise still reflect 2025/26's frozen
-          // pre-kickoff carryover) and once minutes clear the small-sample noise floor (e.g. 4
-          // DC in a single substitute cameo would otherwise extrapolate to 360 DC per 90).
-          const thisSeasonDCPer90 = finishedGWCount > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+          // pre-kickoff carryover) — no separate minimum-minutes gate beyond that. A player with
+          // only a handful of minutes gets a noisier rate, not a suppressed one; the client's own
+          // appearance-rate filter (hide players below 50% of their team's games played,
+          // toggleable) is what protects the view from tiny-sample noise, not this formula.
+          const thisSeasonDCPer90 = finishedGWCount > 0 && (player.minutes || 0) > 0
             ? (seasonDefensiveContribution / (player.minutes || 1)) * 90
             : undefined;
 
-          // This season's data only — a player with no usable current-season rate yet (new
-          // signing, promoted-team squad member, or under the minutes threshold) projects 0
-          // DC/game until they build up real minutes.
+          // This season's data only — a player with no minutes yet (new signing, promoted-team
+          // squad member) projects 0 DC/game until they actually play.
           const dcPerGame = thisSeasonDCPer90 ?? 0;
 
           // Poisson-based chance of hitting the DC threshold in a given game, from the
@@ -17994,10 +17993,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dcPerGame: parseFloat(dcPerGame.toFixed(2)), // DC per match played (for reference)
             chanceOfHittingThreshold: parseFloat((chanceOfHittingThreshold * 100).toFixed(1)), // % chance as percentage
             threshold: threshold, // Threshold value (10 for DEF, 12 for MID/FWD)
-            playerMatchesPlayed: playerMatchesPlayed, // Actual matches played by this player
+            playerMatchesPlayed: playerMatchesPlayed, // Team's completed fixture count (rate denominator)
             avgMinutesPerGame: parseFloat(avgMinutesPerGame.toFixed(1)), // Average minutes per game
             minutesMultiplier: 1.0, // Now using per-GW availability probability
-            seasonDefensiveContribution: seasonDefensiveContribution // Include raw DC value
+            seasonDefensiveContribution: seasonDefensiveContribution, // Include raw DC value
+            playerAppearances: player.starts || 0 // For the client's appearance-rate filter (starts / playerMatchesPlayed)
           };
         })
       );
@@ -18267,7 +18267,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling
         const fdrMultiplierYC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+        // Team's own completed-fixture count — for the client's appearance-rate filter
+        // (playerAppearances / teamGamesPlayed), same pattern as the DC/Saves endpoints.
+        const teamCompletedFixturesYC = new Map<number, number>();
+        fplData.teams.forEach((team: any) => teamCompletedFixturesYC.set(team.id, 0));
+        fixturesData.forEach((fixture: any) => {
+          if (isFixtureActuallyOver(fixture)) {
+            teamCompletedFixturesYC.set(fixture.team_h, (teamCompletedFixturesYC.get(fixture.team_h) || 0) + 1);
+            teamCompletedFixturesYC.set(fixture.team_a, (teamCompletedFixturesYC.get(fixture.team_a) || 0) + 1);
+          }
+        });
 
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
@@ -18281,9 +18290,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
           // (player.yellow_cards/minutes otherwise still reflect 2025/26's frozen pre-kickoff
-          // carryover) and once minutes clear the small-sample noise floor.
+          // carryover) — no separate minimum-minutes gate beyond that. A player with only a
+          // handful of minutes gets a noisier rate, not a suppressed one; the client's own
+          // appearance-rate filter (hide players below 50% of their team's games played,
+          // toggleable) is what protects the view from tiny-sample noise, not this formula.
           const seasonYellowCards = player.yellow_cards || 0;
-          const thisSeasonYCPer90 = finishedGWCountYC > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+          const thisSeasonYCPer90 = finishedGWCountYC > 0 && (player.minutes || 0) > 0
             ? (seasonYellowCards / player.minutes) * 90
             : undefined;
 
@@ -18346,7 +18358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails,
             totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(blendedYCRate.toFixed(3))
+            averagePerGameweek: parseFloat(blendedYCRate.toFixed(3)),
+            playerAppearances: player.starts || 0, // For the client's appearance-rate filter
+            teamGamesPlayed: teamCompletedFixturesYC.get(player.team) || 0
           };
         }));
 
@@ -18434,7 +18448,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // FDR multiplier map for opponent difficulty scaling (red cards)
         const fdrMultiplierRC: Record<number, number> = { 1: 0.75, 2: 0.90, 3: 1.00, 4: 1.15, 5: 1.30 };
 
-        const { MIN_MINUTES_FOR_RATE } = await import("./player-history-blend-service");
+        // Team's own completed-fixture count — for the client's appearance-rate filter
+        // (playerAppearances / teamGamesPlayed), same pattern as the DC/Saves endpoints.
+        const teamCompletedFixturesRC = new Map<number, number>();
+        fplData.teams.forEach((team: any) => teamCompletedFixturesRC.set(team.id, 0));
+        fixturesData.forEach((fixture: any) => {
+          if (isFixtureActuallyOver(fixture)) {
+            teamCompletedFixturesRC.set(fixture.team_h, (teamCompletedFixturesRC.get(fixture.team_h) || 0) + 1);
+            teamCompletedFixturesRC.set(fixture.team_a, (teamCompletedFixturesRC.get(fixture.team_a) || 0) + 1);
+          }
+        });
 
         // Extract red card data for all players using historical data
         const redCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
@@ -18446,10 +18469,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalRedCards = 0;
           let totalPoints = 0;
 
-          // This-season rate is only meaningful once real 2026/27 fixtures have been played
-          // and once minutes clear the small-sample noise floor.
+          // This-season rate is only meaningful once real 2026/27 fixtures have been played —
+          // no separate minimum-minutes gate beyond that. A player with only a handful of
+          // minutes gets a noisier rate, not a suppressed one; the client's own appearance-rate
+          // filter (hide players below 50% of their team's games played, toggleable) is what
+          // protects the view from tiny-sample noise, not this formula.
           const seasonRedCards = player.red_cards || 0;
-          const thisSeasonRCPer90 = finishedGWCountRC > 0 && (player.minutes || 0) >= MIN_MINUTES_FOR_RATE
+          const thisSeasonRCPer90 = finishedGWCountRC > 0 && (player.minutes || 0) > 0
             ? (seasonRedCards / player.minutes) * 90
             : undefined;
 
@@ -18512,7 +18538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails,
             totalRedCards: parseFloat(totalRedCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(blendedRCRate.toFixed(3))
+            averagePerGameweek: parseFloat(blendedRCRate.toFixed(3)),
+            playerAppearances: player.starts || 0, // For the client's appearance-rate filter
+            teamGamesPlayed: teamCompletedFixturesRC.get(player.team) || 0
           };
         }));
         

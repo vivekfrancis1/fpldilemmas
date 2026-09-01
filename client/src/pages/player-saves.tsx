@@ -44,6 +44,8 @@ interface SavesProjection {
   totalPoints: number;
   averagePerGameweek: number;
   fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
+  playerAppearances?: number;
+  teamGamesPlayed?: number;
 }
 
 interface PlayerSavesHistory {
@@ -75,6 +77,10 @@ export default function PlayerSaves() {
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
+  // Default view hides players who've appeared in under half their team's games played (a
+  // more meaningful signal than an arbitrary minutes floor) — togglable to see everyone,
+  // including players with only a handful of minutes so far.
+  const [showAllPlayers, setShowAllPlayers] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
   // View mode: "future" for projections, "past" for historical data
@@ -501,12 +507,20 @@ export default function PlayerSaves() {
     if (!resolvedDisplayData || !Array.isArray(resolvedDisplayData)) return [];
     
     let filtered = resolvedDisplayData.filter((projection: SavesProjection) => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       if (selectedTeams.size > 0 && !selectedTeams.has(projection.teamName)) return false;
-      
+
+      // Default: hide players who've appeared in under half their team's games played so far —
+      // a more meaningful signal than an arbitrary minutes floor. Skipped once the team hasn't
+      // played any games yet (nothing to filter on) or the user asks to see everyone.
+      if (!showAllPlayers && (projection.teamGamesPlayed || 0) > 0) {
+        const appearanceRate = (projection.playerAppearances || 0) / (projection.teamGamesPlayed || 1);
+        if (appearanceRate < 0.5) return false;
+      }
+
       return matchesSearch;
     });
 
@@ -552,7 +566,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [resolvedDisplayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, teamNameToShort, showTBCColumn]);
+  }, [resolvedDisplayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode, teamNameToShort, showTBCColumn, showAllPlayers]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -863,12 +877,21 @@ export default function PlayerSaves() {
                   </Badge>
                 )}
               </h2>
-              <button
-                onClick={() => setShowOpponent(!showOpponent)}
-                className={`shrink-0 inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-              >
-                <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setShowAllPlayers(!showAllPlayers)}
+                  title="By default, players who've appeared in under 50% of their team's games are hidden"
+                  className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showAllPlayers ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                >
+                  {showAllPlayers ? 'All Players' : '50%+ Appearances'}
+                </button>
+                <button
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                >
+                  <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
+                </button>
+              </div>
             </div>
             <div className="fpl-card-content p-0">
               <div className="overflow-x-auto -mx-4 sm:mx-0">

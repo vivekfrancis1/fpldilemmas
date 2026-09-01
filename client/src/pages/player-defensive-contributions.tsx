@@ -54,6 +54,8 @@ interface PlayerDefensiveData {
   }>;
   form: number;
   confidence: number;
+  playerAppearances?: number;
+  teamGamesPlayed?: number;
 }
 
 interface PlayerDefensiveHistory {
@@ -173,6 +175,10 @@ export default function PlayerDefensiveContributions() {
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
+  // Default view hides players who've appeared in under half their team's games played (a
+  // more meaningful signal than an arbitrary minutes floor) — togglable to see everyone,
+  // including players with only a handful of minutes so far.
+  const [showAllPlayers, setShowAllPlayers] = useState(false);
   
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
@@ -330,12 +336,14 @@ export default function PlayerDefensiveContributions() {
         currentSeasonStats: {
           dcPer90: Math.round(currentDCPer90 * 100) / 100,
           tacklesPer90: Math.round(currentDCPer90 * 0.4 * 100) / 100, // Estimated from current DC per 90
-          recoveriesPer90: Math.round(currentDCPer90 * 0.3 * 100) / 100, // Estimated from current DC per 90  
+          recoveriesPer90: Math.round(currentDCPer90 * 0.3 * 100) / 100, // Estimated from current DC per 90
           cbiPer90: Math.round(currentDCPer90 * 0.3 * 100) / 100, // Estimated from current DC per 90
         },
         gameweekProjections,
         form: 0, // Not provided by new API
         confidence: 0.75, // Default confidence
+        playerAppearances: player.playerAppearances || 0,
+        teamGamesPlayed: player.playerMatchesPlayed || 0,
       };
     });
   }, [defensiveData, bootstrapData, fixturesData, currentGameweek, currentGWDecidedTeamShorts]);
@@ -555,6 +563,16 @@ export default function PlayerDefensiveContributions() {
       filtered = filtered.filter(p => selectedTeams.has(p.teamName));
     }
 
+    // Default: hide players who've appeared in under half their team's games played so far —
+    // a more meaningful signal than an arbitrary minutes floor. Skipped once the team hasn't
+    // played any games yet (nothing to filter on) or the user asks to see everyone.
+    if (!showAllPlayers) {
+      filtered = filtered.filter(p => {
+        if (!p.teamGamesPlayed) return true;
+        return (p.playerAppearances || 0) / p.teamGamesPlayed >= 0.5;
+      });
+    }
+
     // Sort by current DC/game if specified
     if (sortByCurrentDC) {
       filtered.sort((a, b) => {
@@ -606,7 +624,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAverage, averageSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
+  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAverage, averageSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks, showAllPlayers]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(displayData.map(p => p.position).filter(Boolean)));
@@ -1053,13 +1071,22 @@ export default function PlayerDefensiveContributions() {
               </Badge>
             )}
           </h2>
-          <button
-            onClick={() => setShowOpponent(!showOpponent)}
-            className={`shrink-0 inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-            data-testid="button-toggle-opponent"
-          >
-            {showOpponent ? 'Hide Opp' : 'Show Opp'}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setShowAllPlayers(!showAllPlayers)}
+              title="By default, players who've appeared in under 50% of their team's games are hidden"
+              className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showAllPlayers ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+            >
+              {showAllPlayers ? 'All Players' : '50%+ Appearances'}
+            </button>
+            <button
+              onClick={() => setShowOpponent(!showOpponent)}
+              className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+              data-testid="button-toggle-opponent"
+            >
+              {showOpponent ? 'Hide Opp' : 'Show Opp'}
+            </button>
+          </div>
         </div>
         <div className="fpl-card-content p-0">
           <div className="w-full mt-4">
