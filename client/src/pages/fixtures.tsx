@@ -14,6 +14,16 @@ import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 
+// Shown wherever the current FDR mode needs explaining — the mode selector cards, the
+// always-visible badge next to the table legend, and the collapsed Fixture Controls header —
+// so a viewer never has to guess what the colors on the table are actually rating fixtures by.
+const FDR_MODE_META: Record<'official' | 'form' | 'lastSeason' | 'custom', { label: string; shortLabel: string; description: string }> = {
+  official: { label: 'Official FPL Ratings', shortLabel: 'Official', description: "FPL's own published 1-5 difficulty rating for each fixture" },
+  form: { label: 'Season Form', shortLabel: 'Season Form', description: 'Recalculated from how each team has actually performed this season' },
+  lastSeason: { label: 'Last Season Form', shortLabel: 'Last Season', description: "Recalculated from each team's final 2025/26 results" },
+  custom: { label: 'Custom Ratings', shortLabel: 'Custom', description: 'Your own difficulty rating (1-5) for each opponent' },
+};
+
 interface Fixture {
   id: number;
   event: number | null;
@@ -753,16 +763,19 @@ export default function Fixtures() {
       <div className="fpl-section-spacing">
         {/* Controls */}
         <div className="fpl-filters">
-          <div 
+          <div
             className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={() => setFiltersExpanded(!filtersExpanded)}
           >
-            <div className="fpl-card-title flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                Fixture Controls
+            <div className="fpl-card-title flex items-center justify-between w-full gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Calendar className="h-5 w-5 text-blue-600 shrink-0" />
+                <span className="truncate">Fixture Controls</span>
+                <span className="shrink-0 text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
+                  {FDR_MODE_META[fdrMode].shortLabel}
+                </span>
               </div>
-              {filtersExpanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
+              {filtersExpanded ? <ChevronUp className="h-5 w-5 text-gray-500 shrink-0" /> : <ChevronDown className="h-5 w-5 text-gray-500 shrink-0" />}
             </div>
           </div>
           {filtersExpanded && (
@@ -770,25 +783,35 @@ export default function Fixtures() {
             <div className="flex flex-col gap-3">
               {/* Section 1: FDR Mode */}
               <div className="bg-gray-50 rounded-lg p-3">
-                <Label className="text-xs font-semibold text-gray-700 block mb-2">FDR Mode</Label>
-                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'lastSeason' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-2 justify-center">
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
-                    <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official ratings</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="form" id="fdr-form" data-testid="radio-fdr-form" />
-                    <Label htmlFor="fdr-form" className="text-xs cursor-pointer">Season Form</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="lastSeason" id="fdr-last-season" data-testid="radio-fdr-last-season" />
-                    <Label htmlFor="fdr-last-season" className="text-xs cursor-pointer">Last Season Form</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="custom" id="fdr-custom" data-testid="radio-fdr-custom" />
-                    <Label htmlFor="fdr-custom" className="text-xs cursor-pointer">Custom</Label>
-                  </div>
-                </RadioGroup>
+                <Label className="text-xs font-semibold text-gray-700 block mb-2">FDR Mode — what the colors below are rated by</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(Object.keys(FDR_MODE_META) as Array<'official' | 'form' | 'lastSeason' | 'custom'>).map((mode) => {
+                    const isActive = fdrMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setFdrMode(mode)}
+                        data-testid={`radio-fdr-${mode === 'lastSeason' ? 'last-season' : mode}`}
+                        className={`text-left rounded-lg border px-3 py-2 transition-colors ${
+                          isActive
+                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'
+                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${isActive ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                          <span className={`text-xs font-semibold ${isActive ? 'text-blue-800' : 'text-gray-700'}`}>
+                            {FDR_MODE_META[mode].label}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                          {FDR_MODE_META[mode].description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
                 {fdrMode === 'custom' && (
                   <div className="flex items-center gap-2 justify-center mt-2">
                     <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
@@ -940,13 +963,13 @@ export default function Fixtures() {
               {/* Section 2: Gameweek Selection */}
               <div className="bg-blue-50 rounded-lg p-3">
                 <Label className="text-xs font-semibold text-gray-700 block mb-2">Gameweek Selection</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-1 justify-center">
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center gap-1.5 justify-center">
                     <label className="text-xs font-medium text-gray-700">Range:</label>
-                    <select 
-                      value={gameweekRange?.start || ''} 
+                    <select
+                      value={gameweekRange?.start || ''}
                       onChange={(e) => handleGameweekRangeChange(parseInt(e.target.value), gameweekRange?.end || 38)}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs"
+                      className="px-2 py-1.5 border border-gray-300 rounded text-sm bg-white"
                       data-testid="select-start-gameweek"
                     >
                       {availableGameweeks.map(gw => (
@@ -954,10 +977,10 @@ export default function Fixtures() {
                       ))}
                     </select>
                     <span className="text-gray-500 text-xs">to</span>
-                    <select 
-                      value={gameweekRange?.end || ''} 
+                    <select
+                      value={gameweekRange?.end || ''}
                       onChange={(e) => handleGameweekRangeChange(gameweekRange?.start || 1, parseInt(e.target.value))}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs"
+                      className="px-2 py-1.5 border border-gray-300 rounded text-sm bg-white"
                       data-testid="select-end-gameweek"
                     >
                       {availableGameweeks.filter(gw => gw >= (gameweekRange?.start || 1)).map(gw => (
@@ -967,24 +990,24 @@ export default function Fixtures() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <label className="text-xs font-medium text-gray-700">Toggle:</label>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={clearGameweekSelections}
-                        className="text-[10px] bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-1.5 py-0.5 h-auto"
+                        className="text-xs bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-2.5 py-1 h-7"
                         data-testid="button-clear-gw-selections"
                       >All</Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedGameweeks(prev => new Set(allGameweeksInRange.filter(gw => !prev.has(gw))))}
-                        className="text-[10px] bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-300 px-1.5 py-0.5 h-auto"
+                        className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-300 px-2.5 py-1 h-7"
                         data-testid="button-invert-gameweeks"
                       >Invert</Button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1 justify-center">
+                  <div className="flex flex-wrap gap-1.5 justify-center">
                     {allGameweeksInRange.map((gw) => {
                       const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                       return (
@@ -993,7 +1016,7 @@ export default function Fixtures() {
                           variant="outline"
                           size="sm"
                           onClick={() => toggleGameweekSelection(gw)}
-                          className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isActive ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
+                          className={`min-w-[36px] text-xs px-2 py-1 h-7 ${isActive ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
                           data-testid={`button-toggle-gw-${gw}`}
                         >
                           {gw}
@@ -1009,18 +1032,18 @@ export default function Fixtures() {
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
                   <Label className="text-xs font-semibold text-gray-700">Team Selection</Label>
                   <div className="flex gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={clearTeamSelections}
-                      className="text-[10px] bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-1.5 py-0.5 h-auto"
+                      className="text-xs bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-2.5 py-1 h-7"
                       data-testid="button-include-all-teams"
                     >
                       All
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-center">
+                <div className="flex flex-wrap gap-1.5 justify-center">
                   {bootstrapData?.teams
                     ?.slice()
                     .sort((a, b) => a.short_name.localeCompare(b.short_name))
@@ -1032,7 +1055,7 @@ export default function Fixtures() {
                           variant="outline"
                           size="sm"
                           onClick={() => toggleTeamSelection(team.id)}
-                          className={`min-w-[32px] text-[10px] px-1 py-0.5 h-6 ${isActive ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
+                          className={`min-w-[36px] text-xs px-2 py-1 h-7 ${isActive ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'}`}
                           data-testid={`button-toggle-team-${team.id}`}
                         >
                           {team.short_name}
@@ -1048,6 +1071,19 @@ export default function Fixtures() {
 
         {/* Fixture Difficulty Analysis */}
         <div className="space-y-3 sm:space-y-4">
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFiltersExpanded(true)}
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-100 transition-colors"
+              title={FDR_MODE_META[fdrMode].description}
+            >
+              <span className="text-gray-500 font-normal">FDR Mode:</span> {FDR_MODE_META[fdrMode].label}
+            </button>
+            <p className="text-[10px] sm:text-[11px] text-gray-500 text-center max-w-md px-4">
+              {FDR_MODE_META[fdrMode].description}
+            </p>
+          </div>
           <div className="flex flex-wrap gap-1.5 sm:gap-3 text-[9px] sm:text-xs justify-center">
             <div className="flex items-center gap-0.5">
               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-300 rounded"></div>
