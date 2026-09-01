@@ -1,7 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Calendar, Loader2, Trophy } from "lucide-react";
+import { ArrowLeft, Calendar, Loader2, Trophy, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -116,9 +116,21 @@ const getResultColor = (result: 'W' | 'D' | 'L') => {
   return 'text-red-600 font-medium';
 };
 
+// Groups stats into scannable sections on mobile instead of one undifferentiated grid —
+// "Performance" is shown by default, the rest collapse behind "Show more".
+type StatGroup = 'performance' | 'expected' | 'bonus' | 'discipline';
+const GROUP_LABELS: Record<StatGroup, string> = {
+  performance: 'Performance',
+  expected: 'Expected Stats',
+  bonus: 'Bonus & Underlying',
+  discipline: 'Discipline',
+};
+const GROUP_ORDER: StatGroup[] = ['performance', 'expected', 'bonus', 'discipline'];
+
 type SeasonColumnDef = {
   key: string;
   label: string;
+  group: StatGroup;
   render: (team: TeamStanding) => JSX.Element;
 };
 
@@ -126,33 +138,34 @@ type SeasonColumnDef = {
 // goals, points first, then clean sheets/cards/saves, then expected-goals and defensive
 // contribution stats.
 const SEASON_COLUMNS: SeasonColumnDef[] = [
-  { key: 'played', label: 'MP', render: (t) => <span>{t.played}</span> },
-  { key: 'wins', label: 'W', render: (t) => <span className="text-green-600 font-medium">{t.wins}</span> },
-  { key: 'draws', label: 'D', render: (t) => <span className="text-gray-600">{t.draws}</span> },
-  { key: 'losses', label: 'L', render: (t) => <span className="text-red-600 font-medium">{t.losses}</span> },
-  { key: 'gf', label: 'GF', render: (t) => <span>{t.goalsFor}</span> },
-  { key: 'ga', label: 'GA', render: (t) => <span>{t.goalsAgainst}</span> },
-  { key: 'gd', label: 'GD', render: (t) => <span className={t.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>{t.goalDifference > 0 ? '+' : ''}{t.goalDifference}</span> },
-  { key: 'pts', label: 'Pts', render: (t) => <span className="font-bold">{t.points}</span> },
-  { key: 'cs', label: 'CS', render: (t) => <span>{t.cleanSheets}</span> },
-  { key: 'xgf', label: 'xGF', render: (t) => <span className="text-indigo-600">{formatValue(t.expectedGoalsFor)}</span> },
-  { key: 'xga', label: 'xGA', render: (t) => <span className="text-indigo-500">{formatValue(t.expectedGoalsAgainst)}</span> },
-  { key: 'dc', label: 'DC', render: (t) => <span className="text-teal-700">{t.defensiveContributions}</span> },
-  { key: 'dcc', label: 'DC Conceded', render: (t) => <span className="text-teal-800">{t.defensiveContributionsConceded}</span> },
-  { key: 'tackles', label: 'Tackles', render: (t) => <span>{t.tackles}</span> },
-  { key: 'defensive_actions', label: 'Defensive Actions', render: (t) => <span>{t.defensiveActions}</span> },
-  { key: 'yc', label: 'YC', render: (t) => <span className="text-yellow-600">{t.yellowCards}</span> },
-  { key: 'rc', label: 'RC', render: (t) => <span className="text-red-600">{t.redCards}</span> },
-  { key: 'saves', label: 'Saves', render: (t) => <span>{t.saves}</span> },
-  { key: 'pen_saved', label: 'Pen Saved', render: (t) => <span>{t.penaltiesSaved}</span> },
-  { key: 'pen_missed', label: 'Pen Missed', render: (t) => <span>{t.penaltiesMissed}</span> },
-  { key: 'og', label: 'OG', render: (t) => <span>{t.ownGoals}</span> },
+  { key: 'played', label: 'MP', group: 'performance', render: (t) => <span>{t.played}</span> },
+  { key: 'wins', label: 'W', group: 'performance', render: (t) => <span className="text-green-600 font-medium">{t.wins}</span> },
+  { key: 'draws', label: 'D', group: 'performance', render: (t) => <span className="text-gray-600">{t.draws}</span> },
+  { key: 'losses', label: 'L', group: 'performance', render: (t) => <span className="text-red-600 font-medium">{t.losses}</span> },
+  { key: 'gf', label: 'GF', group: 'performance', render: (t) => <span>{t.goalsFor}</span> },
+  { key: 'ga', label: 'GA', group: 'performance', render: (t) => <span>{t.goalsAgainst}</span> },
+  { key: 'gd', label: 'GD', group: 'performance', render: (t) => <span className={t.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>{t.goalDifference > 0 ? '+' : ''}{t.goalDifference}</span> },
+  { key: 'pts', label: 'Pts', group: 'performance', render: (t) => <span className="font-bold">{t.points}</span> },
+  { key: 'cs', label: 'CS', group: 'performance', render: (t) => <span>{t.cleanSheets}</span> },
+  { key: 'saves', label: 'Saves', group: 'performance', render: (t) => <span>{t.saves}</span> },
+  { key: 'dc', label: 'DC', group: 'performance', render: (t) => <span className="text-teal-700">{t.defensiveContributions}</span> },
+  { key: 'dcc', label: 'DC Conceded', group: 'performance', render: (t) => <span className="text-teal-800">{t.defensiveContributionsConceded}</span> },
+  { key: 'tackles', label: 'Tackles', group: 'performance', render: (t) => <span>{t.tackles}</span> },
+  { key: 'defensive_actions', label: 'Defensive Actions', group: 'performance', render: (t) => <span>{t.defensiveActions}</span> },
+  { key: 'xgf', label: 'xGF', group: 'expected', render: (t) => <span className="text-indigo-600">{formatValue(t.expectedGoalsFor)}</span> },
+  { key: 'xga', label: 'xGA', group: 'expected', render: (t) => <span className="text-indigo-500">{formatValue(t.expectedGoalsAgainst)}</span> },
+  { key: 'yc', label: 'YC', group: 'discipline', render: (t) => <span className="text-yellow-600">{t.yellowCards}</span> },
+  { key: 'rc', label: 'RC', group: 'discipline', render: (t) => <span className="text-red-600">{t.redCards}</span> },
+  { key: 'pen_saved', label: 'Pen Saved', group: 'discipline', render: (t) => <span>{t.penaltiesSaved}</span> },
+  { key: 'pen_missed', label: 'Pen Missed', group: 'discipline', render: (t) => <span>{t.penaltiesMissed}</span> },
+  { key: 'og', label: 'OG', group: 'discipline', render: (t) => <span>{t.ownGoals}</span> },
 ];
 
 type GwColumnDef = {
   key: string;
   label: string;
   shortLabel?: string;
+  group: StatGroup;
   render: (row: GameweekRow) => JSX.Element;
   aggregate?: (rows: GameweekRow[]) => string | number;
 };
@@ -294,6 +307,11 @@ export default function TeamDetail() {
   // Default the Gameweek Performance tab to 2025/26 when the current season has no data yet
   // (pre-season) — only runs once, and only if the user hasn't already picked a tab themselves.
   const [activeGwTab, setActiveGwTab] = useState("current");
+  // Collapsed by default on mobile — only the "Performance" stat group shows until the user
+  // asks for the rest (Expected Stats/Bonus/Discipline), which otherwise turned every
+  // gameweek row into an undifferentiated stat grid.
+  const [showAdvancedGW, setShowAdvancedGW] = useState(false);
+  const [showAdvancedSeason, setShowAdvancedSeason] = useState(false);
   const hasAutoDefaultedTab = useRef(false);
   const isCurrentGwLoading = isCurrentFixturesLoading || isCurrentTeamGwStatsLoading;
   useEffect(() => {
@@ -347,44 +365,94 @@ export default function TeamDetail() {
       rows.reduce((s, r) => s + (Number(r.stats?.[field]) || 0), 0).toFixed(1);
 
     return [
-      { key: 'opponent', label: 'Opponent', shortLabel: 'Opp', render: (r) => <span><span className="font-medium">{r.opponent}</span><span className="text-xs ml-1 text-gray-500">({r.venue})</span></span>, aggregate: () => '' },
-      { key: 'date', label: 'Date', render: (r) => <span className="text-gray-600 text-xs">{formatKickoff(r.kickoffTime)}</span>, aggregate: () => '' },
-      { key: 'score', label: 'Score', render: (r) => <span className="text-gray-700">{r.goalsFor}-{r.goalsAgainst}</span>, aggregate: () => '' },
-      { key: 'result', label: 'Result', render: (r) => <span className={getResultColor(r.result)}>{r.result}</span>, aggregate: () => '' },
-      { key: 'pts', label: 'Points', shortLabel: 'Pts', render: (r) => <span className="font-semibold">{r.points}</span>, aggregate: (rows) => sumNum(rows, 'points') },
-      { key: 'gf', label: 'GF', render: (r) => <span className="text-green-600 font-medium">{r.goalsFor}</span>, aggregate: (rows) => sumNum(rows, 'goalsFor') },
-      { key: 'ga', label: 'GA', render: (r) => <span className="text-red-600">{r.goalsAgainst}</span>, aggregate: (rows) => sumNum(rows, 'goalsAgainst') },
-      { key: 'cs', label: 'Clean Sheet', shortLabel: 'CS', render: (r) => <span>{r.goalsAgainst === 0 ? 'Yes' : '-'}</span>, aggregate: (rows) => rows.filter(r => r.goalsAgainst === 0).length },
-      { key: 'xg', label: 'xG', render: (r) => <span className="text-purple-600">{r.stats ? formatValue(r.stats.expected_goals) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals') },
-      { key: 'xa', label: 'xA', render: (r) => <span className="text-blue-600">{r.stats ? formatValue(r.stats.expected_assists) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_assists') },
-      { key: 'xgc', label: 'xGC', render: (r) => <span className="text-red-600">{r.stats ? formatValue(r.stats.expected_goals_conceded) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals_conceded') },
-      { key: 'assists', label: 'Assists', shortLabel: 'A', render: (r) => <span>{r.stats?.assists ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'assists') },
-      { key: 'dc', label: 'DC', render: (r) => <span className="text-teal-700">{r.stats?.defensive_contribution ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'defensive_contribution') },
-      { key: 'tackles', label: 'Tackles', render: (r) => <span>{r.stats?.tackles ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'tackles') },
-      { key: 'recoveries', label: 'Recoveries', render: (r) => <span>{r.stats?.recoveries ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'recoveries') },
-      { key: 'cbi', label: 'CBI', render: (r) => <span>{r.stats?.clearances_blocks_interceptions ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'clearances_blocks_interceptions') },
-      { key: 'saves', label: 'Saves', shortLabel: 'Sav', render: (r) => <span>{r.stats?.saves ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'saves') },
-      { key: 'pen_saved', label: 'Pen Saved', render: (r) => <span>{r.stats?.penalties_saved ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_saved') },
-      { key: 'pen_missed', label: 'Pen Missed', render: (r) => <span>{r.stats?.penalties_missed ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_missed') },
-      { key: 'og', label: 'Own Goals', shortLabel: 'OG', render: (r) => <span>{r.stats?.own_goals ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'own_goals') },
-      { key: 'bonus', label: 'Bonus', render: (r) => <span className="text-purple-600 font-medium">{r.stats?.bonus ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bonus') },
-      { key: 'bps', label: 'BPS', render: (r) => <span>{r.stats?.bps ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bps') },
-      { key: 'yc', label: 'Yellow Cards', shortLabel: 'YC', render: (r) => <span className="text-yellow-600">{r.stats?.yellow_cards ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'yellow_cards') },
-      { key: 'rc', label: 'Red Cards', shortLabel: 'RC', render: (r) => <span className="text-red-600">{r.stats?.red_cards ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'red_cards') },
-      { key: 'starts', label: 'Starts', render: (r) => <span>{r.stats?.starts ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'starts') },
-      { key: 'minutes', label: 'Minutes', shortLabel: 'Min', render: (r) => <span>{r.stats?.minutes ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'minutes') },
+      { key: 'opponent', label: 'Opponent', shortLabel: 'Opp', group: 'performance', render: (r) => <span><span className="font-medium">{r.opponent}</span><span className="text-xs ml-1 text-gray-500">({r.venue})</span></span>, aggregate: () => '' },
+      { key: 'date', label: 'Date', group: 'performance', render: (r) => <span className="text-gray-600 text-xs">{formatKickoff(r.kickoffTime)}</span>, aggregate: () => '' },
+      { key: 'score', label: 'Score', group: 'performance', render: (r) => <span className="text-gray-700">{r.goalsFor}-{r.goalsAgainst}</span>, aggregate: () => '' },
+      { key: 'result', label: 'Result', group: 'performance', render: (r) => <span className={getResultColor(r.result)}>{r.result}</span>, aggregate: () => '' },
+      { key: 'pts', label: 'Points', shortLabel: 'Pts', group: 'performance', render: (r) => <span className="font-semibold">{r.points}</span>, aggregate: (rows) => sumNum(rows, 'points') },
+      { key: 'gf', label: 'GF', group: 'performance', render: (r) => <span className="text-green-600 font-medium">{r.goalsFor}</span>, aggregate: (rows) => sumNum(rows, 'goalsFor') },
+      { key: 'ga', label: 'GA', group: 'performance', render: (r) => <span className="text-red-600">{r.goalsAgainst}</span>, aggregate: (rows) => sumNum(rows, 'goalsAgainst') },
+      { key: 'cs', label: 'Clean Sheet', shortLabel: 'CS', group: 'performance', render: (r) => <span>{r.goalsAgainst === 0 ? 'Yes' : '-'}</span>, aggregate: (rows) => rows.filter(r => r.goalsAgainst === 0).length },
+      { key: 'assists', label: 'Assists', shortLabel: 'A', group: 'performance', render: (r) => <span>{r.stats?.assists ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'assists') },
+      { key: 'dc', label: 'DC', group: 'performance', render: (r) => <span className="text-teal-700">{r.stats?.defensive_contribution ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'defensive_contribution') },
+      { key: 'tackles', label: 'Tackles', group: 'performance', render: (r) => <span>{r.stats?.tackles ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'tackles') },
+      { key: 'recoveries', label: 'Recoveries', group: 'performance', render: (r) => <span>{r.stats?.recoveries ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'recoveries') },
+      { key: 'cbi', label: 'CBI', group: 'performance', render: (r) => <span>{r.stats?.clearances_blocks_interceptions ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'clearances_blocks_interceptions') },
+      { key: 'saves', label: 'Saves', shortLabel: 'Sav', group: 'performance', render: (r) => <span>{r.stats?.saves ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'saves') },
+      { key: 'starts', label: 'Starts', group: 'performance', render: (r) => <span>{r.stats?.starts ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'starts') },
+      { key: 'minutes', label: 'Minutes', shortLabel: 'Min', group: 'performance', render: (r) => <span>{r.stats?.minutes ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'minutes') },
+      { key: 'xg', label: 'xG', group: 'expected', render: (r) => <span className="text-purple-600">{r.stats ? formatValue(r.stats.expected_goals) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals') },
+      { key: 'xa', label: 'xA', group: 'expected', render: (r) => <span className="text-blue-600">{r.stats ? formatValue(r.stats.expected_assists) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_assists') },
+      { key: 'xgc', label: 'xGC', group: 'expected', render: (r) => <span className="text-red-600">{r.stats ? formatValue(r.stats.expected_goals_conceded) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals_conceded') },
+      { key: 'bonus', label: 'Bonus', group: 'bonus', render: (r) => <span className="text-purple-600 font-medium">{r.stats?.bonus ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bonus') },
+      { key: 'bps', label: 'BPS', group: 'bonus', render: (r) => <span>{r.stats?.bps ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bps') },
+      { key: 'pen_saved', label: 'Pen Saved', group: 'discipline', render: (r) => <span>{r.stats?.penalties_saved ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_saved') },
+      { key: 'pen_missed', label: 'Pen Missed', group: 'discipline', render: (r) => <span>{r.stats?.penalties_missed ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_missed') },
+      { key: 'og', label: 'Own Goals', shortLabel: 'OG', group: 'discipline', render: (r) => <span>{r.stats?.own_goals ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'own_goals') },
+      { key: 'yc', label: 'Yellow Cards', shortLabel: 'YC', group: 'discipline', render: (r) => <span className="text-yellow-600">{r.stats?.yellow_cards ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'yellow_cards') },
+      { key: 'rc', label: 'Red Cards', shortLabel: 'RC', group: 'discipline', render: (r) => <span className="text-red-600">{r.stats?.red_cards ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'red_cards') },
     ];
   }, []);
 
-  const renderGameweekCard = (rows: GameweekRow[], loading: boolean) => (
+  const renderGameweekCard = (rows: GameweekRow[], loading: boolean) => {
+    const mobileColumns = gwColumns.filter(c => !['opponent', 'date', 'score', 'result', 'pts'].includes(c.key));
+    const mobileGroups = GROUP_ORDER.map(group => ({
+      group,
+      cols: mobileColumns.filter(col => col.group === group),
+    })).filter(g => g.cols.length > 0);
+
+    const renderStatGrid = (cols: GwColumnDef[], getCell: (col: GwColumnDef) => ReactNode, labelClass: string, valueClass: string) => (
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 text-sm">
+        {cols.map(col => {
+          const cell = getCell(col);
+          if (cell === '' || cell === null) return null;
+          return (
+            <div key={col.key} className="text-center min-w-0">
+              <div className={`text-[11px] truncate ${labelClass}`}>{col.shortLabel || col.label}</div>
+              <div className={`font-medium truncate ${valueClass}`}>{cell}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    const renderGroupedStats = (getCell: (col: GwColumnDef) => ReactNode, labelClass: string, valueClass: string, groupLabelClass: string) => (
+      <div className="space-y-3">
+        {mobileGroups.map(({ group, cols }, i) => (
+          (group === 'performance' || showAdvancedGW) && (
+            <div key={group}>
+              {i > 0 && (
+                <div className={`text-[10px] font-semibold uppercase tracking-wide mb-1.5 ${groupLabelClass}`}>
+                  {GROUP_LABELS[group]}
+                </div>
+              )}
+              {renderStatGrid(cols, getCell, labelClass, valueClass)}
+            </div>
+          )
+        ))}
+      </div>
+    );
+
+    return (
     <Card className="border-0 bg-white/80 backdrop-blur-sm">
       <CardContent className="p-0">
-        <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
-          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-blue-600" />
-            Gameweek Performance
-          </h3>
-          <p className="text-xs text-gray-600 mt-1">{rows.length} gameweeks • Latest first</p>
+        <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
+              Gameweek Performance
+            </h3>
+            <p className="text-xs text-gray-600 mt-1">{rows.length} gameweeks • Latest first</p>
+          </div>
+          {isMobile && (
+            <button
+              onClick={() => setShowAdvancedGW(v => !v)}
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
+            >
+              {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {showAdvancedGW ? 'Fewer stats' : 'More stats'}
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -400,28 +468,17 @@ export default function TeamDetail() {
               <div className="px-4 py-8 text-center text-gray-500">No gameweek data available for this team</div>
             ) : (
               <>
-              <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
+              <div className="p-3 space-y-3 bg-purple-50 border-b-2 border-purple-200">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-purple-800">Total</span>
                   <div className="text-lg font-bold text-purple-800">
                     {gwColumns.find(c => c.key === 'pts')?.aggregate?.(rows)} pts
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  {gwColumns.filter(col => col.aggregate && !['opponent', 'date', 'score', 'result', 'pts'].includes(col.key)).map(col => {
-                    const value = col.aggregate!(rows);
-                    if (value === '') return null;
-                    return (
-                      <div key={col.key} className="text-center">
-                        <div className="text-xs text-purple-600">{col.shortLabel || col.label}</div>
-                        <div className="font-bold text-purple-800">{value}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {renderGroupedStats((col) => col.aggregate ? col.aggregate(rows) : '', 'text-purple-600', 'text-purple-800', 'text-purple-500')}
               </div>
               {rows.map((r) => (
-                <div key={r.gameweek} className="p-3 space-y-2">
+                <div key={r.gameweek} className="p-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-900">GW{r.gameweek}</span>
@@ -429,14 +486,7 @@ export default function TeamDetail() {
                     </div>
                     <div className={`text-lg ${getResultColor(r.result)}`}>{r.goalsFor}-{r.goalsAgainst}</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    {gwColumns.filter(c => !['opponent', 'date', 'score', 'result'].includes(c.key)).map(col => (
-                      <div key={col.key} className="text-center">
-                        <div className="text-xs text-gray-500">{col.shortLabel || col.label}</div>
-                        <div className="font-medium">{col.render(r)}</div>
-                      </div>
-                    ))}
-                  </div>
+                  {renderGroupedStats((col) => col.render(r), 'text-gray-500', 'text-gray-900', 'text-gray-400')}
                 </div>
               ))}
               </>
@@ -488,7 +538,8 @@ export default function TeamDetail() {
         )}
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   const isLoading = isCurrentStandingsLoading || isLastSeasonStandingsLoading;
   const teamCrestCode = bootstrapTeam?.code;
@@ -514,19 +565,19 @@ export default function TeamDetail() {
 
       <Card className="border-0 bg-white/80 backdrop-blur-sm">
         <CardContent className="p-4 sm:p-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {teamCrestCode && (
               <img
                 src={teamCrestCode === 14
                   ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                   : `https://resources.premierleague.com/premierleague/badges/t${teamCrestCode}.png`}
                 alt={`${teamName} badge`}
-                className="w-10 h-10 object-contain"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             )}
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{teamName}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{teamName}</h1>
               {currentTeamStanding && (
                 <Badge variant="outline" className="text-xs mt-1">
                   <Trophy className="h-3 w-3 mr-1" /> {currentTeamStanding.position}{currentTeamStanding.position === 1 ? 'st' : currentTeamStanding.position === 2 ? 'nd' : currentTeamStanding.position === 3 ? 'rd' : 'th'} in {CURRENT_SEASON}
@@ -539,16 +590,69 @@ export default function TeamDetail() {
 
       <Card className="border-0 bg-white/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              Season History
-            </h3>
-            <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
+          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                Season History
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
+            </div>
+            {isMobile && seasonHistory.length > 0 && (
+              <button
+                onClick={() => setShowAdvancedSeason(v => !v)}
+                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
+              >
+                {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
+              </button>
+            )}
           </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            </div>
+          ) : isMobile ? (
+            <div className="divide-y divide-gray-100">
+              {seasonHistory.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">No season history available for this team</div>
+              ) : (
+                seasonHistory.map((row) => {
+                  const seasonGroups = GROUP_ORDER.map(group => ({
+                    group,
+                    cols: SEASON_COLUMNS.filter(col => col.group === group && col.key !== 'pts'),
+                  })).filter(g => g.cols.length > 0);
+                  return (
+                    <div key={row.seasonName} className="p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-900">{row.seasonName}</span>
+                        <div className="text-lg font-bold text-purple-800">{row.standing.points} pts</div>
+                      </div>
+                      <div className="space-y-3">
+                        {seasonGroups.map(({ group, cols }, i) => (
+                          (group === 'performance' || showAdvancedSeason) && (
+                            <div key={group}>
+                              {i > 0 && (
+                                <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5 text-gray-400">
+                                  {GROUP_LABELS[group]}
+                                </div>
+                              )}
+                              <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 text-sm">
+                                {cols.map(col => (
+                                  <div key={col.key} className="text-center min-w-0">
+                                    <div className="text-[11px] truncate text-gray-500">{col.label}</div>
+                                    <div className="font-medium truncate text-gray-900">{col.render(row.standing)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
