@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
+import JerseyIcon from "@/components/jersey-icon";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface GameweekData {
   round: number;
@@ -101,16 +103,6 @@ const getPositionName = (elementType: number) => {
   }
 };
 
-const getPositionColor = (elementType: number) => {
-  switch (elementType) {
-    case 1: return "bg-yellow-100 text-yellow-800";
-    case 2: return "bg-green-100 text-green-800";
-    case 3: return "bg-blue-100 text-blue-800";
-    case 4: return "bg-red-100 text-red-800";
-    default: return "bg-gray-100 text-gray-800";
-  }
-};
-
 const getPointsColor = (points: number) => {
   if (points >= 10) return "text-green-700 font-bold";
   if (points >= 6) return "text-green-600 font-semibold";
@@ -132,11 +124,24 @@ const formatKickoff = (kickoffTime?: string) => {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
 
+// Groups stats into scannable sections on mobile instead of one undifferentiated grid —
+// "Performance" is shown by default, the rest collapse behind "Show more".
+type StatGroup = 'performance' | 'expected' | 'bonus' | 'discipline' | 'market';
+const GROUP_LABELS: Record<StatGroup, string> = {
+  performance: 'Performance',
+  expected: 'Expected Stats',
+  bonus: 'Bonus & Underlying',
+  discipline: 'Discipline',
+  market: 'Market',
+};
+const GROUP_ORDER: StatGroup[] = ['performance', 'expected', 'bonus', 'discipline', 'market'];
+
 type ColumnDef = {
   key: string;
   label: string;
   shortLabel?: string;
   positions: number[];
+  group: StatGroup;
   render: (gw: GameweekData) => JSX.Element;
   aggregate?: (history: GameweekData[]) => string | number;
 };
@@ -144,6 +149,7 @@ type ColumnDef = {
 type SeasonColumnDef = {
   key: string;
   label: string;
+  group: StatGroup;
   render: (season: SeasonHistoryData) => JSX.Element;
 };
 
@@ -153,39 +159,41 @@ const SEASON_COLUMNS: SeasonColumnDef[] = [
   {
     key: 'price',
     label: '£ (Start→End)',
+    group: 'market',
     render: (s) => <span>{formatValue((s.start_cost || 0) / 10)} → {formatValue((s.end_cost || 0) / 10)}</span>,
   },
   {
     key: 'pts',
     label: 'Pts',
+    group: 'performance',
     render: (s) => <span className={`font-semibold ${getPointsColor(s.total_points)}`}>{s.total_points}</span>,
   },
-  { key: 'g', label: 'G', render: (s) => <span className="text-green-600 font-medium">{s.goals_scored}</span> },
-  { key: 'a', label: 'A', render: (s) => <span className="text-blue-600 font-medium">{s.assists}</span> },
-  { key: 'cs', label: 'CS', render: (s) => <span>{s.clean_sheets}</span> },
-  { key: 'dc', label: 'DC', render: (s) => <span>{s.defensive_contribution ?? '-'}</span> },
-  { key: 'xg', label: 'xG', render: (s) => <span className="text-purple-600">{s.expected_goals ? formatValue(s.expected_goals) : '-'}</span> },
-  { key: 'xa', label: 'xA', render: (s) => <span className="text-blue-600">{s.expected_assists ? formatValue(s.expected_assists) : '-'}</span> },
-  { key: 'xgi', label: 'xGI', render: (s) => <span className="text-indigo-600">{s.expected_goal_involvements ? formatValue(s.expected_goal_involvements) : '-'}</span> },
-  { key: 'xgc', label: 'xGC', render: (s) => <span className="text-red-600">{s.expected_goals_conceded ? formatValue(s.expected_goals_conceded) : '-'}</span> },
-  { key: 'min', label: 'Min', render: (s) => <span>{s.minutes}</span> },
-  { key: 'gc', label: 'GC', render: (s) => <span className="text-red-600">{s.goals_conceded}</span> },
-  { key: 'saves', label: 'Saves', render: (s) => <span>{s.saves}</span> },
-  { key: 'tackles', label: 'Tackles', render: (s) => <span>{s.tackles ?? '-'}</span> },
-  { key: 'recoveries', label: 'Recoveries', render: (s) => <span>{s.recoveries ?? '-'}</span> },
-  { key: 'cbi', label: 'CBI', render: (s) => <span>{s.clearances_blocks_interceptions ?? '-'}</span> },
-  { key: 'starts', label: 'Starts', render: (s) => <span>{s.starts ?? '-'}</span> },
-  { key: 'bonus', label: 'Bonus', render: (s) => <span className="text-purple-600 font-medium">{s.bonus}</span> },
-  { key: 'bps', label: 'BPS', render: (s) => <span>{s.bps}</span> },
-  { key: 'influence', label: 'Influence', render: (s) => <span>{formatValue(s.influence)}</span> },
-  { key: 'creativity', label: 'Creativity', render: (s) => <span>{formatValue(s.creativity)}</span> },
-  { key: 'threat', label: 'Threat', render: (s) => <span>{formatValue(s.threat)}</span> },
-  { key: 'ict', label: 'ICT', render: (s) => <span>{formatValue(s.ict_index)}</span> },
-  { key: 'pen_saved', label: 'Pen Saved', render: (s) => <span>{s.penalties_saved || 0}</span> },
-  { key: 'pen_missed', label: 'Pen Missed', render: (s) => <span>{s.penalties_missed || 0}</span> },
-  { key: 'yc', label: 'YC', render: (s) => <span className="text-yellow-600">{s.yellow_cards}</span> },
-  { key: 'rc', label: 'RC', render: (s) => <span className="text-red-600">{s.red_cards}</span> },
-  { key: 'og', label: 'OG', render: (s) => <span>{s.own_goals || 0}</span> },
+  { key: 'g', label: 'G', group: 'performance', render: (s) => <span className="text-green-600 font-medium">{s.goals_scored}</span> },
+  { key: 'a', label: 'A', group: 'performance', render: (s) => <span className="text-blue-600 font-medium">{s.assists}</span> },
+  { key: 'cs', label: 'CS', group: 'performance', render: (s) => <span>{s.clean_sheets}</span> },
+  { key: 'dc', label: 'DC', group: 'performance', render: (s) => <span>{s.defensive_contribution ?? '-'}</span> },
+  { key: 'xg', label: 'xG', group: 'expected', render: (s) => <span className="text-purple-600">{s.expected_goals ? formatValue(s.expected_goals) : '-'}</span> },
+  { key: 'xa', label: 'xA', group: 'expected', render: (s) => <span className="text-blue-600">{s.expected_assists ? formatValue(s.expected_assists) : '-'}</span> },
+  { key: 'xgi', label: 'xGI', group: 'expected', render: (s) => <span className="text-indigo-600">{s.expected_goal_involvements ? formatValue(s.expected_goal_involvements) : '-'}</span> },
+  { key: 'xgc', label: 'xGC', group: 'expected', render: (s) => <span className="text-red-600">{s.expected_goals_conceded ? formatValue(s.expected_goals_conceded) : '-'}</span> },
+  { key: 'min', label: 'Min', group: 'performance', render: (s) => <span>{s.minutes}</span> },
+  { key: 'gc', label: 'GC', group: 'performance', render: (s) => <span className="text-red-600">{s.goals_conceded}</span> },
+  { key: 'saves', label: 'Saves', group: 'performance', render: (s) => <span>{s.saves}</span> },
+  { key: 'tackles', label: 'Tackles', group: 'performance', render: (s) => <span>{s.tackles ?? '-'}</span> },
+  { key: 'recoveries', label: 'Recoveries', group: 'performance', render: (s) => <span>{s.recoveries ?? '-'}</span> },
+  { key: 'cbi', label: 'CBI', group: 'performance', render: (s) => <span>{s.clearances_blocks_interceptions ?? '-'}</span> },
+  { key: 'starts', label: 'Starts', group: 'performance', render: (s) => <span>{s.starts ?? '-'}</span> },
+  { key: 'bonus', label: 'Bonus', group: 'bonus', render: (s) => <span className="text-purple-600 font-medium">{s.bonus}</span> },
+  { key: 'bps', label: 'BPS', group: 'bonus', render: (s) => <span>{s.bps}</span> },
+  { key: 'influence', label: 'Influence', group: 'bonus', render: (s) => <span>{formatValue(s.influence)}</span> },
+  { key: 'creativity', label: 'Creativity', group: 'bonus', render: (s) => <span>{formatValue(s.creativity)}</span> },
+  { key: 'threat', label: 'Threat', group: 'bonus', render: (s) => <span>{formatValue(s.threat)}</span> },
+  { key: 'ict', label: 'ICT', group: 'bonus', render: (s) => <span>{formatValue(s.ict_index)}</span> },
+  { key: 'pen_saved', label: 'Pen Saved', group: 'discipline', render: (s) => <span>{s.penalties_saved || 0}</span> },
+  { key: 'pen_missed', label: 'Pen Missed', group: 'discipline', render: (s) => <span>{s.penalties_missed || 0}</span> },
+  { key: 'yc', label: 'YC', group: 'discipline', render: (s) => <span className="text-yellow-600">{s.yellow_cards}</span> },
+  { key: 'rc', label: 'RC', group: 'discipline', render: (s) => <span className="text-red-600">{s.red_cards}</span> },
+  { key: 'og', label: 'OG', group: 'discipline', render: (s) => <span>{s.own_goals || 0}</span> },
 ];
 
 export default function PlayerDetail() {
@@ -251,6 +259,11 @@ export default function PlayerDetail() {
   // Default the Gameweek Performance tab to 2025/26 when the current season has no data yet
   // (pre-season) — only runs once, and only if the user hasn't already picked a tab themselves.
   const [activeGwTab, setActiveGwTab] = useState("current");
+  // Collapsed by default on mobile — only the "Performance" stat group shows until the user
+  // asks for the rest (Expected Stats/Bonus/Discipline/Market), which otherwise turned every
+  // gameweek row into an undifferentiated 18-stat grid.
+  const [showAdvancedGW, setShowAdvancedGW] = useState(false);
+  const [showAdvancedSeason, setShowAdvancedSeason] = useState(false);
   const hasAutoDefaultedTab = useRef(false);
   useEffect(() => {
     if (hasAutoDefaultedTab.current) return;
@@ -276,6 +289,7 @@ export default function PlayerDetail() {
         label: 'Opponent',
         shortLabel: 'Opp',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => {
           const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
           const venue = gw.was_home ? '(H)' : gw.was_home === false ? '(A)' : '';
@@ -287,6 +301,7 @@ export default function PlayerDetail() {
         key: 'date',
         label: 'Date',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span className="text-gray-600 text-xs">{formatKickoff(gw.kickoff_time)}</span>,
         aggregate: () => '',
       },
@@ -294,6 +309,7 @@ export default function PlayerDetail() {
         key: 'score',
         label: 'Score',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => {
           if (gw.team_h_score == null || gw.team_a_score == null) return <span>-</span>;
           return <span className="text-gray-700">{gw.team_h_score}-{gw.team_a_score}</span>;
@@ -305,6 +321,7 @@ export default function PlayerDetail() {
         label: 'Price',
         shortLabel: '£',
         positions: [1, 2, 3, 4],
+        group: 'market',
         render: (gw) => <span>{formatValue((gw.value || 0) / 10)}</span>,
         aggregate: () => '',
       },
@@ -313,6 +330,7 @@ export default function PlayerDetail() {
         label: 'Points',
         shortLabel: 'Pts',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span className={`font-semibold ${getPointsColor(gw.total_points)}`}>{gw.total_points}</span>,
         aggregate: (h) => sumField(h, 'total_points'),
       },
@@ -321,6 +339,7 @@ export default function PlayerDetail() {
         label: 'Goals',
         shortLabel: 'G',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span className="text-green-600 font-medium">{gw.goals_scored}</span>,
         aggregate: (h) => sumField(h, 'goals_scored'),
       },
@@ -329,6 +348,7 @@ export default function PlayerDetail() {
         label: 'Assists',
         shortLabel: 'A',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span className="text-blue-600 font-medium">{gw.assists}</span>,
         aggregate: (h) => sumField(h, 'assists'),
       },
@@ -337,6 +357,7 @@ export default function PlayerDetail() {
         label: 'Clean Sheets',
         shortLabel: 'CS',
         positions: [1, 2, 3],
+        group: 'performance',
         render: (gw) => <span className="text-green-600">{gw.clean_sheets}</span>,
         aggregate: (h) => sumField(h, 'clean_sheets'),
       },
@@ -345,6 +366,7 @@ export default function PlayerDetail() {
         label: 'Selected By',
         shortLabel: 'Sel',
         positions: [1, 2, 3, 4],
+        group: 'market',
         render: (gw) => <span>{(gw.selected || 0).toLocaleString()}</span>,
         aggregate: () => '',
       },
@@ -352,6 +374,7 @@ export default function PlayerDetail() {
         key: 'xg',
         label: 'xG',
         positions: [1, 2, 3, 4],
+        group: 'expected',
         render: (gw) => <span className="text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</span>,
         aggregate: (h) => sumFloatField(h, 'expected_goals'),
       },
@@ -359,6 +382,7 @@ export default function PlayerDetail() {
         key: 'xa',
         label: 'xA',
         positions: [1, 2, 3, 4],
+        group: 'expected',
         render: (gw) => <span className="text-blue-600">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</span>,
         aggregate: (h) => sumFloatField(h, 'expected_assists'),
       },
@@ -366,6 +390,7 @@ export default function PlayerDetail() {
         key: 'xgi',
         label: 'xGI',
         positions: [1, 2, 3, 4],
+        group: 'expected',
         render: (gw) => <span className="text-indigo-600">{gw.expected_goal_involvements ? formatValue(gw.expected_goal_involvements) : '-'}</span>,
         aggregate: (h) => sumFloatField(h, 'expected_goal_involvements'),
       },
@@ -373,6 +398,7 @@ export default function PlayerDetail() {
         key: 'xgc',
         label: 'xGC',
         positions: [1, 2],
+        group: 'expected',
         render: (gw) => <span className="text-red-600">{gw.expected_goals_conceded ? formatValue(gw.expected_goals_conceded) : '-'}</span>,
         aggregate: (h) => sumFloatField(h, 'expected_goals_conceded'),
       },
@@ -381,6 +407,7 @@ export default function PlayerDetail() {
         label: 'Minutes',
         shortLabel: 'Min',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span>{gw.minutes}</span>,
         aggregate: (h) => sumField(h, 'minutes'),
       },
@@ -389,6 +416,7 @@ export default function PlayerDetail() {
         label: 'Goals Conceded',
         shortLabel: 'GC',
         positions: [1, 2],
+        group: 'performance',
         render: (gw) => <span className="text-red-600">{gw.goals_conceded}</span>,
         aggregate: (h) => sumField(h, 'goals_conceded'),
       },
@@ -397,6 +425,7 @@ export default function PlayerDetail() {
         label: 'Saves',
         shortLabel: 'Sav',
         positions: [1],
+        group: 'performance',
         render: (gw) => <span>{gw.saves}</span>,
         aggregate: (h) => sumField(h, 'saves'),
       },
@@ -404,6 +433,7 @@ export default function PlayerDetail() {
         key: 'starts',
         label: 'Starts',
         positions: [1, 2, 3, 4],
+        group: 'performance',
         render: (gw) => <span>{gw.starts ?? '-'}</span>,
         aggregate: (h) => h.reduce((s, gw) => s + (gw.starts ?? 0), 0),
       },
@@ -411,6 +441,7 @@ export default function PlayerDetail() {
         key: 'bonus',
         label: 'Bonus',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span className="text-purple-600 font-medium">{gw.bonus}</span>,
         aggregate: (h) => sumField(h, 'bonus'),
       },
@@ -418,6 +449,7 @@ export default function PlayerDetail() {
         key: 'bps',
         label: 'BPS',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span>{gw.bps}</span>,
         aggregate: (h) => sumField(h, 'bps'),
       },
@@ -426,6 +458,7 @@ export default function PlayerDetail() {
         label: 'Transfers In',
         shortLabel: 'T In',
         positions: [1, 2, 3, 4],
+        group: 'market',
         render: (gw) => <span className="text-green-600">{(gw.transfers_in || 0).toLocaleString()}</span>,
         aggregate: (h) => sumField(h, 'transfers_in').toLocaleString(),
       },
@@ -434,6 +467,7 @@ export default function PlayerDetail() {
         label: 'Transfers Out',
         shortLabel: 'T Out',
         positions: [1, 2, 3, 4],
+        group: 'market',
         render: (gw) => <span className="text-red-600">{(gw.transfers_out || 0).toLocaleString()}</span>,
         aggregate: (h) => sumField(h, 'transfers_out').toLocaleString(),
       },
@@ -441,6 +475,7 @@ export default function PlayerDetail() {
         key: 'influence',
         label: 'Influence',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span>{formatValue(gw.influence)}</span>,
         aggregate: (h) => sumFloatField(h, 'influence'),
       },
@@ -448,6 +483,7 @@ export default function PlayerDetail() {
         key: 'creativity',
         label: 'Creativity',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span>{formatValue(gw.creativity)}</span>,
         aggregate: (h) => sumFloatField(h, 'creativity'),
       },
@@ -455,6 +491,7 @@ export default function PlayerDetail() {
         key: 'threat',
         label: 'Threat',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span>{formatValue(gw.threat)}</span>,
         aggregate: (h) => sumFloatField(h, 'threat'),
       },
@@ -463,6 +500,7 @@ export default function PlayerDetail() {
         label: 'ICT Index',
         shortLabel: 'ICT',
         positions: [1, 2, 3, 4],
+        group: 'bonus',
         render: (gw) => <span>{formatValue(gw.ict_index)}</span>,
         aggregate: (h) => sumFloatField(h, 'ict_index'),
       },
@@ -471,6 +509,7 @@ export default function PlayerDetail() {
         label: 'Pen Saved',
         shortLabel: 'PS',
         positions: [1],
+        group: 'discipline',
         render: (gw) => <span>{gw.penalties_saved || 0}</span>,
         aggregate: (h) => sumField(h, 'penalties_saved'),
       },
@@ -479,6 +518,7 @@ export default function PlayerDetail() {
         label: 'Pen Missed',
         shortLabel: 'PM',
         positions: [1, 2, 3, 4],
+        group: 'discipline',
         render: (gw) => <span>{gw.penalties_missed || 0}</span>,
         aggregate: (h) => sumField(h, 'penalties_missed'),
       },
@@ -487,6 +527,7 @@ export default function PlayerDetail() {
         label: 'Yellow Cards',
         shortLabel: 'YC',
         positions: [1, 2, 3, 4],
+        group: 'discipline',
         render: (gw) => <span className="text-yellow-600">{gw.yellow_cards}</span>,
         aggregate: (h) => sumField(h, 'yellow_cards'),
       },
@@ -495,6 +536,7 @@ export default function PlayerDetail() {
         label: 'Red Cards',
         shortLabel: 'RC',
         positions: [1, 2, 3, 4],
+        group: 'discipline',
         render: (gw) => <span className="text-red-600">{gw.red_cards}</span>,
         aggregate: (h) => sumField(h, 'red_cards'),
       },
@@ -503,6 +545,7 @@ export default function PlayerDetail() {
         label: 'Own Goals',
         shortLabel: 'OG',
         positions: [1, 2, 3, 4],
+        group: 'discipline',
         render: (gw) => <span className="text-red-600">{gw.own_goals || 0}</span>,
         aggregate: (h) => sumField(h, 'own_goals'),
       },
@@ -516,19 +559,67 @@ export default function PlayerDetail() {
   // in a compact grid, so every column added above shows up on mobile too.
   const renderGameweekCard = (history: GameweekData[], loading: boolean) => {
     const gameweeksPlayed = history.filter(gw => gw.minutes > 0).length;
-    const mobileColumns = columns.filter(col => col.key !== 'opponent' && col.key !== 'score' && col.key !== 'date');
+    const mobileColumns = columns.filter(col => col.key !== 'opponent' && col.key !== 'score' && col.key !== 'date' && col.key !== 'pts');
+    const mobileGroups = GROUP_ORDER.map(group => ({
+      group,
+      cols: mobileColumns.filter(col => col.group === group),
+    })).filter(g => g.cols.length > 0);
+
+    // A grid of stat tiles for one group, reused for both the Totals row and each gameweek row.
+    const renderStatGrid = (cols: ColumnDef[], getCell: (col: ColumnDef) => ReactNode, labelClass: string, valueClass: string) => (
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 text-sm">
+        {cols.map(col => {
+          const cell = getCell(col);
+          if (cell === '' || cell === null) return null;
+          return (
+            <div key={col.key} className="text-center min-w-0">
+              <div className={`text-[11px] truncate ${labelClass}`}>{col.shortLabel || col.label}</div>
+              <div className={`font-medium truncate ${valueClass}`}>{cell}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    const renderGroupedStats = (cols: { group: StatGroup; cols: ColumnDef[] }[], getCell: (col: ColumnDef) => ReactNode, labelClass: string, valueClass: string, groupLabelClass: string) => (
+      <div className="space-y-3">
+        {cols.map(({ group, cols: groupCols }, i) => (
+          (group === 'performance' || showAdvancedGW) && (
+            <div key={group}>
+              {i > 0 && (
+                <div className={`text-[10px] font-semibold uppercase tracking-wide mb-1.5 ${groupLabelClass}`}>
+                  {GROUP_LABELS[group]}
+                </div>
+              )}
+              {renderStatGrid(groupCols, getCell, labelClass, valueClass)}
+            </div>
+          )
+        ))}
+      </div>
+    );
 
     return (
       <Card className="border-0 bg-white/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              Gameweek Performance
-            </h3>
-            <p className="text-xs text-gray-600 mt-1">
-              {history.length} gameweeks • {gameweeksPlayed} appearances • Latest first
-            </p>
+          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                Gameweek Performance
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">
+                {history.length} gameweeks • {gameweeksPlayed} appearances • Latest first
+              </p>
+            </div>
+            {isMobile && (
+              <button
+                onClick={() => setShowAdvancedGW(v => !v)}
+                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
+              >
+                {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {showAdvancedGW ? 'Fewer stats' : 'More stats'}
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -546,25 +637,14 @@ export default function PlayerDetail() {
                 </div>
               ) : (
                 <>
-                <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
+                <div className="p-3 space-y-3 bg-purple-50 border-b-2 border-purple-200">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-purple-800">Total</span>
                     <div className="text-lg font-bold text-purple-800">
                       {columns.find(c => c.key === 'pts')?.aggregate?.(history)} pts
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    {mobileColumns.filter(col => col.aggregate && col.key !== 'pts').map(col => {
-                      const value = col.aggregate!(history);
-                      if (value === '') return null;
-                      return (
-                        <div key={col.key} className="text-center">
-                          <div className="text-xs text-purple-600">{col.shortLabel || col.label}</div>
-                          <div className="font-bold text-purple-800">{value}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {renderGroupedStats(mobileGroups, (col) => col.aggregate ? col.aggregate(history) : '', 'text-purple-600', 'text-purple-800', 'text-purple-500')}
                 </div>
                 {history.map((gw) => {
                   const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
@@ -572,7 +652,7 @@ export default function PlayerDetail() {
                   const score = gw.team_h_score != null && gw.team_a_score != null
                     ? `${gw.team_h_score}-${gw.team_a_score}` : '';
                   return (
-                    <div key={gw.round} className="p-3 space-y-2">
+                    <div key={gw.round} className="p-3 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900">GW{gw.round}</span>
@@ -583,14 +663,7 @@ export default function PlayerDetail() {
                           {gw.total_points} pts
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        {mobileColumns.filter(col => col.key !== 'pts').map(col => (
-                          <div key={col.key} className="text-center">
-                            <div className="text-xs text-gray-500">{col.shortLabel || col.label}</div>
-                            <div className="font-medium">{col.render(gw)}</div>
-                          </div>
-                        ))}
-                      </div>
+                      {renderGroupedStats(mobileGroups, (col) => col.render(gw), 'text-gray-500', 'text-gray-900', 'text-gray-400')}
                     </div>
                   );
                 })}
@@ -678,17 +751,24 @@ export default function PlayerDetail() {
         <Card className="border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <div className="flex items-center gap-3 min-w-0">
+                <JerseyIcon team={teamName} position={getPositionName(elementType)} className="h-14 w-14 sm:h-16 sm:w-16 object-contain shrink-0" />
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
                     {player.first_name} {player.second_name}
                   </h1>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={`text-xs font-medium ${getPositionColor(elementType)}`}>
-                      {getPositionName(elementType)}
+                  <div className="text-sm text-gray-500 mt-0.5">
+                    {teamName} · {getPositionName(elementType)}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <Badge variant="outline" className="text-xs font-medium">
+                      £{((player.now_cost || 0) / 10).toFixed(1)}m
                     </Badge>
-                    <Badge variant="outline" className="text-xs">{teamName}</Badge>
-                    <Badge variant="outline" className="text-xs">£{((player.now_cost || 0) / 10).toFixed(1)}m</Badge>
+                    {player.selected_by_percent && (
+                      <Badge variant="outline" className="text-xs font-medium">
+                        {player.selected_by_percent}% owned
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -706,13 +786,70 @@ export default function PlayerDetail() {
 
       <Card className="border-0 bg-white/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              Season History
-            </h3>
-            <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
+          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                Season History
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
+            </div>
+            {isMobile && seasonHistory.length > 0 && (
+              <button
+                onClick={() => setShowAdvancedSeason(v => !v)}
+                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
+              >
+                {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
+              </button>
+            )}
           </div>
+
+          {isMobile ? (
+            <div className="divide-y divide-gray-100">
+              {seasonHistory.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">
+                  No season history available for this player
+                </div>
+              ) : (
+                seasonHistory.map((season) => {
+                  const seasonGroups = GROUP_ORDER.map(group => ({
+                    group,
+                    cols: SEASON_COLUMNS.filter(col => col.group === group && col.key !== 'pts'),
+                  })).filter(g => g.cols.length > 0);
+                  return (
+                    <div key={season.season_name} className="p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-900">{season.season_name}</span>
+                        <div className="text-lg font-bold text-purple-800">{season.total_points} pts</div>
+                      </div>
+                      <div className="space-y-3">
+                        {seasonGroups.map(({ group, cols }, i) => (
+                          (group === 'performance' || showAdvancedSeason) && (
+                            <div key={group}>
+                              {i > 0 && (
+                                <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5 text-gray-400">
+                                  {GROUP_LABELS[group]}
+                                </div>
+                              )}
+                              <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 text-sm">
+                                {cols.map(col => (
+                                  <div key={col.key} className="text-center min-w-0">
+                                    <div className="text-[11px] truncate text-gray-500">{col.label}</div>
+                                    <div className="font-medium truncate text-gray-900">{col.render(season)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b">
@@ -752,6 +889,7 @@ export default function PlayerDetail() {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 

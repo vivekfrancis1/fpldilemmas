@@ -73,7 +73,7 @@ const navSections: NavSection[] = [
       { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield },
       { path: "/player-saves", label: "Saves", icon: Shield },
       { path: "/player-bonus-points", label: "Bonus Points", icon: Star, adminOnly: true },
-      { path: "/player-minutes", label: "Minutes", icon: Clock },
+      { path: "/player-minutes", label: "Minutes", icon: Clock, adminOnly: true },
     ],
   },
   {
