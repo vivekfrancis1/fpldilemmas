@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { useQuery } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PlayerNameCell } from "@/components/enhanced-table";
 
 interface ColumnDefinition {
   id: string;
@@ -1249,29 +1250,12 @@ export default function PlayerStatsTable({
               return (
                 <tr key={player.id} className="hover:bg-gray-50" data-testid={`row-player-${player.id}`}>
                   <td className="px-4 py-4 sticky left-0 bg-white hover:bg-gray-50 border-r min-w-[140px]">
-                    <div className="flex items-center">
-                      <div>
-                        <div 
-                          className="text-sm font-medium text-gray-900 hover:text-purple-700 cursor-pointer hover:underline"
-                          onClick={() => navigate(`/player/${detailPlayerId}?from=${encodeURIComponent(window.location.pathname)}`)}
-                        >
-                          {player.web_name}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge className={`text-xs px-1 py-0 h-4 ${
-                            position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                            position === 'DEF' ? 'bg-green-100 text-green-800' :
-                            position === 'MID' ? 'bg-blue-100 text-blue-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {position}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-gray-600">
-                            {teamName}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
+                    <PlayerNameCell
+                      name={player.web_name}
+                      position={position}
+                      team={teamName}
+                      playerId={detailPlayerId}
+                    />
                   </td>
                   <td className="hidden md:table-cell px-1 py-2 text-center">
                     <Button
