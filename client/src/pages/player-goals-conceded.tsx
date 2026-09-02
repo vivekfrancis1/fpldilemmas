@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/protected-route";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface BootstrapData {
   elements: any[];
@@ -35,7 +36,7 @@ export default function PlayerGoalsConceded() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortBy, setSortBy] = useState<string>("totalGoalsConceded");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
   const [includeTBC, setIncludeTBC] = useState(true);
   const [selectedStartGW, setSelectedStartGW] = useState<number | null>(null);
   const [selectedEndGW, setSelectedEndGW] = useState<number | null>(null);
@@ -272,13 +273,47 @@ export default function PlayerGoalsConceded() {
       )}
 
       <div className="fpl-section-spacing">
+        {/* Gameweek range — always visible, not buried behind the collapsible */}
+        <div className="fpl-card mb-3">
+          <div className="p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] sm:text-xs font-medium text-gray-600">From</label>
+                <Select value={String(effectiveStartGW)} onValueChange={(v) => { setSelectedStartGW(Number(v)); if (selectedEndGW !== null && Number(v) > selectedEndGW) setSelectedEndGW(Number(v)); }}>
+                  <SelectTrigger className="h-8 text-xs w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gameweeks.map(gw => (
+                      <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] sm:text-xs font-medium text-gray-600">To</label>
+                <Select value={String(effectiveEndGW)} onValueChange={(v) => setSelectedEndGW(Number(v))}>
+                  <SelectTrigger className="h-8 text-xs w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gameweeks.filter(gw => gw >= effectiveStartGW).map(gw => (
+                      <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
           <CollapsibleTrigger asChild>
             <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-indigo-600" />
-                <h2 className="fpl-card-title">Filters & Controls</h2>
+                <h2 className="fpl-card-title">Filters</h2>
               </div>
               <div className="flex items-center gap-2">
                 {isFiltersOpen ? (
@@ -354,32 +389,6 @@ export default function PlayerGoalsConceded() {
 
                   <TabsContent value="gws" className="mt-0">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">From</label>
-                        <Select value={String(effectiveStartGW)} onValueChange={(v) => { setSelectedStartGW(Number(v)); if (selectedEndGW !== null && Number(v) > selectedEndGW) setSelectedEndGW(Number(v)); }}>
-                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gameweeks.map(gw => (
-                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[10px] sm:text-xs font-medium text-gray-600">To</label>
-                        <Select value={String(effectiveEndGW)} onValueChange={(v) => setSelectedEndGW(Number(v))}>
-                          <SelectTrigger className="h-6 text-[10px] sm:text-xs w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gameweeks.filter(gw => gw >= effectiveStartGW).map(gw => (
-                              <SelectItem key={gw} value={String(gw)}>{gw === 39 ? 'GW39 TBC' : `GW${gw}`}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
                       <button
                         onClick={() => setIncludeTBC(!includeTBC)}
                         className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${includeTBC ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>

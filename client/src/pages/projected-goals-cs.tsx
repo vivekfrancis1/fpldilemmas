@@ -8,6 +8,7 @@ import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -129,7 +130,7 @@ export default function ProjectedGoalsCS() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
 
   // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
   const { data: tbcFixtures } = useQuery<any[]>({
@@ -646,6 +647,48 @@ export default function ProjectedGoalsCS() {
 
       <div className="fpl-section-spacing">
 
+          {/* Gameweek range — always visible, not buried behind the collapsible */}
+          <Card className="mb-3 shadow-sm border-0">
+            <CardContent className="pt-3 pb-3">
+              <div className="flex flex-wrap gap-3 items-center">
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <label className="text-xs font-semibold text-gray-700">From:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <label className="text-xs font-semibold text-gray-700">To:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Controls - Compact */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card className="mb-3 shadow-sm border-0">
@@ -654,7 +697,7 @@ export default function ProjectedGoalsCS() {
                   <CardTitle className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
-                      <span>Filters & Options</span>
+                      <span>Filters</span>
                     </div>
                     {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </CardTitle>
@@ -662,43 +705,6 @@ export default function ProjectedGoalsCS() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-2">
-                  <div className="flex flex-wrap gap-3 items-center">
-
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <label className="text-xs font-semibold text-gray-700">From:</label>
-                      <Select value={startGameweek} onValueChange={setStartGameweek}>
-                        <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map(gameweek => (
-                            <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <label className="text-xs font-semibold text-gray-700">To:</label>
-                      <Select value={endGameweek} onValueChange={setEndGameweek}>
-                        <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map(gameweek => (
-                            <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   {/* Fixture mode toggle — only relevant in future mode when TBC exists */}
                   {viewMode === 'future' && hasTBCFixture && (
                     <div className="mt-2 flex items-center gap-2">

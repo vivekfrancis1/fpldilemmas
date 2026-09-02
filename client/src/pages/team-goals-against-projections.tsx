@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface FixtureDetail {
   opponent: string;
@@ -140,7 +141,7 @@ export default function TeamGoalsAgainstProjections() {
   const [showOpponent, setShowOpponent] = useState<boolean>(false);
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
 
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }
@@ -620,6 +621,46 @@ export default function TeamGoalsAgainstProjections() {
 
       <div className="fpl-section-spacing">
 
+          {/* Gameweek range — always visible, not buried behind the collapsible */}
+          <Card className="mb-3">
+            <CardContent className="py-4">
+              <div className="flex flex-wrap gap-4 items-end">
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-600">Start GW:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem key={gw} value={gw.toString()}>
+                          {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-600">End GW:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem key={gw} value={gw.toString()}>
+                          {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card className="mb-6">
@@ -628,7 +669,7 @@ export default function TeamGoalsAgainstProjections() {
                   <CardTitle className="flex items-center justify-between text-base">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
-                      <span>Filters & Options</span>
+                      <span>Filters</span>
                     </div>
                     {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </CardTitle>
@@ -636,41 +677,6 @@ export default function TeamGoalsAgainstProjections() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
-                  <div className="flex flex-wrap gap-4 items-end">
-
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-600">Start GW:</label>
-                      <Select value={startGameweek} onValueChange={setStartGameweek}>
-                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map((gw) => (
-                            <SelectItem key={gw} value={gw.toString()}>
-                              {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-600">End GW:</label>
-                      <Select value={endGameweek} onValueChange={setEndGameweek}>
-                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map((gw) => (
-                            <SelectItem key={gw} value={gw.toString()}>
-                              {gw === 39 ? 'GW39 (TBC)' : `GW${gw}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   {viewMode === "past" && (
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
                       <span className="text-xs text-gray-500">Quick:</span>

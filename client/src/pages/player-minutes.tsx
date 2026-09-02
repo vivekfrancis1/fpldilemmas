@@ -12,6 +12,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import JerseyIcon from "@/components/jersey-icon";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface BootstrapData {
   events: any[];
@@ -49,7 +50,7 @@ export default function PlayerMinutes() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -400,29 +401,10 @@ export default function PlayerMinutes() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-blue-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-          <CardContent className="p-6 pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+        {/* Gameweek range + search — always visible, not buried behind the collapsible */}
+        <Card className="mb-3">
+          <CardContent className="p-3 sm:p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="">
                 <label className="text-xs font-semibold text-gray-600 mb-1 block">From GW:</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
@@ -465,28 +447,52 @@ export default function PlayerMinutes() {
                 </div>
               </div>
 
-              <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Min Minutes:</label>
-                <Select value={minMinutes} onValueChange={setMinMinutes}>
-                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">0</SelectItem>
-                    <SelectItem value="30">30</SelectItem>
-                    <SelectItem value="60">60</SelectItem>
-                    <SelectItem value="75">75</SelectItem>
-                    <SelectItem value="90">90</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="flex items-end">
                 <div className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 h-8 rounded-md text-xs font-medium border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>{filteredAndSortedData.length} players</span>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Filters */}
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isFiltersOpen ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+          <CardContent className="p-6 pt-0">
+            <div className="max-w-[220px] mb-4">
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Min Minutes:</label>
+              <Select value={minMinutes} onValueChange={setMinMinutes}>
+                <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">0</SelectItem>
+                  <SelectItem value="30">30</SelectItem>
+                  <SelectItem value="60">60</SelectItem>
+                  <SelectItem value="75">75</SelectItem>
+                  <SelectItem value="90">90</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Tabs defaultValue="pos" className="w-full">

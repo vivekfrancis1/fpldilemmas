@@ -20,6 +20,7 @@ import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface FixtureDetail {
   opponent: string;
@@ -87,7 +88,7 @@ export default function PlayerGoalsScoredProjections() {
   const [applyAvailability, setApplyAvailability] = useState(true);
   const [initialized, setInitialized] = useState(false);
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
 
   // Fixture mode for TBC display
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
@@ -872,26 +873,10 @@ export default function PlayerGoalsScoredProjections() {
 
       <div className="fpl-section-spacing">
 
-        {/* Controls */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-4 md:mb-6">
-          <CollapsibleTrigger asChild>
-            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-orange-600" />
-                <h2 className="fpl-card-title">Filters & Controls</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                )}
-              </div>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
+        {/* Gameweek range + search — always visible, not buried behind the collapsible */}
+        <div className="fpl-card mb-3">
           <div className="p-3 sm:p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">From GW</label>
                 <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
@@ -934,7 +919,28 @@ export default function PlayerGoalsScoredProjections() {
                 />
               </div>
             </div>
+          </div>
+        </div>
 
+        {/* Filters */}
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-4 md:mb-6">
+          <CollapsibleTrigger asChild>
+            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-orange-600" />
+                <h2 className="fpl-card-title">Filters</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <div className="p-3 sm:p-4">
             {(viewMode === "past" || viewMode === "pastXg") && (
               <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
                 <span className="text-xs text-gray-500">Quick:</span>

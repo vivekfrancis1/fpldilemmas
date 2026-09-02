@@ -21,6 +21,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import JerseyIcon from "@/components/jersey-icon";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
@@ -1039,7 +1040,7 @@ export default function PlayerTotalPoints() {
   const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
   
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {
@@ -2202,32 +2203,10 @@ export default function PlayerTotalPoints() {
       <div className="fpl-container fpl-content-area fpl-section-spacing">
           {pageHeaderAndTabs}
 
-          {/* Filters and Controls */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
-            <CollapsibleTrigger asChild>
-              <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-indigo-600" />
-                    <h2 className="fpl-card-title">Filters & Controls</h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 md:hidden">
-                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                    </span>
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
+          {/* Gameweek range — always visible, not buried behind the collapsible */}
+          <div className="fpl-card mb-3">
             <div className="p-3 sm:p-4">
-              {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs font-medium text-gray-600 mb-1 block">From GW</Label>
                   <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
@@ -2254,6 +2233,36 @@ export default function PlayerTotalPoints() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+            <CollapsibleTrigger asChild>
+              <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-indigo-600" />
+                    <h2 className="fpl-card-title">Filters</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 md:hidden">
+                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                    </span>
+                    {isFiltersOpen ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+            <div className="p-3 sm:p-4">
+              {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 <div>
                   <Label className="text-xs font-medium text-gray-600 mb-1 block">Avail.</Label>
                   <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>

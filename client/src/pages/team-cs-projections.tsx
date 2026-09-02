@@ -6,6 +6,7 @@ import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,7 @@ export default function TeamCSProjections() {
   };
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
 
   const [tbcAssignments, setTbcAssignments] = useState<Record<number, number>>(() => {
     try { const s = localStorage.getItem('fpl-tbc-assignments'); return s ? JSON.parse(s) : {}; } catch { return {}; }
@@ -414,6 +415,46 @@ export default function TeamCSProjections() {
 
       <div className="fpl-section-spacing">
 
+          {/* Gameweek range — always visible, not buried behind the collapsible */}
+          <Card className="mb-3">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-wrap gap-4 items-end">
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-600">Start GW:</label>
+                  <Select value={startGameweek} onValueChange={setStartGameweek}>
+                    <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-gray-600">End GW:</label>
+                  <Select value={endGameweek} onValueChange={setEndGameweek}>
+                    <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gameweek => (
+                        <SelectItem key={gameweek} value={gameweek.toString()}>
+                          {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card className="mb-6">
@@ -422,7 +463,7 @@ export default function TeamCSProjections() {
                   <CardTitle className="flex items-center justify-between text-base">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4" />
-                      <span>Filters & Options</span>
+                      <span>Filters</span>
                     </div>
                     {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </CardTitle>
@@ -430,41 +471,6 @@ export default function TeamCSProjections() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-6">
-                  <div className="flex flex-wrap gap-4 items-end">
-
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-600">Start GW:</label>
-                      <Select value={startGameweek} onValueChange={setStartGameweek}>
-                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map(gameweek => (
-                            <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-600">End GW:</label>
-                      <Select value={endGameweek} onValueChange={setEndGameweek}>
-                        <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableGameweeks.map(gameweek => (
-                            <SelectItem key={gameweek} value={gameweek.toString()}>
-                              {gameweek === 39 ? 'GW39 (TBC)' : `GW${gameweek}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
                   <div className="w-full mt-3 space-y-3">
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-1 mb-1">

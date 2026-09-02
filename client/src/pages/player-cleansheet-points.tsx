@@ -14,6 +14,7 @@ import { computeNextRange } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface FixtureDetail {
   opponent: string;
@@ -47,7 +48,7 @@ export default function PlayerCleanSheetPoints() {
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // collapsed by default (multiple filter categories: gameweeks/position/team/etc)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
   // Fixture mode toggle
   const [fixtureMode, setFixtureMode] = useState<'base' | 'custom' | 'expert'>('base');
   const [showOpponent, setShowOpponent] = useState(false);
@@ -362,13 +363,75 @@ export default function PlayerCleanSheetPoints() {
 
       <div className="fpl-section-spacing">
 
+        {/* Gameweek range + search — always visible, not buried behind the collapsible */}
+        <div className="fpl-card mb-3">
+          <div className="p-3 sm:p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {/* Gameweek Range */}
+              <div className="">
+                <Label htmlFor="start-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">Start GW</Label>
+                <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.filter(gw => gw <= 38).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="">
+                <Label htmlFor="end-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">End GW</Label>
+                <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGameweeks.filter(gw => gw <= 38).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                    {tbcTeamInfoMap.size > 0 && fixtureMode === 'base' && (
+                      <SelectItem value="39" className="text-amber-700 font-medium">GW39 (TBC)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search */}
+              <div className="">
+                <Label htmlFor="search" className="text-xs font-medium text-gray-600 mb-1 block">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="search"
+                    placeholder="Player or team..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-xs pl-9"
+                  />
+                </div>
+              </div>
+
+              {/* Stats Display */}
+              <div className="">
+                <Label className="text-xs font-medium text-gray-600 mb-1 block">Players</Label>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-lg text-center">
+                  <span className="font-bold">{filteredAndSortedData.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filters and Controls */}
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
           <CollapsibleTrigger asChild>
             <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2">
                 <Filter className="h-5 w-5 text-green-600" />
-                <h2 className="fpl-card-title">Filters & Controls</h2>
+                <h2 className="fpl-card-title">Filters</h2>
               </div>
               <div className="flex items-center gap-2">
                 {isFiltersOpen ? (
@@ -381,63 +444,6 @@ export default function PlayerCleanSheetPoints() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-3 sm:p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {/* Gameweek Range */}
-            <div className="">
-              <Label htmlFor="start-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">Start GW</Label>
-              <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.filter(gw => gw <= 38).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="">
-              <Label htmlFor="end-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">End GW</Label>
-              <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.filter(gw => gw <= 38).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                  {tbcTeamInfoMap.size > 0 && fixtureMode === 'base' && (
-                    <SelectItem value="39" className="text-amber-700 font-medium">GW39 (TBC)</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Search */}
-            <div className="">
-              <Label htmlFor="search" className="text-xs font-medium text-gray-600 mb-1 block">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  id="search"
-                  placeholder="Player or team..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 text-xs pl-9"
-                />
-              </div>
-            </div>
-
-            {/* Stats Display */}
-            <div className="">
-              <Label className="text-xs font-medium text-gray-600 mb-1 block">Players</Label>
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-lg text-center">
-                <span className="font-bold">{filteredAndSortedData.length}</span>
-              </div>
-            </div>
-          </div>
-
           <Tabs defaultValue="pos" className="w-full mt-2">
             <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
               <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">

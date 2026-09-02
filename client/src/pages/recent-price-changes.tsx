@@ -634,7 +634,6 @@ export default function RecentPriceChanges() {
                 </CardTitle>
                 <CardDescription>
                   Real-time progress toward each player's next price change, straight from FPL's own official data.
-                  {" "}Status: predicted progress past <strong>100%</strong> is "Very likely", <strong>95–100%</strong> is "May", anything below is "Unlikely to change".
                 </CardDescription>
               </CardHeader>
               <CardContent>
