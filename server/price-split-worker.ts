@@ -4,7 +4,7 @@ import { storage } from "./storage";
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
 
 /**
- * Daily price split worker that runs at 8:30 AM IST
+ * Daily price split worker that runs at 5:30 AM IST
  * Checks for any 0.2 price changes and splits them into two 0.1 changes
  */
 export class PriceSplitWorker {
@@ -16,11 +16,11 @@ export class PriceSplitWorker {
   }
 
   private startWorker() {
-    // Calculate time until next 8:30 AM IST
-    const nextRun = this.getNext830AMIST();
+    // Calculate time until next 5:30 AM IST
+    const nextRun = this.getNext530AMIST();
     const timeUntilRun = nextRun.getTime() - Date.now();
-    
-    console.log(`Next price split check scheduled for: ${nextRun.toISOString()} (IST 8:30 AM)`);
+
+    console.log(`Next price split check scheduled for: ${nextRun.toISOString()} (IST 5:30 AM)`);
     
     // Set initial timeout
     setTimeout(() => {
@@ -33,19 +33,19 @@ export class PriceSplitWorker {
     }, timeUntilRun);
   }
 
-  private getNext830AMIST(): Date {
+  private getNext530AMIST(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
-    
-    // Create target time: 8:30 AM IST today
+
+    // Create target time: 5:30 AM IST today
     const target = new Date(istNow);
-    target.setHours(8, 30, 0, 0);
-    
-    // If we've already passed 8:30 AM IST today, schedule for tomorrow
+    target.setHours(5, 30, 0, 0);
+
+    // If we've already passed 5:30 AM IST today, schedule for tomorrow
     if (istNow.getTime() >= target.getTime()) {
       target.setDate(target.getDate() + 1);
     }
-    
+
     // Convert back to UTC
     return new Date(target.getTime() - IST_OFFSET);
   }
@@ -175,7 +175,7 @@ export class PriceSplitWorker {
    * Get worker status
    */
   getStatus(): { isRunning: boolean; nextRun: string } {
-    const nextRun = this.getNext830AMIST();
+    const nextRun = this.getNext530AMIST();
     return {
       isRunning: this.isRunning,
       nextRun: nextRun.toISOString()

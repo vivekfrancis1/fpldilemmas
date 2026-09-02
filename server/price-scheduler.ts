@@ -4,7 +4,7 @@ import { storage } from "./storage";
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
 
 /**
- * Daily price data fetcher that runs at 7:30 AM IST
+ * Daily price data fetcher that runs at 5:00 AM IST
  * Fetches all player data and stores prices, ownership, and transfer data
  */
 export class PriceScheduler {
@@ -37,10 +37,10 @@ export class PriceScheduler {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
     
-    // Schedule times: 7:05 AM and 7:05 PM IST
+    // Schedule times: 5:00 AM and 5:00 PM IST
     const scheduleTimes = [
-      { hour: 7, minute: 5 },   // 7:05 AM
-      { hour: 19, minute: 5 }   // 7:05 PM
+      { hour: 5, minute: 0 },   // 5:00 AM
+      { hour: 17, minute: 0 }   // 5:00 PM
     ];
     
     // Find next scheduled time today
@@ -63,19 +63,19 @@ export class PriceScheduler {
     return new Date(tomorrow.getTime() - IST_OFFSET);
   }
 
-  private getNext705AMIST(): Date {
+  private getNext5AMIST(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
-    
-    // Create target time: 7:05 AM IST today
+
+    // Create target time: 5:00 AM IST today
     const target = new Date(istNow);
-    target.setHours(7, 5, 0, 0);
-    
-    // If we've already passed 7:05 AM IST today, schedule for tomorrow
+    target.setHours(5, 0, 0, 0);
+
+    // If we've already passed 5:00 AM IST today, schedule for tomorrow
     if (istNow.getTime() >= target.getTime()) {
       target.setDate(target.getDate() + 1);
     }
-    
+
     // Convert back to UTC
     return new Date(target.getTime() - IST_OFFSET);
   }
@@ -213,7 +213,7 @@ export class PriceScheduler {
    * Get scheduler status
    */
   getStatus(): { isRunning: boolean; nextRun: string } {
-    const nextRun = this.getNext705AMIST();
+    const nextRun = this.getNext5AMIST();
     return {
       isRunning: this.isRunning,
       nextRun: nextRun.toISOString()
