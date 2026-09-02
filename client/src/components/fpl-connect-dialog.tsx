@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link2, Unlink, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Bookmark } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
+import { InstructionSteps, InstructionStep } from "@/components/instruction-steps";
 
 // Captures the "x-api-authorization" header FPL's own frontend sends on its next login-scoped
 // request (fetch or XHR — we don't know which API their SPA uses, so we patch both) and redirects
@@ -247,33 +248,39 @@ export function FplConnectDialog() {
           </div>
         ) : (
           <div className="space-y-4">
-            <Alert>
-              <Bookmark className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                <strong>One-click setup:</strong>
-                <ol className="list-decimal list-inside mt-2 space-y-2">
-                  <li>
-                    Drag this button to your browser's bookmarks bar:{" "}
+            <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Bookmark className="h-4 w-4 text-blue-600" />
+                <h3 className="text-sm font-semibold">One-click setup</h3>
+              </div>
+              <InstructionSteps>
+                <InstructionStep number={1}>
+                  Drag this button to your browser's bookmarks bar:
+                  <div className="mt-2">
                     <a
                       href={buildBookmarkletHref()}
                       onClick={(e) => e.preventDefault()}
-                      className="inline-block align-middle bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-move select-none"
+                      className="inline-flex items-center bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-move select-none"
                       data-testid="link-fpl-bookmarklet"
                     >
-                      <Bookmark className="h-3 w-3 inline mr-1" />Connect to FPL Dilemmas
+                      <Bookmark className="h-3 w-3 mr-1" />Connect to FPL Dilemmas
                     </a>
-                  </li>
-                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong></li>
-                  <li>Click the bookmark, then click <strong>OK</strong> on the popup and <strong>refresh the page</strong></li>
-                </ol>
-                <p className="mt-2 text-xs font-semibold text-green-600">
-                  ✅ You'll be redirected back here, fully connected — no Manager ID or token to copy.
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Bookmarks bar not visible? Most browsers show it with Ctrl/⌘ + Shift + B.
-                </p>
-              </AlertDescription>
-            </Alert>
+                  </div>
+                </InstructionStep>
+                <InstructionStep number={2}>
+                  Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong>
+                </InstructionStep>
+                <InstructionStep number={3} isLast>
+                  Click the bookmark, then click <strong>OK</strong> on the popup and <strong>refresh the page</strong>
+                </InstructionStep>
+              </InstructionSteps>
+              <p className="mt-3 text-xs font-semibold text-green-600">
+                ✅ You'll be redirected back here, fully connected — no Manager ID or token to copy.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Bookmarks bar not visible? Most browsers show it with Ctrl/⌘ + Shift + B.
+              </p>
+            </div>
 
             <button
               type="button"
@@ -287,31 +294,37 @@ export function FplConnectDialog() {
 
             {showManualSteps && (
               <div className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">
-                    <strong>Manual Setup:</strong>
-                    <ol className="list-decimal list-inside mt-2 space-y-2">
-                      <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a>, <strong>sign in</strong>, and <strong>click on the Points tab</strong></li>
-                      <li><strong>Copy the browser URL</strong> from the address bar → Paste in "Manager ID" field below</li>
-                      <li>
-                        Open Developer Tools and switch to the <strong>Network tab</strong>, then refresh the page:
-                        <ul className="list-disc list-inside mt-1 ml-4 space-y-1 text-xs">
-                          <li><strong>Windows/Linux</strong> (Chrome, Edge, Firefox): press <strong>F12</strong>, then <strong>F5</strong> to refresh</li>
-                          <li><strong>Mac</strong> (Chrome, Edge, Firefox): press <strong>⌘ + Option + I</strong>, then <strong>⌘ + R</strong> to refresh</li>
-                          <li><strong>Mac Safari</strong>: first enable it once via <strong>Safari → Settings → Advanced → "Show Develop menu in menu bar"</strong>, then press <strong>⌘ + Option + I</strong> and <strong>⌘ + R</strong> to refresh</li>
-                        </ul>
-                      </li>
-                      <li>
-                        Type <strong>"me"</strong> in the Network tab's filter box → <strong>right-click</strong> the <code>me</code> request → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below
-                        <span className="block text-xs mt-1 text-muted-foreground">Most other requests (images, scripts, analytics) won't carry your login token, so filtering to "me" avoids picking the wrong one. Older Safari versions don't have "Copy as cURL" — if you don't see it, click the request, open its <strong>Headers</strong> pane, and copy the value next to <strong>Authorization</strong> instead.</span>
-                      </li>
-                    </ol>
-                    <p className="mt-2 text-xs font-semibold text-green-600">
-                      ✅ That's it! We'll extract everything automatically.
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                <div className="rounded-lg border bg-muted/40 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <h3 className="text-sm font-semibold">Manual setup</h3>
+                  </div>
+                  <InstructionSteps>
+                    <InstructionStep number={1}>
+                      Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a>, <strong>sign in</strong>, and <strong>click on the Points tab</strong>
+                    </InstructionStep>
+                    <InstructionStep number={2}>
+                      <strong>Copy the browser URL</strong> from the address bar → paste it in the "Manager ID" field below
+                    </InstructionStep>
+                    <InstructionStep number={3}>
+                      Open Developer Tools and switch to the <strong>Network tab</strong>, then refresh the page:
+                      <div className="mt-2 rounded-md border bg-background p-2.5 space-y-1.5 text-[11px] sm:text-xs text-muted-foreground">
+                        <div><strong className="text-foreground">Windows/Linux</strong> (Chrome, Edge, Firefox): press <strong>F12</strong>, then <strong>F5</strong></div>
+                        <div><strong className="text-foreground">Mac</strong> (Chrome, Edge, Firefox): press <strong>⌘ + Option + I</strong>, then <strong>⌘ + R</strong></div>
+                        <div><strong className="text-foreground">Mac Safari</strong>: enable once via <strong>Safari → Settings → Advanced → "Show Develop menu in menu bar"</strong>, then <strong>⌘ + Option + I</strong> and <strong>⌘ + R</strong></div>
+                      </div>
+                    </InstructionStep>
+                    <InstructionStep number={4} isLast>
+                      Type <strong>"me"</strong> in the Network tab's filter box → <strong>right-click</strong> the <code className="px-1 py-0.5 rounded bg-muted text-[11px]">me</code> request → <strong>"Copy as cURL"</strong> → paste it in the "cURL" field below
+                      <p className="mt-1.5 text-[11px] sm:text-xs text-muted-foreground">
+                        Most other requests (images, scripts, analytics) won't carry your login token, so filtering to "me" avoids picking the wrong one. Older Safari versions don't have "Copy as cURL" — if you don't see it, click the request, open its <strong>Headers</strong> pane, and copy the value next to <strong>Authorization</strong> instead.
+                      </p>
+                    </InstructionStep>
+                  </InstructionSteps>
+                  <p className="mt-3 text-xs font-semibold text-green-600">
+                    ✅ That's it! We'll extract everything automatically.
+                  </p>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="fpl-manager-id">Your FPL Manager ID or Browser URL</Label>
