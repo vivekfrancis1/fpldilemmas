@@ -367,6 +367,17 @@ export default function RecentPriceChanges() {
     }
   };
 
+  // Compact label for narrow mobile widths — full text stays on sm+ (see the "Status" column).
+  const statusShortLabel = (status: string): string => {
+    switch (status) {
+      case "Very likely to rise today": return "Rising";
+      case "May rise today": return "May rise";
+      case "Very likely to drop today": return "Falling";
+      case "May drop today": return "May drop";
+      default: return "Stable"; // Unlikely to change today
+    }
+  };
+
   // Mirrors the same >100%/>=95% thresholds the Status column uses — a badge should only stand
   // out (light or dark green/red) when a player is actually in "Likely"/"Very likely" territory,
   // not for any nonzero progress (e.g. 87%/88% is real movement but still "Unlikely to change").
@@ -603,45 +614,45 @@ export default function RecentPriceChanges() {
                   </div>
                 ) : filteredAndSortedPredictions.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs sm:text-sm">
+                    <table className="w-full text-[11px] sm:text-sm">
                       <thead>
                         <tr className="border-b bg-muted/20">
-                          <th className="text-left p-2 sm:p-3 font-medium">Player</th>
+                          <th className="text-left p-1 sm:p-3 font-medium">Player</th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('hourly_rate')}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-0.5">
                               Per Hr
                               {predictionSortField === 'hourly_rate' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
                               )}
                             </div>
                           </th>
                           <th
-                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('progress')}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-0.5">
                               Progress
                               {predictionSortField === 'progress' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
                               )}
                             </div>
                           </th>
                           <th
-                            className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('predicted_progress')}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-0.5">
                               Predicted
                               {predictionSortField === 'predicted_progress' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
                               )}
                             </div>
                           </th>
-                          <th className="hidden sm:table-cell text-left p-3 font-medium">Status</th>
+                          <th className="text-left p-1 sm:p-3 font-medium">Status</th>
                           <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             title="Time to reach the ±100% threshold at the current per-hour rate, shown in your device's local time zone"
@@ -677,10 +688,10 @@ export default function RecentPriceChanges() {
                             className="border-b hover:bg-muted/50 transition-colors"
                             data-testid={`prediction-${prediction.player_id}`}
                           >
-                            <td className="p-2 sm:p-3">
+                            <td className="p-1 sm:p-3">
                               <div>
                                 <p className="font-medium leading-tight">{prediction.player_name}</p>
-                                <p className="text-[0.9em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
+                                <p className="text-[0.85em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
                               </div>
                             </td>
                             <td className="hidden md:table-cell p-3">
@@ -695,22 +706,23 @@ export default function RecentPriceChanges() {
                                 <span className="text-muted-foreground capitalize">{prediction.ownership_trend}</span>
                               </div>
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right text-muted-foreground">
+                            <td className="p-1 sm:p-3 text-right text-muted-foreground whitespace-nowrap">
                               {prediction.hourly_rate > 0 ? "+" : ""}{prediction.hourly_rate.toFixed(2)}%
                             </td>
-                            <td className="p-2 sm:p-3 text-right">
-                              <Badge variant="outline" className={`text-xs sm:text-sm ${progressBadgeClass(prediction.progress)}`}>
+                            <td className="p-1 sm:p-3 text-right">
+                              <Badge variant="outline" className={`px-1 sm:px-2.5 text-[11px] sm:text-sm ${progressBadgeClass(prediction.progress)}`}>
                                 {prediction.progress > 0 ? "+" : ""}{prediction.progress.toFixed(1)}%
                               </Badge>
                             </td>
-                            <td className="p-2 sm:p-3 text-right">
-                              <Badge variant="outline" className={`text-xs sm:text-sm ${progressBadgeClass(prediction.predicted_progress)}`}>
+                            <td className="p-1 sm:p-3 text-right">
+                              <Badge variant="outline" className={`px-1 sm:px-2.5 text-[11px] sm:text-sm ${progressBadgeClass(prediction.predicted_progress)}`}>
                                 {prediction.predicted_progress > 0 ? "+" : ""}{prediction.predicted_progress.toFixed(1)}%
                               </Badge>
                             </td>
-                            <td className="hidden sm:table-cell p-3">
-                              <Badge variant="outline" className={`whitespace-nowrap text-xs sm:text-sm ${statusBadgeClass(prediction.status)}`}>
-                                {prediction.status}
+                            <td className="p-1 sm:p-3">
+                              <Badge variant="outline" className={`whitespace-nowrap px-1 sm:px-2.5 text-[11px] sm:text-sm ${statusBadgeClass(prediction.status)}`}>
+                                <span className="sm:hidden">{statusShortLabel(prediction.status)}</span>
+                                <span className="hidden sm:inline">{prediction.status}</span>
                               </Badge>
                             </td>
                             <td className="hidden md:table-cell p-3 text-right text-muted-foreground">
