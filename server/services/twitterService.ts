@@ -64,6 +64,13 @@ export class TwitterService {
   }
 
   private getClient(): TwitterApi {
+    // Single kill switch for all X/Twitter posting — posting via the X API now requires a paid
+    // plan, so every path (scheduled jobs and manual admin-triggered posts alike) is blocked here
+    // rather than relying on each caller/scheduler being individually disabled.
+    if (process.env.TWITTER_POSTING_ENABLED !== 'true') {
+      throw new Error('Twitter/X posting is disabled (set TWITTER_POSTING_ENABLED=true to re-enable)');
+    }
+
     if (this.client) {
       return this.client;
     }
