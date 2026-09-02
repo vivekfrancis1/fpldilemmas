@@ -975,19 +975,24 @@ export default function TransferRecommendations() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full" onValueChange={setSelectedGameweek}>
-                <div className="overflow-x-auto -mx-6 px-6 mb-4">
-                  <TabsList className="inline-flex w-auto min-w-full h-auto gap-2 bg-transparent">
-                    {Object.keys(adjustedRecommendations.gameweeks).map((gw) => (
-                      <TabsTrigger 
-                        key={gw} 
-                        value={gw} 
-                        className="text-sm py-2.5 px-4 min-w-[80px] data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900" 
-                        data-testid={`tab-transfer-gw-${gw}`}
-                      >
-                        GW{gw}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
+                <div className="relative mb-4">
+                  <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
+                    <TabsList className="inline-flex w-auto min-w-full h-auto gap-2 bg-transparent">
+                      {Object.keys(adjustedRecommendations.gameweeks).map((gw) => (
+                        <TabsTrigger
+                          key={gw}
+                          value={gw}
+                          className="text-sm py-2.5 px-4 min-w-[80px] data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900"
+                          data-testid={`tab-transfer-gw-${gw}`}
+                        >
+                          GW{gw}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+                  {/* Fade hint that the tab strip scrolls — the hidden native scrollbar left no
+                      visual cue that GW tabs continue off-screen on mobile. */}
+                  <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-950 to-transparent sm:hidden" />
                 </div>
                 {Object.entries(adjustedRecommendations.gameweeks).map(([gw, gwData]: [string, any]) => {
                   const finances = gameweekFinances[gw];
