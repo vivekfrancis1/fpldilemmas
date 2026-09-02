@@ -25,6 +25,7 @@ const BestFreehitTeam = lazy(() => import("./pages/best-freehit-team"));
 const BestWildcardTeam = lazy(() => import("./pages/best-wildcard-team"));
 const MyTeam = lazy(() => import("./pages/my-team"));
 const MyDashboard = lazy(() => import("./pages/my-dashboard"));
+const FplConnectCallback = lazy(() => import("./pages/fpl-connect-callback"));
 const LeagueAnalysisPage = lazy(() => import("./pages/league-analysis"));
 const RecentPriceChanges = lazy(() => import("./pages/recent-price-changes"));
 const TransferTracker = lazy(() => import("./pages/transfer-tracker"));
@@ -97,6 +98,7 @@ function Router() {
       <Switch>
         <Route path="/" component={PlayerStats} />
         <Route path="/my-dashboard" component={MyDashboard} />
+        <Route path="/fpl-connect-callback" component={FplConnectCallback} />
         <Route path="/projected-points" component={ProjectedPoints} />
         <Route path="/team-optimizer" component={TeamOptimizer} />
         <Route path="/transfer-recommendations" component={TransferRecommendations} />
