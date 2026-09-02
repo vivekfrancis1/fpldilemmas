@@ -509,6 +509,32 @@ export default function RecentPriceChanges() {
               </CardContent>
             </Card>
 
+            <Card className="mb-3 shadow-md border-0">
+              <CardContent className="p-3 sm:p-4 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search players or teams..."
+                    value={predictionSearchTerm}
+                    onChange={(e) => setPredictionSearchTerm(e.target.value)}
+                    className="pl-9 h-9 text-xs sm:text-sm"
+                    data-testid="input-search-predictions"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="prediction-min-ownership"
+                    checked={predictionMinOwnershipFilter}
+                    onCheckedChange={(checked) => setPredictionMinOwnershipFilter(checked === true)}
+                    data-testid="checkbox-prediction-min-ownership"
+                  />
+                  <Label htmlFor="prediction-min-ownership" className="text-xs sm:text-sm font-normal cursor-pointer">
+                    Show players with ownership greater than 1%
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
             <Collapsible open={isPredictionFiltersOpen} onOpenChange={setIsPredictionFiltersOpen} className="mb-6">
               <Card className="shadow-md border-0">
                 <CollapsibleTrigger asChild>
@@ -516,7 +542,7 @@ export default function RecentPriceChanges() {
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
                         <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        <CardTitle className="text-sm sm:text-lg">Search &amp; Filters</CardTitle>
+                        <CardTitle className="text-sm sm:text-lg">Filters</CardTitle>
                       </div>
                       {isPredictionFiltersOpen ? (
                         <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
@@ -528,19 +554,7 @@ export default function RecentPriceChanges() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0 text-xs sm:text-sm">
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                      <div className="flex-1">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search players or teams..."
-                            value={predictionSearchTerm}
-                            onChange={(e) => setPredictionSearchTerm(e.target.value)}
-                            className="pl-9 h-9 text-xs sm:text-sm"
-                            data-testid="input-search-predictions"
-                          />
-                        </div>
-                      </div>
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
                       <Select value={predictionTeamFilter} onValueChange={(v) => setPredictionTeamFilter(v as PredictionTeamFilter)}>
                         <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-prediction-team-filter">
                           <SelectValue placeholder="All Players" />
@@ -600,17 +614,6 @@ export default function RecentPriceChanges() {
                           <SelectItem value="Very likely to drop today">Very likely to drop today</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <Checkbox
-                        id="prediction-min-ownership"
-                        checked={predictionMinOwnershipFilter}
-                        onCheckedChange={(checked) => setPredictionMinOwnershipFilter(checked === true)}
-                        data-testid="checkbox-prediction-min-ownership"
-                      />
-                      <Label htmlFor="prediction-min-ownership" className="text-xs sm:text-sm font-normal cursor-pointer">
-                        Show players with ownership greater than 1%
-                      </Label>
                     </div>
                     {predictionTeamFilter === "my-team" && !cachedManagerId && (
                       <p className="text-xs text-muted-foreground mt-3">
@@ -865,7 +868,22 @@ export default function RecentPriceChanges() {
 
 
 
-        {/* Search and Filters */}
+        {/* Search bar — kept outside the collapsible so it's always reachable without a tap */}
+        <Card className="mb-3 shadow-md border-0">
+          <CardContent className="p-3 sm:p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search players or teams..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9 text-xs sm:text-sm"
+                data-testid="input-search-players"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Collapsible open={isRecentFiltersOpen} onOpenChange={setIsRecentFiltersOpen} className="mb-6">
           <Card className="shadow-md border-0">
             <CollapsibleTrigger asChild>
@@ -873,7 +891,7 @@ export default function RecentPriceChanges() {
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                    <CardTitle className="text-sm sm:text-lg">Search &amp; Filters</CardTitle>
+                    <CardTitle className="text-sm sm:text-lg">Filters</CardTitle>
                   </div>
                   {isRecentFiltersOpen ? (
                     <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
@@ -886,19 +904,7 @@ export default function RecentPriceChanges() {
             <CollapsibleContent>
               <CardContent className="pt-0 text-xs sm:text-sm">
                 <div className="flex flex-col gap-3 sm:gap-4">
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search players or teams..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-9 h-9 text-xs sm:text-sm"
-                          data-testid="input-search-players"
-                        />
-                      </div>
-                    </div>
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
                     <Select value={positionFilter} onValueChange={setPositionFilter}>
                       <SelectTrigger className="w-full sm:w-48 h-9 text-xs sm:text-sm" data-testid="select-position-filter">
                         <SelectValue placeholder="All Positions" />
