@@ -4,7 +4,7 @@ import { storage } from "./storage";
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
 
 /**
- * Daily price data fetcher that runs at 5:00 AM IST
+ * Daily price data fetcher that runs at 4:30 AM IST (with a 4:35 AM retry)
  * Fetches all player data and stores prices, ownership, and transfer data
  */
 export class PriceScheduler {
@@ -19,28 +19,42 @@ export class PriceScheduler {
     // Calculate time until next scheduled run (twice daily)
     const nextRun = this.getNextScheduledRun();
     const timeUntilRun = nextRun.getTime() - Date.now();
-    
+
     console.log(`Next price data fetch scheduled for: ${nextRun.toISOString()}`);
-    
+
     // Set initial timeout
     setTimeout(() => {
-      this.fetchAndStorePriceData();
-      
+      this.runWithRetry();
+
       // Then set interval for every 12 hours (twice daily)
       this.interval = setInterval(() => {
-        this.fetchAndStorePriceData();
+        this.runWithRetry();
       }, 12 * 60 * 60 * 1000); // 12 hours
     }, timeUntilRun);
+  }
+
+  /**
+   * Runs the fetch, then retries 5 minutes later in case FPL hadn't applied the day's
+   * price changes yet at the primary run time. Safe to call twice back-to-back:
+   * detectPriceChanges() re-derives oldPrice from the last row already recorded in
+   * price_changes, so once a change has been stored the retry computes a 0 delta for
+   * that player and skips it rather than inserting a duplicate.
+   */
+  private runWithRetry() {
+    this.fetchAndStorePriceData();
+    setTimeout(() => {
+      this.fetchAndStorePriceData();
+    }, 5 * 60 * 1000);
   }
 
   private getNextScheduledRun(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
-    
-    // Schedule times: 5:00 AM and 5:00 PM IST
+
+    // Schedule times: 4:30 AM and 4:30 PM IST
     const scheduleTimes = [
-      { hour: 5, minute: 0 },   // 5:00 AM
-      { hour: 17, minute: 0 }   // 5:00 PM
+      { hour: 4, minute: 30 },   // 4:30 AM
+      { hour: 16, minute: 30 }   // 4:30 PM
     ];
     
     // Find next scheduled time today
@@ -63,15 +77,15 @@ export class PriceScheduler {
     return new Date(tomorrow.getTime() - IST_OFFSET);
   }
 
-  private getNext5AMIST(): Date {
+  private getNext430AMIST(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
 
-    // Create target time: 5:00 AM IST today
+    // Create target time: 4:30 AM IST today
     const target = new Date(istNow);
-    target.setHours(5, 0, 0, 0);
+    target.setHours(4, 30, 0, 0);
 
-    // If we've already passed 5:00 AM IST today, schedule for tomorrow
+    // If we've already passed 4:30 AM IST today, schedule for tomorrow
     if (istNow.getTime() >= target.getTime()) {
       target.setDate(target.getDate() + 1);
     }
@@ -213,7 +227,7 @@ export class PriceScheduler {
    * Get scheduler status
    */
   getStatus(): { isRunning: boolean; nextRun: string } {
-    const nextRun = this.getNext5AMIST();
+    const nextRun = this.getNext430AMIST();
     return {
       isRunning: this.isRunning,
       nextRun: nextRun.toISOString()
