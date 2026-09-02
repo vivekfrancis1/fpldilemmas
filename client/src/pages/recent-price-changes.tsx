@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles, Filter } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -94,6 +96,7 @@ export default function RecentPriceChanges() {
   const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
   const [predictionClubFilter, setPredictionClubFilter] = useState("all");
   const [predictionStatusFilter, setPredictionStatusFilter] = useState("all");
+  const [predictionMinOwnershipFilter, setPredictionMinOwnershipFilter] = useState(true); // on by default: hides sub-1% ownership noise
   const [isPredictionFiltersOpen, setIsPredictionFiltersOpen] = useState(false); // collapsed by default, especially on mobile
   const [isRecentFiltersOpen, setIsRecentFiltersOpen] = useState(false); // collapsed by default, especially on mobile
   const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
@@ -304,7 +307,8 @@ export default function RecentPriceChanges() {
         : p.predicted_progress < 0;
       const matchesStatus = predictionStatusFilter === "all" || p.status === predictionStatusFilter;
       const matchesTeam = predictionTeamFilter === "all" || myTeamPlayerIds.has(p.player_id);
-      return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesStatus && matchesTeam;
+      const matchesOwnership = !predictionMinOwnershipFilter || p.ownership_percentage > 1;
+      return matchesSearch && matchesPosition && matchesClub && matchesMovement && matchesStatus && matchesTeam && matchesOwnership;
     })
     .sort((a: PricePrediction, b: PricePrediction) => {
       // hours_to_threshold is null when there's no meaningful ETA (already crossed uses 0, not
@@ -597,6 +601,17 @@ export default function RecentPriceChanges() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Checkbox
+                        id="prediction-min-ownership"
+                        checked={predictionMinOwnershipFilter}
+                        onCheckedChange={(checked) => setPredictionMinOwnershipFilter(checked === true)}
+                        data-testid="checkbox-prediction-min-ownership"
+                      />
+                      <Label htmlFor="prediction-min-ownership" className="text-xs sm:text-sm font-normal cursor-pointer">
+                        Show players with ownership greater than 1%
+                      </Label>
+                    </div>
                     {predictionTeamFilter === "my-team" && !cachedManagerId && (
                       <p className="text-xs text-muted-foreground mt-3">
                         Link your Manager ID on the My Team page to filter to your own squad.
@@ -648,6 +663,17 @@ export default function RecentPriceChanges() {
                             <div className="flex items-center justify-end gap-1">
                               Current Price
                               {predictionSortField === 'current_price' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('ownership_percentage')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Ownership%
+                              {predictionSortField === 'ownership_percentage' && (
                                 predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                               )}
                             </div>
@@ -729,6 +755,9 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(prediction.current_price)}
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right text-muted-foreground">
+                              {prediction.ownership_percentage.toFixed(1)}%
                             </td>
                             <td className="hidden md:table-cell p-3">
                               <div className="flex items-center justify-center gap-1">
