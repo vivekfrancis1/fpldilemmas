@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Search, Calendar, BarChart3, RefreshCw, ChevronUp, ChevronDown, Sparkles, Filter } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 
 interface PricePrediction {
   player_id: number;
@@ -97,8 +98,8 @@ export default function RecentPriceChanges() {
   const [predictionClubFilter, setPredictionClubFilter] = useState("all");
   const [predictionStatusFilter, setPredictionStatusFilter] = useState("all");
   const [predictionMinOwnershipFilter, setPredictionMinOwnershipFilter] = useState(true); // on by default: hides sub-1% ownership noise
-  const [isPredictionFiltersOpen, setIsPredictionFiltersOpen] = useState(false); // collapsed by default, especially on mobile
-  const [isRecentFiltersOpen, setIsRecentFiltersOpen] = useState(false); // collapsed by default, especially on mobile
+  const [isPredictionFiltersOpen, setIsPredictionFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
+  const [isRecentFiltersOpen, setIsRecentFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
   const [cachedManagerId, setCachedManagerId] = useState<string | null>(null);
   const [secondsUntilPriceChange, setSecondsUntilPriceChange] = useState(() => getSecondsUntilNextPriceChange());
   const { toast } = useToast();
@@ -490,19 +491,19 @@ export default function RecentPriceChanges() {
               </Alert>
             )}
 
-            <Card className="mb-6 shadow-lg border-0 bg-gradient-to-br from-indigo-50 to-purple-50">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-center sm:text-left">
+            <Card className="mb-3 shadow-md border-0 bg-gradient-to-br from-indigo-50 to-purple-50">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center justify-around sm:justify-start sm:gap-8 text-center sm:text-left">
                   <div>
-                    <p className="text-xs text-muted-foreground">Next Price Changes Happen in</p>
-                    <p className="text-xl font-bold font-mono" data-testid="text-price-change-countdown">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Next Price Changes Happen in</p>
+                    <p className="text-base sm:text-lg font-bold font-mono" data-testid="text-price-change-countdown">
                       {formatCountdown(secondsUntilPriceChange)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Next Price Change at</p>
-                    <p className="text-xl font-bold" data-testid="text-price-change-local-time">
-                      {nextPriceChangeLocalTime} <span className="text-sm font-normal text-muted-foreground">{localTimeZoneAbbr}</span>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Next Price Change at</p>
+                    <p className="text-base sm:text-lg font-bold" data-testid="text-price-change-local-time">
+                      {nextPriceChangeLocalTime} <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">{localTimeZoneAbbr}</span>
                     </p>
                   </div>
                 </div>
@@ -517,7 +518,7 @@ export default function RecentPriceChanges() {
                     placeholder="Search players or teams..."
                     value={predictionSearchTerm}
                     onChange={(e) => setPredictionSearchTerm(e.target.value)}
-                    className="pl-9 h-9 text-xs sm:text-sm"
+                    className="pl-9 h-9 text-xs"
                     data-testid="input-search-predictions"
                   />
                 </div>
@@ -816,57 +817,58 @@ export default function RecentPriceChanges() {
 
           <TabsContent value="recent">
         {/* Today's Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 px-1">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-100 hover:shadow-xl transition-all duration-300">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-200 rounded-full mr-3">
-                  <TrendingUp className="h-6 w-6 text-green-700" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-green-700" data-testid="text-today-rises">
-                    {todayStats.todayRises}
-                  </p>
-                  <p className="text-xs sm:text-sm text-green-600 font-medium">Price rises today</p>
-                </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-100">
+            <CardContent className="p-2 sm:p-3 flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2.5 bg-green-200 rounded-full">
+                <TrendingUp className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-green-700" />
+              </div>
+              <div>
+                <p className="text-base sm:text-xl font-bold text-green-700 leading-tight" data-testid="text-today-rises">
+                  {todayStats.todayRises}
+                </p>
+                <p className="text-[9px] sm:text-xs text-green-600 font-medium leading-tight">
+                  <span className="sm:hidden">Rises</span>
+                  <span className="hidden sm:inline">Price rises today</span>
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-rose-100 hover:shadow-xl transition-all duration-300">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-200 rounded-full mr-3">
-                  <TrendingDown className="h-6 w-6 text-red-700" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-red-700" data-testid="text-today-falls">
-                    {todayStats.todayFalls}
-                  </p>
-                  <p className="text-xs sm:text-sm text-red-600 font-medium">Price falls today</p>
-                </div>
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-rose-100">
+            <CardContent className="p-2 sm:p-3 flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2.5 bg-red-200 rounded-full">
+                <TrendingDown className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-red-700" />
+              </div>
+              <div>
+                <p className="text-base sm:text-xl font-bold text-red-700 leading-tight" data-testid="text-today-falls">
+                  {todayStats.todayFalls}
+                </p>
+                <p className="text-[9px] sm:text-xs text-red-600 font-medium leading-tight">
+                  <span className="sm:hidden">Falls</span>
+                  <span className="hidden sm:inline">Price falls today</span>
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-100 hover:shadow-xl transition-all duration-300">
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-200 rounded-full mr-3">
-                  <Calendar className="h-6 w-6 text-blue-700" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-700" data-testid="text-today-changes">
-                    {todayStats.todayChanges}
-                  </p>
-                  <p className="text-xs sm:text-sm text-blue-600 font-medium">Total price changes today</p>
-                </div>
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-100">
+            <CardContent className="p-2 sm:p-3 flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2.5 bg-blue-200 rounded-full">
+                <Calendar className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-blue-700" />
+              </div>
+              <div>
+                <p className="text-base sm:text-xl font-bold text-blue-700 leading-tight" data-testid="text-today-changes">
+                  {todayStats.todayChanges}
+                </p>
+                <p className="text-[9px] sm:text-xs text-blue-600 font-medium leading-tight">
+                  <span className="sm:hidden">Total</span>
+                  <span className="hidden sm:inline">Total price changes today</span>
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
-
-
 
         {/* Search bar — kept outside the collapsible so it's always reachable without a tap */}
         <Card className="mb-3 shadow-md border-0">
@@ -877,7 +879,7 @@ export default function RecentPriceChanges() {
                 placeholder="Search players or teams..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 text-xs sm:text-sm"
+                className="pl-9 h-9 text-xs"
                 data-testid="input-search-players"
               />
             </div>
@@ -1000,11 +1002,11 @@ export default function RecentPriceChanges() {
               </div>
             ) : filteredAndSortedChanges.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs sm:text-sm">
+                <table className="w-full text-[11px] sm:text-sm">
                   <thead>
                     <tr className="border-b bg-muted/20">
-                      <th 
-                        className="text-left p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                      <th
+                        className="text-left p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('change_date')}
                       >
                         <div className="flex items-center gap-1">
@@ -1014,8 +1016,8 @@ export default function RecentPriceChanges() {
                           )}
                         </div>
                       </th>
-                      <th 
-                        className="text-left p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                      <th
+                        className="text-left p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('player_name')}
                       >
                         <div className="flex items-center gap-1">
@@ -1069,8 +1071,8 @@ export default function RecentPriceChanges() {
                           )}
                         </div>
                       </th>
-                      <th 
-                        className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                      <th
+                        className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('price_change')}
                       >
                         <div className="flex items-center justify-end gap-1">
@@ -1080,8 +1082,8 @@ export default function RecentPriceChanges() {
                           )}
                         </div>
                       </th>
-                      <th 
-                        className="text-right p-2 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                      <th
+                        className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('current_price')}
                       >
                         <div className="flex items-center justify-end gap-1">
@@ -1108,16 +1110,16 @@ export default function RecentPriceChanges() {
                               </td>
                             </tr>
                           )}
-                          <tr 
+                          <tr
                             className="border-b hover:bg-muted/50 transition-colors"
                             data-testid={`price-change-${change.player_id}`}
                           >
-                            <td className="p-2 sm:p-3">
-                              <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                            <td className="p-1 sm:p-3">
+                              <div className="text-muted-foreground whitespace-nowrap">
                                 {new Date(change.change_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                               </div>
                             </td>
-                            <td className="p-2 sm:p-3">
+                            <td className="p-1 sm:p-3">
                               <div className="flex items-center gap-1.5">
                                 {change.price_change > 0 ? (
                                   <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
@@ -1127,8 +1129,8 @@ export default function RecentPriceChanges() {
                                   <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
                                 )}
                                 <div>
-                                  <p className="font-medium text-xs sm:text-sm leading-tight">{change.player_name}</p>
-                                  <p className="text-xs text-muted-foreground sm:hidden leading-tight">{change.team_name} · {change.position}</p>
+                                  <p className="font-medium leading-tight">{change.player_name}</p>
+                                  <p className="text-[0.85em] text-muted-foreground sm:hidden leading-tight">{change.team_name} · {change.position}</p>
                                 </div>
                               </div>
                             </td>
@@ -1146,13 +1148,11 @@ export default function RecentPriceChanges() {
                             <td className="hidden sm:table-cell p-3 text-right font-medium">
                               {formatPrice(change.old_price)}
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right">
-                              <Badge variant={change.price_change > 0 ? "success" : change.price_change < 0 ? "destructive" : "secondary"} className="text-xs sm:text-sm">
-                                {change.price_change > 0 ? "+" : change.price_change < 0 ? "-" : ""}{formatPrice(Math.abs(change.price_change))}
-                              </Badge>
+                            <td className={`p-1 sm:p-3 text-right font-semibold whitespace-nowrap ${change.price_change > 0 ? "text-green-700" : change.price_change < 0 ? "text-red-700" : "text-muted-foreground"}`}>
+                              {change.price_change > 0 ? "+" : change.price_change < 0 ? "-" : ""}{formatPrice(Math.abs(change.price_change))}
                             </td>
-                            <td className="p-2 sm:p-3 text-right">
-                              <div className="font-medium text-xs sm:text-sm">{formatPrice(change.current_price)}</div>
+                            <td className="p-1 sm:p-3 text-right">
+                              <div className="font-medium">{formatPrice(change.current_price)}</div>
                             </td>
                           </tr>
                         </React.Fragment>
