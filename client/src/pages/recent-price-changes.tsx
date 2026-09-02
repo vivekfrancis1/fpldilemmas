@@ -31,7 +31,7 @@ interface PricePrediction {
   days_to_threshold: number | null;
 }
 
-type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'hours_to_threshold' | 'ownership_percentage' | 'current_price';
+type PredictionSortField = 'progress' | 'predicted_progress' | 'hourly_rate' | 'hours_to_threshold' | 'ownership_percentage' | 'current_price' | 'status';
 type PredictionMovementFilter = 'all' | 'rise' | 'drop' | 'locked';
 type PredictionTeamFilter = 'all' | 'my-team';
 
@@ -88,7 +88,7 @@ export default function RecentPriceChanges() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [predictionSearchTerm, setPredictionSearchTerm] = useState("");
   const [predictionPositionFilter, setPredictionPositionFilter] = useState("all");
-  const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('progress');
+  const [predictionSortField, setPredictionSortField] = useState<PredictionSortField>('predicted_progress');
   const [predictionSortDirection, setPredictionSortDirection] = useState<SortDirection>('desc');
   const [predictionMovementFilter, setPredictionMovementFilter] = useState<PredictionMovementFilter>('all');
   const [predictionTeamFilter, setPredictionTeamFilter] = useState<PredictionTeamFilter>('all');
@@ -280,6 +280,18 @@ export default function RecentPriceChanges() {
   // real, meaningful data point too, not something to filter out.
   const allPredictions = Array.isArray(predictionsData) ? predictionsData : [];
 
+  // Ordinal rank for sorting the Status column — highest for "most likely to rise",
+  // lowest for "most likely to drop", so desc order reads rise-to-drop.
+  const statusSortRank = (status: string): number => {
+    switch (status) {
+      case "Very likely to rise today": return 4;
+      case "May rise today": return 3;
+      case "Very likely to drop today": return 0;
+      case "May drop today": return 1;
+      default: return 2; // Unlikely to change today
+    }
+  };
+
   const filteredAndSortedPredictions = allPredictions
     .filter((p: PricePrediction) => {
       const matchesSearch = p.player_name.toLowerCase().includes(predictionSearchTerm.toLowerCase()) ||
@@ -305,6 +317,17 @@ export default function RecentPriceChanges() {
         if (aNull) return 1;
         if (bNull) return -1;
         const result = a.hours_to_threshold! - b.hours_to_threshold!;
+        return predictionSortDirection === 'asc' ? result : -result;
+      }
+      if (predictionSortField === 'status') {
+        const result = statusSortRank(a.status) - statusSortRank(b.status);
+        return predictionSortDirection === 'asc' ? result : -result;
+      }
+      if (predictionSortField === 'predicted_progress') {
+        // Default view: rank by how close a player is to *any* crossing, rise or drop, rather
+        // than by signed value — otherwise desc would just list every riser before every faller
+        // instead of surfacing whichever players are closest to actually moving today.
+        const result = Math.abs(a.predicted_progress) - Math.abs(b.predicted_progress);
         return predictionSortDirection === 'asc' ? result : -result;
       }
       const aValue = a[predictionSortField] ?? 0;
@@ -618,6 +641,17 @@ export default function RecentPriceChanges() {
                       <thead>
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-1 sm:p-3 font-medium">Player</th>
+                          <th
+                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('current_price')}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Current Price
+                              {predictionSortField === 'current_price' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </th>
                           <th className="hidden md:table-cell text-center p-3 font-medium">Ownership Trend</th>
                           <th
                             className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
@@ -652,7 +686,17 @@ export default function RecentPriceChanges() {
                               )}
                             </div>
                           </th>
-                          <th className="text-left p-1 sm:p-3 font-medium">Status</th>
+                          <th
+                            className="text-left p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handlePredictionSort('status')}
+                          >
+                            <div className="flex items-center gap-0.5">
+                              Status
+                              {predictionSortField === 'status' && (
+                                predictionSortDirection === 'asc' ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                              )}
+                            </div>
+                          </th>
                           <th
                             className="hidden md:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             title="Time to reach the ±100% threshold at the current per-hour rate, shown in your device's local time zone"
@@ -668,17 +712,6 @@ export default function RecentPriceChanges() {
                           <th className="hidden lg:table-cell text-center p-3 font-medium" title="Whether the crossing happens before or after the next transfer deadline">
                             Vs Transfer Deadline
                           </th>
-                          <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handlePredictionSort('current_price')}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Current Price
-                              {predictionSortField === 'current_price' && (
-                                predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -693,6 +726,9 @@ export default function RecentPriceChanges() {
                                 <p className="font-medium leading-tight">{prediction.player_name}</p>
                                 <p className="text-[0.85em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
                               </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                              {formatPrice(prediction.current_price)}
                             </td>
                             <td className="hidden md:table-cell p-3">
                               <div className="flex items-center justify-center gap-1">
@@ -730,9 +766,6 @@ export default function RecentPriceChanges() {
                             </td>
                             <td className="hidden lg:table-cell p-3 text-center text-muted-foreground">
                               {formatDeadlineComparison(prediction)}
-                            </td>
-                            <td className="hidden sm:table-cell p-3 text-right font-medium">
-                              {formatPrice(prediction.current_price)}
                             </td>
                           </tr>
                         ))}
