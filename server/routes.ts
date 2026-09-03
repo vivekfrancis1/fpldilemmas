@@ -18594,7 +18594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Bonus Points Projections API called - blended formula: 50/50 this-season/last-season bonus-per-start (falls back to position league-average for new-to-league players)");
+        console.log("DEBUG: Player Bonus Points Projections API called - this-season bonus-per-appearance (starts + sub appearances), FDR-adjusted, capped at 3/fixture");
 
         // Get FPL bootstrap data for current gameweek info and players
         const fplResponse = await internalFetch("api/bootstrap-static");
@@ -18617,10 +18617,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
         const endGameweek = hasTBCBonus ? 39 : (bpHasExplicitRange ? bpQueryEnd : gameweekRange.end);
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        // True per-fixture appearance count (starts + sub appearances with real minutes), from
+        // the same per-gameweek history the minutes-projections endpoint already parses. Using
+        // this instead of bootstrap's `starts` field avoids overstating a player's bonus-per-fixture
+        // rate when some of their season bonus came from substitute appearances that never counted
+        // as a "start" — e.g. a player with 1 start but 2 total appearances earning bonus in both.
+        const appearancesByPlayerId = new Map<number, number>();
         if (bonusMinutesResponse.ok) {
           const bonusMinutesData = await bonusMinutesResponse.json();
           for (const m of bonusMinutesData) {
             if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            if (m.playerAppearances) appearancesByPlayerId.set(m.playerId, m.playerAppearances);
           }
         }
 
@@ -18669,17 +18676,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
 
+          // Appearances (starts + sub appearances with real minutes) rather than starts alone —
+          // a player who's earned bonus as a substitute would otherwise have that bonus divided
+          // by a start count that excludes the very appearance it came from, overstating their
+          // per-fixture rate (e.g. 1 start + 1 sub appearance, bonus earned in both: dividing by
+          // starts=1 doubles the true per-fixture rate). Falls back to starts if the minutes-
+          // projections endpoint has no data for this player yet.
+          const playerAppearances = appearancesByPlayerId.get(player.id) || player.starts || 0;
+
           // This-season rate is only meaningful once real 2026/27 fixtures have been played
-          // (player.bonus/starts otherwise still reflect 2025/26's frozen pre-kickoff carryover).
-          // No minimum-starts gate — a player's rate from even 1-2 starts is used as-is rather
-          // than projecting a flat 0 until they clear an arbitrary threshold.
-          const thisSeasonBonusPerFixture = finishedGWs > 0 && (player.starts || 0) > 0
-            ? (player.bonus || 0) / player.starts
+          // (player.bonus/appearances otherwise still reflect 2025/26's frozen pre-kickoff carryover).
+          // No minimum-appearances gate — a player's rate from even 1-2 appearances is used as-is
+          // rather than projecting a flat 0 until they clear an arbitrary threshold.
+          const thisSeasonBonusPerFixture = finishedGWs > 0 && playerAppearances > 0
+            ? (player.bonus || 0) / playerAppearances
             : undefined;
 
           // This season's data only — a player with no usable current-season rate yet (new
-          // signing, promoted-team squad member, or 0 starts so far) projects 0 bonus/fixture
-          // until they've started at least once.
+          // signing, promoted-team squad member, or 0 appearances so far) projects 0 bonus/fixture
+          // until they've actually featured at least once.
           const bonusPerFixture = thisSeasonBonusPerFixture ?? 0;
 
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
@@ -18713,7 +18728,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const fdrMultiplierMap: Record<number, number> = { 1: 1.30, 2: 1.15, 3: 1.00, 4: 0.80, 5: 0.65 };
               const clampedFactor = fdrMultiplierMap[fdr] ?? 1.00;
               
-              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
+              // Hard-capped at 3 — FPL awards bonus points only to the top 3 BPS scorers in a
+              // single match (3/2/1), so no projection for one fixture can exceed 3 regardless of
+              // how the underlying rate was computed.
+              const fixtureBonus = Math.min(bonusPerFixture * clampedFactor * availabilityProb, 3);
               gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({
