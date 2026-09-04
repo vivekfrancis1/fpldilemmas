@@ -42,6 +42,12 @@ export function calculateFreeTransfers(
     // Skip future gameweeks
     if (gwNum >= currentGameweek) break;
 
+    // Gameweek 1 has no free-transfer mechanic — your initial squad is built from scratch
+    // with unlimited changes, not a transfer. The first real FT decision is the window
+    // between GW1 and GW2, recorded as event_transfers under GW2. So GW1 must never
+    // consume/roll a free transfer itself.
+    if (gwNum === 1) continue;
+
     // Check if a wildcard or free hit was used this GW
     // FPL rule: banked FTs are preserved through a wildcard or free hit —
     // the chip covers all transfers so the FT bank is untouched

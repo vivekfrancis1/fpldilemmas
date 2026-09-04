@@ -4536,6 +4536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let runningFTsTeam = 1;
           for (const gw of (historyData.current || [])) {
             if (gw.event >= currentGameweek!) break;
+            // GW1 has no free-transfer mechanic (initial squad build, not a transfer) — never
+            // let it consume/roll a free transfer. See the matching comment further below.
+            if (gw.event === 1) continue;
             const chipUsed = chipsByGWTeam.get(gw.event);
             if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
               runningFTsTeam = 1;
@@ -4866,6 +4869,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let runningFTs = 1;
         for (const gw of historyData.current) {
           if (gw.event >= planningStartGW) break;
+
+          // Gameweek 1 has no free-transfer mechanic — your initial squad is built from
+          // scratch with unlimited changes, not a transfer. The first real FT decision is
+          // the window between GW1 and GW2, recorded as event_transfers under event 2. So
+          // GW1 must never consume/roll a free transfer itself.
+          if (gw.event === 1) continue;
 
           const chipUsed = chipsByGWFT.get(gw.event);
           if (chipUsed === 'wildcard' || chipUsed === 'freehit') {
