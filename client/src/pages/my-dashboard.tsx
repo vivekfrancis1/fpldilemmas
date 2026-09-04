@@ -1200,11 +1200,7 @@ export default function MyDashboard() {
     if (!currentFixture.started || (!currentFixture.finished && points === 0)) {
       return `${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
     }
-    
-    if (currentFixture.finished && points === 0) {
-      return '-';
-    }
-    
+
     return displayPoints.toString();
   };
 
