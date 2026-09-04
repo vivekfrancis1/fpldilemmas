@@ -952,8 +952,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const myTeamData = await myTeamResponse.json();
+
+      // FPL's my-team endpoint doesn't always set the flat active_chip field — a pending
+      // chip (e.g. a wildcard activated for an upcoming gameweek) often only shows up inside
+      // the chips array, as the entry with status_for_entry === 'active'. Promote that into
+      // active_chip so the rest of the app (which only reads the flat field) sees it.
+      if (!myTeamData.active_chip && Array.isArray(myTeamData.chips)) {
+        const activeChip = myTeamData.chips.find((chip: any) => chip.status_for_entry === 'active');
+        if (activeChip) {
+          myTeamData.active_chip = activeChip.name;
+        }
+      }
+
       console.log("DEBUG my-team: active_chip =", myTeamData.active_chip);
-      
+
       res.json(myTeamData);
     } catch (error) {
       console.error('FPL my-team error:', error);
