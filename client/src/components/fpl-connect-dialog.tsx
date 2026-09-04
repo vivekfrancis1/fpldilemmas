@@ -62,7 +62,7 @@ function buildBookmarkletHref(): string {
         try { if (name && name.toLowerCase() === 'x-api-authorization') grab(value); } catch(e) {}
         return origSetHeader.apply(this, arguments);
       };
-      alert('FPL Dilemmas: click OK, then refresh this page to finish connecting.');
+      alert('FPL Dilemmas: click OK, then click on the Points tab (or any other tab) in the FPL app to finish connecting. Do NOT refresh the page — that cancels the connection.');
     })();
   `.replace(/\s+/g, ' ').trim();
   return "javascript:" + encodeURIComponent(code);
@@ -271,7 +271,7 @@ export function FplConnectDialog() {
                   Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong>
                 </InstructionStep>
                 <InstructionStep number={3} isLast>
-                  Click the bookmark, then click <strong>OK</strong> on the popup and <strong>refresh the page</strong>
+                  Click the bookmark, then click <strong>OK</strong> on the popup, then click on the <strong>Points</strong> tab (or any other tab) in the FPL app. Do <strong>not</strong> refresh the page — that cancels the connection.
                 </InstructionStep>
               </InstructionSteps>
               <p className="mt-3 text-xs font-semibold text-green-600">
