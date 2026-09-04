@@ -23,6 +23,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -74,6 +75,8 @@ interface PlayerXaHistory {
 
 type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'rangePoints' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
 type SortDirection = 'asc' | 'desc';
+
+const getAssistsColor = (assists: number) => getHeatmapColor(assists, [0.1, 0.25, 0.4, 0.6]);
 
 export default function PlayerAssistProjections() {
   const { defaultWeeks, totalWeeks } = useProjectionSettings();
@@ -1131,7 +1134,7 @@ export default function PlayerAssistProjections() {
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
                               const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
                               return (
-                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
+                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getAssistsColor(displayValue)}`}>
                                   <div className="flex flex-col items-center">
                                     {isDGW && viewMode === "future" ? (
                                       <Popover>
@@ -1213,7 +1216,7 @@ export default function PlayerAssistProjections() {
                                 )}
                               </td>
                             )}
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getAssistsColor(averageAssists)}`}>
                               {(() => {
                                 const tbcContrib = showTBCColumn ? tbcAssists : 0;
                                 return hasAnyAdjustment ? (
@@ -1222,12 +1225,12 @@ export default function PlayerAssistProjections() {
                                     <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcContrib) : (originalTotal + tbcContrib).toFixed(2)}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
+                                  <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
                                 );
                               })()}
                             </td>
-                            <td className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 bg-emerald-50 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                              <span className="text-sm md:text-lg font-bold text-emerald-800">{viewMode === "past" ? Math.round(averageAssists) : averageAssists.toFixed(2)}</span>
+                            <td className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getAssistsColor(averageAssists)}`}>
+                              <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(averageAssists) : averageAssists.toFixed(2)}</span>
                             </td>
                           </tr>
                           );

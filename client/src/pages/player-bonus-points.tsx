@@ -18,6 +18,7 @@ import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -47,6 +48,8 @@ interface BonusPointsProjection {
 
 type SortField = 'name' | 'team' | 'totalBonusPoints' | string;
 type SortDirection = 'asc' | 'desc';
+
+const getBonusColor = (bonus: number) => getHeatmapColor(bonus, [0.8, 1.15, 1.5, 2.0]);
 
 export default function PlayerBonusPoints() {
   const { defaultWeeks, totalWeeks } = useProjectionSettings();
@@ -749,7 +752,7 @@ export default function PlayerBonusPoints() {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             return (
-                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
+                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBonusColor(displayValue)}`}>
                                 {isDGW ? (
                                   <Popover>
                                     <PopoverTrigger asChild>
@@ -819,7 +822,7 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
                             {(() => {
                               const tbcBonusVal2 = showTBCColumn ? (projection.bonusPoints?.['gw39'] || 0) : 0;
                               return hasAnyAdjustment ? (
@@ -828,18 +831,18 @@ export default function PlayerBonusPoints() {
                                   <span className="text-gray-400 line-through text-[10px] md:text-xs">{(originalTotal + tbcBonusVal2).toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
+                                <span className="text-sm md:text-lg font-bold">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
                               );
                             })()}
                           </td>
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>
                                 <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(1)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm font-medium text-green-900">{adjustedAverage.toFixed(1)}</span>
+                              <span className="text-sm font-medium">{adjustedAverage.toFixed(1)}</span>
                             )}
                           </td>
                         </tr>

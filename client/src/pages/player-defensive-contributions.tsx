@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -72,6 +73,8 @@ interface PlayerDefensiveHistory {
     totalDefensiveContribution: number;
   }[];
 }
+
+const getDCColor = (dc: number) => getHeatmapColor(dc, [5, 7.5, 10, 13]);
 
 export default function PlayerDefensiveContributions() {
   // View mode: "future" for projections, "past" for historical data
@@ -1232,18 +1235,18 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC)}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                           <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotalDC) : originalTotalDC.toFixed(1)}</span>
                         </div>
                       ) : (
-                        <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
+                        <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 bg-emerald-50 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                      <span className="text-sm md:text-lg font-bold text-emerald-800">{viewMode === "past" ? Math.round(averageDC) : averageDC.toFixed(1)}</span>
+                    <TableCell className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getDCColor(averageDC)}`}>
+                      <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(averageDC) : averageDC.toFixed(1)}</span>
                     </TableCell>
                   </TableRow>
                   );

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -275,12 +276,7 @@ export default function PlayerMinutes() {
     }
   };
 
-  const getMinutesColor = (minutes: number) => {
-    if (minutes >= 80) return 'text-green-600 font-bold';
-    if (minutes >= 60) return 'text-blue-600 font-semibold';
-    if (minutes >= 30) return 'text-orange-600';
-    return 'text-red-600';
-  };
+  const getMinutesColor = (minutes: number) => getHeatmapColor(minutes, [20, 45, 70, 85]);
 
   if (error) {
     return (
@@ -656,23 +652,23 @@ export default function PlayerMinutes() {
                             {player.position}
                           </Badge>
                         </td>
-                        <td className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
-                          <div className={`font-semibold text-xs md:text-sm ${getMinutesColor(player.currentMinutesPerGame)}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px] ${getMinutesColor(player.currentMinutesPerGame)}`}>
+                          <div className="font-semibold text-xs md:text-sm">
                             {Math.round(player.currentMinutesPerGame)}
                           </div>
                         </td>
                         {dynamicGameweekColumns.map((gw) => {
                           const value = player.xMinsPerGW?.[`gw${gw}`];
                           return (
-                            <td key={`xmins-cell-${player.playerId}-gw${gw}`} className="px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
-                              <div className={`font-medium text-xs md:text-sm ${value !== undefined ? getMinutesColor(value) : 'text-gray-300'}`}>
-                                {value !== undefined ? value.toFixed(1) : '-'}
+                            <td key={`xmins-cell-${player.playerId}-gw${gw}`} className={`px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px] ${value !== undefined ? getMinutesColor(value) : ''}`}>
+                              <div className="font-medium text-xs md:text-sm">
+                                {value !== undefined ? value.toFixed(1) : <span className="text-gray-300">-</span>}
                               </div>
                             </td>
                           );
                         })}
-                        <td className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                          <div className={`font-bold text-xs md:text-sm ${getMinutesColor(getAvgXMins(player))}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getMinutesColor(getAvgXMins(player))}`}>
+                          <div className="font-bold text-xs md:text-sm">
                             {getAvgXMins(player).toFixed(1)}
                           </div>
                         </td>
