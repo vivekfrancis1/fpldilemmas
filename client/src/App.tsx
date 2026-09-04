@@ -101,8 +101,16 @@ function Router() {
         <Route path="/" component={PlayerStats} />
         <Route path="/my-dashboard" component={MyDashboard} />
         <Route path="/fpl-connect-callback" component={FplConnectCallback} />
-        <Route path="/projected-points" component={ProjectedPoints} />
-        <Route path="/team-optimizer" component={TeamOptimizer} />
+        <Route path="/projected-points">
+          <ProtectedRoute requireAdmin={true}>
+            <ProjectedPoints />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/team-optimizer">
+          <ProtectedRoute requireAdmin={true}>
+            <TeamOptimizer />
+          </ProtectedRoute>
+        </Route>
         <Route path="/transfer-recommendations" component={TransferRecommendations} />
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
