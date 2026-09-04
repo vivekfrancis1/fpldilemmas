@@ -1674,6 +1674,9 @@ export default function PlayerTotalPoints() {
       const gameweekProjections: { [gw: string]: number } = {};
       
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        // Respect the gameweek filter chips — a gameweek deselected there must not still be
+        // counted into Total/Avg just because it's within the From/To range.
+        if (selectedGameweeks.size > 0 && !selectedGameweeks.has(gw)) continue;
         // The FPL live endpoint this history is built from includes every player with all-zero
         // stats even before their team's fixture kicks off — skip the cell entirely (rather than
         // showing a real "0", which reads as "played and scored nothing") for the current
@@ -1738,7 +1741,7 @@ export default function PlayerTotalPoints() {
         gameweekStats: player.gameweekStats,
       } as unknown as PlayerTotalPointsData;
     }).filter(p => p.totalExpectedPoints > 0 || hasComponentFilter);
-  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek, excludedComponents, currentGameweek, currentGWDecidedTeamNames]);
+  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek, selectedGameweeks, excludedComponents, currentGameweek, currentGWDecidedTeamNames]);
 
   // Generate full gameweek range (for toggle display)
   const fullGameweekRange = useMemo(() => {
