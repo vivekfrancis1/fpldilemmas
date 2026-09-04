@@ -14391,6 +14391,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Buy Me a Coffee widget toggle - public read (client needs it to decide whether to load the
+  // widget script), admin-only write.
+  app.get("/api/bmc-widget-config", async (req, res) => {
+    try {
+      const enabled = await storage.getBmcWidgetEnabled();
+      res.json({ enabled });
+    } catch (error) {
+      console.error("Error fetching BMC widget config:", error);
+      res.status(500).json({ error: "Failed to fetch BMC widget configuration" });
+    }
+  });
+
+  app.post("/api/admin/bmc-widget-config", requireAdmin, async (req, res) => {
+    try {
+      const enabled = !!req.body?.enabled;
+      await storage.setBmcWidgetEnabled(enabled);
+      res.json({ success: true, enabled });
+    } catch (error) {
+      console.error("Error saving BMC widget config:", error);
+      res.status(500).json({ error: "Failed to save BMC widget configuration" });
+    }
+  });
+
   // OpenFPL Projection routes
   app.get('/api/openfpl-projections', async (req, res) => {
     try {

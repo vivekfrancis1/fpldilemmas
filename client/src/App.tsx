@@ -11,6 +11,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useErrorMonitoring } from "./hooks/use-error-monitoring";
 import { Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/protected-route";
+import BmcWidget from "@/components/bmc-widget";
 
 const Fixtures = lazy(() => import("./pages/fixtures"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
@@ -58,6 +59,7 @@ const AdminCacheManagement = lazy(() => import("./pages/admin-cache-management")
 const AdminActivityLogs = lazy(() => import("./pages/admin-activity-logs"));
 const AdminProjectionValidation = lazy(() => import("./pages/admin-projection-validation"));
 const AdminProjectionWindow = lazy(() => import("./pages/admin-projection-window"));
+const AdminSiteSettings = lazy(() => import("./pages/admin-site-settings"));
 const PlayerDefensiveContributions = lazy(() => import("./pages/player-defensive-contributions"));
 const ProjectionDocumentation = lazy(() => import("./pages/projection-documentation"));
 const PlayerSaves = lazy(() => import("./pages/player-saves"));
@@ -186,6 +188,7 @@ function Router() {
         <Route path="/admin-data-population" component={AdminDataPopulation} />
         <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
         <Route path="/admin-projection-window" component={AdminProjectionWindow} />
+        <Route path="/admin-site-settings" component={AdminSiteSettings} />
         <Route path="/content-creators">
           <ProtectedRoute requireAdmin={true}>
             <Suspense fallback={<PageLoader />}>
@@ -370,6 +373,7 @@ function App() {
             </ErrorBoundary>
           </Layout>
           <Toaster />
+          <BmcWidget />
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

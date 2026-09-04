@@ -24,7 +24,8 @@ import {
   FileText,
   Activity,
   CalendarRange,
-  UserPlus
+  UserPlus,
+  Coffee
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false },
         { path: "/admin-activity-logs", label: "User Activity Logs", icon: Activity, description: "View user activity and search logs", popular: false },
         { path: "/admin-projection-validation", label: "Projection Validation", icon: BarChart3, description: "Compare past vs projected averages per component", popular: false },
-        { path: "/admin-projection-window", label: "Projection Window", icon: CalendarRange, description: "Set default view weeks and calculation horizon", popular: false }
+        { path: "/admin-projection-window", label: "Projection Window", icon: CalendarRange, description: "Set default view weeks and calculation horizon", popular: false },
+        { path: "/admin-site-settings", label: "Site Settings", icon: Coffee, description: "Toggle site-wide widgets like Buy Me a Coffee", popular: false }
       ]
     },
     {

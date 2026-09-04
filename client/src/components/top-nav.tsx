@@ -25,6 +25,7 @@ import {
   LogIn,
   User,
   UserPlus,
+  Coffee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -121,6 +122,7 @@ const adminSection: NavSection = {
     { path: "/admin-activity-logs", label: "Activity Logs", icon: Activity },
     { path: "/admin-projection-validation", label: "Projection Validation", icon: BarChart3 },
     { path: "/admin-projection-window", label: "Projection Window", icon: CalendarRange },
+    { path: "/admin-site-settings", label: "Site Settings", icon: Coffee },
     { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield },
     { path: "/player-goals-conceded", label: "Player Goals Conceded", icon: Shield },
     { path: "/player-yellow-cards", label: "Yellow Cards", icon: Shield },

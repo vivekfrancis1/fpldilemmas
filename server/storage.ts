@@ -50,7 +50,11 @@ export interface IStorage {
   // Upset configuration operations
   getUpsetConfig(): Promise<UpsetConfig | undefined>;
   setUpsetConfig(config: UpsetConfig): Promise<void>;
-  
+
+  // Site-wide feature toggles (admin-controlled)
+  getBmcWidgetEnabled(): Promise<boolean>;
+  setBmcWidgetEnabled(enabled: boolean): Promise<void>;
+
   // Player mappings operations (stable data only)
   getPlayerMappings(): Promise<PlayerMapping[]>;
   upsertPlayerMappings(players: InsertPlayerMapping[]): Promise<void>;
@@ -183,6 +187,7 @@ export class MemStorage implements IStorage {
   private historicalPlayerCache: Map<string, HistoricalPlayer[]>;
   private lastManagerId: string | undefined;
   private upsetConfig: UpsetConfig | undefined;
+  private bmcWidgetEnabled: boolean = false;
   private nextWatchlistId: number;
   private nextAlertId: number;
   private users: Map<string, User>;
@@ -342,6 +347,14 @@ export class MemStorage implements IStorage {
   
   async setUpsetConfig(config: UpsetConfig): Promise<void> {
     this.upsetConfig = config;
+  }
+
+  async getBmcWidgetEnabled(): Promise<boolean> {
+    return this.bmcWidgetEnabled;
+  }
+
+  async setBmcWidgetEnabled(enabled: boolean): Promise<void> {
+    this.bmcWidgetEnabled = enabled;
   }
 
   // Daily price tracking methods
@@ -1028,6 +1041,14 @@ export class DatabaseStorage implements IStorage {
   
   async setUpsetConfig(config: UpsetConfig): Promise<void> {
     return this.memFallback.setUpsetConfig(config);
+  }
+
+  async getBmcWidgetEnabled(): Promise<boolean> {
+    return this.memFallback.getBmcWidgetEnabled();
+  }
+
+  async setBmcWidgetEnabled(enabled: boolean): Promise<void> {
+    return this.memFallback.setBmcWidgetEnabled(enabled);
   }
 
   // Daily price tracking methods (use database for persistence)
