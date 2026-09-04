@@ -1650,6 +1650,16 @@ export default function MyDashboard() {
                 >
                   Overview
                 </TabsTrigger>
+                {/* Next Gameweek Team Tab - only show if FPL is connected (teamData exists) */}
+                {teamData && (
+                  <TabsTrigger
+                    value="nextteam"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
+                    data-testid="tab-nextteam"
+                  >
+                    Projections
+                  </TabsTrigger>
+                )}
                 <TabsTrigger
                   value="leagues"
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
@@ -1657,16 +1667,6 @@ export default function MyDashboard() {
                 >
                   Leagues
                 </TabsTrigger>
-                {/* Next Gameweek Team Tab - only show if FPL is connected (teamData exists) */}
-                {teamData && (
-                  <TabsTrigger 
-                    value="nextteam" 
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
-                    data-testid="tab-nextteam"
-                  >
-                    Projections
-                  </TabsTrigger>
-                )}
                 <TabsTrigger 
                   value="transfers" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
@@ -1692,173 +1692,105 @@ export default function MyDashboard() {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6 mt-6 sm:mt-8">
-                <div className="grid grid-cols-4 gap-1 sm:gap-6">
+                <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-4">
                   {/* Total Points */}
-                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-total-points">
-                    <CardContent className="p-1.5 sm:p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] sm:text-sm font-medium text-blue-600 leading-tight sm:mb-2">Total Pts</p>
-                          <p className="text-sm sm:text-2xl font-bold text-blue-900 truncate">{formatRank(managerData.summary_overall_points)}</p>
-                        </div>
-                        <div className="hidden sm:flex p-2.5 bg-blue-100 rounded-full flex-shrink-0">
-                          <Target className="h-5 w-5 text-blue-600" />
-                        </div>
-                      </div>
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm" data-testid="card-total-points">
+                    <CardContent className="p-2 sm:p-3">
+                      <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Total Pts</p>
+                      <p className="text-base sm:text-lg font-bold text-blue-900">{formatRank(managerData.summary_overall_points)}</p>
                     </CardContent>
                   </Card>
 
                   {/* Overall Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-overall-rank">
-                    <CardContent className="p-1.5 sm:p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] sm:text-sm font-medium text-amber-600 leading-tight sm:mb-2">Rank</p>
-                          <p className="text-sm sm:text-2xl font-bold text-amber-900 truncate">{formatRank(managerData.summary_overall_rank)}</p>
-                          {getRankChange() !== null && getRankChange() !== 0 && (
-                            <div className={`hidden sm:flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {getRankChange()! > 0 ? (
-                                <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
-                              )}
-                              <span className="font-medium">
-                                {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="hidden sm:flex p-2.5 bg-amber-100 rounded-full flex-shrink-0">
-                          <Trophy className="h-5 w-5 text-amber-600" />
-                        </div>
-                      </div>
+                  <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 shadow-sm" data-testid="card-overall-rank">
+                    <CardContent className="p-2 sm:p-3">
+                      <p className="text-[10px] sm:text-xs font-medium text-amber-700 mb-0.5">Rank</p>
+                      <p className="text-base sm:text-lg font-bold text-amber-900">
+                        {formatRank(managerData.summary_overall_rank)}
+                        {getRankChange() !== null && getRankChange() !== 0 && (
+                          <span className={`ml-1.5 text-[10px] sm:text-xs font-medium ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
+                          </span>
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
-                  {/* Bank */}
-                  <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-bank">
-                    <CardContent className="p-1.5 sm:p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] sm:text-sm font-medium text-orange-600 leading-tight sm:mb-2">Bank</p>
-                          <p className="text-sm sm:text-2xl font-bold text-orange-900 truncate">
-                            {formatPrice(nextTeamData?.transfers?.bank || nextTeamData?.entry_history?.bank || teamData?.entry_history?.bank || 0)}
+                  {teamData && (
+                    <>
+                      {/* GW Points */}
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-green-700 mb-0.5">GW Points</p>
+                          <p className="text-base sm:text-lg font-bold text-green-900">
+                            {managerData?.summary_event_points || 0}
                           </p>
-                          <p className="hidden sm:block text-xs text-orange-600 font-medium mt-1">
-                            GW{nextTeamData ? getNextGameweekDashboard() : getCurrentGameweekDashboard()}
-                          </p>
-                        </div>
-                        <div className="hidden sm:flex p-2.5 bg-orange-100 rounded-full flex-shrink-0">
-                          <DollarSign className="h-5 w-5 text-orange-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </Card>
 
-                  {/* Squad Value */}
-                  <Card className="border-0 bg-gradient-to-br from-teal-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-squad-value">
-                    <CardContent className="p-1.5 sm:p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] sm:text-sm font-medium text-teal-600 leading-tight sm:mb-2">Squad</p>
-                          <p className="text-sm sm:text-2xl font-bold text-teal-900 truncate">
-                            {formatPrice((() => {
-                              const value = teamData?.entry_history?.value;
-                              const bank = nextTeamData?.transfers?.bank ?? nextTeamData?.entry_history?.bank ?? teamData?.entry_history?.bank ?? 0;
-                              if (value) return value - bank;
-                              const picks = nextTeamData?.picks || teamData?.picks;
-                              if (!picks) return 0;
-                              return picks.reduce((total: number, pick: any) => {
-                                const player = getPlayerById(pick.element);
-                                return total + (player?.now_cost || 0);
-                              }, 0);
-                            })())}
+                      {/* GW Rank */}
+                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-purple-700 mb-0.5">GW Rank</p>
+                          <p className="text-base sm:text-lg font-bold text-purple-900">
+                            {formatRank(managerData?.summary_event_rank || 0)}
                           </p>
-                          <p className="hidden sm:block text-xs text-teal-600 font-medium mt-1">
-                            GW{nextTeamData ? getNextGameweekDashboard() : getCurrentGameweekDashboard()}
+                        </CardContent>
+                      </Card>
+
+                      {/* Formation */}
+                      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-emerald-700 mb-0.5">Formation</p>
+                          <p className="text-base sm:text-lg font-bold text-emerald-900">
+                            {getFormationString()}
                           </p>
-                        </div>
-                        <div className="hidden sm:flex p-2.5 bg-teal-100 rounded-full flex-shrink-0">
-                          <TrendingUp className="h-5 w-5 text-teal-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-              </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Squad Value */}
+                      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
+                          <p className="text-base sm:text-lg font-bold text-orange-900">
+                            {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Cash in Bank */}
+                      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-yellow-700 mb-0.5">Cash in Bank</p>
+                          <p className="text-base sm:text-lg font-bold text-yellow-900">
+                            {formatPrice(teamData.entry_history?.bank || 0)}
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Transfers */}
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Transfers</p>
+                          <p className="text-base sm:text-lg font-bold text-blue-900">
+                            {teamData.entry_history?.event_transfers || 0}/{(() => {
+                              const transfersMade = teamData.entry_history?.event_transfers || 0;
+                              const transferCost = teamData.entry_history?.event_transfers_cost || 0;
+                              const freeTransfers = transfersMade - (transferCost / 4);
+                              return freeTransfers;
+                            })()}
+                            {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
+                              <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
+                            )}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </div>
 
               {teamData && (
                 <>
-                  {/* Team Overview Cards */}
-                  <div className="grid gap-2 sm:gap-4 grid-cols-3 lg:grid-cols-6">
-                    {/* 1. GW Points */}
-                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-green-700 mb-0.5">GW Points</p>
-                        <p className="text-base sm:text-lg font-bold text-green-900">
-                          {managerData?.summary_event_points || 0}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 2. GW Rank */}
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-purple-700 mb-0.5">GW Rank</p>
-                        <p className="text-base sm:text-lg font-bold text-purple-900">
-                          {formatRank(managerData?.summary_event_rank || 0)}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 3. Formation */}
-                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-emerald-700 mb-0.5">Formation</p>
-                        <p className="text-base sm:text-lg font-bold text-emerald-900">
-                          {getFormationString()}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 4. Squad Value */}
-                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
-                        <p className="text-base sm:text-lg font-bold text-orange-900">
-                          {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 5. Cash in Bank */}
-                    <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-yellow-700 mb-0.5">Cash in Bank</p>
-                        <p className="text-base sm:text-lg font-bold text-yellow-900">
-                          {formatPrice(teamData.entry_history?.bank || 0)}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 6. Transfers */}
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Transfers</p>
-                        <p className="text-base sm:text-lg font-bold text-blue-900">
-                          {teamData.entry_history?.event_transfers || 0}/{(() => {
-                            const transfersMade = teamData.entry_history?.event_transfers || 0;
-                            const transferCost = teamData.entry_history?.event_transfers_cost || 0;
-                            const freeTransfers = transfersMade - (transferCost / 4);
-                            return freeTransfers;
-                          })()}
-                          {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
-                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
-                          )}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
                   {/* Pitch View — GW Points */}
                   {(() => {
                     const gwPointsPitchPlayers: PitchPlayer[] = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
