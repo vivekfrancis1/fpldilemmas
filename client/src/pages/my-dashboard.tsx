@@ -55,6 +55,7 @@ import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { InstructionSteps, InstructionStep } from "@/components/instruction-steps";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { calculateFreeTransfers } from "@/lib/free-transfers";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -327,10 +328,9 @@ export default function MyDashboard() {
   const [nameSearchResults, setNameSearchResults] = useState<ManagerSearchResult[]>([]);
   const [isNameSearching, setIsNameSearching] = useState(false);
   const [nameSearchError, setNameSearchError] = useState("");
-  const [activeTab, setActiveTab] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || 'overview';
-  });
+  const [activeTab, setActiveTab] = useViewModeParam<
+    "overview" | "team" | "nextteam" | "transfers" | "chips" | "performance"
+  >("tab", "overview", ["overview", "team", "nextteam", "transfers", "chips", "performance"]);
   // Always default to pitch view
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const [nextTeamView, setNextTeamView] = useState<"pitch" | "list">("pitch");
@@ -1577,7 +1577,13 @@ export default function MyDashboard() {
             </Card>
 
             {/* Main Dashboard Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) =>
+                setActiveTab(v as "overview" | "team" | "nextteam" | "transfers" | "chips" | "performance")
+              }
+              className="w-full"
+            >
               {/* Dynamic grid based on whether next team data is available */}
               <TabsList className={`grid w-full ${teamData ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'} gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg`}>
                 <TabsTrigger 
