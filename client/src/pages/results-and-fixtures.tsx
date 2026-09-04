@@ -488,7 +488,9 @@ export default function ResultsAndFixtures() {
                                 </div>
                                 {getStatusBadge(fixture)}
                               </div>
-
+                              {isClickableFixture(fixture) && (
+                                <span className="text-[10px] text-blue-500">Tap for stats</span>
+                              )}
                             </div>
                           </div>
                           
@@ -559,7 +561,7 @@ export default function ResultsAndFixtures() {
                               {/* Click indicator for completed and live matches */}
                               {isClickableFixture(fixture) && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                                  Player Stats
+                                  Click for Stats
                                 </Badge>
                               )}
                             </div>
@@ -646,6 +648,9 @@ export default function ResultsAndFixtures() {
                           </div>
                           {getStatusBadge(fixture)}
                         </div>
+                        {isClickableFixture(fixture) && (
+                          <span className="text-[10px] text-blue-500">Tap for stats</span>
+                        )}
 
                       </div>
                     </div>
@@ -717,7 +722,7 @@ export default function ResultsAndFixtures() {
                         {/* Click indicator for completed and live matches */}
                         {isClickableFixture(fixture) && (
                           <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                            Player Stats
+                            Click for Stats
                           </Badge>
                         )}
                       </div>
