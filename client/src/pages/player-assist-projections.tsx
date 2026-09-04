@@ -489,8 +489,11 @@ export default function PlayerAssistProjections() {
         columns.push(gw);
       }
     }
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the filter selection itself is unaffected.
+    if (viewMode !== "future") columns.reverse();
     return columns;
-  }, [startGameweek, endGameweek, selectedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
 
   // Calculate dynamic range label
   const rangeLabel = useMemo(() => {

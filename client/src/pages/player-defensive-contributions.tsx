@@ -431,10 +431,13 @@ export default function PlayerDefensiveContributions() {
 
   // Get active gameweeks (all in range, or filtered to selected set)
   const activeGameweeks = useMemo(() => {
-    return selectedGameweeks.size > 0
+    const active = selectedGameweeks.size > 0
       ? gameweeks.filter(gw => selectedGameweeks.has(gw))
       : gameweeks;
-  }, [gameweeks, selectedGameweeks]);
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the filter chips (gameweeks) stay ascending.
+    return viewMode !== "future" ? [...active].reverse() : active;
+  }, [gameweeks, selectedGameweeks, viewMode]);
 
   // Toggle gameweek selection
   const toggleGameweekSelection = (gw: number) => {

@@ -396,8 +396,11 @@ export default function PlayerGoalsScoredProjections() {
         gameweeks.push(gw);
       }
     }
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the underlying filter/range selection is unaffected.
+    if (viewMode !== "future") gameweeks.reverse();
     return gameweeks;
-  }, [startGameweek, endGameweek, gwFilter]);
+  }, [startGameweek, endGameweek, gwFilter, viewMode]);
 
   // Helper to normalize position strings for filtering
   const normalizePosition = (pos: string): string => {

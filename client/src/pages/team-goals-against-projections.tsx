@@ -257,8 +257,11 @@ export default function TeamGoalsAgainstProjections() {
         allGameweeks.push(gw);
       }
     }
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the filter chips stay ascending.
+    if (viewMode !== "future") allGameweeks.reverse();
     return allGameweeks;
-  }, [startGameweek, endGameweek, selectedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
 
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {

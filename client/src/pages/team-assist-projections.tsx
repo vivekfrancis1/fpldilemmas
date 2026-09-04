@@ -220,8 +220,11 @@ export default function TeamAssistProjections() {
         gameweeks.push(gw);
       }
     }
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the filter chips stay ascending.
+    if (viewMode !== "future") gameweeks.reverse();
     return gameweeks;
-  }, [startGameweek, endGameweek, selectedGameweeks]);
+  }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
 
   const toggleGameweekSelection = (gw: number) => {
     setSelectedGameweeks(prev => {

@@ -408,11 +408,14 @@ export default function ProjectedGoalsCS() {
       }
     });
 
+    // Match Results reads newest-to-oldest (most recently played gameweek first); Match
+    // Predictions stays chronological (soonest upcoming gameweek first).
+    const gwDirection = viewMode === "past" ? -1 : 1;
     return matches.sort((a, b) => {
       if (a.gameweek !== b.gameweek) {
-        return a.gameweek - b.gameweek;
+        return (a.gameweek - b.gameweek) * gwDirection;
       }
-      return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
+      return (new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime()) * gwDirection;
     });
   }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek, viewMode, winDrawLossByTeams]);
 

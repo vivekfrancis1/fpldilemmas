@@ -1752,10 +1752,13 @@ export default function PlayerTotalPoints() {
 
   // Generate active gameweek range for table headers (filtered to selected ones if any)
   const gameweekRange = useMemo(() => {
-    return selectedGameweeks.size > 0
+    const range = selectedGameweeks.size > 0
       ? fullGameweekRange.filter(gw => selectedGameweeks.has(gw))
       : fullGameweekRange;
-  }, [fullGameweekRange, selectedGameweeks]);
+    // History reads newest-to-oldest; Projections stays chronological. Only the displayed
+    // column order flips here — the filter toggle (fullGameweekRange) stays ascending.
+    return viewMode !== "future" ? [...range].reverse() : range;
+  }, [fullGameweekRange, selectedGameweeks, viewMode]);
 
   // In base mode: GW39 is already a proper projected column from the backend — no adjustments needed.
   // In custom/expert mode: move real GW39 points (and per-component breakdowns) to the assigned GW
@@ -2210,7 +2213,7 @@ export default function PlayerTotalPoints() {
           {/* Gameweek range — always visible, not buried behind the collapsible */}
           <div className="fpl-card mb-3">
             <div className="p-3 sm:p-4">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
                   <Label className="text-xs font-medium text-gray-600 mb-1 block">From GW</Label>
                   <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
@@ -2236,6 +2239,19 @@ export default function PlayerTotalPoints() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block flex items-center gap-1.5">
+                    <Search className="h-3.5 w-3.5 text-gray-500" />
+                    Search
+                  </Label>
+                  <Input
+                    placeholder="Search players or teams..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-xs"
+                    data-testid="input-search-players"
+                  />
                 </div>
               </div>
             </div>
@@ -2320,17 +2336,6 @@ export default function PlayerTotalPoints() {
                   </button>
                 </div>
               )}
-
-              {/* Search */}
-              <div className="relative mb-3">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                <Input
-                  placeholder="Search players or teams..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 text-xs pl-8"
-                />
-              </div>
 
               {/* Tabbed toggle sections */}
               <div className="w-full space-y-3">
