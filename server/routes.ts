@@ -13007,6 +13007,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log(`📦 DB history cache: ${dbCacheHits}/${allPlayerIds.length} players served from DB`);
 
+        // Ongoing (not just pre-season): fplcopilot.com's per-gameweek xMins export (see
+        // server/copilot-xmins-override.ts and scripts/build-copilot-xmins-projections.ts)
+        // overrides our own history-based estimate for whichever gameweeks it actually covers —
+        // it only genuinely forecasts a handful of gameweeks ahead, so gameweeks outside that
+        // range fall back to the historical estimate below rather than a flatlined placeholder.
+        const copilotXminsByPlayerId = new Map<number, Map<number, number>>();
+        {
+          const { copilotXminsProjections, CURRENT_SEASON: copilotSeason } = await import('@shared/schema');
+          const copilotRows = await db.select().from(copilotXminsProjections)
+            .where(eq(copilotXminsProjections.season, copilotSeason));
+          for (const row of copilotRows) {
+            if (!copilotXminsByPlayerId.has(row.playerId)) copilotXminsByPlayerId.set(row.playerId, new Map());
+            copilotXminsByPlayerId.get(row.playerId)!.set(row.gameweek, row.xMins);
+          }
+          console.log(`🧭 Copilot xMins loaded: ${copilotXminsByPlayerId.size} players`);
+        }
+
         // Build fixture→team map and blend map for recentP60 correction.
         // Blend-eligible players (AFCON/injury/transfer returnees) have AFCON 0-min entries
         // in their last 8 completed games, which drags recentP60 down unfairly.
@@ -13172,6 +13189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // calculateAvailabilityProbability already used elsewhere.
         {
           const { reallocateGroupXmins } = await import('./xmins-reallocation');
+          const { getEffectiveBaseXMins } = await import('./copilot-xmins-override');
           const events: BootstrapEvent[] = bootstrapData.events || [];
           const { computeNextRange } = await import("../shared/gameweek-utils");
           const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
@@ -13207,10 +13225,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const availabilityRatioPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
 
           for (let gw = gwStart; gw <= gwEnd; gw++) {
+            // Copilot's per-gameweek xMins export overrides the flat, history-based baseXMins
+            // wherever it covers this specific player + gameweek (see
+            // server/copilot-xmins-override.ts) — recomputed per gw since it can vary week to
+            // week, unlike baseXMinsById.
+            const effectiveBaseXMinsById = new Map<number, number>(
+              playerMinutesProjections.map((r: any) => [
+                r.playerId,
+                getEffectiveBaseXMins(gw, copilotXminsByPlayerId.get(r.playerId), baseXMinsById.get(r.playerId) || 0),
+              ])
+            );
             for (const playerIds of groups.values()) {
               const groupMembers = playerIds.map(id => ({
                 playerId: id,
-                baseXMins: baseXMinsById.get(id) || 0,
+                baseXMins: effectiveBaseXMinsById.get(id) || 0,
                 availability: calculateAvailabilityProbability(playerById.get(id), gw, currentGameweek, events),
               }));
               let adjusted: Map<number, number>;
@@ -13223,11 +13251,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // signal entirely for this group/gameweek.
                 console.error(`⚠️ xMins reallocation failed for a group at GW${gw}, falling back to manual xMins:`, reallocError);
                 adjusted = new Map(playerIds.map(id =>
-                  [id, manualXminsByPlayerId.get(id)?.xMins ?? baseXMinsById.get(id) ?? 0]
+                  [id, manualXminsByPlayerId.get(id)?.xMins ?? effectiveBaseXMinsById.get(id) ?? 0]
                 ));
               }
               for (const id of playerIds) {
-                const baseXMins = baseXMinsById.get(id) || 0;
+                const baseXMins = effectiveBaseXMinsById.get(id) || 0;
                 const adjustedXMins = adjusted.get(id) || 0;
                 const ratio = baseXMins > 0 ? adjustedXMins / baseXMins : 0;
                 const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;

@@ -863,6 +863,26 @@ export type InsertPlayerMinutesProjection = typeof playerMinutesProjections.$inf
 export type ManualXminsProjection = typeof manualXminsProjections.$inferSelect;
 export type InsertManualXminsProjection = typeof manualXminsProjections.$inferInsert;
 
+// Per-gameweek expected-minutes data manually exported from fplcopilot.com's Expected Points
+// page (Manual Uploads/xMins/Copilot projections/), which only genuinely forecasts about 6
+// gameweeks ahead — everything past that in their export flatlines to a single steady-state
+// number, so we only import the gameweeks it actually varies for and let the app's own
+// history-based estimate carry on past that horizon. Refreshed manually, not scraped live —
+// see the "FPL Copilot" discussion in the session for why this stays a one-off import.
+export const copilotXminsProjections = pgTable("copilot_xmins_projections", {
+  playerId: integer("player_id").notNull(),
+  season: text("season").notNull().default(CURRENT_SEASON),
+  gameweek: integer("gameweek").notNull(),
+  xMins: real("x_mins").notNull(),
+  xPts: real("x_pts"),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.season, table.gameweek] }),
+}));
+
+export type CopilotXminsProjection = typeof copilotXminsProjections.$inferSelect;
+export type InsertCopilotXminsProjection = typeof copilotXminsProjections.$inferInsert;
+
 // Gameweek Data Cache Tables - Store actual FPL data when gameweeks complete
 export const gameweekPlayerDataTable = pgTable("gameweek_player_data", {
   id: serial("id").primaryKey(),

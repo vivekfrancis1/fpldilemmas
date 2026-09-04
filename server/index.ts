@@ -6,6 +6,7 @@ import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
 import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
+import { copilotXminsScheduler } from "./copilot-xmins-scheduler";
 // TWEETS PAUSED — re-enable when X Developer API plan is active
 // import { twitterScheduler } from "./twitter-scheduler";
 // import { deadlineTweetScheduler } from "./deadline-tweet-scheduler";
