@@ -13,6 +13,7 @@ import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown,
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
+import { getFixtureDifficultyColor, getHeatmapColor } from "@/lib/heatmap-colors";
 
 // Shown wherever the current FDR mode needs explaining — the mode selector cards, the
 // always-visible badge next to the table legend, and the collapsed Fixture Controls header —
@@ -45,14 +46,7 @@ interface CustomFDR {
 type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number };
 
 function getDifficultyColor(difficulty: number) {
-  switch (difficulty) {
-    case 1: return 'bg-green-300 text-green-800';
-    case 2: return 'bg-green-100 text-green-800';
-    case 3: return 'bg-gray-100 text-gray-800';
-    case 4: return 'bg-red-100 text-red-800';
-    case 5: return 'bg-red-300 text-red-800';
-    default: return 'bg-gray-300 text-gray-900';
-  }
+  return getFixtureDifficultyColor(difficulty);
 }
 
 function TBCCell({ fixtures, onFixtureClick }: {
@@ -836,23 +830,23 @@ export default function Fixtures() {
                         <div className="space-y-4 mt-4">
                           <div className="flex flex-wrap gap-3 text-xs justify-center bg-gray-50 p-3 rounded-lg border">
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-green-300 rounded"></div>
+                              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
                               <span className="font-medium">1 - Very Easy</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                              <div className="w-4 h-4 bg-green-50 border border-green-100 rounded"></div>
                               <span className="font-medium">2 - Easy</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                              <div className="w-4 h-4 bg-slate-50 border border-slate-200 rounded"></div>
                               <span className="font-medium">3 - Medium</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                              <div className="w-4 h-4 bg-red-50 border border-red-100 rounded"></div>
                               <span className="font-medium">4 - Hard</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-red-300 rounded"></div>
+                              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
                               <span className="font-medium">5 - Very Hard</span>
                             </div>
                           </div>
@@ -1086,23 +1080,23 @@ export default function Fixtures() {
           </div>
           <div className="flex flex-wrap gap-1.5 sm:gap-3 text-[9px] sm:text-xs justify-center">
             <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-100 border border-green-200 rounded"></div>
               <span>1</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-100 border border-green-200 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-50 border border-green-100 rounded"></div>
               <span>2</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gray-100 border border-gray-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-slate-50 border border-slate-200 rounded"></div>
               <span>3</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-100 border border-red-200 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-50 border border-red-100 rounded"></div>
               <span>4</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-100 border border-red-200 rounded"></div>
               <span>5</span>
             </div>
           </div>
@@ -1233,12 +1227,7 @@ export default function Fixtures() {
                             </div>
                           </td>
                           <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l z-10">
-                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${
-                              avgFDR <= 2 ? 'bg-green-100 text-green-800' :
-                              avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
-                              avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${getHeatmapColor(avgFDR, [2, 3, 4, 4.5], true)}`}>
                               {avgFDR > 0 ? avgFDR : '-'}
                             </div>
                           </td>

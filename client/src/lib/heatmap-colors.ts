@@ -39,3 +39,12 @@ export function getHeatmapColor(
   }
   return HEATMAP_TIERS[tier];
 }
+
+/**
+ * FPL's Fixture Difficulty Rating is already a discrete 1-5 scale (1 = easiest, 5 = hardest),
+ * so it maps directly onto the 5 heatmap tiers without needing cutoffs.
+ */
+export function getFixtureDifficultyColor(difficulty: number): string {
+  const tier = Math.min(4, Math.max(0, Math.round(difficulty) - 1));
+  return HEATMAP_TIERS[tier];
+}

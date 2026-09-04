@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 
 interface FixtureAnalyzerProps {
   data?: BootstrapData;
@@ -243,13 +244,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
       .filter(gw => gw.fixtures.length > 0); // Remove empty gameweeks
   }, [data, fixtures, activeGameweeks, difficultyType, excludedTeams]);
 
-  const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
-    if (difficulty === 2) return "bg-green-100 text-green-800"; // Easy - Light Green
-    if (difficulty === 3) return "bg-gray-100 text-gray-800"; // Medium - Grey
-    if (difficulty === 4) return "bg-red-100 text-red-800"; // Hard - Light Red
-    return "bg-red-600 text-white"; // Very Hard (5) - Dark Red (softer)
-  };
+  const getDifficultyColor = (difficulty: number): string => getFixtureDifficultyColor(difficulty);
 
   const getDifficultyText = (difficulty: number): string => {
     if (difficulty === 1) return "Very Easy";

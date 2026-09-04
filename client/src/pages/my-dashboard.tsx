@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -908,13 +909,7 @@ export default function MyDashboard() {
     });
   };
 
-  const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-600 text-white";
-    if (difficulty === 2) return "bg-green-100 text-green-800";
-    if (difficulty === 3) return "bg-gray-100 text-gray-800";
-    if (difficulty === 4) return "bg-red-100 text-red-800";
-    return "bg-red-600 text-white";
-  };
+  const getDifficultyColor = (difficulty: number): string => getFixtureDifficultyColor(difficulty);
 
   const getCurrentGameweekDashboard = (): number => {
     return computeCurrentGameweek((bootstrapData?.events || []) as any);

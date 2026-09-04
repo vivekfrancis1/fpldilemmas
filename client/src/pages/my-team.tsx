@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -188,13 +189,7 @@ export default function MyTeam() {
       });
   };
 
-  const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
-    if (difficulty === 2) return "bg-green-100 text-green-800"; // Easy - Light Green
-    if (difficulty === 3) return "bg-gray-100 text-gray-800"; // Medium - Grey
-    if (difficulty === 4) return "bg-red-100 text-red-800"; // Hard - Light Red
-    return "bg-red-600 text-white"; // Very Hard (5) - Dark Red (softer)
-  };
+  const getDifficultyColor = (difficulty: number): string => getFixtureDifficultyColor(difficulty);
 
   const getDifficultyTextColor = (difficulty: number): string => {
     // This function is now redundant as colors are handled in getDifficultyColor

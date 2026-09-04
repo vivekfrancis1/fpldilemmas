@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -452,13 +453,7 @@ export default function CreatorTeam() {
     });
   };
 
-  const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-600 text-white";
-    if (difficulty === 2) return "bg-green-100 text-green-800";
-    if (difficulty === 3) return "bg-gray-100 text-gray-800";
-    if (difficulty === 4) return "bg-red-100 text-red-800";
-    return "bg-red-600 text-white";
-  };
+  const getDifficultyColor = (difficulty: number): string => getFixtureDifficultyColor(difficulty);
 
   if (isLoading) {
     return (

@@ -4,6 +4,7 @@ import { BarChart3, Calendar, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BootstrapData } from "@shared/schema";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 
 interface PlayerPopupDetailsProps {
   player: {
@@ -49,16 +50,7 @@ interface PlayerPopupDetailsProps {
   children?: React.ReactNode;
 }
 
-const getDifficultyColor = (difficulty: number) => {
-  switch (difficulty) {
-    case 1: return 'bg-green-300 text-green-900';
-    case 2: return 'bg-green-100 text-green-800';
-    case 3: return 'bg-gray-100 text-gray-800';
-    case 4: return 'bg-red-100 text-red-800';
-    case 5: return 'bg-red-300 text-red-900';
-    default: return 'bg-gray-200 text-gray-700';
-  }
-};
+const getDifficultyColor = (difficulty: number) => getFixtureDifficultyColor(difficulty);
 
 const getPositionName = (elementType: number) => {
   switch (elementType) {

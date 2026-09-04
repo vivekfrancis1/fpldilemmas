@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
@@ -663,13 +664,7 @@ export default function TopManagerTeam() {
     });
   };
 
-  const getDifficultyColor = (difficulty: number): string => {
-    if (difficulty === 1) return "bg-green-600 text-white";
-    if (difficulty === 2) return "bg-green-100 text-green-800";
-    if (difficulty === 3) return "bg-gray-100 text-gray-800";
-    if (difficulty === 4) return "bg-red-100 text-red-800";
-    return "bg-red-600 text-white";
-  };
+  const getDifficultyColor = (difficulty: number): string => getFixtureDifficultyColor(difficulty);
 
   return (
     <div className="w-full py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
