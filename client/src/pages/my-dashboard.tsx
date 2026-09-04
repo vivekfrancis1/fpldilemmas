@@ -331,8 +331,8 @@ export default function MyDashboard() {
   const [isNameSearching, setIsNameSearching] = useState(false);
   const [nameSearchError, setNameSearchError] = useState("");
   const [activeTab, setActiveTab] = useViewModeParam<
-    "overview" | "team" | "nextteam" | "transfers" | "chips" | "performance"
-  >("tab", "overview", ["overview", "team", "nextteam", "transfers", "chips", "performance"]);
+    "overview" | "leagues" | "nextteam" | "transfers" | "chips" | "performance"
+  >("tab", "overview", ["overview", "leagues", "nextteam", "transfers", "chips", "performance"]);
   // Always default to pitch view
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const [nextTeamView, setNextTeamView] = useState<"pitch" | "list">("pitch");
@@ -348,7 +348,6 @@ export default function MyDashboard() {
   // Projection breakdown modal state (for nextteam tab)
   const [selectedPlayerForProjection, setSelectedPlayerForProjection] = useState<any | null>(null);
   const [showProjectionBreakdown, setShowProjectionBreakdown] = useState(false);
-  const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
   const [selectedMultiGwOptimizerGW, setSelectedMultiGwOptimizerGW] = useState<number | null>(null);
 
   // Chip simulation state for GW Projections tab
@@ -569,8 +568,16 @@ export default function MyDashboard() {
     return { picks: newPicks, totalPoints };
   };
 
-  const optimizeLineup = (picks: TeamPick[], gameweek: number, activeChip?: string | null) => {
-    setOptimisedPicks(computeOptimizedPicks(picks, gameweek, activeChip).picks);
+  // GW Projections always shows the auto-optimized lineup for the next gameweek — no manual
+  // toggle, so there's only ever one projected-points figure per gameweek, not an
+  // optimised/non-optimised pair.
+  const getOptimizedPicksForNextGW = (basePicks: TeamPick[], activeChip: string | null): TeamPick[] => {
+    const nextGW = getNextGameweekDashboard();
+    const normalized = basePicks.map(pick => ({
+      ...pick,
+      multiplier: pick.is_captain ? (activeChip === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0),
+    }));
+    return computeOptimizedPicks(normalized, nextGW, activeChip).picks;
   };
 
 
@@ -1630,7 +1637,7 @@ export default function MyDashboard() {
             <Tabs
               value={activeTab}
               onValueChange={(v) =>
-                setActiveTab(v as "overview" | "team" | "nextteam" | "transfers" | "chips" | "performance")
+                setActiveTab(v as "overview" | "leagues" | "nextteam" | "transfers" | "chips" | "performance")
               }
               className="w-full"
             >
@@ -1643,12 +1650,12 @@ export default function MyDashboard() {
                 >
                   Overview
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="team" 
+                <TabsTrigger
+                  value="leagues"
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
-                  data-testid="tab-team"
+                  data-testid="tab-leagues"
                 >
-                  Points
+                  Leagues
                 </TabsTrigger>
                 {/* Next Gameweek Team Tab - only show if FPL is connected (teamData exists) */}
                 {teamData && (
@@ -1779,6 +1786,265 @@ export default function MyDashboard() {
                   </Card>
               </div>
 
+              {teamData && (
+                <>
+                  {/* Team Overview Cards */}
+                  <div className="grid gap-2 sm:gap-4 grid-cols-3 lg:grid-cols-6">
+                    {/* 1. GW Points */}
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-green-700 mb-0.5">GW Points</p>
+                        <p className="text-base sm:text-lg font-bold text-green-900">
+                          {managerData?.summary_event_points || 0}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* 2. GW Rank */}
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-purple-700 mb-0.5">GW Rank</p>
+                        <p className="text-base sm:text-lg font-bold text-purple-900">
+                          {formatRank(managerData?.summary_event_rank || 0)}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* 3. Formation */}
+                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-emerald-700 mb-0.5">Formation</p>
+                        <p className="text-base sm:text-lg font-bold text-emerald-900">
+                          {getFormationString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* 4. Squad Value */}
+                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
+                        <p className="text-base sm:text-lg font-bold text-orange-900">
+                          {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* 5. Cash in Bank */}
+                    <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-yellow-700 mb-0.5">Cash in Bank</p>
+                        <p className="text-base sm:text-lg font-bold text-yellow-900">
+                          {formatPrice(teamData.entry_history?.bank || 0)}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* 6. Transfers */}
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Transfers</p>
+                        <p className="text-base sm:text-lg font-bold text-blue-900">
+                          {teamData.entry_history?.event_transfers || 0}/{(() => {
+                            const transfersMade = teamData.entry_history?.event_transfers || 0;
+                            const transferCost = teamData.entry_history?.event_transfers_cost || 0;
+                            const freeTransfers = transfersMade - (transferCost / 4);
+                            return freeTransfers;
+                          })()}
+                          {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
+                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Pitch View — GW Points */}
+                  {(() => {
+                    const gwPointsPitchPlayers: PitchPlayer[] = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
+                      const playerTeam = getPlayerTeam(player);
+                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
+                      const pts = (showGwLivePoints && pick.live_points !== undefined) ? pick.live_points : (player.event_points || 0);
+                      return {
+                        element: pick.element,
+                        element_type: player.element_type,
+                        position: pick.position,
+                        is_captain: pick.is_captain,
+                        is_vice_captain: pick.is_vice_captain,
+                        multiplier: pick.multiplier,
+                        web_name: player.web_name,
+                        team_short_name: playerTeam?.short_name,
+                        team_id: player.team,
+                        team_code: getTeamCode(playerTeam),
+                        price: getPickPrice(pick, player),
+                        event_points: pts,
+                        live_minutes: pick.live_minutes ?? 0,
+                        provisional_bonus: pick.provisional_bonus ?? 0,
+                        provisional_cs_points: pick.provisional_cs_points ?? 0,
+                        in_dreamteam: player.in_dreamteam,
+                        points_display: showGwLivePoints ? (pts * (pick.multiplier || 1)).toString() : getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.multiplier || 1),
+                        fixtures: fxs,
+                        status: player.status,
+                        chance_of_playing: player.chance_of_playing_next_round,
+                        news: player.news,
+                      };
+                    }).filter(Boolean) as PitchPlayer[];
+
+                    const gwPointsBenchPlayers: PitchPlayer[] = sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map(pick => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
+                      const playerTeam = getPlayerTeam(player);
+                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
+                      const pts = (showGwLivePoints && pick.live_points !== undefined) ? pick.live_points : (player.event_points || 0);
+                      return {
+                        element: pick.element,
+                        element_type: player.element_type,
+                        position: pick.position,
+                        is_captain: false,
+                        is_vice_captain: false,
+                        multiplier: pick.multiplier,
+                        web_name: player.web_name,
+                        team_short_name: playerTeam?.short_name,
+                        team_id: player.team,
+                        team_code: getTeamCode(playerTeam),
+                        price: getPickPrice(pick, player),
+                        event_points: pts,
+                        live_minutes: pick.live_minutes ?? 0,
+                        provisional_bonus: pick.provisional_bonus ?? 0,
+                        provisional_cs_points: pick.provisional_cs_points ?? 0,
+                        in_dreamteam: player.in_dreamteam,
+                        points_display: showGwLivePoints ? pts.toString() : getPlayerDisplayPoints(player, playerTeam?.id || 0, 1),
+                        fixtures: fxs,
+                        status: player.status,
+                        chance_of_playing: player.chance_of_playing_next_round,
+                        news: player.news,
+                      };
+                    }).filter(Boolean) as PitchPlayer[];
+
+                    // Auto-subs derivation for GW Points live view
+                    const gwFplAutoSubs = (teamData.automatic_subs || []).map(s => ({ element_in: s.element_in, element_out: s.element_out }));
+                    const gwDerivedAutoSubs: Array<{ element_in: number; element_out: number }> = (() => {
+                      if (gwFplAutoSubs.length > 0 || !showGwLivePoints) return [];
+                      const result: Array<{ element_in: number; element_out: number }> = [];
+                      const getFS = (teamId: number) => {
+                        const f = Array.isArray(fixturesData) ? fixturesData.find((fx: any) => (fx.team_h === teamId || fx.team_a === teamId) && fx.event === currentGameweek) : null;
+                        return { started: f?.started || false, finished: f?.finished || false };
+                      };
+                      const isDNP = (p: PitchPlayer) => {
+                        const s = getFS(p.team_id || 0);
+                        return (s.started || s.finished) && ((p as any).live_minutes ?? -1) === 0;
+                      };
+                      const benchSorted = [...gwPointsBenchPlayers].sort((a, b) => a.position - b.position);
+                      const gkStarter = gwPointsPitchPlayers.find(p => p.element_type === 1);
+                      if (gkStarter && isDNP(gkStarter)) {
+                        const gkBench = benchSorted.find(p => p.element_type === 1 && ((p as any).live_minutes ?? 0) > 0);
+                        if (gkBench) result.push({ element_in: gkBench.element, element_out: gkStarter.element });
+                      }
+                      const usedBench = new Set<number>();
+                      let formation = gwPointsPitchPlayers.filter(p => p.element_type !== 1);
+                      for (const dnp of gwPointsPitchPlayers.filter(p => p.element_type !== 1 && isDNP(p))) {
+                        for (const bench of benchSorted.filter(p => p.element_type !== 1)) {
+                          if (usedBench.has(bench.element) || ((bench as any).live_minutes ?? 0) === 0) continue;
+                          const testF = formation.filter(p => p.element !== dnp.element).concat(bench);
+                          if (testF.filter(p => p.element_type === 2).length >= 3 && testF.filter(p => p.element_type === 4).length >= 1) {
+                            result.push({ element_in: bench.element, element_out: dnp.element });
+                            usedBench.add(bench.element);
+                            formation = testF;
+                            break;
+                          }
+                        }
+                      }
+                      return result;
+                    })();
+                    const gwAutoSubs = [...gwFplAutoSubs, ...gwDerivedAutoSubs];
+
+                    const gwEffectivePitch: PitchPlayer[] = showGwLivePoints && gwAutoSubs.length > 0
+                      ? gwPointsPitchPlayers.map(p => {
+                          const sub = gwAutoSubs.find(s => s.element_out === p.element);
+                          if (sub) {
+                            const subIn = gwPointsBenchPlayers.find(b => b.element === sub.element_in);
+                            if (subIn) return { ...subIn, position: p.position, is_captain: p.is_captain, is_vice_captain: p.is_vice_captain, multiplier: p.multiplier, is_subbed_in: true } as PitchPlayer;
+                          }
+                          return p;
+                        })
+                      : gwPointsPitchPlayers;
+
+                    const gwEffectiveBench: PitchPlayer[] = showGwLivePoints && gwAutoSubs.length > 0
+                      ? gwPointsBenchPlayers.map(b => {
+                          const sub = gwAutoSubs.find(s => s.element_in === b.element);
+                          if (sub) {
+                            const subbedOut = gwPointsPitchPlayers.find(p => p.element === sub.element_out);
+                            if (subbedOut) return { ...subbedOut, position: b.position, is_subbed_out: true } as PitchPlayer;
+                          }
+                          return b;
+                        })
+                      : gwPointsBenchPlayers;
+
+                    const { gwLiveTotal, gwHasProvisional } = (() => {
+                      if (!showGwLivePoints) return { gwLiveTotal: null, gwHasProvisional: false };
+                      let base = 0, provisional = 0;
+                      for (const p of gwEffectivePitch) {
+                        const mult = p.multiplier || 1;
+                        base += (p.event_points || 0) * mult;
+                        provisional += ((p.provisional_bonus || 0) + (p.provisional_cs_points || 0)) * mult;
+                      }
+                      return { gwLiveTotal: base + provisional, gwHasProvisional: provisional > 0 };
+                    })();
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-gray-600">GW Squad</span>
+                          <Button
+                            size="sm"
+                            variant={showGwLivePoints ? "default" : "outline"}
+                            className={showGwLivePoints ? "bg-green-600 hover:bg-green-700 text-white gap-1.5" : "gap-1.5"}
+                            onClick={() => setShowGwLivePoints(v => !v)}
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            Live Points
+                          </Button>
+                        </div>
+                        {showGwLivePoints && gwLiveTotal !== null && (
+                          <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                            <Zap className="h-4 w-4 text-green-600 shrink-0" />
+                            <span className="text-sm font-medium text-green-800">Live GW Score:</span>
+                            <span className="text-lg font-bold text-green-700">{gwLiveTotal} pts</span>
+                            <span className="text-xs text-green-600 ml-1">
+                              {[
+                                gwAutoSubs.length > 0 && `${gwAutoSubs.length} auto-sub${gwAutoSubs.length > 1 ? 's' : ''} applied`,
+                                gwHasProvisional && 'inc. est. bonus & CS',
+                              ].filter(Boolean).join(' · ')}
+                            </span>
+                          </div>
+                        )}
+                        <PitchView 
+                          players={showGwLivePoints ? gwEffectivePitch : gwPointsPitchPlayers}
+                          benchPlayers={showGwLivePoints ? gwEffectiveBench : gwPointsBenchPlayers}
+                          activeChip={teamData.active_chip}
+                          onPlayerClick={(player) => {
+                            const fullPlayer = getPlayerById(player.element);
+                            if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain, player.multiplier || 1);
+                          }}
+                        />
+                      </>
+                    );
+                  })()}
+
+                </>
+              )}
+              
+              {!teamData && searchedId && (
+                <div className="text-center py-8">
+                  <div className="text-lg">Loading team data...</div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Leagues Tab */}
+            <TabsContent value="leagues" className="space-y-6 mt-6 sm:mt-8">
                 {/* My Leagues */}
                 {leaguesData && leaguesData.classic && (
                   <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg" data-testid="card-leagues">
@@ -2063,266 +2329,6 @@ export default function MyDashboard() {
               )}
             </TabsContent>
 
-
-            {/* Team Tab */}
-            <TabsContent value="team" className="space-y-6 mt-6 sm:mt-8">
-              {teamData && (
-                <>
-                  {/* Team Overview Cards */}
-                  <div className="grid gap-2 sm:gap-4 grid-cols-3 lg:grid-cols-6">
-                    {/* 1. GW Points */}
-                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-green-700 mb-0.5">GW Points</p>
-                        <p className="text-base sm:text-lg font-bold text-green-900">
-                          {managerData?.summary_event_points || 0}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 2. GW Rank */}
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-purple-700 mb-0.5">GW Rank</p>
-                        <p className="text-base sm:text-lg font-bold text-purple-900">
-                          {formatRank(managerData?.summary_event_rank || 0)}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 3. Formation */}
-                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-emerald-700 mb-0.5">Formation</p>
-                        <p className="text-base sm:text-lg font-bold text-emerald-900">
-                          {getFormationString()}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 4. Squad Value */}
-                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
-                        <p className="text-base sm:text-lg font-bold text-orange-900">
-                          {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 5. Cash in Bank */}
-                    <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-yellow-700 mb-0.5">Cash in Bank</p>
-                        <p className="text-base sm:text-lg font-bold text-yellow-900">
-                          {formatPrice(teamData.entry_history?.bank || 0)}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* 6. Transfers */}
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Transfers</p>
-                        <p className="text-base sm:text-lg font-bold text-blue-900">
-                          {teamData.entry_history?.event_transfers || 0}/{(() => {
-                            const transfersMade = teamData.entry_history?.event_transfers || 0;
-                            const transferCost = teamData.entry_history?.event_transfers_cost || 0;
-                            const freeTransfers = transfersMade - (transferCost / 4);
-                            return freeTransfers;
-                          })()}
-                          {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
-                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
-                          )}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Pitch View — GW Points */}
-                  {(() => {
-                    const gwPointsPitchPlayers: PitchPlayer[] = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
-                      const player = getPlayerById(pick.element);
-                      if (!player) return null;
-                      const playerTeam = getPlayerTeam(player);
-                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
-                      const pts = (showGwLivePoints && pick.live_points !== undefined) ? pick.live_points : (player.event_points || 0);
-                      return {
-                        element: pick.element,
-                        element_type: player.element_type,
-                        position: pick.position,
-                        is_captain: pick.is_captain,
-                        is_vice_captain: pick.is_vice_captain,
-                        multiplier: pick.multiplier,
-                        web_name: player.web_name,
-                        team_short_name: playerTeam?.short_name,
-                        team_id: player.team,
-                        team_code: getTeamCode(playerTeam),
-                        price: getPickPrice(pick, player),
-                        event_points: pts,
-                        live_minutes: pick.live_minutes ?? 0,
-                        provisional_bonus: pick.provisional_bonus ?? 0,
-                        provisional_cs_points: pick.provisional_cs_points ?? 0,
-                        in_dreamteam: player.in_dreamteam,
-                        points_display: showGwLivePoints ? (pts * (pick.multiplier || 1)).toString() : getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.multiplier || 1),
-                        fixtures: fxs,
-                        status: player.status,
-                        chance_of_playing: player.chance_of_playing_next_round,
-                        news: player.news,
-                      };
-                    }).filter(Boolean) as PitchPlayer[];
-
-                    const gwPointsBenchPlayers: PitchPlayer[] = sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map(pick => {
-                      const player = getPlayerById(pick.element);
-                      if (!player) return null;
-                      const playerTeam = getPlayerTeam(player);
-                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
-                      const pts = (showGwLivePoints && pick.live_points !== undefined) ? pick.live_points : (player.event_points || 0);
-                      return {
-                        element: pick.element,
-                        element_type: player.element_type,
-                        position: pick.position,
-                        is_captain: false,
-                        is_vice_captain: false,
-                        multiplier: pick.multiplier,
-                        web_name: player.web_name,
-                        team_short_name: playerTeam?.short_name,
-                        team_id: player.team,
-                        team_code: getTeamCode(playerTeam),
-                        price: getPickPrice(pick, player),
-                        event_points: pts,
-                        live_minutes: pick.live_minutes ?? 0,
-                        provisional_bonus: pick.provisional_bonus ?? 0,
-                        provisional_cs_points: pick.provisional_cs_points ?? 0,
-                        in_dreamteam: player.in_dreamteam,
-                        points_display: showGwLivePoints ? pts.toString() : getPlayerDisplayPoints(player, playerTeam?.id || 0, 1),
-                        fixtures: fxs,
-                        status: player.status,
-                        chance_of_playing: player.chance_of_playing_next_round,
-                        news: player.news,
-                      };
-                    }).filter(Boolean) as PitchPlayer[];
-
-                    // Auto-subs derivation for GW Points live view
-                    const gwFplAutoSubs = (teamData.automatic_subs || []).map(s => ({ element_in: s.element_in, element_out: s.element_out }));
-                    const gwDerivedAutoSubs: Array<{ element_in: number; element_out: number }> = (() => {
-                      if (gwFplAutoSubs.length > 0 || !showGwLivePoints) return [];
-                      const result: Array<{ element_in: number; element_out: number }> = [];
-                      const getFS = (teamId: number) => {
-                        const f = Array.isArray(fixturesData) ? fixturesData.find((fx: any) => (fx.team_h === teamId || fx.team_a === teamId) && fx.event === currentGameweek) : null;
-                        return { started: f?.started || false, finished: f?.finished || false };
-                      };
-                      const isDNP = (p: PitchPlayer) => {
-                        const s = getFS(p.team_id || 0);
-                        return (s.started || s.finished) && ((p as any).live_minutes ?? -1) === 0;
-                      };
-                      const benchSorted = [...gwPointsBenchPlayers].sort((a, b) => a.position - b.position);
-                      const gkStarter = gwPointsPitchPlayers.find(p => p.element_type === 1);
-                      if (gkStarter && isDNP(gkStarter)) {
-                        const gkBench = benchSorted.find(p => p.element_type === 1 && ((p as any).live_minutes ?? 0) > 0);
-                        if (gkBench) result.push({ element_in: gkBench.element, element_out: gkStarter.element });
-                      }
-                      const usedBench = new Set<number>();
-                      let formation = gwPointsPitchPlayers.filter(p => p.element_type !== 1);
-                      for (const dnp of gwPointsPitchPlayers.filter(p => p.element_type !== 1 && isDNP(p))) {
-                        for (const bench of benchSorted.filter(p => p.element_type !== 1)) {
-                          if (usedBench.has(bench.element) || ((bench as any).live_minutes ?? 0) === 0) continue;
-                          const testF = formation.filter(p => p.element !== dnp.element).concat(bench);
-                          if (testF.filter(p => p.element_type === 2).length >= 3 && testF.filter(p => p.element_type === 4).length >= 1) {
-                            result.push({ element_in: bench.element, element_out: dnp.element });
-                            usedBench.add(bench.element);
-                            formation = testF;
-                            break;
-                          }
-                        }
-                      }
-                      return result;
-                    })();
-                    const gwAutoSubs = [...gwFplAutoSubs, ...gwDerivedAutoSubs];
-
-                    const gwEffectivePitch: PitchPlayer[] = showGwLivePoints && gwAutoSubs.length > 0
-                      ? gwPointsPitchPlayers.map(p => {
-                          const sub = gwAutoSubs.find(s => s.element_out === p.element);
-                          if (sub) {
-                            const subIn = gwPointsBenchPlayers.find(b => b.element === sub.element_in);
-                            if (subIn) return { ...subIn, position: p.position, is_captain: p.is_captain, is_vice_captain: p.is_vice_captain, multiplier: p.multiplier, is_subbed_in: true } as PitchPlayer;
-                          }
-                          return p;
-                        })
-                      : gwPointsPitchPlayers;
-
-                    const gwEffectiveBench: PitchPlayer[] = showGwLivePoints && gwAutoSubs.length > 0
-                      ? gwPointsBenchPlayers.map(b => {
-                          const sub = gwAutoSubs.find(s => s.element_in === b.element);
-                          if (sub) {
-                            const subbedOut = gwPointsPitchPlayers.find(p => p.element === sub.element_out);
-                            if (subbedOut) return { ...subbedOut, position: b.position, is_subbed_out: true } as PitchPlayer;
-                          }
-                          return b;
-                        })
-                      : gwPointsBenchPlayers;
-
-                    const { gwLiveTotal, gwHasProvisional } = (() => {
-                      if (!showGwLivePoints) return { gwLiveTotal: null, gwHasProvisional: false };
-                      let base = 0, provisional = 0;
-                      for (const p of gwEffectivePitch) {
-                        const mult = p.multiplier || 1;
-                        base += (p.event_points || 0) * mult;
-                        provisional += ((p.provisional_bonus || 0) + (p.provisional_cs_points || 0)) * mult;
-                      }
-                      return { gwLiveTotal: base + provisional, gwHasProvisional: provisional > 0 };
-                    })();
-
-                    return (
-                      <>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-medium text-gray-600">GW Squad</span>
-                          <Button
-                            size="sm"
-                            variant={showGwLivePoints ? "default" : "outline"}
-                            className={showGwLivePoints ? "bg-green-600 hover:bg-green-700 text-white gap-1.5" : "gap-1.5"}
-                            onClick={() => setShowGwLivePoints(v => !v)}
-                          >
-                            <Zap className="h-3.5 w-3.5" />
-                            Live Points
-                          </Button>
-                        </div>
-                        {showGwLivePoints && gwLiveTotal !== null && (
-                          <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                            <Zap className="h-4 w-4 text-green-600 shrink-0" />
-                            <span className="text-sm font-medium text-green-800">Live GW Score:</span>
-                            <span className="text-lg font-bold text-green-700">{gwLiveTotal} pts</span>
-                            <span className="text-xs text-green-600 ml-1">
-                              {[
-                                gwAutoSubs.length > 0 && `${gwAutoSubs.length} auto-sub${gwAutoSubs.length > 1 ? 's' : ''} applied`,
-                                gwHasProvisional && 'inc. est. bonus & CS',
-                              ].filter(Boolean).join(' · ')}
-                            </span>
-                          </div>
-                        )}
-                        <PitchView 
-                          players={showGwLivePoints ? gwEffectivePitch : gwPointsPitchPlayers}
-                          benchPlayers={showGwLivePoints ? gwEffectiveBench : gwPointsBenchPlayers}
-                          activeChip={teamData.active_chip}
-                          onPlayerClick={(player) => {
-                            const fullPlayer = getPlayerById(player.element);
-                            if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain, player.multiplier || 1);
-                          }}
-                        />
-                      </>
-                    );
-                  })()}
-
-                </>
-              )}
-              
-              {!teamData && searchedId && (
-                <div className="text-center py-8">
-                  <div className="text-lg">Loading team data...</div>
-                </div>
-              )}
-            </TabsContent>
-
             {/* Next Gameweek Team Tab */}
             <TabsContent value="nextteam" className="space-y-6 mt-3 sm:mt-4">
               {/* Multi-gameweek optimizer, mirroring Team Optimizer's next-GWs view */}
@@ -2516,7 +2522,7 @@ export default function MyDashboard() {
                       ...pick,
                       multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
                     }));
-                    const activePicks = optimisedPicks || normalizedPicks;
+                    const activePicks = computeOptimizedPicks(normalizedPicks, nextGW, activeChipVal).picks;
                     const starting11 = activePicks.filter(pick => pick.position <= 11);
                     const bench = activePicks.filter(pick => pick.position > 11);
                     let totalStartingXPts = 0;
@@ -2540,7 +2546,7 @@ export default function MyDashboard() {
                                 <Target className="h-6 w-6 text-purple-700" />
                               </div>
                               <div>
-                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
+                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points (Optimised)</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(2)}</p>
                               </div>
                             </div>
@@ -2550,28 +2556,6 @@ export default function MyDashboard() {
                               ) : (
                                 <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(2)}</p>
                               )}
-                              <div className="flex gap-1.5 justify-end">
-                                {optimisedPicks ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
-                                    onClick={() => setOptimisedPicks(null)}
-                                  >
-                                    <RefreshCw className="h-3 w-3 mr-1" />
-                                    Reset
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    className="h-7 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                                    onClick={() => optimizeLineup(normalizedPicks, nextGW, null)}
-                                  >
-                                    <Sparkles className="h-3 w-3 mr-1" />
-                                    Optimise Lineup
-                                  </Button>
-                                )}
-                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -2585,12 +2569,12 @@ export default function MyDashboard() {
                         GW {getNextGameweekDashboard()} Fixtures & Projections
                       </CardTitle>
                       <CardDescription className="text-amber-700 mt-1">
-                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your {optimisedPicks ? 'optimised' : `GW ${getCurrentGameweekDashboard()}`} team.
+                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your optimised team.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <PitchView
-                          players={(optimisedPicks || teamData.picks).filter(pick => pick.position <= 11).map(pick => {
+                          players={getOptimizedPicksForNextGW(teamData.picks, dashboardChip).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -2619,7 +2603,7 @@ export default function MyDashboard() {
                               news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={(optimisedPicks || teamData.picks).filter(pick => pick.position > 11).map(pick => {
+                          benchPlayers={getOptimizedPicksForNextGW(teamData.picks, dashboardChip).filter(pick => pick.position > 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -2807,7 +2791,7 @@ export default function MyDashboard() {
                         ...pick,
                         multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
                       }));
-                      const activePicks = optimisedPicks || normalizedNextPicks;
+                      const activePicks = computeOptimizedPicks(normalizedNextPicks, nextGW, activeChipVal).picks;
                       const starting11 = activePicks.filter((p: any) => p.position <= 11);
                       const bench = activePicks.filter((p: any) => p.position > 11);
                       let totalStartingXPts = 0;
@@ -2837,7 +2821,7 @@ export default function MyDashboard() {
                                   <Target className="h-6 w-6 text-purple-700" />
                                 </div>
                                 <div>
-                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
+                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points (Optimised)</p>
                                   <div className="flex items-baseline gap-2">
                                     <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(2)}</p>
                                     {hitCost > 0 && (
@@ -2858,26 +2842,6 @@ export default function MyDashboard() {
                                       {activeChipVal === '3xc' ? '3xC' : activeChipVal === 'freehit' ? 'FH' : activeChipVal === 'wildcard' ? 'WC' : activeChipVal}
                                     </Badge>
                                   )}
-                                  {optimisedPicks ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
-                                      onClick={() => setOptimisedPicks(null)}
-                                    >
-                                      <RefreshCw className="h-3 w-3 mr-1" />
-                                      Reset
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      className="h-7 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                                      onClick={() => optimizeLineup(nextTeamData.picks, nextGW, activeChipVal)}
-                                    >
-                                      <Sparkles className="h-3 w-3 mr-1" />
-                                      Optimise Lineup
-                                    </Button>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -2895,7 +2859,7 @@ export default function MyDashboard() {
                               <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1">Formation</p>
                               <p className="text-xl sm:text-2xl font-bold text-emerald-900">
                                 {(() => {
-                                  const starting = (optimisedPicks || nextTeamData.picks).filter(p => p.position <= 11);
+                                  const starting = getOptimizedPicksForNextGW(nextTeamData.picks, getUpcomingActiveChip()).filter(p => p.position <= 11);
                                   const defs = starting.filter(p => {
                                     const player = getPlayerById(p.element);
                                     return player?.element_type === 2;
@@ -3069,7 +3033,7 @@ export default function MyDashboard() {
                       <div className="mt-6">
                         <PitchView
                           activeChip={getUpcomingActiveChip()}
-                          players={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position <= 11).map(pick => {
+                          players={getOptimizedPicksForNextGW(nextTeamData.picks, getUpcomingActiveChip()).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -3098,7 +3062,7 @@ export default function MyDashboard() {
                               news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
+                          benchPlayers={getOptimizedPicksForNextGW(nextTeamData.picks, getUpcomingActiveChip()).filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
