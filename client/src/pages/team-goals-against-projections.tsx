@@ -1033,13 +1033,14 @@ export default function TeamGoalsAgainstProjections() {
                             const total = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
                             const countedWeeks = activeGameweeks.filter(gw => team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined).length;
                             const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                            const avgColorClasses = getGoalsAgainstColor(avg);
                             return (
                               <>
-                                <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
-                                  <span className="text-sm md:text-lg font-bold text-blue-900">{total}</span>
+                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
+                                  <span className="text-sm md:text-lg font-bold">{total}</span>
                                 </td>
-                                <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                                  <span className="text-sm md:text-lg font-bold text-blue-900">{avg.toFixed(2)}</span>
+                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                                  <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                                 </td>
                               </>
                             );
@@ -1057,13 +1058,14 @@ export default function TeamGoalsAgainstProjections() {
                           const total = regularGA + tbcGA;
                           const countedWeeks = countedRegularGws.length + (tbcGA > 0 ? 1 : 0);
                           const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                          const avgColorClasses = getGoalsAgainstColor(avg);
                           return (
                             <>
-                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{total.toFixed(2)}</span>
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
+                                <span className="text-sm md:text-lg font-bold">{total.toFixed(2)}</span>
                               </td>
-                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{avg.toFixed(2)}</span>
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                                <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                               </td>
                             </>
                           );

@@ -833,14 +833,15 @@ export default function TeamAssistProjections() {
                         const rowTotal = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
                         const countedWeeks = countedGws.length + (tbc > 0 ? 1 : 0);
                         const avg = countedWeeks > 0 ? rowTotal / countedWeeks : 0;
+                        const avgColorClasses = getAssistsColor(avg);
                         return (
                           <>
-                            <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
-                              <span className="text-sm md:text-lg font-bold text-blue-900">
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] ${avgColorClasses}`}>
+                              <span className="text-sm md:text-lg font-bold">
                                 {viewMode === "past" ? rowTotal : rowTotal.toFixed(2)}
                               </span>
                             </td>
-                            <td className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium text-gray-900 hidden md:table-cell">
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold hidden md:table-cell ${avgColorClasses}`}>
                               {avg.toFixed(2)}
                             </td>
                           </>

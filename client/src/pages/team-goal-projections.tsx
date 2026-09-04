@@ -1154,15 +1154,16 @@ export default function TeamGoalProjections() {
                           const total = gwSum + tbcGoals;
                           const countedWeeks = countedGws.length + (tbcGoals > 0 ? 1 : 0);
                           const avg = countedWeeks > 0 ? total / countedWeeks : 0;
+                          const avgColorClasses = getGoalsColor(avg);
                           return (
                             <>
-                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-14 z-[5]">
-                                <span className="text-sm md:text-lg font-bold text-orange-900">
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
+                                <span className="text-sm md:text-lg font-bold">
                                   {viewMode === "past" ? total : total.toFixed(2)}
                                 </span>
                               </td>
-                              <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                                <span className="text-sm md:text-lg font-bold text-orange-900">
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                                <span className="text-sm md:text-lg font-bold">
                                   {avg.toFixed(2)}
                                 </span>
                               </td>
