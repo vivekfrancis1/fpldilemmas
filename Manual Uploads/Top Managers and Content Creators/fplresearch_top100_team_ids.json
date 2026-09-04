@@ -1,0 +1,806 @@
+{
+  "source": "https://www.fplresearch.com",
+  "last_update": "01/09/2026",
+  "managers": [
+    {
+      "rank": 1,
+      "entry_id": 9267,
+      "manager": "Cameron Scott",
+      "country": "IM",
+      "rating": 99.12,
+      "change": -0.09
+    },
+    {
+      "rank": 2,
+      "entry_id": 2076855,
+      "manager": "- elevenify.com",
+      "country": "EN",
+      "rating": 99.08,
+      "change": 0.0
+    },
+    {
+      "rank": 3,
+      "entry_id": 179777,
+      "manager": "Tom Dollimore",
+      "country": "EN",
+      "rating": 98.75,
+      "change": 0.01
+    },
+    {
+      "rank": 4,
+      "entry_id": 806,
+      "manager": "Abinav C",
+      "country": "IN",
+      "rating": 98.54,
+      "change": 0.01
+    },
+    {
+      "rank": 5,
+      "entry_id": 1519295,
+      "manager": "John Walsh",
+      "country": "IE",
+      "rating": 98.53,
+      "change": -0.02
+    },
+    {
+      "rank": 6,
+      "entry_id": 149311,
+      "manager": "Sam Hackett",
+      "country": "EN",
+      "rating": 98.37,
+      "change": -0.01
+    },
+    {
+      "rank": 7,
+      "entry_id": 53517,
+      "manager": "Ben Crellin",
+      "country": "EN",
+      "rating": 98.35,
+      "change": 0.0
+    },
+    {
+      "rank": 8,
+      "entry_id": 485455,
+      "manager": "Uz Ray",
+      "country": "S1",
+      "rating": 98.34,
+      "change": 0.03
+    },
+    {
+      "rank": 9,
+      "entry_id": 16499,
+      "manager": "Michael Giovanni",
+      "country": "ID",
+      "rating": 98.33,
+      "change": -0.04
+    },
+    {
+      "rank": 10,
+      "entry_id": 22493,
+      "manager": "Huss E",
+      "country": "AU",
+      "rating": 98.32,
+      "change": -0.1
+    },
+    {
+      "rank": 11,
+      "entry_id": 3054,
+      "manager": "Harry Daniels",
+      "country": "EN",
+      "rating": 98.15,
+      "change": -0.04
+    },
+    {
+      "rank": 12,
+      "entry_id": 47394,
+      "manager": "-Calm -",
+      "country": "EN",
+      "rating": 98.06,
+      "change": 0.0
+    },
+    {
+      "rank": 13,
+      "entry_id": 77750,
+      "manager": "Jovan Popovi\u0107",
+      "country": "RS",
+      "rating": 98.02,
+      "change": -0.08
+    },
+    {
+      "rank": 14,
+      "entry_id": 35543,
+      "manager": "Mark Hurst",
+      "country": "EN",
+      "rating": 98.0,
+      "change": 0.04
+    },
+    {
+      "rank": 15,
+      "entry_id": 616,
+      "manager": "Mark Brookes",
+      "country": "EN",
+      "rating": 97.99,
+      "change": -0.02
+    },
+    {
+      "rank": 16,
+      "entry_id": 1540613,
+      "manager": "\u0141ukasz Wo\u017aniak",
+      "country": "PL",
+      "rating": 97.98,
+      "change": -0.07
+    },
+    {
+      "rank": 17,
+      "entry_id": 198901,
+      "manager": "Mattias Forsblom",
+      "country": "FI",
+      "rating": 97.98,
+      "change": 0.02
+    },
+    {
+      "rank": 18,
+      "entry_id": 3096757,
+      "manager": "Jon Ballantyne",
+      "country": "EN",
+      "rating": 97.93,
+      "change": -0.07
+    },
+    {
+      "rank": 19,
+      "entry_id": 6350,
+      "manager": "Josh Shah",
+      "country": "EN",
+      "rating": 97.93,
+      "change": 0.0
+    },
+    {
+      "rank": 20,
+      "entry_id": 287178,
+      "manager": "Sam McKenzie",
+      "country": "EN",
+      "rating": 97.91,
+      "change": 0.07
+    },
+    {
+      "rank": 21,
+      "entry_id": 25452,
+      "manager": "Tom N",
+      "country": "EN",
+      "rating": 97.91,
+      "change": -0.02
+    },
+    {
+      "rank": 22,
+      "entry_id": 32058,
+      "manager": "Thomas O'Brien",
+      "country": "IE",
+      "rating": 97.88,
+      "change": 0.02
+    },
+    {
+      "rank": 23,
+      "entry_id": 14058,
+      "manager": "Jonas Fougner",
+      "country": "NO",
+      "rating": 97.86,
+      "change": -0.02
+    },
+    {
+      "rank": 24,
+      "entry_id": 289023,
+      "manager": "Asgeir Gylland",
+      "country": "NO",
+      "rating": 97.85,
+      "change": -0.01
+    },
+    {
+      "rank": 25,
+      "entry_id": 10137,
+      "manager": "Michael Herbert",
+      "country": "EN",
+      "rating": 97.83,
+      "change": 0.03
+    },
+    {
+      "rank": 26,
+      "entry_id": 4620837,
+      "manager": "Andy Hamilton",
+      "country": "EN",
+      "rating": 97.8,
+      "change": 0.03
+    },
+    {
+      "rank": 27,
+      "entry_id": 2721176,
+      "manager": "Ola Eikill Veflen",
+      "country": "NO",
+      "rating": 97.8,
+      "change": 0.01
+    },
+    {
+      "rank": 28,
+      "entry_id": 3718868,
+      "manager": "F\u00e1bio Borges",
+      "country": "PT",
+      "rating": 97.79,
+      "change": -0.09
+    },
+    {
+      "rank": 29,
+      "entry_id": 2083312,
+      "manager": "Filip Hanssen Storaas",
+      "country": "NO",
+      "rating": 97.78,
+      "change": 0.03
+    },
+    {
+      "rank": 30,
+      "entry_id": 338432,
+      "manager": "Muneeb Hijazi",
+      "country": "EN",
+      "rating": 97.77,
+      "change": -0.04
+    },
+    {
+      "rank": 31,
+      "entry_id": 2086,
+      "manager": "Pro -",
+      "country": "NZ",
+      "rating": 97.76,
+      "change": 0.01
+    },
+    {
+      "rank": 32,
+      "entry_id": 18203,
+      "manager": "Torkel Wahl-Olsen",
+      "country": "NO",
+      "rating": 97.76,
+      "change": -0.03
+    },
+    {
+      "rank": 33,
+      "entry_id": 6098,
+      "manager": "Mark Lynch",
+      "country": "IE",
+      "rating": 97.75,
+      "change": 0.02
+    },
+    {
+      "rank": 34,
+      "entry_id": 47420,
+      "manager": "Joakim Ahlstr\u00f6m",
+      "country": "SE",
+      "rating": 97.75,
+      "change": -0.04
+    },
+    {
+      "rank": 35,
+      "entry_id": 2421,
+      "manager": "Ahmed Shahin",
+      "country": "EN",
+      "rating": 97.75,
+      "change": 0.04
+    },
+    {
+      "rank": 36,
+      "entry_id": 852,
+      "manager": "William Johansson",
+      "country": "SE",
+      "rating": 97.74,
+      "change": 0.01
+    },
+    {
+      "rank": 37,
+      "entry_id": 4156,
+      "manager": "Thomas Daines",
+      "country": "EN",
+      "rating": 97.74,
+      "change": 0.02
+    },
+    {
+      "rank": 38,
+      "entry_id": 515217,
+      "manager": "Simon MacNair",
+      "country": "CA",
+      "rating": 97.73,
+      "change": 0.01
+    },
+    {
+      "rank": 39,
+      "entry_id": 19797,
+      "manager": "Anthony Brown",
+      "country": "WA",
+      "rating": 97.73,
+      "change": 0.08
+    },
+    {
+      "rank": 40,
+      "entry_id": 216412,
+      "manager": "Calum Duddy",
+      "country": "IE",
+      "rating": 97.72,
+      "change": -0.02
+    },
+    {
+      "rank": 41,
+      "entry_id": 1955586,
+      "manager": "Nick S",
+      "country": "EN",
+      "rating": 97.69,
+      "change": 0.17
+    },
+    {
+      "rank": 42,
+      "entry_id": 1690,
+      "manager": "Jesper \u00d8iestad",
+      "country": "NO",
+      "rating": 97.69,
+      "change": 0.0
+    },
+    {
+      "rank": 43,
+      "entry_id": 243130,
+      "manager": "Ole Martin Stabbetorp",
+      "country": "NO",
+      "rating": 97.68,
+      "change": 0.08
+    },
+    {
+      "rank": 44,
+      "entry_id": 987,
+      "manager": "Jack B",
+      "country": "EN",
+      "rating": 97.67,
+      "change": 0.16
+    },
+    {
+      "rank": 45,
+      "entry_id": 15150,
+      "manager": "Talal Samy",
+      "country": "LB",
+      "rating": 97.67,
+      "change": 0.0
+    },
+    {
+      "rank": 46,
+      "entry_id": 381580,
+      "manager": "Sander Ekanger",
+      "country": "NO",
+      "rating": 97.65,
+      "change": 0.0
+    },
+    {
+      "rank": 47,
+      "entry_id": 788908,
+      "manager": "Thomas Angelo",
+      "country": "NO",
+      "rating": 97.64,
+      "change": 0.0
+    },
+    {
+      "rank": 48,
+      "entry_id": 3961,
+      "manager": "Jack Watton",
+      "country": "EN",
+      "rating": 97.63,
+      "change": 0.02
+    },
+    {
+      "rank": 49,
+      "entry_id": 28376,
+      "manager": "Dan Wright",
+      "country": "IT",
+      "rating": 97.63,
+      "change": 0.1
+    },
+    {
+      "rank": 50,
+      "entry_id": 80380,
+      "manager": "Ben Houghton",
+      "country": "IE",
+      "rating": 97.63,
+      "change": 0.03
+    },
+    {
+      "rank": 51,
+      "entry_id": 2725369,
+      "manager": "Jussi Hokkinen",
+      "country": "FI",
+      "rating": 97.63,
+      "change": -0.01
+    },
+    {
+      "rank": 52,
+      "entry_id": 63377,
+      "manager": "Michael Williams",
+      "country": "EN",
+      "rating": 97.62,
+      "change": 0.05
+    },
+    {
+      "rank": 53,
+      "entry_id": 965528,
+      "manager": "Cam Barras",
+      "country": "US",
+      "rating": 97.61,
+      "change": 0.0
+    },
+    {
+      "rank": 54,
+      "entry_id": 11059,
+      "manager": "James Dean",
+      "country": "MY",
+      "rating": 97.61,
+      "change": 0.04
+    },
+    {
+      "rank": 55,
+      "entry_id": 273847,
+      "manager": "Isaac P",
+      "country": "GH",
+      "rating": 97.61,
+      "change": 0.0
+    },
+    {
+      "rank": 56,
+      "entry_id": 694,
+      "manager": "Marcin Kaczorowski",
+      "country": "PL",
+      "rating": 97.6,
+      "change": -0.05
+    },
+    {
+      "rank": 57,
+      "entry_id": 5133,
+      "manager": "BigMan Bakar",
+      "country": "PK",
+      "rating": 97.6,
+      "change": 0.03
+    },
+    {
+      "rank": 58,
+      "entry_id": 41,
+      "manager": "Andy LTFPL",
+      "country": "IE",
+      "rating": 97.6,
+      "change": -0.01
+    },
+    {
+      "rank": 59,
+      "entry_id": 42815,
+      "manager": "Kenny Liljeblad",
+      "country": "SE",
+      "rating": 97.6,
+      "change": -0.01
+    },
+    {
+      "rank": 60,
+      "entry_id": 262813,
+      "manager": "Sigurd Holen",
+      "country": "NO",
+      "rating": 97.6,
+      "change": -0.04
+    },
+    {
+      "rank": 61,
+      "entry_id": 480091,
+      "manager": "Ben Alexander",
+      "country": "EN",
+      "rating": 97.59,
+      "change": 0.01
+    },
+    {
+      "rank": 62,
+      "entry_id": 176400,
+      "manager": "Ahmed Mohamed",
+      "country": "SD",
+      "rating": 97.58,
+      "change": -0.06
+    },
+    {
+      "rank": 63,
+      "entry_id": 236708,
+      "manager": "Gareth Griffiths",
+      "country": "HK",
+      "rating": 97.58,
+      "change": -0.08
+    },
+    {
+      "rank": 64,
+      "entry_id": 223898,
+      "manager": "Rob Mayes",
+      "country": "EN",
+      "rating": 97.57,
+      "change": -0.02
+    },
+    {
+      "rank": 65,
+      "entry_id": 14633,
+      "manager": "Laurence Imich",
+      "country": "US",
+      "rating": 97.57,
+      "change": 0.01
+    },
+    {
+      "rank": 66,
+      "entry_id": 13524,
+      "manager": "Elaine Ridgewell",
+      "country": "CY",
+      "rating": 97.55,
+      "change": 0.12
+    },
+    {
+      "rank": 67,
+      "entry_id": 46949,
+      "manager": "Ole Nikolai Lie",
+      "country": "NO",
+      "rating": 97.55,
+      "change": 0.01
+    },
+    {
+      "rank": 68,
+      "entry_id": 112860,
+      "manager": "Sean Connors",
+      "country": "EN",
+      "rating": 97.55,
+      "change": 0.0
+    },
+    {
+      "rank": 69,
+      "entry_id": 212742,
+      "manager": "Matt Banner",
+      "country": "EN",
+      "rating": 97.54,
+      "change": -0.06
+    },
+    {
+      "rank": 70,
+      "entry_id": 1826,
+      "manager": "Paul Marshman",
+      "country": "EN",
+      "rating": 97.52,
+      "change": 0.0
+    },
+    {
+      "rank": 71,
+      "entry_id": 221552,
+      "manager": "Ally Christodoulou",
+      "country": "EN",
+      "rating": 97.51,
+      "change": 0.03
+    },
+    {
+      "rank": 72,
+      "entry_id": 8920,
+      "manager": "Charlie M",
+      "country": "EN",
+      "rating": 97.5,
+      "change": 0.04
+    },
+    {
+      "rank": 73,
+      "entry_id": 6050,
+      "manager": "Anthony Moylette",
+      "country": "IE",
+      "rating": 97.5,
+      "change": -0.03
+    },
+    {
+      "rank": 74,
+      "entry_id": 559945,
+      "manager": "David Fairchild",
+      "country": "US",
+      "rating": 97.49,
+      "change": -0.04
+    },
+    {
+      "rank": 75,
+      "entry_id": 3601,
+      "manager": "Testimony Ukpoweh",
+      "country": "NG",
+      "rating": 97.49,
+      "change": -0.04
+    },
+    {
+      "rank": 76,
+      "entry_id": 20896,
+      "manager": "Harry Vernon",
+      "country": "KP",
+      "rating": 97.49,
+      "change": 0.04
+    },
+    {
+      "rank": 77,
+      "entry_id": 13036,
+      "manager": "Tom Stephenson",
+      "country": "EN",
+      "rating": 97.48,
+      "change": -0.02
+    },
+    {
+      "rank": 78,
+      "entry_id": 4127,
+      "manager": "Alastair McKeever",
+      "country": "US",
+      "rating": 97.47,
+      "change": 0.07
+    },
+    {
+      "rank": 79,
+      "entry_id": 141,
+      "manager": "Jack Vamplew",
+      "country": "EN",
+      "rating": 97.47,
+      "change": 0.09
+    },
+    {
+      "rank": 80,
+      "entry_id": 53543,
+      "manager": "Liam McAllister",
+      "country": "IE",
+      "rating": 97.47,
+      "change": 0.02
+    },
+    {
+      "rank": 81,
+      "entry_id": 35602,
+      "manager": "Marc El-Khoury",
+      "country": "CA",
+      "rating": 97.46,
+      "change": -0.02
+    },
+    {
+      "rank": 82,
+      "entry_id": 124,
+      "manager": "Jonny Currie",
+      "country": "S1",
+      "rating": 97.46,
+      "change": 0.03
+    },
+    {
+      "rank": 83,
+      "entry_id": 339759,
+      "manager": "Martin Janson",
+      "country": "SE",
+      "rating": 97.45,
+      "change": 0.02
+    },
+    {
+      "rank": 84,
+      "entry_id": 449246,
+      "manager": "Tommy Shinton",
+      "country": "S1",
+      "rating": 97.45,
+      "change": -0.03
+    },
+    {
+      "rank": 85,
+      "entry_id": 4592,
+      "manager": "Aaron Houston",
+      "country": "EN",
+      "rating": 97.45,
+      "change": -0.06
+    },
+    {
+      "rank": 86,
+      "entry_id": 271613,
+      "manager": "Khaled Zaki",
+      "country": "EG",
+      "rating": 97.45,
+      "change": -0.04
+    },
+    {
+      "rank": 87,
+      "entry_id": 195822,
+      "manager": "Sindre Askeland",
+      "country": "NO",
+      "rating": 97.44,
+      "change": -0.03
+    },
+    {
+      "rank": 88,
+      "entry_id": 306536,
+      "manager": "Martin Felton",
+      "country": "EN",
+      "rating": 97.44,
+      "change": 0.03
+    },
+    {
+      "rank": 89,
+      "entry_id": 1209161,
+      "manager": "Sam Mac-",
+      "country": "EN",
+      "rating": 97.44,
+      "change": -0.04
+    },
+    {
+      "rank": 90,
+      "entry_id": 837651,
+      "manager": "Adam O\u2019Brien",
+      "country": "IE",
+      "rating": 97.43,
+      "change": 0.02
+    },
+    {
+      "rank": 91,
+      "entry_id": 173078,
+      "manager": "Bradley Finney",
+      "country": "EN",
+      "rating": 97.43,
+      "change": -0.04
+    },
+    {
+      "rank": 92,
+      "entry_id": 80403,
+      "manager": "Dave Metz",
+      "country": "US",
+      "rating": 97.43,
+      "change": -0.01
+    },
+    {
+      "rank": 93,
+      "entry_id": 4443767,
+      "manager": "Rob Banner",
+      "country": "EN",
+      "rating": 97.42,
+      "change": -0.01
+    },
+    {
+      "rank": 94,
+      "entry_id": 1224,
+      "manager": "Stephan Haugsrud",
+      "country": "NO",
+      "rating": 97.4,
+      "change": -0.04
+    },
+    {
+      "rank": 95,
+      "entry_id": 429,
+      "manager": "Dan Furneaux",
+      "country": "EN",
+      "rating": 97.4,
+      "change": 0.03
+    },
+    {
+      "rank": 96,
+      "entry_id": 471088,
+      "manager": "Arman Khondker",
+      "country": "US",
+      "rating": 97.4,
+      "change": 0.01
+    },
+    {
+      "rank": 97,
+      "entry_id": 4624701,
+      "manager": "Thomas Hewitt",
+      "country": "AU",
+      "rating": 97.4,
+      "change": 0.01
+    },
+    {
+      "rank": 98,
+      "entry_id": 810,
+      "manager": "Albert Gudmundsson",
+      "country": "IS",
+      "rating": 97.39,
+      "change": 0.03
+    },
+    {
+      "rank": 99,
+      "entry_id": 339434,
+      "manager": "Nick Purdon",
+      "country": "EN",
+      "rating": 97.39,
+      "change": -0.04
+    },
+    {
+      "rank": 100,
+      "entry_id": 25494,
+      "manager": "Nick Jones",
+      "country": "WA",
+      "rating": 97.39,
+      "change": -0.01
+    }
+  ]
+}
