@@ -33,8 +33,15 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  // Handle 401 errors by clearing stale auth cache
-  if (res.status === 401) {
+  // Handle 401 errors by clearing stale auth cache — but not for /api/fpl/* endpoints, which use
+  // a separate auth concept (the user's *FPL connection* token, not their app login session). A
+  // 401 there means "your FPL connection has expired," not "you're logged out of the app," but
+  // this used to clear the app-auth cache unconditionally anyway, forcing every useAuth()
+  // consumer to refetch. Since the refetched user record still carries the same stale
+  // fplManagerId, pages that derive "is this the user's own team" from that field would
+  // re-select the authenticated endpoint again, hit the same 401, and repeat — an infinite loop,
+  // visible as constant flicker on My FPL pages once a user's FPL connection expired.
+  if (res.status === 401 && !url.startsWith("/api/fpl/")) {
     queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
     queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
   }

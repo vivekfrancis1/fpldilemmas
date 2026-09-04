@@ -76,8 +76,21 @@ export default function TransferRecommendations() {
     }
   }, []);
 
-  // Check if user is viewing their own team
-  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
+  // fplManagerId persists on the user record even when the FPL connection was never made or has
+  // since expired — checking it alone (as this used to) meant an unconnected/disconnected user
+  // with a stale fplManagerId would repeatedly try the authenticated endpoint, get a 401, and
+  // (since apiRequest's global 401 handler clears the app-auth query cache on ANY 401, not just
+  // app-auth ones) trigger a fresh auth refetch that resolved with the same stale fplManagerId —
+  // re-selecting the authenticated endpoint and repeating the 401 forever, visible as constant
+  // flicker. Requiring a genuinely live connection closes that loop off entirely.
+  const { data: fplStatus } = useQuery<{ connected: boolean; fplManagerId?: number; needsReauth?: boolean }>({
+    queryKey: ["/api/fpl/status"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  // Check if user is viewing their own team (and actually has a live FPL connection)
+  const isOwnTeam = !!fplStatus?.connected && user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
 
   // Determine which endpoint to use (with fallback for expired sessions)
   const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
@@ -190,9 +203,16 @@ export default function TransferRecommendations() {
   
   // Use authenticated team picks if available (includes pending transfers), otherwise fall back to
   // public team data — or, pre-season with no real squad yet, the saved GW1 draft.
-  const effectiveTeamPicks = (usingDraftFallback && cachedDraft && bootstrapData)
-    ? draftToFplPicks(cachedDraft, bootstrapData)
-    : (adjustedRecommendations?.authenticatedTeamPicks || teamData?.picks);
+  // Memoized: draftToFplPicks was previously called directly in the render body, producing a new
+  // array reference every render whenever the draft-fallback branch was active. That broke
+  // memoization for cascadedState/applyRecommendedTransfers/optimizedTeam (all depend on this
+  // value), so the entire lineup — including the pitch view — recomputed and re-rendered on every
+  // render tick, visible as constant flicker on this page for anyone on the draft fallback path.
+  const effectiveTeamPicks = useMemo(() => {
+    return (usingDraftFallback && cachedDraft && bootstrapData)
+      ? draftToFplPicks(cachedDraft, bootstrapData)
+      : (adjustedRecommendations?.authenticatedTeamPicks || teamData?.picks);
+  }, [usingDraftFallback, cachedDraft, bootstrapData, adjustedRecommendations, teamData]);
 
   // Helper function to get opponent info for a player in a given gameweek
   const getOpponentInfo = (playerTeamId: number, gameweek: number): string => {
