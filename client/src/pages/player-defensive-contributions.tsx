@@ -704,17 +704,6 @@ export default function PlayerDefensiveContributions() {
     }
   };
 
-  const getOpponentColor = (tier: string) => {
-    switch (tier) {
-      case 'elite': return 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300';
-      case 'strong': return 'bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300';
-      case 'weak': return 'bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300';
-      case 'promoted': return 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300';
-      default: return 'bg-gray-50 dark:bg-gray-900/10 text-gray-700 dark:text-gray-300';
-    }
-  };
-
-
   const pageHeaderAndTabs = (
     <>
       {/* Unified Page Header */}
@@ -1217,7 +1206,7 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : getOpponentColor(gw.opponentTier)}`}>
+                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : hasGwAdjustment ? 'bg-purple-50' : getDCColor(gw.defensiveContribution)}`}>
                         <div className="flex flex-col items-center">
                           <span className="font-bold">
                             {hasGwAdjustment && !gw.isActual ? (

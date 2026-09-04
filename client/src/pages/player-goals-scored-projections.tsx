@@ -1185,7 +1185,7 @@ export default function PlayerGoalsScoredProjections() {
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                           
                           return (
-                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
+                            <td key={gw} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${hasGwAdjustment && viewMode === "future" ? 'bg-purple-50' : getGoalsColor(goals)}`}>
                               <div>
                                 {isDGW && viewMode === "future" ? (
                                   <Popover>
