@@ -121,6 +121,7 @@ interface TeamPick {
   live_minutes?: number;
   provisional_bonus?: number;
   provisional_cs_points?: number;
+  selling_price?: number;
 }
 
 interface TeamData {
@@ -548,6 +549,7 @@ export default function MyDashboard() {
         multiplier: isCaptain ? captainMultiplier : 1,
         is_captain: isCaptain,
         is_vice_captain: isViceCaptain,
+        selling_price: p.selling_price,
       });
     }
     for (const p of bestBench) {
@@ -557,6 +559,7 @@ export default function MyDashboard() {
         multiplier: 0,
         is_captain: false,
         is_vice_captain: false,
+        selling_price: p.selling_price,
       });
     }
 
@@ -1186,6 +1189,15 @@ export default function MyDashboard() {
       const opponent = getTeamById(opponentId);
       return { opponent: opponent?.short_name || 'TBD', isHome };
     });
+  };
+
+  // Uses the pick's selling price (only present when FPL is connected and this is the user's
+  // own live squad, via /api/fpl/my-team) so a player who's risen/fallen in value since being
+  // bought reflects what selling them would actually return — falls back to the player's
+  // current market price otherwise (public team data, or FPL not connected).
+  const getPickPrice = (pick: TeamPick, player: Player | undefined): number => {
+    if (pick.selling_price !== undefined) return pick.selling_price / 10;
+    return (player?.now_cost || 0) / 10;
   };
 
   const getPlayerDisplayPoints = (player: any, teamId: number, captainMultiplier: number = 1) => {
@@ -2146,6 +2158,7 @@ export default function MyDashboard() {
                         team_short_name: playerTeam?.short_name,
                         team_id: player.team,
                         team_code: getTeamCode(playerTeam),
+                        price: getPickPrice(pick, player),
                         event_points: pts,
                         live_minutes: pick.live_minutes ?? 0,
                         provisional_bonus: pick.provisional_bonus ?? 0,
@@ -2176,6 +2189,7 @@ export default function MyDashboard() {
                         team_short_name: playerTeam?.short_name,
                         team_id: player.team,
                         team_code: getTeamCode(playerTeam),
+                        price: getPickPrice(pick, player),
                         event_points: pts,
                         live_minutes: pick.live_minutes ?? 0,
                         provisional_bonus: pick.provisional_bonus ?? 0,
@@ -2400,6 +2414,7 @@ export default function MyDashboard() {
                                 team_short_name: playerTeam?.short_name,
                                 team_id: player.team,
                                 team_code: playerTeam?.code || playerTeam?.id || 0,
+                                price: getPickPrice(pick, player),
                                 points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
                                 fixtures: fixtureInfos as PitchPlayerFixture[],
                                 status: player.status,
@@ -2426,6 +2441,7 @@ export default function MyDashboard() {
                                 team_short_name: playerTeam?.short_name,
                                 team_id: player.team,
                                 team_code: playerTeam?.code || playerTeam?.id || 0,
+                                price: getPickPrice(pick, player),
                                 points_display: projected > 0 ? projected.toFixed(2) : '-',
                                 fixtures: fixtureInfos as PitchPlayerFixture[],
                                 status: player.status,
@@ -2595,6 +2611,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
+                              price: getPickPrice(pick, player),
                               points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
@@ -2619,6 +2636,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
+                              price: getPickPrice(pick, player),
                               points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
@@ -3072,6 +3090,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
+                              price: getPickPrice(pick, player),
                               points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
@@ -3096,6 +3115,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
+                              price: getPickPrice(pick, player),
                               points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
