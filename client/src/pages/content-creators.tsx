@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
@@ -334,6 +335,14 @@ export default function ContentCreators() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useViewModeParam<"creators" | "team-analysis">(
+    "tab",
+    "creators",
+    ["creators", "team-analysis"],
+  );
+  const [activeSubTab, setActiveSubTab] = useViewModeParam<
+    "overview" | "players" | "captains" | "formations" | "budget"
+  >("subtab", "overview", ["overview", "players", "captains", "formations", "budget"]);
 
   const [sortBy, setSortBy] = useState<string>("latestTracking.overallRank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -933,7 +942,11 @@ export default function ContentCreators() {
         </div>
 
         {/* Tabs for Content Creators and Team Analysis */}
-        <Tabs defaultValue="creators" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "creators" | "team-analysis")}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="creators" data-testid="tab-creators">Content Creators</TabsTrigger>
             <TabsTrigger value="team-analysis" data-testid="tab-team-analysis">Team Analysis</TabsTrigger>
@@ -1208,7 +1221,11 @@ export default function ContentCreators() {
                 </CardContent>
               </Card>
             ) : (
-              <Tabs defaultValue="overview" className="space-y-6">
+              <Tabs
+                value={activeSubTab}
+                onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
+                className="space-y-6"
+              >
                 <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
                   <TabsTrigger value="players" data-testid="tab-players">Players</TabsTrigger>

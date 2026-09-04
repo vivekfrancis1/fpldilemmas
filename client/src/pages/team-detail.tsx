@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2, Trophy, ChevronDown, ChevronUp } from "lucide-react";
@@ -306,7 +307,7 @@ export default function TeamDetail() {
 
   // Default the Gameweek Performance tab to 2025/26 when the current season has no data yet
   // (pre-season) — only runs once, and only if the user hasn't already picked a tab themselves.
-  const [activeGwTab, setActiveGwTab] = useState("current");
+  const [activeGwTab, setActiveGwTab] = useViewModeParam<"current" | "last">("view", "current", ["current", "last"]);
   // Collapsed by default on mobile — only the "Performance" stat group shows until the user
   // asks for the rest (Expected Stats/Bonus/Discipline), which otherwise turned every
   // gameweek row into an undifferentiated stat grid.
@@ -691,7 +692,7 @@ export default function TeamDetail() {
         </CardContent>
       </Card>
 
-      <Tabs value={activeGwTab} onValueChange={setActiveGwTab} className="w-full">
+      <Tabs value={activeGwTab} onValueChange={(v) => setActiveGwTab(v as "current" | "last")} className="w-full">
         <TabsList>
           <TabsTrigger value="current">{CURRENT_SEASON} (Current)</TabsTrigger>
           <TabsTrigger value="last">{LAST_SEASON} Season</TabsTrigger>

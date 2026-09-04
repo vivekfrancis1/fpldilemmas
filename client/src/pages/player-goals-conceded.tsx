@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ interface GoalsConcededProjection {
 }
 
 export default function PlayerGoalsConceded() {
+  const [activeStatTab, setActiveStatTab] = useViewModeParam<"conceded" | "points">("view", "conceded", ["conceded", "points"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
@@ -418,7 +420,7 @@ export default function PlayerGoalsConceded() {
         </Collapsible>
 
         {/* Results */}
-        <Tabs defaultValue="conceded" className="w-full">
+        <Tabs value={activeStatTab} onValueChange={(v) => setActiveStatTab(v as "conceded" | "points")} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="conceded">Goals Conceded</TabsTrigger>
             <TabsTrigger value="points">Points from Goals Conceded</TabsTrigger>

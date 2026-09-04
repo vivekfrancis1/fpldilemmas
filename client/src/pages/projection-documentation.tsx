@@ -4,8 +4,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ProtectedRoute from "@/components/protected-route";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
+
+const DOC_TABS = [
+  "overview",
+  "flow",
+  "algorithms",
+  "player-tools",
+  "team-tools",
+  "data-sources",
+  "configuration",
+  "troubleshooting",
+] as const;
 
 export default function ProjectionDocumentation() {
+  const [activeTab, setActiveTab] = useViewModeParam<(typeof DOC_TABS)[number]>(
+    "tab",
+    "overview",
+    DOC_TABS,
+  );
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="fpl-page-container">
@@ -20,7 +37,7 @@ export default function ProjectionDocumentation() {
       </div>
 
       <div className="fpl-section-spacing">
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as (typeof DOC_TABS)[number])} className="w-full">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="flow">Logic Flow</TabsTrigger>

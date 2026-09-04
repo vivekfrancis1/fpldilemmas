@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,6 +150,15 @@ export default function PickTeam() {
     for (let gw = startGameweek; gw <= endGameweek; gw++) list.push(gw);
     return list;
   }, [startGameweek, endGameweek]);
+  const lineupTabValues = useMemo(
+    () => ["set-forget", ...gameweekList.map(String)],
+    [gameweekList],
+  );
+  const [activeLineupTab, setActiveLineupTab] = useViewModeParam<string>(
+    "tab",
+    "set-forget",
+    lineupTabValues,
+  );
 
   const { data: allCachedData, isLoading: isLoadingProjections, error: projectionsError } = useQuery<any[]>({
     queryKey: ["/api/cached/player-total-points"],
@@ -418,7 +428,7 @@ export default function PickTeam() {
             </CardHeader>
             <CardContent>
               {aggregateLineup ? (
-                <Tabs defaultValue="set-forget" className="w-full">
+                <Tabs value={activeLineupTab} onValueChange={setActiveLineupTab} className="w-full">
                   <TabsList className="flex w-full flex-wrap h-auto">
                     <TabsTrigger value="set-forget">Set & Forget</TabsTrigger>
                     {gameweekList.map(gw => (

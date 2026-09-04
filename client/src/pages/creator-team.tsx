@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Link, useParams } from "wouter";
@@ -175,6 +176,11 @@ function getPositionShortName(position: string) {
 
 export default function CreatorTeam() {
   const { id } = useParams<{ id: string }>();
+  const [activeTab, setActiveTab] = useViewModeParam<"team" | "transfers" | "performance" | "chips">(
+    "tab",
+    "team",
+    ["team", "transfers", "performance", "chips"],
+  );
   
   const { data: teamData, isLoading, error } = useQuery<TeamData>({
     queryKey: [`/api/content-creators/${id}/team`],
@@ -827,7 +833,11 @@ export default function CreatorTeam() {
       )}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="team" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "chips")}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />

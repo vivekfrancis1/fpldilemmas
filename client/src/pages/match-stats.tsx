@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -78,8 +79,10 @@ export default function MatchStats() {
   // state is always correct) and only auto-switches to "previous" once we've actually confirmed
   // last season's head-to-head exists. Never auto-switches after the user has clicked a tab
   // themselves, and never overrides a real live/finished current match.
-  const [activeTab, setActiveTab] = useState<"current" | "previous">("current");
-  const hasUserSelectedTabRef = useRef(false);
+  const [activeTab, setActiveTab] = useViewModeParam<"current" | "previous">("view", "current", ["current", "previous"]);
+  // Starts true when the page was opened with an explicit ?view= link, so a shared/deep
+  // link isn't silently overridden by the auto-select effect below.
+  const hasUserSelectedTabRef = useRef(new URLSearchParams(window.location.search).has("view"));
 
   const { data: bootstrapData } = useQuery<any>({
     queryKey: ['/api/bootstrap-static'],

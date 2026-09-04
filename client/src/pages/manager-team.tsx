@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useLocation } from "wouter";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
@@ -208,6 +209,9 @@ function getRankChangeDisplay(rankChange: number) {
 export default function ManagerTeam() {
   const { managerId } = useParams<{ managerId: string }>();
   const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useViewModeParam<
+    "team" | "transfers" | "performance" | "history" | "chips"
+  >("tab", "team", ["team", "transfers", "performance", "history", "chips"]);
   
   // Fetch manager general info (name, etc.)
   const { data: managerInfo } = useQuery<any>({
@@ -993,7 +997,11 @@ export default function ManagerTeam() {
       )}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="team" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "history" | "chips")}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1 h-auto">
           <TabsTrigger value="team" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
             <Users className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />

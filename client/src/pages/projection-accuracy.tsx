@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { Target, Users, BarChart3, TrendingUp, TrendingDown, Minus, AlertCircle, ChevronUp, ChevronDown, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,7 +150,12 @@ const normalizeTeamName = (teamName: string): string => {
 
 export default function ProjectionAccuracy() {
   const [selectedGameweek, setSelectedGameweek] = useState<number>(29);
-  const [activeTab, setActiveTab] = useState<string>("players");
+  const [activeTab, setActiveTab] = useViewModeParam<string>("view", "players", [
+    "players",
+    "teams",
+    "aggregate-players",
+    "aggregate-teams",
+  ]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>('projected');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');

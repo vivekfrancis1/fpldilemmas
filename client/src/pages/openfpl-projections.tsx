@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
@@ -52,7 +53,9 @@ export default function OpenFPLProjections() {
   const [startGameweek, setStartGameweek] = useState<number>(6); // Will be dynamically calculated
   const [endGameweek, setEndGameweek] = useState<number>(11); // Will be dynamically calculated
   const gameweekFilter = "all"; // Always use all available data
-  const [activeMetric, setActiveMetric] = useState("predicted_points");
+  const [activeMetric, setActiveMetric] = useViewModeParam<
+    "predicted_points" | "predicted_goals" | "predicted_assists"
+  >("metric", "predicted_points", ["predicted_points", "predicted_goals", "predicted_assists"]);
   const [sortBy, setSortBy] = useState<keyof OpenFPLProjection>("predicted_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [sortColumn, setSortColumn] = useState<string>("total");
@@ -365,7 +368,11 @@ export default function OpenFPLProjections() {
               ) : (
                 <div className="space-y-6">
                   {/* Metric Tabs with Gameweek Columns */}
-                  <Tabs value={activeMetric} onValueChange={setActiveMetric} className="w-full">
+                  <Tabs
+                    value={activeMetric}
+                    onValueChange={(v) => setActiveMetric(v as "predicted_points" | "predicted_goals" | "predicted_assists")}
+                    className="w-full"
+                  >
                     <TabsList className="grid w-full grid-cols-3 mb-6">
                       <TabsTrigger value="predicted_points" className="text-xs">Points</TabsTrigger>
                       <TabsTrigger value="predicted_goals" className="text-xs">Goals</TabsTrigger>

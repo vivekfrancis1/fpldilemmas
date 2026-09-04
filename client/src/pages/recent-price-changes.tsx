@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -83,7 +84,7 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 export default function RecentPriceChanges() {
-  const [activeTab, setActiveTab] = useState<"predicted" | "recent">("predicted");
+  const [activeTab, setActiveTab] = useViewModeParam<"predicted" | "recent">("view", "predicted", ["predicted", "recent"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [changeTypeFilter, setChangeTypeFilter] = useState("all");

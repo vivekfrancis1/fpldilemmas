@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,7 @@ interface YellowCardProjection {
 }
 
 export default function PlayerYellowCards() {
+  const [activeStatTab, setActiveStatTab] = useViewModeParam<"cards" | "points">("view", "cards", ["cards", "points"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
@@ -423,7 +425,7 @@ export default function PlayerYellowCards() {
         </Collapsible>
 
         {/* Results */}
-        <Tabs defaultValue="cards" className="w-full">
+        <Tabs value={activeStatTab} onValueChange={(v) => setActiveStatTab(v as "cards" | "points")} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="cards">Yellow Cards</TabsTrigger>
             <TabsTrigger value="points">Points from Yellow Cards</TabsTrigger>
