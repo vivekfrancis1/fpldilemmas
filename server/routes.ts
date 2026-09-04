@@ -27,6 +27,7 @@ import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayer
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { resolveActiveChip } from "./fpl-chip-utils";
+import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
 import { TOP_MANAGERS } from "@shared/top-managers";
 import bcrypt from "bcrypt";
@@ -5067,9 +5068,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
+        // On an active wildcard, transfers are unlimited and free for this gameweek — offer a
+        // full 15-player squad rebuild instead of the capped transfer-combo search below.
+        // Scoped to the immediate target gameweek only (not future planned wildcards), using
+        // the same 6-GW projection window already computed above and the manager's real budget
+        // (current bank + full sell value of the existing squad).
+        let wildcardSquad: ReturnType<typeof buildWildcardSquad> = null;
+        if (targetGW === planningStart && activeChip === 'wildcard') {
+          const wildcardBudget = runningBank + currentTeam.reduce((sum, p) => sum + p.sellingPrice, 0);
+          const wildcardCandidates: SquadCandidate[] = bootstrapData.elements
+            .filter((p: any) => p.status === 'a')
+            .map((p: any): SquadCandidate => ({
+              id: p.id,
+              webName: p.web_name,
+              team: p.team,
+              elementType: p.element_type,
+              price: p.now_cost,
+              projectedPoints: fourGWProjectionsByPlayerId.get(p.id)?.totalExpectedPoints || 0
+            }));
+          wildcardSquad = buildWildcardSquad(wildcardCandidates, wildcardBudget);
+          console.log(`DEBUG GW${targetGW}: Wildcard squad rebuild - budget £${(wildcardBudget / 10).toFixed(1)}m, ${wildcardSquad ? `spent £${(wildcardSquad.totalCost / 10).toFixed(1)}m, ${wildcardSquad.totalProjectedPoints.toFixed(1)} pts (6 GWs)` : 'infeasible'}`);
+        }
+
         // Initialize running bank balance for this gameweek
         let currentBank = runningBank;
-        
+
         // Calculate transfer recommendations for this gameweek
         const transferRecommendations: any[] = [];
         // Budget-relaxed candidate pool for combo search only.
@@ -5529,7 +5552,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bankBefore: runningBank,
           recommendations: filteredRecommendations,
           ...(bestCombination && bestCombination.length > 0 ? { bestCombination, bestCombinationTotalGain: bestCombination.reduce((sum: number, t: any) => sum + t.fourGWPointsGain, 0) } : {}),
-          ...(Object.keys(bestCombinations).length > 0 ? { bestCombinations } : {})
+          ...(Object.keys(bestCombinations).length > 0 ? { bestCombinations } : {}),
+          ...(wildcardSquad ? {
+            wildcardSquad: {
+              squad: wildcardSquad.squad,
+              totalCost: wildcardSquad.totalCost,
+              budget: runningBank + currentTeam.reduce((sum, p) => sum + p.sellingPrice, 0),
+              totalProjectedPoints: wildcardSquad.totalProjectedPoints
+            }
+          } : {})
         };
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
