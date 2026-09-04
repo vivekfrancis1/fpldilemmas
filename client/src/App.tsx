@@ -98,7 +98,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={PlayerStats} />
+        <Route path="/" component={ProjectedGoalsCS} />
         <Route path="/my-dashboard" component={MyDashboard} />
         <Route path="/fpl-connect-callback" component={FplConnectCallback} />
         <Route path="/projected-points">
@@ -130,7 +130,10 @@ function Router() {
         <Route path="/player/:id" component={PlayerDetail} />
         <Route path="/team/:name" component={TeamDetail} />
 
-        <Route path="/projected-goals-cs" component={ProjectedGoalsCS} />
+        <Route path="/match-predictions" component={ProjectedGoalsCS} />
+        <Route path="/projected-goals-cs">
+          <Redirect to="/match-predictions" />
+        </Route>
         <Route path="/match-odds-history/:eventId" component={MatchOddsHistory} />
         <Route path="/projected-standings" component={ProjectedStandings} />
         <Route path="/team-statistics" component={CurrentStandings} />

@@ -48,8 +48,15 @@ interface MatchProjection {
   awayWinProb?: number | null;
 }
 
+// Match odds (win/draw/away-win probabilities) are only ever open for the next couple of
+// gameweeks — bookmakers don't price fixtures much further out than that. Default the Match
+// Predictions view to that same 2-gameweek window rather than the shared projection-wide
+// default, so it opens on games that actually have odds instead of a wider range where most
+// matches show no odds at all. Users can still widen the range via the GW dropdowns.
+const MATCH_PREDICTIONS_DEFAULT_WEEKS = 2;
+
 export default function ProjectedGoalsCS() {
-  const { defaultWeeks, totalWeeks } = useProjectionSettings();
+  const { totalWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -118,14 +125,14 @@ export default function ProjectedGoalsCS() {
       return { startGameweek: "7", endGameweek: "14" }; // Fallback to likely next 8 gameweeks
     }
     debugGameweekCalculation(bootstrapData.events);
-    const defaultRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+    const defaultRange = getDefaultGameweekRange(bootstrapData.events, MATCH_PREDICTIONS_DEFAULT_WEEKS);
     // Fold the current gameweek into Match Predictions when it still has an unstarted fixture —
     // the default range normally starts the gameweek AFTER the current one.
     if (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(defaultRange.startGameweek)) {
       return { ...defaultRange, startGameweek: String(currentGameweek) };
     }
     return defaultRange;
-  }, [bootstrapData?.events, viewMode, resultsEndGW, defaultWeeks, currentGameweek, currentGWHasUnstarted]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, currentGameweek, currentGWHasUnstarted]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -179,7 +186,7 @@ export default function ProjectedGoalsCS() {
       setStartGameweek(String(startGW));
       setEndGameweek(String(resultsEndGW));
     } else if (viewMode === "future" && bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      const newRange = getDefaultGameweekRange(bootstrapData.events, MATCH_PREDICTIONS_DEFAULT_WEEKS);
       // Fold the current gameweek in (see defaultGameweekRange) when it still has an unstarted fixture.
       const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(newRange.startGameweek))
         ? String(currentGameweek)
@@ -192,7 +199,7 @@ export default function ProjectedGoalsCS() {
         setEndGameweek(newRange.endGameweek);
       }
     }
-  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, defaultWeeks, currentGameweek, currentGWHasUnstarted]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, currentGameweek, currentGWHasUnstarted]);
 
   // Pre-season: nothing has finished yet, so "Match Results" has no real data to fetch or
   // show (see the early-return notice below) — skip these fetches entirely in that case.

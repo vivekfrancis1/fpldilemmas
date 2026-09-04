@@ -164,7 +164,7 @@ export default function MatchOddsHistory() {
       </div>
 
       <div className="mb-4">
-        <Link href="/projected-goals-cs">
+        <Link href="/match-predictions">
           <Button variant="outline" size="sm" className="gap-1.5">
             <ArrowLeft className="h-4 w-4" />
             Back to Match Predictions
