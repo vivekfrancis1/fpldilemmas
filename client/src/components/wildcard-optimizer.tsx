@@ -11,7 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingExperience } from "@/components/loading-experience";
-import { PitchView, type PitchPlayer } from "@/components/pitch-view";
+import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
@@ -126,15 +126,39 @@ export function WildcardOptimizer({
     return map;
   }, [bootstrapData]);
 
-  // Team name -> { code, short_name } for pitch-view jersey images / badges
+  // Team name -> { id, code, short_name } for pitch-view jersey images / badges / fixture lookups
   const teamInfoByName = useMemo(() => {
-    if (!bootstrapData?.teams) return new Map<string, { code: number; short_name: string }>();
-    const map = new Map<string, { code: number; short_name: string }>();
+    if (!bootstrapData?.teams) return new Map<string, { id: number; code: number; short_name: string }>();
+    const map = new Map<string, { id: number; code: number; short_name: string }>();
     bootstrapData.teams.forEach((team: any) => {
-      map.set(team.name, { code: team.code, short_name: team.short_name });
+      map.set(team.name, { id: team.id, code: team.code, short_name: team.short_name });
     });
     return map;
   }, [bootstrapData]);
+
+  // Fixtures data — used to show each player's opponent + home/away once a specific
+  // gameweek is selected in the Weekly Lineup view.
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    queryFn: async () => {
+      const response = await fetch('/api/fixtures');
+      if (!response.ok) throw new Error('Failed to fetch fixtures');
+      return response.json();
+    },
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const getFixturesForTeamGameweek = (teamId: number, gameweek: number): PitchPlayerFixture[] => {
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return [];
+    return (fixturesData as any[])
+      .filter((f: any) => f.event === gameweek && (f.team_h === teamId || f.team_a === teamId))
+      .map((f: any) => {
+        const isHome = f.team_h === teamId;
+        const opponentId = isHome ? f.team_a : f.team_h;
+        const opponent = bootstrapData.teams.find((t: any) => t.id === opponentId);
+        return { opponent: opponent?.short_name || 'TBD', isHome };
+      });
+  };
 
   const POSITION_TO_ELEMENT_TYPE: Record<string, number> = {
     Goalkeeper: 1, GKP: 1,
@@ -143,7 +167,7 @@ export function WildcardOptimizer({
     Forward: 4, FWD: 4,
   };
 
-  const toPitchPlayer = (player: PlayerSnapshot, slot: number, isCaptain: boolean, isViceCaptain: boolean, points: number): PitchPlayer => {
+  const toPitchPlayer = (player: PlayerSnapshot, slot: number, isCaptain: boolean, isViceCaptain: boolean, points: number, fixtures?: PitchPlayerFixture[]): PitchPlayer => {
     const teamInfo = teamInfoByName.get(player.teamName);
     return {
       element: player.playerId,
@@ -154,6 +178,8 @@ export function WildcardOptimizer({
       web_name: playerIdToWebName.get(player.playerId) || player.playerName,
       team_short_name: teamInfo?.short_name,
       team_code: teamInfo?.code,
+      price: player.price,
+      fixtures,
       custom_badge_text: points.toFixed(1),
       custom_badge_color: isCaptain ? 'bg-yellow-500' : 'bg-purple-600',
     };
@@ -1341,10 +1367,18 @@ export function WildcardOptimizer({
           const orderedBench = [...benchGK, ...benchOutfield];
 
           const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
-            toPitchPlayer(player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId, getGameweekPoints(player, gameweekTeam.gameweek))
+            toPitchPlayer(
+              player, i + 1, player.playerId === gameweekTeam.captain.playerId, player.playerId === gameweekTeam.viceCaptain.playerId,
+              getGameweekPoints(player, gameweekTeam.gameweek),
+              getFixturesForTeamGameweek(teamInfoByName.get(player.teamName)?.id || 0, gameweekTeam.gameweek)
+            )
           );
           const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
-            toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, gameweekTeam.gameweek))
+            toPitchPlayer(
+              player, 12 + i, false, false,
+              getGameweekPoints(player, gameweekTeam.gameweek),
+              getFixturesForTeamGameweek(teamInfoByName.get(player.teamName)?.id || 0, gameweekTeam.gameweek)
+            )
           );
 
           return (
