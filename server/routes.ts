@@ -26,6 +26,7 @@ import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { resolveActiveChip } from "./fpl-chip-utils";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
 import { TOP_MANAGERS } from "@shared/top-managers";
 import bcrypt from "bcrypt";
@@ -952,17 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const myTeamData = await myTeamResponse.json();
-
-      // FPL's my-team endpoint doesn't always set the flat active_chip field — a pending
-      // chip (e.g. a wildcard activated for an upcoming gameweek) often only shows up inside
-      // the chips array, as the entry with status_for_entry === 'active'. Promote that into
-      // active_chip so the rest of the app (which only reads the flat field) sees it.
-      if (!myTeamData.active_chip && Array.isArray(myTeamData.chips)) {
-        const activeChip = myTeamData.chips.find((chip: any) => chip.status_for_entry === 'active');
-        if (activeChip) {
-          myTeamData.active_chip = activeChip.name;
-        }
-      }
+      myTeamData.active_chip = resolveActiveChip(myTeamData);
 
       console.log("DEBUG my-team: active_chip =", myTeamData.active_chip);
 
@@ -1129,6 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const myTeamData = await myTeamResponse.json();
+      const activeChip = resolveActiveChip(myTeamData);
 
       // Convert my-team format to picks format for compatibility
       const teamData = {
@@ -1149,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the standard public endpoint with the converted team data
       // Pass authenticated team picks via POST to ensure current squad is used
       const managerId = user.fplManagerId;
-      
+
       // Forward to the standard endpoint's logic, but pass the authenticated team picks
       // This ensures recommendations are based on current squad including pending transfers
       const internalUrl = `api/manager/${managerId}/recommended-transfers`;
@@ -1160,7 +1152,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         body: JSON.stringify({
           authenticatedPicks: teamData.picks,
-          authenticatedBank: myTeamData.transfers.bank
+          authenticatedBank: myTeamData.transfers.bank,
+          activeChip
         })
       });
       
@@ -4820,9 +4813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if authenticated team picks were provided via POST
       const authenticatedPicks = req.method === 'POST' && req.body?.authenticatedPicks;
       const authenticatedBank = req.method === 'POST' && req.body?.authenticatedBank;
-      
+      const authenticatedActiveChip = req.method === 'POST' ? (req.body?.activeChip ?? null) : null;
+
       let teamData: any;
-      
+      let activeChip: string | null = authenticatedActiveChip;
+
       if (authenticatedPicks) {
         // Use authenticated picks (current squad including pending transfers)
         teamData = { picks: authenticatedPicks };
@@ -4847,6 +4842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw fetchError;
         }
         teamData = await teamResponse.json();
+        activeChip = resolveActiveChip(teamData);
         console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''} (current GW${currentGameweek} is_current=${currentGW?.is_current}, finished=${isCurrentGWFinished})`);
       }
       
