@@ -29,7 +29,10 @@ export interface ResponsiveTableColumn<T = any> {
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
   width?: string;
-  className?: string;
+  // A plain string applies to every cell (header + body) as before. A function is called per
+  // body cell with that row's raw value/item — for value-based heatmap coloring, for example —
+  // and only affects body cells; the header keeps its own static styling.
+  className?: string | ((value: any, item: T, index: number) => string);
   
   // Mobile card formatting
   formatForCard?: 'currency' | 'number' | 'badge' | 'text' | 'rank' | 'custom';
@@ -388,7 +391,7 @@ export function ResponsiveTable<T = any>({
                     stickyFirstColumn && columnIndex === 0 && "sticky left-0 bg-white z-30 shadow-sm",
                     stickyHeader && stickyFirstColumn && columnIndex === 0 && "z-40",
                     cellPadding,
-                    column.className,
+                    typeof column.className === 'string' ? column.className : undefined,
                     column.width && `w-${column.width}`
                   )}
                   data-priority={column.priority}
@@ -456,7 +459,9 @@ export function ResponsiveTable<T = any>({
                           getVisibilityClass(column.priority, column.hideOnMobile),
                           stickyFirstColumn && columnIndex === 0 && "sticky left-0 bg-white z-10 shadow-sm",
                           cellPadding,
-                          column.className
+                          typeof column.className === 'function'
+                            ? column.className(value, item, index)
+                            : column.className
                         )}
                         data-priority={column.priority}
                         data-testid={`cell-${column.key}-${index}`}

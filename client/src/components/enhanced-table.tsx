@@ -11,7 +11,10 @@ export interface TableColumn<T = any> {
   header: string | React.ReactNode;
   sortable?: boolean;
   hideSortIcon?: boolean;
-  className?: string;
+  // A plain string applies to every cell (header + body) as before. A function is called per
+  // body cell with that row's raw value/item — for value-based heatmap coloring, for example —
+  // and only affects body cells; the header keeps its own static styling.
+  className?: string | ((value: any, item: T, index: number) => string);
   style?: React.CSSProperties;
   render?: (value: any, item: T, index: number) => React.ReactNode;
   width?: string;
@@ -181,8 +184,9 @@ export function EnhancedTable<T = any>({
             <tr>
               {columns.map((column, colIndex) => {
                 const isFirstColumn = colIndex === 0;
-                const isStickyCol = isFirstColumn && column.className?.includes('sticky');
-                
+                const headerClassName = typeof column.className === 'string' ? column.className : undefined;
+                const isStickyCol = isFirstColumn && !!headerClassName?.includes('sticky');
+
                 return (
                 <th
                   key={column.key}
@@ -190,7 +194,7 @@ export function EnhancedTable<T = any>({
                     "font-semibold text-gray-700 border-b border-gray-200",
                     compact ? "px-2 py-1.5 text-xs" : "px-4 py-3",
                     getAlignment(column.align),
-                    column.className,
+                    headerClassName,
                     column.width && `w-${column.width}`,
                   )}
                   style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 30, backgroundColor: 'white', ...column.style } : column.style}
@@ -248,7 +252,10 @@ export function EnhancedTable<T = any>({
                       : value;
                     
                     const isFirstColumn = colIndex === 0;
-                    const isStickyCol = isFirstColumn && column.className?.includes('sticky');
+                    const cellClassName = typeof column.className === 'function'
+                      ? column.className(value, item, index)
+                      : column.className;
+                    const isStickyCol = isFirstColumn && !!cellClassName?.includes('sticky');
 
                     return (
                       <td
@@ -257,7 +264,7 @@ export function EnhancedTable<T = any>({
                           "text-sm text-gray-900",
                           compact ? "px-2 py-1.5" : "px-4 py-3",
                           getAlignment(column.align),
-                          column.className,
+                          cellClassName,
                         )}
                         style={isStickyCol ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: highlightRow && highlightRow(item, index) ? '#eef2ff' : 'white', ...column.style } : column.style}
                       >

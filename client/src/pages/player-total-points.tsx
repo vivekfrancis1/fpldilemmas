@@ -22,6 +22,7 @@ import JerseyIcon from "@/components/jersey-icon";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
@@ -747,7 +748,8 @@ function createPlayerTotalPointsColumns(
         sortable: true,
         hideSortIcon: true,
         align: 'center' as const,
-        className: 'bg-blue-50/30 px-0.5',
+        className: (_: any, player: PlayerTotalPointsData) =>
+          `px-0.5 ${getHeatmapColor(player.gameweekProjections?.[numericGwKey] || 0, [2, 3.5, 5, 6.5])}`,
         style: { width: '50px', minWidth: '50px' } as CSSProperties,
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
@@ -834,10 +836,11 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       hideSortIcon: true,
       align: 'center',
-      className: 'w-[68px] bg-green-50 border-l-2 border-gray-300 px-1 sticky right-0 md:right-[340px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: (_: any, player: PlayerTotalPointsData) =>
+        `w-[68px] border-l-2 border-gray-300 px-1 sticky right-0 md:right-[340px] z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getHeatmapColor(player.averagePerGameweek || 0, [2, 3.5, 5, 6.5])}`,
       render: (_, player) => (
         isPastMode ? (
-          <span className="font-bold text-green-800 text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
+          <span className="font-bold text-sm">{Math.round(player.totalExpectedPoints || 0)}</span>
         ) : (
           <RangeTotalBreakdownTooltip
             player={player}
@@ -857,13 +860,14 @@ function createPlayerTotalPointsColumns(
       // Projections, or a not-yet-played current-GW in History) — see the averagePerGameweek
       // computation in totalPointsData/adjustedPlayerData above, same convention as the Team
       // Projections pages' Average column.
-      className: 'hidden md:table-cell md:w-[68px] bg-emerald-50 border-l border-gray-300 px-1 md:sticky md:right-[272px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]',
+      className: (value: number) =>
+        `hidden md:table-cell md:w-[68px] border-l border-gray-300 px-1 md:sticky md:right-[272px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getHeatmapColor(value || 0, [2, 3.5, 5, 6.5])}`,
       render: (value) => (
         <ValueCell
           value={value || 0}
           format="number"
           decimals={1}
-          className="font-bold text-emerald-800 text-sm"
+          className="font-bold text-sm"
         />
       )
     },
