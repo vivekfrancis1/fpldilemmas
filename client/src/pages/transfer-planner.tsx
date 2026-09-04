@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3, Eye, EyeOff } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3, Eye, EyeOff, Lock } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -331,37 +331,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     return map;
   }, [bootstrapData]);
 
-  if (isLoading) {
-    return (
-      <LoadingExperience
-        variant="optimization"
-        title="Loading Transfer Planner"
-        description="Setting up your transfer planning workspace with player projections and team data..."
-        steps={[
-          { text: "Loading 700+ player projections", delay: "0s" },
-          { text: "Fetching FPL bootstrap data", delay: "0.2s" },
-          { text: "Preparing draft management system", delay: "0.4s" },
-        ]}
-      />
-    );
-  }
-
-  if (!allPlayersData) {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-muted-foreground">
-            No projection data available
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Get next 6 gameweeks (for the bottom table)
   const getNextGameweeksForTable = () => {
     if (!bootstrapData) return [];
-    
+
     const startGW = computeCurrentGameweek(bootstrapData.events as any) + 1;
 
     const gameweeks = [];
@@ -371,7 +344,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         gameweeks.push(gwNumber);
       }
     }
-    
+
     return gameweeks;
   };
 
@@ -379,6 +352,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // In base mode: GW39 data from the backend is already in gameweekProjections['39'] — use it directly.
   // In custom/expert mode: move real GW39 points to the user-assigned GW for planning purposes.
+  //
+  // Declared above the isLoading/allPlayersData early returns below (and internally guarded
+  // against missing data itself) so this hook is always called on every render — a hook
+  // declared after a conditional return violates the Rules of Hooks and previously crashed
+  // the component ("Rendered more hooks than during the previous render") the moment isLoading
+  // flipped from true to false mid-session.
   const adjustedPlayersData = useMemo(() => {
     if (!allPlayersData) return allPlayersData;
     if (fixtureMode === 'base') return allPlayersData;
@@ -431,6 +410,33 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       return { ...player, gameweekProjections: newGameweekProjections, totalExpectedPoints: newTotal };
     });
   }, [allPlayersData, fixtureMode, assignmentVersion, nextGameweeks, bootstrapData, fixturesDataEarly]);
+
+  if (isLoading) {
+    return (
+      <LoadingExperience
+        variant="optimization"
+        title="Loading Transfer Planner"
+        description="Setting up your transfer planning workspace with player projections and team data..."
+        steps={[
+          { text: "Loading 700+ player projections", delay: "0s" },
+          { text: "Fetching FPL bootstrap data", delay: "0.2s" },
+          { text: "Preparing draft management system", delay: "0.4s" },
+        ]}
+      />
+    );
+  }
+
+  if (!allPlayersData) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-muted-foreground">
+            No projection data available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
@@ -1345,6 +1351,42 @@ export default function TransferPlanner() {
       console.log("🔍 Authenticated my-team data transfers:", teamData.transfers);
     }
   }, [isOwnTeam, teamData]);
+
+  // Auto-detect a chip that's already active on the connected FPL account (see
+  // server/xmins-override.ts sibling fix for active_chip detection) and reflect it in the
+  // plan for the upcoming gameweek. Wildcard/Free Hit can't be cancelled once played on FPL's
+  // own site, so the plan must match reality even if it overrides something set here —
+  // Bench Boost/Triple Captain can still be turned off before the deadline, so those only fill
+  // an empty slot (never override an explicit choice) and surface a dismissible notice with a
+  // one-click way to turn them off again, mirroring FPL's own cancel option.
+  const detectedChipAppliedRef = useRef<string | null>(null);
+  const [detectedTeamChipNotice, setDetectedTeamChipNotice] = useState<{ gameweek: number; chip: ChipType } | null>(null);
+  // Derived (not stored) from the live teamData so it always reflects current reality rather
+  // than a one-time snapshot — the gameweek whose chip selector must be locked because it's an
+  // already-played, uncancellable Wildcard/Free Hit.
+  const lockedChipGameweek = useMemo(() => {
+    if (!isOwnTeam || !selectedGameweek) return null;
+    const detected = teamData?.active_chip as ChipType | null | undefined;
+    return (detected === 'wildcard' || detected === 'freehit') ? selectedGameweek : null;
+  }, [isOwnTeam, selectedGameweek, teamData]);
+  useEffect(() => {
+    if (!isOwnTeam || !selectedGameweek) return;
+    const detected = teamData?.active_chip as ChipType | null | undefined;
+    if (!detected) return;
+    const key = `${selectedGameweek}:${detected}`;
+    if (detectedChipAppliedRef.current === key) return;
+
+    const isTransferChip = detected === 'wildcard' || detected === 'freehit';
+    const current = plannedChips[selectedGameweek];
+    if (current === detected) { detectedChipAppliedRef.current = key; return; }
+    if (!isTransferChip && current) { detectedChipAppliedRef.current = key; return; }
+
+    detectedChipAppliedRef.current = key;
+    setPlannedChips(prev => ({ ...prev, [selectedGameweek]: detected }));
+    if (!isTransferChip) {
+      setDetectedTeamChipNotice({ gameweek: selectedGameweek, chip: detected });
+    }
+  }, [teamData, isOwnTeam, selectedGameweek, plannedChips]);
 
 
   // Auto-detect and remove stale transfers where the outgoing player is no longer in the squad.
@@ -6402,6 +6444,31 @@ export default function TransferPlanner() {
               </AlertDescription>
             </Alert>
 
+            {/* Detected active chip — Bench Boost/Triple Captain only, since those can still be
+                cancelled on FPL before the deadline (Wildcard/Free Hit are applied silently
+                since they can't be undone there either). */}
+            {detectedTeamChipNotice && (
+              <Alert className="border-purple-300 bg-purple-50 dark:bg-purple-950/20">
+                <Info className="h-4 w-4 text-purple-600" />
+                <AlertDescription className="text-xs md:text-sm flex items-center justify-between gap-3">
+                  <span>
+                    <strong>{getChipDisplayName(detectedTeamChipNotice.chip)}</strong> is already active on your FPL account for GW{detectedTeamChipNotice.gameweek} — applied to this plan.
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs shrink-0"
+                    onClick={() => {
+                      handleChipSelection(detectedTeamChipNotice.gameweek, null);
+                      setDetectedTeamChipNotice(null);
+                    }}
+                  >
+                    Turn off
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Chips Availability Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
               {(['wildcard', '3xc', 'bboost', 'freehit'] as ChipType[]).map(chipType => {
@@ -6428,12 +6495,14 @@ export default function TransferPlanner() {
                 {getNextGameweeks().map((gw) => {
                   const remainingChips = getRemainingChips();
                   const selectedChip = plannedChips[gw.id];
-                  
+                  const isLocked = lockedChipGameweek === gw.id;
+
                   return (
                     <div key={gw.id} className="flex items-center gap-2">
                       <span className="text-xs font-medium min-w-[45px]">GW {gw.id}:</span>
                       <Select
                         value={selectedChip || "none"}
+                        disabled={isLocked}
                         onValueChange={(value) => {
                           if (value === "none") {
                             handleChipSelection(gw.id, null);
@@ -6457,7 +6526,12 @@ export default function TransferPlanner() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {selectedChip && (
+                      {isLocked ? (
+                        <span className="flex items-center gap-1 text-[10px] text-purple-600 font-medium whitespace-nowrap" title="Already played on FPL — can't be cancelled">
+                          <Lock className="h-3 w-3" />
+                          Played
+                        </span>
+                      ) : selectedChip && (
                         <Button
                           size="sm"
                           variant="ghost"
