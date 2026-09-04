@@ -860,8 +860,13 @@ function createPlayerTotalPointsColumns(
       // Projections, or a not-yet-played current-GW in History) — see the averagePerGameweek
       // computation in totalPointsData/adjustedPlayerData above, same convention as the Team
       // Projections pages' Average column.
+      //
+      // Always visible (not hidden below md) — EnhancedTable only copies a column's className
+      // onto its <th> header when it's a plain string, not a function, so a function-based
+      // className that hides the <td> below md leaves the header always visible with nothing
+      // under it. Matches Total's always-visible treatment instead.
       className: (value: number) =>
-        `hidden md:table-cell md:w-[68px] border-l border-gray-300 px-1 md:sticky md:right-[272px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getHeatmapColor(value || 0, [2, 3.5, 5, 6.5])}`,
+        `w-[68px] border-l border-gray-300 px-1 md:sticky md:right-[272px] md:z-[5] md:shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getHeatmapColor(value || 0, [2, 3.5, 5, 6.5])}`,
       render: (value) => (
         <ValueCell
           value={value || 0}
