@@ -348,6 +348,7 @@ export default function MyDashboard() {
   const [selectedPlayerForProjection, setSelectedPlayerForProjection] = useState<any | null>(null);
   const [showProjectionBreakdown, setShowProjectionBreakdown] = useState(false);
   const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
+  const [selectedMultiGwOptimizerGW, setSelectedMultiGwOptimizerGW] = useState<number | null>(null);
 
   // Chip simulation state for GW Projections tab
   const [dashboardChip, setDashboardChip] = useState<string | null>(null);
@@ -749,7 +750,7 @@ export default function MyDashboard() {
   const multiGwOptimizerGWs = useMemo(() => {
     const start = Math.min(computeCurrentGameweek((bootstrapData?.events || []) as any) + 1, 38);
     const gws: number[] = [];
-    for (let i = 0; i < 12 && start + i <= 38; i++) gws.push(start + i);
+    for (let i = 0; i < 6 && start + i <= 38; i++) gws.push(start + i);
     return gws;
   }, [bootstrapData]);
 
@@ -2314,6 +2315,136 @@ export default function MyDashboard() {
 
             {/* Next Gameweek Team Tab */}
             <TabsContent value="nextteam" className="space-y-6 mt-3 sm:mt-4">
+              {/* Multi-gameweek optimizer, mirroring Team Optimizer's next-GWs view */}
+              {multiGwBasePicks && multiGwOptimized.size > 0 && (
+                <>
+                  <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <CardTitle className="text-white text-sm sm:text-base md:text-lg">
+                        Projected Points - Next {multiGwOptimizerGWs.length} Gameweeks
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-4 sm:pb-6">
+                      <div className="text-3xl sm:text-4xl md:text-5xl font-bold">
+                        {Array.from(multiGwOptimized.values()).reduce((sum, gw) => sum + gw.totalPoints, 0).toFixed(1)}
+                      </div>
+                      <div className="text-purple-100 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
+                        Auto Optimized Lineup
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <CardTitle className="text-sm sm:text-base md:text-lg">Projected Points by Gameweek</CardTitle>
+                      <CardDescription>Tap a gameweek to see its optimized lineup</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                        {multiGwOptimizerGWs.map(gw => {
+                          const gwResult = multiGwOptimized.get(gw);
+                          const formation = gwResult ? getFormation(gwResult.picks) : '';
+                          const isSelected = selectedMultiGwOptimizerGW === gw;
+                          return (
+                            <Card
+                              key={gw}
+                              className={`min-h-[90px] sm:min-h-[100px] cursor-pointer transition-colors ${
+                                isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : 'hover:bg-gray-50'
+                              }`}
+                              onClick={() => setSelectedMultiGwOptimizerGW(isSelected ? null : gw)}
+                            >
+                              <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
+                                <div className="text-[10px] sm:text-xs font-medium text-gray-600 mb-0.5 sm:mb-1">GW{gw}</div>
+                                <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 mb-0.5 sm:mb-1">
+                                  {(gwResult?.totalPoints || 0).toFixed(1)}
+                                </div>
+                                {formation && (
+                                  <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
+                                    {formation}
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedMultiGwOptimizerGW && multiGwOptimized.get(selectedMultiGwOptimizerGW) && (
+                    <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
+                      <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
+                        <CardTitle className="text-lg sm:text-xl text-purple-900">
+                          GW {selectedMultiGwOptimizerGW} Optimized Lineup
+                        </CardTitle>
+                        <CardDescription className="text-purple-700 mt-1">
+                          Best XI for GW {selectedMultiGwOptimizerGW} based on projected points, using your current squad.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <PitchView
+                          players={multiGwOptimized.get(selectedMultiGwOptimizerGW)!.picks
+                            .filter(pick => pick.position <= 11)
+                            .map(pick => {
+                              const player = getPlayerById(pick.element);
+                              if (!player) return null;
+                              const playerTeam = getPlayerTeam(player);
+                              const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                              const projected = getProjectedPoints(pick.element, selectedMultiGwOptimizerGW);
+                              const multiplier = pick.is_captain ? 2 : 1;
+                              const displayPts = projected * multiplier;
+                              return {
+                                element: pick.element,
+                                element_type: player.element_type,
+                                position: pick.position,
+                                is_captain: pick.is_captain,
+                                is_vice_captain: pick.is_vice_captain,
+                                multiplier,
+                                web_name: player.web_name,
+                                team_short_name: playerTeam?.short_name,
+                                team_id: player.team,
+                                team_code: playerTeam?.code || playerTeam?.id || 0,
+                                points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
+                                fixtures: fixtureInfos as PitchPlayerFixture[],
+                                status: player.status,
+                                chance_of_playing: player.chance_of_playing_next_round,
+                                news: player.news,
+                              };
+                            }).filter(Boolean) as PitchPlayer[]}
+                          benchPlayers={multiGwOptimized.get(selectedMultiGwOptimizerGW)!.picks
+                            .filter(pick => pick.position > 11)
+                            .sort((a, b) => a.position - b.position)
+                            .map(pick => {
+                              const player = getPlayerById(pick.element);
+                              if (!player) return null;
+                              const playerTeam = getPlayerTeam(player);
+                              const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                              const projected = getProjectedPoints(pick.element, selectedMultiGwOptimizerGW);
+                              return {
+                                element: pick.element,
+                                element_type: player.element_type,
+                                position: pick.position,
+                                is_captain: false,
+                                is_vice_captain: false,
+                                web_name: player.web_name,
+                                team_short_name: playerTeam?.short_name,
+                                team_id: player.team,
+                                team_code: playerTeam?.code || playerTeam?.id || 0,
+                                points_display: projected > 0 ? projected.toFixed(2) : '-',
+                                fixtures: fixtureInfos as PitchPlayerFixture[],
+                                status: player.status,
+                                chance_of_playing: player.chance_of_playing_next_round,
+                                news: player.news,
+                              };
+                            }).filter(Boolean) as PitchPlayer[]}
+                          onPlayerClick={handleProjectionPlayerClick}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
               {isLoadingNextTeam && fplStatus?.connected && (
                 <div className="text-center py-8">
                   <div className="text-lg">Loading GW {getNextGameweekDashboard()} projections...</div>
@@ -2983,55 +3114,6 @@ export default function MyDashboard() {
                 </Card>
               )}
 
-              {/* Multi-gameweek optimizer, mirroring Team Optimizer's next-12-GWs view */}
-              {multiGwBasePicks && multiGwOptimized.size > 0 && (
-                <>
-                  <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <CardTitle className="text-white text-sm sm:text-base md:text-lg">
-                        Projected Points - Next {multiGwOptimizerGWs.length} Gameweeks
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-4 sm:pb-6">
-                      <div className="text-3xl sm:text-4xl md:text-5xl font-bold">
-                        {Array.from(multiGwOptimized.values()).reduce((sum, gw) => sum + gw.totalPoints, 0).toFixed(1)}
-                      </div>
-                      <div className="text-purple-100 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
-                        Auto Optimized Lineup
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <CardTitle className="text-sm sm:text-base md:text-lg">Projected Points by Gameweek</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {multiGwOptimizerGWs.map(gw => {
-                          const gwResult = multiGwOptimized.get(gw);
-                          const formation = gwResult ? getFormation(gwResult.picks) : '';
-                          return (
-                            <Card key={gw} className="min-h-[90px] sm:min-h-[100px]">
-                              <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
-                                <div className="text-[10px] sm:text-xs font-medium text-gray-600 mb-0.5 sm:mb-1">GW{gw}</div>
-                                <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 mb-0.5 sm:mb-1">
-                                  {(gwResult?.totalPoints || 0).toFixed(1)}
-                                </div>
-                                {formation && (
-                                  <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
-                                    {formation}
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
             </TabsContent>
 
               {/* Transfers Tab */}
