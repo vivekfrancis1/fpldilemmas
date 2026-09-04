@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import {
   Card,
   CardContent,
@@ -30,15 +31,15 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Top25TeamAnalysis from "./top25-team-analysis";
+import TopTeamAnalysis from "./top-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
-import { TOP_25_MANAGERS as TOP_25_MANAGERS_BASE } from "@shared/top25-managers";
+import { TOP_MANAGERS as TOP_MANAGERS_BASE } from "@shared/top-managers";
 import { CURRENT_SEASON } from "@shared/schema";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
-type Top25Manager = {
+type TopManagerRow = {
   rank: number;
   name: string;
   managerId: number;
@@ -64,10 +65,10 @@ type Top25Manager = {
   active_chip?: string | null;
 };
 
-const TOP_25_MANAGERS: Top25Manager[] = TOP_25_MANAGERS_BASE;
+const TOP_MANAGERS: TopManagerRow[] = TOP_MANAGERS_BASE;
 
-const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<Top25Manager>[] => {
-  const allTimeRankCol: ResponsiveTableColumn<Top25Manager> = {
+const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<TopManagerRow>[] => {
+  const allTimeRankCol: ResponsiveTableColumn<TopManagerRow> = {
     key: 'rank',
     header: 'Rank',
     priority: 'essential',
@@ -82,7 +83,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     )
   };
 
-  const nameCol: ResponsiveTableColumn<Top25Manager> = {
+  const nameCol: ResponsiveTableColumn<TopManagerRow> = {
     key: 'name',
     header: 'Manager',
     priority: 'essential',
@@ -95,7 +96,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     )
   };
 
-  const chipCol: ResponsiveTableColumn<Top25Manager> = {
+  const chipCol: ResponsiveTableColumn<TopManagerRow> = {
     key: 'active_chip',
     header: currentGameweek ? <span className="leading-tight">Chip<br/>GW{currentGameweek}</span> : 'Chip',
     priority: 'secondary',
@@ -113,7 +114,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     )
   };
 
-  const sharedCols = getSharedColumns<Top25Manager>({
+  const sharedCols = getSharedColumns<TopManagerRow>({
     currentGameweek,
     upcomingGameweek,
     valueScale: 'raw',
@@ -163,8 +164,8 @@ interface CachedManagersResponse {
   fromCache: boolean;
 }
 
-export default function Top25Managers() {
-  const [managersWithData, setManagersWithData] = useState<Top25Manager[]>(TOP_25_MANAGERS);
+export default function TopManagers() {
+  const [managersWithData, setManagersWithData] = useState<TopManagerRow[]>(TOP_MANAGERS);
   const [sortField, setSortField] = useState<string>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedSeason, setSelectedSeason] = useState<string>('');
@@ -172,6 +173,11 @@ export default function Top25Managers() {
   const [historicalSortDirection, setHistoricalSortDirection] = useState<'asc' | 'desc'>('asc');
   const [viewSeason, setViewSeason] = useState<string>(CURRENT_SEASON);
   const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useViewModeParam<"managers" | "team-analysis">(
+    "tab",
+    "managers",
+    ["managers", "team-analysis"],
+  );
 
   // Always fetched (not gated on viewSeason): doubles as the 2025/26 Final Standings data
   // AND as the source of truth for which manager IDs are confirmed-current for 2026/27
@@ -180,9 +186,9 @@ export default function Top25Managers() {
     season: string;
     managers: { rank: number; name: string; managerId: number; confirmed: boolean; totalPoints: number | null; fplRank: number | null; rankPercentage: string | null }[];
   }>({
-    queryKey: ["/api/top25-managers/season-standings", PREVIOUS_SEASON],
+    queryKey: ["/api/top-managers/season-standings", PREVIOUS_SEASON],
     queryFn: async () => {
-      const res = await fetch(`/api/top25-managers/season-standings?season=${encodeURIComponent(PREVIOUS_SEASON)}`);
+      const res = await fetch(`/api/top-managers/season-standings?season=${encodeURIComponent(PREVIOUS_SEASON)}`);
       if (!res.ok) throw new Error("Failed to fetch season standings");
       return res.json();
     },
@@ -211,9 +217,9 @@ export default function Top25Managers() {
     return nextEvent?.id || (currentGameweek ? currentGameweek + 1 : undefined);
   }, [bootstrapData, currentGameweek]);
 
-  // Fetch cached Top 25 managers data (30-minute cache)
+  // Fetch cached Top Managers data (30-minute cache)
   const { data: cachedData, isLoading: isLoadingCached, refetch: refetchCached, isFetching: isRefreshing } = useQuery<CachedManagersResponse>({
-    queryKey: ['/api/cached/top25-managers-data'],
+    queryKey: ['/api/cached/top-managers-data'],
     staleTime: 25 * 60 * 1000, // Consider stale after 25 minutes (cache is 30 min)
     gcTime: 35 * 60 * 1000, // Keep in memory for 35 minutes
     refetchOnWindowFocus: false,
@@ -223,7 +229,7 @@ export default function Top25Managers() {
     if (cachedData?.managers) {
       return cachedData.managers.map(m => m.managerId);
     }
-    return TOP_25_MANAGERS.map(m => m.managerId);
+    return TOP_MANAGERS.map(m => m.managerId);
   }, [cachedData]);
 
   const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
@@ -334,7 +340,7 @@ export default function Top25Managers() {
   // Force refresh function (clears cache and refetches)
   const forceRefresh = async () => {
     try {
-      await fetch('/api/cached/top25-managers-data/refresh', { method: 'POST' });
+      await fetch('/api/cached/top-managers-data/refresh', { method: 'POST' });
       refetchCached();
     } catch (error) {
       console.error('Failed to force refresh:', error);
@@ -363,14 +369,14 @@ export default function Top25Managers() {
   }, [managersWithData, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
   const { data: pastSeasonsData, isLoading: isPastSeasonsLoading } = useQuery<{ seasons: string[]; managers: any[] }>({
-    queryKey: ['/api/managers/past-seasons', 'top25'],
+    queryKey: ['/api/managers/past-seasons', 'top-managers'],
     queryFn: async () => {
       const res = await fetch('/api/managers/past-seasons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          managerIds: TOP_25_MANAGERS.map(m => m.managerId),
-          managerNames: TOP_25_MANAGERS.map(m => ({ managerId: m.managerId, playerName: m.name, entryName: '' })),
+          managerIds: TOP_MANAGERS.map(m => m.managerId),
+          managerNames: TOP_MANAGERS.map(m => ({ managerId: m.managerId, playerName: m.name, entryName: '' })),
         }),
       });
       if (!res.ok) throw new Error('Failed to fetch past seasons');
@@ -427,8 +433,8 @@ export default function Top25Managers() {
     return (
       <LoadingExperience
         variant="table"
-        title="Loading Top 25 Managers"
-        description="Fetching live data for all 25 elite FPL managers..."
+        title="Loading Top 100 Managers"
+        description="Fetching live data for all 100 elite FPL managers..."
         steps={[
           { text: "Retrieving manager profiles", delay: "0s" },
           { text: "Fetching current rankings and points", delay: "0.2s" },
@@ -459,7 +465,7 @@ export default function Top25Managers() {
           <SeasonSelector value={viewSeason} onChange={setViewSeason} />
         </div>
 
-        <Tabs defaultValue="managers" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="managers" data-testid="tab-managers">
               <Crown className="h-4 w-4 mr-2" />
@@ -495,14 +501,14 @@ export default function Top25Managers() {
                   <CardContent className="p-0">
                     <ResponsiveTable
                       data={sortedManagersData}
-                      columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                      columns={getTopManagerRowColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
                       compact={true}
                       mobileCompactTable={true}
                       mobileCardTitle={(manager) => manager.name}
                       loading={isRefreshing}
                       emptyMessage="No manager data available"
                       onRowClick={(manager) => {
-                        navigate(`/top25-managers/${manager.rank}/team`);
+                        navigate(`/top-managers/${manager.rank}/team`);
                       }}
                       onSort={handleSort}
                       sortField={sortField}
@@ -511,13 +517,13 @@ export default function Top25Managers() {
                       stickyHeader={true}
                       enableHorizontalScroll={true}
                       getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
-                      data-testid="top25-managers-table"
+                      data-testid="top-managers-table"
                     />
                   </CardContent>
                 </Card>
               </>
             ) : (
-              <Card className="border-0 shadow-lg" data-testid="top25-managers-final-standings">
+              <Card className="border-0 shadow-lg" data-testid="top-managers-final-standings">
                 <CardHeader className="pb-3">
                   <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
                     <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -718,7 +724,7 @@ export default function Top25Managers() {
           </TabsContent>
 
           <TabsContent value="team-analysis">
-            <Top25TeamAnalysis />
+            <TopTeamAnalysis />
           </TabsContent>
         </Tabs>
       </div>

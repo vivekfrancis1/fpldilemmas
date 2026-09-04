@@ -27,7 +27,7 @@ import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayer
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
-import { TOP_25_MANAGERS } from "@shared/top25-managers";
+import { TOP_MANAGERS } from "@shared/top-managers";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -427,8 +427,8 @@ class EnhancedCache {
 // Recommended Transfers Cache - Short TTL for fresh recommendations
 const recommendedTransfersCache = new EnhancedCache(100, 3 * 60 * 1000); // 100 entries, 3min TTL
 
-// Manager Data Caches - 30 minute TTL for Top 25 and Content Creators
-const top25ManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
+// Manager Data Caches - 30 minute TTL for Top Managers and Content Creators
+const topManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
 const contentCreatorsCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
 
 // ========== INITIALIZATION ORCHESTRATOR FOR DEPENDENCY MANAGEMENT ==========
@@ -5930,17 +5930,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Archived season-end standings for the Top 25 Managers list. Only managers whose
-  // 2026/27 manager id has been confirmed (see shared/top25-managers.ts) have a row in
+  // Archived season-end standings for the Top Managers list. Only managers whose
+  // 2026/27 manager id has been confirmed (see shared/top-managers.ts) have a row in
   // manager_season_standings — everyone else comes back with confirmed:false and null
   // stats rather than silently wrong or missing data.
-  app.get("/api/top25-managers/season-standings", async (req, res) => {
+  app.get("/api/top-managers/season-standings", async (req, res) => {
     try {
       const season = typeof req.query.season === "string" ? req.query.season : PREVIOUS_SEASON;
       const rows = await db.select().from(managerSeasonStandings).where(eq(managerSeasonStandings.season, season));
       const byManagerId = new Map(rows.map(r => [r.managerId, r]));
 
-      const managers = TOP_25_MANAGERS.map(m => {
+      const managers = TOP_MANAGERS.map(m => {
         const archived = byManagerId.get(m.managerId);
         return {
           rank: m.rank,
@@ -5955,12 +5955,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ season, managers });
     } catch (error) {
-      console.error("Error fetching Top 25 season standings:", error);
+      console.error("Error fetching Top Managers season standings:", error);
       res.status(500).json({ error: "Failed to fetch season standings" });
     }
   });
 
-  // Same as above, for Content Creators (DB-backed list rather than the static Top 25 array).
+  // Same as above, for Content Creators (DB-backed list rather than the static Top Managers array).
   app.get("/api/content-creators/season-standings", async (req, res) => {
     try {
       const season = typeof req.query.season === "string" ? req.query.season : PREVIOUS_SEASON;
@@ -5990,22 +5990,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cached Top 25 Managers Data Endpoint
-  app.get("/api/cached/top25-managers-data", async (req, res) => {
-    const cacheKey = 'top25-managers-data';
+  // Cached Top Managers Data Endpoint
+  app.get("/api/cached/top-managers-data", async (req, res) => {
+    const cacheKey = 'top-managers-data';
     
     // Check cache first
-    if (top25ManagersCache.has(cacheKey)) {
-      const cached = top25ManagersCache.get(cacheKey);
-      console.log("🔄 Serving Top 25 managers data from cache");
+    if (topManagersCache.has(cacheKey)) {
+      const cached = topManagersCache.get(cacheKey);
+      console.log("🔄 Serving Top Managers data from cache");
       return res.json({ ...cached, fromCache: true });
     }
     
     try {
-      console.log("🚀 Fetching fresh Top 25 managers data (will cache for 30 mins)...");
+      console.log("🚀 Fetching fresh Top Managers data (will cache for 30 mins)...");
       
       // Fetch all manager data in parallel
-      const managerPromises = TOP_25_MANAGERS.map(manager => 
+      const managerPromises = TOP_MANAGERS.map(manager => 
         fetchManagerDataWithHistory(manager.managerId).then(data => ({
           ...manager,
           ...data
@@ -6017,7 +6017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const responseData = {
         managers: managersWithData,
         metadata: {
-          totalManagers: TOP_25_MANAGERS.length,
+          totalManagers: TOP_MANAGERS.length,
           successfulFetches: managersWithData.filter(m => m.success).length,
           fetchedAt: new Date().toISOString(),
           cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
@@ -6025,13 +6025,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Cache the result
-      top25ManagersCache.set(cacheKey, responseData);
-      console.log(`✅ Top 25 managers data cached: ${responseData.metadata.successfulFetches}/${TOP_25_MANAGERS.length} successful`);
+      topManagersCache.set(cacheKey, responseData);
+      console.log(`✅ Top Managers data cached: ${responseData.metadata.successfulFetches}/${TOP_MANAGERS.length} successful`);
       
       res.json({ ...responseData, fromCache: false });
     } catch (error) {
-      console.error("❌ Error fetching Top 25 managers data:", error);
-      res.status(500).json({ error: "Failed to fetch Top 25 managers data" });
+      console.error("❌ Error fetching Top Managers data:", error);
+      res.status(500).json({ error: "Failed to fetch Top Managers data" });
     }
   });
 
@@ -6096,10 +6096,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Force refresh endpoints for admin use
-  app.post("/api/cached/top25-managers-data/refresh", async (req, res) => {
-    top25ManagersCache.clear();
-    console.log("🔄 Top 25 managers cache cleared - next request will fetch fresh data");
-    res.json({ success: true, message: "Top 25 managers cache cleared" });
+  app.post("/api/cached/top-managers-data/refresh", async (req, res) => {
+    topManagersCache.clear();
+    console.log("🔄 Top Managers cache cleared - next request will fetch fresh data");
+    res.json({ success: true, message: "Top Managers cache cleared" });
   });
   
   app.post("/api/cached/content-creators-data/refresh", async (req, res) => {
@@ -6128,7 +6128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Server-side cache for team analysis (2-minute cache)
-  let top25TeamsCache: { 
+  let topManagersTeamsCache: { 
     data: any; 
     timestamp: number; 
     gameweek: number;
@@ -6142,10 +6142,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   const TEAMS_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
-  // Batch endpoint to fetch all Top 25 managers' team data
-  app.get("/api/top25/teams", async (req, res) => {
+  // Batch endpoint to fetch all Top Managers' team data
+  app.get("/api/top-managers/teams", async (req, res) => {
     try {
-      console.log("🚀 Fetching Top 25 managers' team data...");
+      console.log("🚀 Fetching Top Managers' team data...");
       
       // Get current gameweek
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -6158,15 +6158,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check cache first
       const now = Date.now();
-      if (top25TeamsCache && 
-          (now - top25TeamsCache.timestamp) < TEAMS_CACHE_DURATION &&
-          top25TeamsCache.gameweek === currentGameweek) {
-        console.log("🔄 Serving Top 25 teams from cache");
-        return res.json(top25TeamsCache.data);
+      if (topManagersTeamsCache && 
+          (now - topManagersTeamsCache.timestamp) < TEAMS_CACHE_DURATION &&
+          topManagersTeamsCache.gameweek === currentGameweek) {
+        console.log("🔄 Serving Top Managers teams from cache");
+        return res.json(topManagersTeamsCache.data);
       }
 
       // Fetch all team data in parallel using Promise.allSettled
-      const teamPromises = TOP_25_MANAGERS.map(async (manager) => {
+      const teamPromises = TOP_MANAGERS.map(async (manager) => {
         try {
           const response = await fetch(
             `https://fantasy.premierleague.com/api/entry/${manager.managerId}/event/${currentGameweek}/picks/`
@@ -6208,7 +6208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return result.value;
         } else {
           // Handle rejected promise (should rarely happen due to internal try-catch)
-          const manager = TOP_25_MANAGERS[index];
+          const manager = TOP_MANAGERS[index];
           return {
             managerId: manager.managerId,
             name: manager.name,
@@ -6227,7 +6227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const responseData = {
         teams,
         metadata: {
-          totalRequested: TOP_25_MANAGERS.length,
+          totalRequested: TOP_MANAGERS.length,
           totalSuccessful: successful.length,
           totalFailed: failed.length,
           gameweek: currentGameweek,
@@ -6237,20 +6237,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Cache the result
-      top25TeamsCache = {
+      topManagersTeamsCache = {
         data: responseData,
         timestamp: now,
         gameweek: currentGameweek
       };
 
-      console.log(`✅ Top 25 batch fetch complete: ${successful.length}/${TOP_25_MANAGERS.length} successful`);
+      console.log(`✅ Top Managers batch fetch complete: ${successful.length}/${TOP_MANAGERS.length} successful`);
       
       res.json(responseData);
       
     } catch (error) {
-      console.error("❌ Error in Top 25 batch endpoint:", error);
+      console.error("❌ Error in Top Managers batch endpoint:", error);
       res.status(500).json({
-        error: "Failed to fetch Top 25 managers' teams",
+        error: "Failed to fetch Top Managers' teams",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }

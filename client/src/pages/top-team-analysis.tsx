@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { TOP_25_MANAGERS } from "@shared/top25-managers";
+import { TOP_MANAGERS } from "@shared/top-managers";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import {
   Card,
   CardContent,
@@ -69,7 +70,7 @@ interface TeamData {
 }
 
 // API response types
-interface Top25TeamResponse {
+interface TopManagerTeamResponse {
   managerId: number;
   name: string;
   rank: number;
@@ -78,8 +79,8 @@ interface Top25TeamResponse {
   error: string | null;
 }
 
-interface Top25BatchResponse {
-  teams: Top25TeamResponse[];
+interface TopManagersBatchResponse {
+  teams: TopManagerTeamResponse[];
   metadata: {
     totalRequested: number;
     totalSuccessful: number;
@@ -168,22 +169,26 @@ function formatPrice(price: number): string {
   return `£${(price / 10).toFixed(1)}m`;
 }
 
-export default function Top25TeamAnalysis() {
+export default function TopTeamAnalysis() {
+  const [activeSubTab, setActiveSubTab] = useViewModeParam<
+    "overview" | "players" | "captains" | "formations" | "budget"
+  >("subtab", "overview", ["overview", "players", "captains", "formations", "budget"]);
+
   // Fetch bootstrap data
   const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Fetch Top 25 teams data using batch endpoint with React Query
+  // Fetch Top Managers teams data using batch endpoint with React Query
   const { 
-    data: top25Response, 
+    data: topManagersResponse, 
     isLoading: teamsLoading, 
     error: teamsError,
     refetch: refetchTeams,
     isFetching: isRefreshing
-  } = useQuery<Top25BatchResponse>({
-    queryKey: ["/api/top25/teams"],
+  } = useQuery<TopManagersBatchResponse>({
+    queryKey: ["/api/top-managers/teams"],
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime in v5)
     retry: 2,
@@ -192,8 +197,8 @@ export default function Top25TeamAnalysis() {
 
   // Transform the API response to match the expected data structure
   const managersData: ManagerTeamData[] = useMemo(() => {
-    if (!top25Response?.teams) {
-      return TOP_25_MANAGERS.map(manager => ({
+    if (!topManagersResponse?.teams) {
+      return TOP_MANAGERS.map(manager => ({
         ...manager,
         teamData: null,
         success: false,
@@ -201,7 +206,7 @@ export default function Top25TeamAnalysis() {
       }));
     }
     
-    return top25Response.teams.map(team => ({
+    return topManagersResponse.teams.map(team => ({
       managerId: team.managerId,
       name: team.name,
       rank: team.rank,
@@ -209,7 +214,7 @@ export default function Top25TeamAnalysis() {
       success: team.success,
       error: team.error
     }));
-  }, [top25Response]);
+  }, [topManagersResponse]);
 
   // Helper functions for analysis (memoized for performance)
   const validTeams = useMemo(() => 
@@ -427,7 +432,11 @@ export default function Top25TeamAnalysis() {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="overview" className="space-y-6">
+          <Tabs
+            value={activeSubTab}
+            onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
+            className="space-y-6"
+          >
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1">
               <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs sm:text-sm px-2 py-2">Overview</TabsTrigger>
               <TabsTrigger value="players" data-testid="tab-players" className="text-xs sm:text-sm px-2 py-2">Players</TabsTrigger>
@@ -447,7 +456,7 @@ export default function Top25TeamAnalysis() {
                       Most Popular Players
                     </CardTitle>
                     <CardDescription>
-                      Players owned by the most Top 25 managers
+                      Players owned by the most Top 100 managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -483,7 +492,7 @@ export default function Top25TeamAnalysis() {
                       Popular Formations
                     </CardTitle>
                     <CardDescription>
-                      Formation preferences among Top 25 managers
+                      Formation preferences among Top 100 managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -606,7 +615,7 @@ export default function Top25TeamAnalysis() {
                 <CardHeader>
                   <CardTitle>Player Ownership Analysis</CardTitle>
                   <CardDescription>
-                    All players owned by Top 25 managers, sorted by popularity
+                    All players owned by Top 100 managers, sorted by popularity
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -666,7 +675,7 @@ export default function Top25TeamAnalysis() {
                 <CardHeader>
                   <CardTitle>Captaincy Analysis</CardTitle>
                   <CardDescription>
-                    Captain and vice-captain choices among Top 25 managers
+                    Captain and vice-captain choices among Top 100 managers
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -733,7 +742,7 @@ export default function Top25TeamAnalysis() {
                   <CardHeader>
                     <CardTitle>Formation Distribution</CardTitle>
                     <CardDescription>
-                      Tactical setups preferred by Top 25 managers
+                      Tactical setups preferred by Top 100 managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -805,7 +814,7 @@ export default function Top25TeamAnalysis() {
                           <div className="space-y-2">
                             <h4 className="font-semibold">Formation Diversity</h4>
                             <div className="text-sm text-gray-600">
-                              Top 25 managers are using {diversity} different formations, 
+                              Top 100 managers are using {diversity} different formations, 
                               showing {diversity > 5 ? 'high' : diversity > 3 ? 'moderate' : 'low'} tactical diversity.
                             </div>
                           </div>
@@ -824,7 +833,7 @@ export default function Top25TeamAnalysis() {
                   <CardHeader>
                     <CardTitle>Team Values</CardTitle>
                     <CardDescription>
-                      Squad value distribution among Top 25 managers
+                      Squad value distribution among Top 100 managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

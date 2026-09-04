@@ -48,7 +48,8 @@ import {
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
-import { TOP_25_MANAGERS } from "@shared/top25-managers";
+import { TOP_MANAGERS } from "@shared/top-managers";
+import { useViewModeParam } from "@/hooks/use-view-mode-param";
 
 type TeamPick = {
   element: number;
@@ -207,14 +208,17 @@ function getRankChangeDisplay(rankChange: number) {
   }
 }
 
-export default function Top25ManagerTeam() {
+export default function TopManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  const [activeTab, setActiveTab] = useViewModeParam<
+    "team" | "transfers" | "performance" | "history" | "chips"
+  >("tab", "team", ["team", "transfers", "performance", "history", "chips"]);
   const [showLivePoints, setShowLivePoints] = useState(false);
   const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any>(null);
   
-  const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
+  const managerInfo = TOP_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
   const managerId = managerInfo?.managerId;
   
   const { data: teamData, isLoading, error } = useQuery<TeamData>({
@@ -672,14 +676,14 @@ export default function Top25ManagerTeam() {
       {/* Header */}
       <div className="flex flex-col space-y-2 sm:space-y-3 md:space-y-4">
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-          <Link href="/top25-managers">
+          <Link href="/top-managers">
             <Button 
               variant="outline" 
               size="sm" 
               className="hover:bg-blue-50"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Top 25
+              Back to Top 100
             </Button>
           </Link>
         </div>
@@ -831,7 +835,11 @@ export default function Top25ManagerTeam() {
       )}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="team" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "history" | "chips")}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />

@@ -33,9 +33,9 @@ const TransferTracker = lazy(() => import("./pages/transfer-tracker"));
 const OpenFPLProjections = lazy(() => import("./pages/openfpl-projections"));
 const ContentCreators = lazy(() => import("./pages/content-creators"));
 const CreatorTeam = lazy(() => import("./pages/creator-team"));
-const Top25Managers = lazy(() => import("./pages/top25-managers"));
-const Top25ManagerTeam = lazy(() => import("./pages/top25-manager-team"));
-const Top25TeamAnalysis = lazy(() => import("./pages/top25-team-analysis"));
+const TopManagers = lazy(() => import("./pages/top-managers"));
+const TopManagerTeam = lazy(() => import("./pages/top-manager-team"));
+const TopTeamAnalysis = lazy(() => import("./pages/top-team-analysis"));
 const ManagerTeam = lazy(() => import("./pages/manager-team"));
 const PlayerStats = lazy(() => import("./pages/player-stats"));
 const PlayerDetail = lazy(() => import("./pages/player-detail"));
@@ -190,40 +190,36 @@ function Router() {
         <Route path="/admin-projection-window" component={AdminProjectionWindow} />
         <Route path="/admin-site-settings" component={AdminSiteSettings} />
         <Route path="/content-creators">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <ContentCreators />
-            </Suspense>
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <ContentCreators />
+          </Suspense>
         </Route>
         <Route path="/content-creators/:id/team">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <CreatorTeam />
-            </Suspense>
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <CreatorTeam />
+          </Suspense>
         </Route>
-        <Route path="/top25-managers">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <Top25Managers />
-            </Suspense>
-          </ProtectedRoute>
+        <Route path="/top-managers">
+          <Suspense fallback={<PageLoader />}>
+            <TopManagers />
+          </Suspense>
         </Route>
+        <Route path="/top-managers/:rank/team">
+          <Suspense fallback={<PageLoader />}>
+            <TopManagerTeam />
+          </Suspense>
+        </Route>
+        <Route path="/top-managers/team-analysis">
+          <Suspense fallback={<PageLoader />}>
+            <TopTeamAnalysis />
+          </Suspense>
+        </Route>
+        {/* Old URLs redirect so existing bookmarks/shared links keep working */}
+        <Route path="/top25-managers"><Redirect to="/top-managers" /></Route>
         <Route path="/top25-managers/:rank/team">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <Top25ManagerTeam />
-            </Suspense>
-          </ProtectedRoute>
+          {(params) => <Redirect to={`/top-managers/${params.rank}/team`} />}
         </Route>
-        <Route path="/top25-team-analysis">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <Top25TeamAnalysis />
-            </Suspense>
-          </ProtectedRoute>
-        </Route>
+        <Route path="/top25-team-analysis"><Redirect to="/top-managers/team-analysis" /></Route>
         <Route path="/manager-team/:managerId" component={ManagerTeam} />
         <Route path="/projection-documentation" component={ProjectionDocumentation} />
         <Route path="/login" component={Login} />

@@ -90,8 +90,8 @@ const navSections: NavSection[] = [
   {
     section: "Top Managers",
     items: [
-      { path: "/top25-managers", label: "Top 25 (All Time)", icon: Crown, adminOnly: true },
-      { path: "/content-creators", label: "Content Creators", icon: Users, adminOnly: true },
+      { path: "/top-managers", label: "Top 100 Managers", icon: Crown },
+      { path: "/content-creators", label: "Content Creators", icon: Users },
     ],
   },
   {
