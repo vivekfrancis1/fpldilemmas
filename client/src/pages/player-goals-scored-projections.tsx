@@ -21,6 +21,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -686,21 +687,9 @@ export default function PlayerGoalsScoredProjections() {
     await queryClient.refetchQueries({ queryKey: ["/api/cached/player-goals-projections"] });
   };
 
-  const getGoalsColor = (goals: number) => {
-    if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
-    if (goals >= 2.0) return 'bg-blue-50 text-blue-800 font-medium';
-    if (goals >= 1.5) return 'bg-yellow-50 text-yellow-800';
-    if (goals >= 1.0) return 'bg-orange-50 text-orange-800';
-    return 'bg-red-50 text-red-800';
-  };
+  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
 
-  const getPointsColor = (points: number) => {
-    if (points >= 15) return 'bg-green-50 text-green-800 font-semibold';
-    if (points >= 12) return 'bg-blue-50 text-blue-800 font-medium';
-    if (points >= 8) return 'bg-yellow-50 text-yellow-800';
-    if (points >= 5) return 'bg-orange-50 text-orange-800';
-    return 'bg-red-50 text-red-800';
-  };
+  const getPointsColor = (points: number) => getHeatmapColor(points, [5, 8, 12, 15]);
 
   // Format goals based on view mode - integers for past, decimals for future
   const formatGoals = (goals: number) => {
@@ -1280,18 +1269,18 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </td>
                         )}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getGoalsColor(averageGoals)}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>
                               <span className="text-gray-400 line-through text-[10px] md:text-xs">{formatGoals(originalTotal + tbcGoals)}</span>
                             </div>
                           ) : (
-                            <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal + tbcGoals)}</span>
+                            <span className="text-sm md:text-lg font-bold">{formatGoals(adjustedTotal + tbcGoals)}</span>
                           )}
                         </td>
-                        <td className="hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 bg-emerald-50 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                          <span className="text-sm md:text-lg font-bold text-emerald-800">{formatGoals(averageGoals)}</span>
+                        <td className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getGoalsColor(averageGoals)}`}>
+                          <span className="text-sm md:text-lg font-bold">{formatGoals(averageGoals)}</span>
                         </td>
                       </tr>
                     );

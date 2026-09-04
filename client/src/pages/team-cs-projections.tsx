@@ -7,6 +7,7 @@ import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalc
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -338,13 +339,7 @@ export default function TeamCSProjections() {
     return map;
   }, [resolvedProjections]);
 
-  const getCSColor = (percentage: number) => {
-    if (percentage >= 45) return 'bg-green-50 text-green-800 font-semibold';
-    if (percentage >= 35) return 'bg-blue-50 text-blue-800 font-medium';
-    if (percentage >= 25) return 'bg-yellow-50 text-yellow-800';
-    if (percentage >= 15) return 'bg-orange-50 text-orange-800';
-    return 'bg-red-50 text-red-800';
-  };
+  const getCSColor = (percentage: number) => getHeatmapColor(percentage, [15, 25, 35, 45]);
 
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {

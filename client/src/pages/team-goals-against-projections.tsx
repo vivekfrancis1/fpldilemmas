@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -496,14 +497,8 @@ export default function TeamGoalsAgainstProjections() {
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, fixtureMode, tbcGAMap, currentGameweek, currentGWDecidedTeamIds]);
 
-  const getGoalsAgainstColor = (goalsAgainst: number) => {
-    // Lower goals against = better defense = green colors
-    if (goalsAgainst <= 1.0) return 'bg-green-50 text-green-800 font-semibold';
-    if (goalsAgainst <= 1.3) return 'bg-blue-50 text-blue-800 font-medium';
-    if (goalsAgainst <= 1.6) return 'bg-yellow-50 text-yellow-800';
-    if (goalsAgainst <= 2.0) return 'bg-orange-50 text-orange-800';
-    return 'bg-red-50 text-red-800';
-  };
+  // Lower goals against = better defense, so the scale is inverted (fewer conceded -> greener)
+  const getGoalsAgainstColor = (goalsAgainst: number) => getHeatmapColor(goalsAgainst, [1.0, 1.3, 1.6, 2.0], true);
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
 

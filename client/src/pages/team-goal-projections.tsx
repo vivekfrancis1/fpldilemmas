@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -588,13 +589,7 @@ export default function TeamGoalProjections() {
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, currentGameweek, currentGWDecidedTeamIds]);
 
-  const getGoalsColor = (goals: number) => {
-    if (goals >= 2.5) return 'bg-green-50 text-green-800 font-semibold';
-    if (goals >= 2.0) return 'bg-blue-50 text-blue-800 font-medium';
-    if (goals >= 1.5) return 'bg-yellow-50 text-yellow-800';
-    if (goals >= 1.0) return 'bg-orange-50 text-orange-800';
-    return 'bg-red-50 text-red-800';
-  };
+  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXg" && xgHistoryLoading);
 

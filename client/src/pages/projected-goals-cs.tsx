@@ -9,6 +9,7 @@ import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -433,21 +434,9 @@ export default function ProjectedGoalsCS() {
     return groups;
   }, [filteredProjections]);
 
-  const getGoalsColor = (goals: number) => {
-    if (goals >= 2.5) return 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300';
-    if (goals >= 2.0) return 'bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-800 border border-indigo-300';
-    if (goals >= 1.5) return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300';
-    if (goals >= 1.0) return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
-    return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
-  };
+  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
 
-  const getCSColor = (percentage: number) => {
-    if (percentage >= 50) return 'bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 border border-amber-300';
-    if (percentage >= 40) return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300';
-    if (percentage >= 30) return 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300';
-    if (percentage >= 20) return 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300';
-    return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300';
-  };
+  const getCSColor = (percentage: number) => getHeatmapColor(percentage, [20, 30, 40, 50]);
 
   const getResultColor = (result: string) => {
     if (result === 'win') return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300';

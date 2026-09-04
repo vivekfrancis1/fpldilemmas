@@ -9,6 +9,7 @@ import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGam
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -435,12 +436,7 @@ export default function TeamAssistProjections() {
   }, [filteredProjections, bootstrapData, activeGameweeks]);
 
   // Helper functions for styling
-  const getAssistsColor = (assists: number) => {
-    if (assists >= 1.5) return "text-green-600 bg-green-50";
-    if (assists >= 1.0) return "text-blue-600 bg-blue-50";
-    if (assists >= 0.6) return "text-yellow-600 bg-yellow-50";
-    return "text-red-600 bg-red-50";
-  };
+  const getAssistsColor = (assists: number) => getHeatmapColor(assists, [0.3, 0.6, 1.0, 1.5]);
 
   const isDataLoading = isLoading
     || (viewMode === "future" && projectionsLoading)
