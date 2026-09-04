@@ -77,9 +77,7 @@ const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Reco
     cardOrder: 5,
     sortable: true,
     render: (value, manager) => (
-      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
-        <span className="text-white font-bold text-sm">#{manager.rank}</span>
-      </div>
+      <span className="font-semibold text-sm">{manager.rank}</span>
     )
   };
 
