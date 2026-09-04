@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter, Plus, X, Check, LayoutGrid, List } from "lucide-react";
+import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter, Plus, X, Check, LayoutGrid, List, Crown } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
@@ -1092,6 +1092,53 @@ export default function TransferRecommendations() {
                       );
                       })()}
                     </div>
+                    {gwData.wildcardSquad && (() => {
+                      const POSITION_LABELS: Record<number, string> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+                      const squadByPosition = [1, 2, 3, 4].map((elementType) => ({
+                        elementType,
+                        label: POSITION_LABELS[elementType],
+                        players: gwData.wildcardSquad.squad
+                          .filter((p: any) => p.elementType === elementType)
+                          .sort((a: any, b: any) => b.projectedPoints - a.projectedPoints)
+                      }));
+                      const remaining = gwData.wildcardSquad.budget - gwData.wildcardSquad.totalCost;
+                      return (
+                        <div className="mb-4 p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg shadow-sm" data-testid={`wildcard-squad-gw${gw}`}>
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <div className="w-7 h-7 bg-amber-100 rounded-full flex items-center justify-center">
+                              <Crown className="h-4 w-4 text-amber-600" />
+                            </div>
+                            <h3 className="text-base font-bold text-amber-800">Wildcard Squad Rebuild</h3>
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-300 ml-auto">
+                              {gwData.wildcardSquad.totalProjectedPoints.toFixed(1)} pts (6 GWs)
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-amber-700 mb-3">
+                            Your Wildcard is active — transfers are unlimited this gameweek, so here's the best full 15-man squad your budget can build.
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {squadByPosition.map(({ elementType, label, players }) => (
+                              <div key={elementType} className="bg-white/70 rounded-md border border-amber-200 p-2">
+                                <div className="text-xs font-semibold text-amber-700 mb-1">{label}</div>
+                                <div className="space-y-1">
+                                  {players.map((p: any) => (
+                                    <div key={p.id} className="flex items-center justify-between gap-1 text-xs">
+                                      <span className="font-medium text-gray-800 truncate">{p.webName}</span>
+                                      <span className="text-gray-500 whitespace-nowrap">£{(p.price / 10).toFixed(1)}m</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 border-t border-amber-200 pt-2">
+                            <span>Budget: £{(gwData.wildcardSquad.budget / 10).toFixed(1)}m</span>
+                            <span>Spent: £{(gwData.wildcardSquad.totalCost / 10).toFixed(1)}m</span>
+                            <span>Remaining: £{(remaining / 10).toFixed(1)}m</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
                       <div className="space-y-3">
                         {/* Check if this is a roll transfer recommendation */}
