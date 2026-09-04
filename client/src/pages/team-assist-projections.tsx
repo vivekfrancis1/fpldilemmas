@@ -9,7 +9,7 @@ import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGam
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -397,6 +397,21 @@ export default function TeamAssistProjections() {
       });
   }, [resolvedProjections, selectedTeams, sortBy, activeGameweeks, tbcAssistMap, fixtureMode, tbcAssignments, startGameweek, endGameweek, viewMode, currentGameweek, currentGWDecidedTeamIds]);
 
+  // Per-gameweek arrays of every displayed team's value, so each cell can be colored relative
+  // to that gameweek's own spread (bell-curve) rather than a fixed absolute scale.
+  const gwValuesMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const gw of activeGameweeks) {
+      map.set(gw, filteredProjections.map(t => t.gameweekProjections[gw] || 0));
+    }
+    return map;
+  }, [filteredProjections, activeGameweeks]);
+
+  const avgValues = useMemo(
+    () => filteredProjections.map(t => getRowStats(t).avg),
+    [filteredProjections],
+  );
+
   // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
   // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
   const gwSourceMap = useMemo(() => {
@@ -435,8 +450,6 @@ export default function TeamAssistProjections() {
     return { gameweekTotals, overallTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks]);
 
-  // Helper functions for styling
-  const getAssistsColor = (assists: number) => getHeatmapColor(assists, [0.3, 0.6, 1.0, 1.5]);
 
   const isDataLoading = isLoading
     || (viewMode === "future" && projectionsLoading)
@@ -721,7 +734,7 @@ export default function TeamAssistProjections() {
                           const liveIds = viewMode === "past" ? historyData?.liveTeamIds : xaHistoryData?.liveTeamIds;
                           const isLiveCell = liveGw === gwNumber && (liveIds || []).includes(team.id);
                           return (
-                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${value !== null ? getAssistsColor(value) : ''}`}>
+                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${value !== null ? getBellCurveColor(value, gwValuesMap.get(gwNumber) || []) : ''}`}>
                               <span className="flex items-center justify-center gap-1">
                                 {value !== null ? (viewMode === "past" ? value : value.toFixed(2)) : <span className="text-gray-400">-</span>}
                                 {isLiveCell && (
@@ -745,7 +758,7 @@ export default function TeamAssistProjections() {
                           );
                         }
                         return (
-                          <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getAssistsColor(assists)}`}>
+                          <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBellCurveColor(assists, gwValuesMap.get(gwNumber) || [])}`}>
                             {isDGW ? (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -829,7 +842,7 @@ export default function TeamAssistProjections() {
                         const rowTotal = countedGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0) + tbc;
                         const countedWeeks = countedGws.length + (tbc > 0 ? 1 : 0);
                         const avg = countedWeeks > 0 ? rowTotal / countedWeeks : 0;
-                        const avgColorClasses = getAssistsColor(avg);
+                        const avgColorClasses = getBellCurveColor(avg, avgValues);
                         return (
                           <>
                             <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] ${avgColorClasses}`}>

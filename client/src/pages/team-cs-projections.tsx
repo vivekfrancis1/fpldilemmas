@@ -7,7 +7,7 @@ import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalc
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -321,6 +321,16 @@ export default function TeamCSProjections() {
       });
   }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcCSMap, fixtureMode, tbcAssignments, startGameweek, endGameweek, currentGameweek, currentGWDecidedTeamIds]);
 
+  // Per-gameweek arrays of every displayed team's value, so each cell can be colored relative
+  // to that gameweek's own spread (bell-curve) rather than a fixed absolute scale.
+  const gwValuesMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const gw of activeGameweeks) {
+      map.set(gw, filteredProjections.map(t => t.gameweekProjections[gw] || 0));
+    }
+    return map;
+  }, [filteredProjections, activeGameweeks]);
+
   // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
   // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
   const gwSourceMap = useMemo(() => {
@@ -339,7 +349,6 @@ export default function TeamCSProjections() {
     return map;
   }, [resolvedProjections]);
 
-  const getCSColor = (percentage: number) => getHeatmapColor(percentage, [15, 25, 35, 45]);
 
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
@@ -639,7 +648,7 @@ export default function TeamCSProjections() {
                           const avgCS = hasFixtures ? totalCS / fixtures.length : 0;
                           
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getCSColor(avgCS)}`}>
+                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBellCurveColor(avgCS, gwValuesMap.get(gwNumber) || [])}`}>
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>

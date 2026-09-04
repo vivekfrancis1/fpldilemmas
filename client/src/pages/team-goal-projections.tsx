@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -535,6 +535,21 @@ export default function TeamGoalProjections() {
       });
   }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, viewMode, fixtureMode, tbcGoalMap, tbcGoalData, tbcAssignments, currentGameweek, currentGWDecidedTeamIds]);
 
+  // Per-gameweek arrays of every displayed team's value, so each cell can be colored relative
+  // to that gameweek's own spread (bell-curve) rather than a fixed absolute scale.
+  const gwValuesMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const gw of activeGameweeks) {
+      map.set(gw, filteredProjections.map(t => t.gameweekProjections[gw.toString()] || 0));
+    }
+    return map;
+  }, [filteredProjections, activeGameweeks]);
+
+  const avgValues = useMemo(
+    () => filteredProjections.map(t => getRowStats(t).avg),
+    [filteredProjections],
+  );
+
   // Per-gameweek data source: 'odds' if ANY fixture in that gameweek (across every team) used
   // live betting-market odds, 'model' if every fixture that gameweek fell through to the
   // internal projection model — shown once per column rather than per cell.
@@ -589,7 +604,6 @@ export default function TeamGoalProjections() {
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, currentGameweek, currentGWDecidedTeamIds]);
 
-  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXg" && xgHistoryLoading);
 
@@ -1042,7 +1056,7 @@ export default function TeamGoalProjections() {
                           return (
                             <td 
                               key={`${team.id}-gw${gwNumber}`} 
-                              className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
+                              className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(goals || 0, gwValuesMap.get(gwNumber) || [])} ${isDGW ? 'cursor-help' : ''}`}
                             >
                               {isDGW ? (
                                 <Popover>
@@ -1149,7 +1163,7 @@ export default function TeamGoalProjections() {
                           const total = gwSum + tbcGoals;
                           const countedWeeks = countedGws.length + (tbcGoals > 0 ? 1 : 0);
                           const avg = countedWeeks > 0 ? total / countedWeeks : 0;
-                          const avgColorClasses = getGoalsColor(avg);
+                          const avgColorClasses = getBellCurveColor(avg, avgValues);
                           return (
                             <>
                               <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>

@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -444,6 +444,37 @@ export default function TeamGoalsAgainstProjections() {
       });
   }, [resolvedProjections, selectedTeams, sortBy, sortDir, activeGameweeks, tbcGAMap, viewMode, fixtureMode, tbcAssignments, startGameweek, endGameweek, currentGameweek, currentGWDecidedTeamIds, selectedGameweeks]);
 
+  // Per-gameweek arrays of every displayed team's value, so each cell can be colored relative to
+  // that gameweek's own spread (bell-curve) rather than a fixed absolute scale. Uses the plain
+  // gameweekProjections figure (not the DGW-aware fixtureDetails breakdown the cell itself
+  // renders) — close enough for the mean/spread this only feeds into.
+  const gwValuesMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const gw of activeGameweeks) {
+      map.set(gw, filteredProjections.map(t =>
+        (gw === 39 && viewMode === 'future' && fixtureMode === 'base')
+          ? (tbcGAMap.get(t.teamShort)?.goalsAgainst || 0)
+          : (t.gameweekProjections[gw] || 0)
+      ));
+    }
+    return map;
+  }, [filteredProjections, activeGameweeks, viewMode, fixtureMode, tbcGAMap]);
+
+  const avgValues = useMemo(() => filteredProjections.map(team => {
+    const countedRegularGws = activeGameweeks.filter(gw =>
+      gw !== 39 &&
+      !(viewMode === 'future' && gw === currentGameweek && currentGWDecidedTeamIds.has(team.id)) &&
+      (viewMode !== 'past' || (team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined))
+    );
+    const regularGA = countedRegularGws.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
+    const tbcGA = (activeGameweeks.includes(39) && viewMode === 'future' && fixtureMode === 'base')
+      ? (tbcGAMap.get(team.teamShort)?.goalsAgainst || 0)
+      : ((activeGameweeks.includes(39) || (selectedGameweeks.size > 0 && !selectedGameweeks.has(39))) ? 0 : getUnabsorbedTBC(team.teamShort));
+    const total = regularGA + tbcGA;
+    const countedWeeks = countedRegularGws.length + (tbcGA > 0 ? 1 : 0);
+    return countedWeeks > 0 ? total / countedWeeks : 0;
+  }), [filteredProjections, activeGameweeks, viewMode, fixtureMode, tbcGAMap, currentGameweek, currentGWDecidedTeamIds, selectedGameweeks]);
+
   // Per-gameweek data source ('odds' if ANY fixture in that gameweek, across every team, used
   // live betting-market odds) — see the matching gwSourceMap in team-goal-projections.tsx.
   const gwSourceMap = useMemo(() => {
@@ -497,8 +528,6 @@ export default function TeamGoalsAgainstProjections() {
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
   }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, fixtureMode, tbcGAMap, currentGameweek, currentGWDecidedTeamIds]);
 
-  // Lower goals against = better defense, so the scale is inverted (fewer conceded -> greener)
-  const getGoalsAgainstColor = (goalsAgainst: number) => getHeatmapColor(goalsAgainst, [1.0, 1.3, 1.6, 2.0], true);
 
   const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
 
@@ -879,7 +908,7 @@ export default function TeamGoalsAgainstProjections() {
                             const pastOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                             const isLiveCell = historyData?.liveGameweek === gwNumber && (historyData?.liveTeamIds || []).includes(team.id);
                             return (
-                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(value ?? 0)}`}>
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(value ?? 0, gwValuesMap.get(gwNumber) || [], true)}`}>
                                 <div className="flex flex-col items-center">
                                   <span className="flex items-center gap-1">
                                     {value !== null ? value : '-'}
@@ -908,7 +937,7 @@ export default function TeamGoalsAgainstProjections() {
                               );
                             }
                             return (
-                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium bg-amber-50/60 border-l border-amber-200 ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(tbcEntry.goalsAgainst)}`}>
+                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium bg-amber-50/60 border-l border-amber-200 ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(tbcEntry.goalsAgainst, gwValuesMap.get(gwNumber) || [], true)}`}>
                                 <div className="flex flex-col items-center">
                                   <span>{tbcEntry.goalsAgainst.toFixed(2)}</span>
                                   {showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">{tbcEntry.opponent} ({tbcEntry.isHome ? 'H' : 'A'})</span>}
@@ -929,7 +958,7 @@ export default function TeamGoalsAgainstProjections() {
                           const avgGA = hasFixtures ? totalGA / fixtures.length : 0;
                           
                           return (
-                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getGoalsAgainstColor(avgGA)}`}>
+                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(avgGA, gwValuesMap.get(gwNumber) || [], true)}`}>
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>
@@ -1028,7 +1057,7 @@ export default function TeamGoalsAgainstProjections() {
                             const total = activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0);
                             const countedWeeks = activeGameweeks.filter(gw => team.gameweekProjections[gw] !== null && team.gameweekProjections[gw] !== undefined).length;
                             const avg = countedWeeks > 0 ? total / countedWeeks : 0;
-                            const avgColorClasses = getGoalsAgainstColor(avg);
+                            const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                             return (
                               <>
                                 <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
@@ -1053,7 +1082,7 @@ export default function TeamGoalsAgainstProjections() {
                           const total = regularGA + tbcGA;
                           const countedWeeks = countedRegularGws.length + (tbcGA > 0 ? 1 : 0);
                           const avg = countedWeeks > 0 ? total / countedWeeks : 0;
-                          const avgColorClasses = getGoalsAgainstColor(avg);
+                          const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                           return (
                             <>
                               <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>

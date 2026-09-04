@@ -9,7 +9,7 @@ import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -419,6 +419,30 @@ export default function ProjectedGoalsCS() {
     );
   }, [projectionsData, selectedTeam]);
 
+  // Per-gameweek arrays of every team's value (both sides of every match that week), so each
+  // badge can be colored relative to that gameweek's own spread (bell-curve) rather than a fixed
+  // absolute scale. Built from the unfiltered match list so the scale doesn't shift just because
+  // the team filter narrows what's displayed.
+  const gwGoalsMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const match of projectionsData || []) {
+      const arr = map.get(match.gameweek) || [];
+      arr.push(match.homeTeam.expectedGoals, match.awayTeam.expectedGoals);
+      map.set(match.gameweek, arr);
+    }
+    return map;
+  }, [projectionsData]);
+
+  const gwCSMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const match of projectionsData || []) {
+      const arr = map.get(match.gameweek) || [];
+      arr.push(match.homeTeam.cleanSheetOdds, match.awayTeam.cleanSheetOdds);
+      map.set(match.gameweek, arr);
+    }
+    return map;
+  }, [projectionsData]);
+
   // Group by gameweek for display
   const groupedProjections = useMemo(() => {
     const groups: { [key: string]: MatchProjection[] } = {};
@@ -433,10 +457,6 @@ export default function ProjectedGoalsCS() {
     
     return groups;
   }, [filteredProjections]);
-
-  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
-
-  const getCSColor = (percentage: number) => getHeatmapColor(percentage, [20, 30, 40, 50]);
 
   const getResultColor = (result: string) => {
     if (result === 'win') return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300';
@@ -903,14 +923,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.homeTeam.expectedGoals)}`}>
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match1.homeTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.homeTeam.expectedGoals : match1.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.homeTeam.cleanSheetOdds)}`}>
+                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -949,14 +969,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match1.awayTeam.expectedGoals)}`}>
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match1.awayTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.awayTeam.expectedGoals : match1.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match1.awayTeam.cleanSheetOdds)}`}>
+                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -1025,14 +1045,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.homeTeam.expectedGoals)}`}>
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match2.homeTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.homeTeam.expectedGoals : match2.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.homeTeam.cleanSheetOdds)}`}>
+                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -1071,14 +1091,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getGoalsColor(match2.awayTeam.expectedGoals)}`}>
+                                        <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match2.awayTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.awayTeam.expectedGoals : match2.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getCSColor(match2.awayTeam.cleanSheetOdds)}`}>
+                                          <div className={`px-2 py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[45px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
