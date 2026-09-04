@@ -74,7 +74,15 @@ interface PlayerDefensiveHistory {
   }[];
 }
 
-const getDCColor = (dc: number) => getHeatmapColor(dc, [5, 7.5, 10, 13]);
+// FPL's Defensive Contribution bonus is a hard threshold — 10+ for a defender, 12+ for a
+// midfielder/forward — so dark green (the top tier) is anchored exactly at that threshold
+// rather than a generic cutoff, making "will this player actually earn the bonus" legible
+// at a glance instead of just "high vs low".
+const getDCColor = (dc: number, position: string) => {
+  const isDefender = position === "DEF" || position === "Defender";
+  const cutoffs: [number, number, number, number] = isDefender ? [4, 6, 8, 10] : [5, 7, 9, 12];
+  return getHeatmapColor(dc, cutoffs);
+};
 
 export default function PlayerDefensiveContributions() {
   // View mode: "future" for projections, "past" for historical data
@@ -1209,7 +1217,7 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : hasGwAdjustment ? 'bg-purple-50' : getDCColor(gw.defensiveContribution)}`}>
+                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : hasGwAdjustment ? 'bg-purple-50' : getDCColor(gw.defensiveContribution, player.position)}`}>
                         <div className="flex flex-col items-center">
                           <span className="font-bold">
                             {hasGwAdjustment && !gw.isActual ? (
@@ -1227,7 +1235,7 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC)}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC, player.position)}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
@@ -1237,7 +1245,7 @@ export default function PlayerDefensiveContributions() {
                         <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                       )}
                     </TableCell>
-                    <TableCell className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getDCColor(averageDC)}`}>
+                    <TableCell className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getDCColor(averageDC, player.position)}`}>
                       <span className="text-sm md:text-lg font-bold">{viewMode === "past" ? Math.round(averageDC) : averageDC.toFixed(1)}</span>
                     </TableCell>
                   </TableRow>

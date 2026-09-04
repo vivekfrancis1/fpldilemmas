@@ -13,7 +13,6 @@ import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SeasonBadge } from "@/components/season-badge";
@@ -771,15 +770,6 @@ export default function ProjectedGoalsCS() {
 
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Target className="h-4 w-4" />
-                {viewMode === "future" ? "Goals and Clean Sheet Projections" : "Goals and Clean Sheet Results"}
-                <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
-                  {filteredProjections.length} {filteredProjections.length === 1 ? 'match' : 'matches'}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-0">
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
