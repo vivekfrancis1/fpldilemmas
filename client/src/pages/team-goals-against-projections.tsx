@@ -1150,39 +1150,8 @@ export default function TeamGoalsAgainstProjections() {
               </div>
             </CardContent>
           </Card>
-
-
-
-          {/* Info Panel */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">About Team Goals Conceded Projections</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Team defensive performance data</li>
-                    <li>• Historical goals conceded patterns</li>
-                    <li>• Opposition attacking strength</li>
-                    <li>• Fixture context factors</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Projected goals conceded per gameweek</li>
-                    <li>• Lower values indicate stronger defense</li>
-                    <li>• Comparative defensive rankings</li>
-                    <li>• Updated regularly throughout season</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    
+
   );
 }

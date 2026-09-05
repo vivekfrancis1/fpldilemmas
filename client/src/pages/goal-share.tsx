@@ -271,40 +271,8 @@ export default function GoalShare() {
               ))}
             </div>
           )}
-
-
-          {/* Info Panel */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">About Goal Share</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Formula: Player's (0.5×Goals + 0.5×xG) ÷ team's (0.5×Goals + 0.5×xG) × 100</li>
-                    <li>• Switch season above to view real 2025/26 or 2026/27 data</li>
-                    <li>• Promoted teams (Coventry/Ipswich/Hull) use their real 2025/26 Championship figures, with an admin-configured assumed team total for projections</li>
-                    <li>• All players in a team total 100%</li>
-                    <li>• Shows each player's contribution to team's goal output</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Use Cases</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Identify top goal threats in each team</li>
-                    <li>• Compare players for transfer decisions</li>
-                    <li>• Captain selection based on goal involvement</li>
-                    <li>• Understand team attacking patterns</li>
-                    <li>• Find value picks with high goal share</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    
+
   );
 }

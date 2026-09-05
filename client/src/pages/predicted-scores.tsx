@@ -453,37 +453,8 @@ export default function PredictedScores() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Info Panel */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">About Predicted Scores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">How It Works</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Expected goals rounded to nearest whole number</li>
-                    <li>• Match outcomes determined by predicted scores</li>
-                    <li>• Green (H) = Home Win, Blue (A) = Away Win, Yellow (D) = Draw</li>
-                    <li>• Original expected goals shown for reference</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Result Comparison</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Solid badges show predicted outcomes</li>
-                    <li>• Outlined badges show actual results (finished games)</li>
-                    <li>• Compare prediction accuracy vs actual outcomes</li>
-                    <li>• Confidence levels indicate prediction reliability</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    
+
   );
 }

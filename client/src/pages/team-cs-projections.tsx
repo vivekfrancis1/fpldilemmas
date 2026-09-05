@@ -767,35 +767,6 @@ export default function TeamCSProjections() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Info Panel */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">About Clean Sheet Projections</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Team defensive performance data</li>
-                    <li>• Historical clean sheet patterns</li>
-                    <li>• Opposition attacking strength</li>
-                    <li>• Fixture context factors</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Clean sheet probability percentages</li>
-                    <li>• Gameweek-by-gameweek analysis</li>
-                    <li>• Comparative defensive rankings</li>
-                    <li>• Updated regularly throughout season</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
   );

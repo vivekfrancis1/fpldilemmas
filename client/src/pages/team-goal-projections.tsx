@@ -1237,62 +1237,8 @@ export default function TeamGoalProjections() {
               </div>
             </CardContent>
           </Card>
-
-
-          {/* Info Panel */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {viewMode === "future" ? "About Team Goal Projections" : viewMode === "pastXg" ? "About Team xG History" : "About Team Goals History"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {viewMode === "future" ? (
-                      <>
-                        <li>• Team attacking performance data</li>
-                        <li>• Historical goal-scoring patterns</li>
-                        <li>• Current form and statistics</li>
-                        <li>• Fixture context factors</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>• Official FPL match results</li>
-                        <li>• Verified gameweek data</li>
-                        <li>• Home and away goal breakdown</li>
-                        <li>• Complete season history</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {viewMode === "future" ? (
-                      <>
-                        <li>• Projected goals per gameweek</li>
-                        <li>• Season-long goal estimates</li>
-                        <li>• Comparative team analysis</li>
-                        <li>• Updated regularly throughout season</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>• Actual goals scored per gameweek</li>
-                        <li>• Historical performance trends</li>
-                        <li>• Team comparison across periods</li>
-                        <li>• Filter by gameweek range</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    
+
   );
 }
