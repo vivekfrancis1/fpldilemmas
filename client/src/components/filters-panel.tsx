@@ -93,6 +93,21 @@ export default function FiltersPanel({
 
   return (
     <div className="fpl-filters">
+      {/* Search stays outside the collapsible section below — it's the control people reach for
+          most, so it shouldn't be hidden behind a click just because the rest of the filters are
+          collapsed. */}
+      <div className="fpl-card-content pb-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search by player name..."
+            value={filters.search}
+            onChange={(e) => handleFilterChange("search", e.target.value)}
+            className="pl-10"
+            data-testid="input-search"
+          />
+        </div>
+      </div>
       <div
         className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -100,30 +115,13 @@ export default function FiltersPanel({
         <div className="fpl-card-title flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <Search className="h-5 w-5 text-blue-600" />
-            Smart Filters & Search
+            More Filters
           </div>
           {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
         </div>
       </div>
       {isExpanded && (
       <div className="fpl-card-content">
-        {/* Search Section */}
-        <div className="mb-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Search Players</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by player name..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10"
-                data-testid="input-search"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* All Filters in One Row */}
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${showGWFilters ? 'lg:grid-cols-6' : 'lg:grid-cols-4'} gap-3`}>
           {/* Position Filter */}
