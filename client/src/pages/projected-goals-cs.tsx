@@ -115,6 +115,17 @@ export default function ProjectedGoalsCS() {
   // even though it isn't "lastFinishedGW" yet (that requires every fixture finished).
   const resultsEndGW = (currentGWHasFinishedOrLive && currentGameweek > lastFinishedGW) ? currentGameweek : lastFinishedGW;
 
+  // The last gameweek with real Odds API coverage — same source team-goal-projections.tsx and
+  // siblings already use to cap their default end gameweek. Match Predictions previously ignored
+  // this entirely, so its fixed MATCH_PREDICTIONS_DEFAULT_WEEKS-wide default window could reach a
+  // gameweek with no odds yet — those fixtures silently fall back to the internal model, which
+  // shouldn't be what a user sees by default without asking for a wider range explicitly.
+  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
+    queryKey: ["/api/fixture-odds-max-gameweek"],
+    staleTime: 15 * 60 * 1000,
+  });
+  const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
+
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
     if (viewMode === "past") {
@@ -128,11 +139,19 @@ export default function ProjectedGoalsCS() {
     const defaultRange = getDefaultGameweekRange(bootstrapData.events, MATCH_PREDICTIONS_DEFAULT_WEEKS);
     // Fold the current gameweek into Match Predictions when it still has an unstarted fixture —
     // the default range normally starts the gameweek AFTER the current one.
-    if (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(defaultRange.startGameweek)) {
-      return { ...defaultRange, startGameweek: String(currentGameweek) };
-    }
-    return defaultRange;
-  }, [bootstrapData?.events, viewMode, resultsEndGW, currentGameweek, currentGWHasUnstarted]);
+    const effectiveStart = (currentGWHasUnstarted && currentGameweek > 0 && currentGameweek < parseInt(defaultRange.startGameweek))
+      ? String(currentGameweek)
+      : defaultRange.startGameweek;
+    // Cap the end to the last odds-covered gameweek so the default view never silently includes
+    // a model-only gameweek — only widening the range on purpose (via the To: dropdown) does
+    // that. If odds don't cover even the immediate gameweek (no coverage yet at all, or an API
+    // outage), fall back to showing just that single gameweek via internal calculations rather
+    // than the full MATCH_PREDICTIONS_DEFAULT_WEEKS-wide model-only default.
+    const effectiveEnd = (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart))
+      ? String(maxGameweekWithOdds)
+      : effectiveStart;
+    return { startGameweek: effectiveStart, endGameweek: effectiveEnd };
+  }, [bootstrapData?.events, viewMode, resultsEndGW, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -192,14 +211,18 @@ export default function ProjectedGoalsCS() {
         ? String(currentGameweek)
         : newRange.startGameweek;
       setStartGameweek(effectiveStart);
-      // In base mode extend to GW39 when TBC exists; in expert/custom use remapped GW
+      // In base mode extend to GW39 when TBC exists; in expert/custom use remapped GW. Otherwise
+      // cap the end to the last odds-covered gameweek (see defaultGameweekRange) — or just the
+      // single immediate gameweek if odds don't cover even that yet.
       if (hasTBCFixture && tbcEffectiveGW !== null) {
         setEndGameweek(String(tbcEffectiveGW));
+      } else if (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart)) {
+        setEndGameweek(String(maxGameweekWithOdds));
       } else {
-        setEndGameweek(newRange.endGameweek);
+        setEndGameweek(effectiveStart);
       }
     }
-  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, currentGameweek, currentGWHasUnstarted]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
 
   // Pre-season: nothing has finished yet, so "Match Results" has no real data to fetch or
   // show (see the early-return notice below) — skip these fetches entirely in that case.
