@@ -399,7 +399,7 @@ export default function ResultsAndFixtures() {
           <div className="fpl-card-content">
             {selectedGameweek === "all" ? (
               // Grouped by gameweek view
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 {fixturesByGameweek.map(({ gameweek, fixtures }) => (
                   <div key={gameweek} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">

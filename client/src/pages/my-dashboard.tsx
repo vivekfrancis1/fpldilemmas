@@ -2963,7 +2963,7 @@ export default function MyDashboard() {
                       );
                     })()}
 
-                      <div className="mt-6">
+                      <div className="mt-3 sm:mt-4">
                         <PitchView
                           activeChip={getUpcomingActiveChip()}
                           players={getOptimizedPicksForNextGW(nextTeamData.picks, getUpcomingActiveChip()).filter(pick => pick.position <= 11).map(pick => {

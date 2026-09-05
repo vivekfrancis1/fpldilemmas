@@ -463,7 +463,7 @@ export default function TopManagers() {
           <SeasonSelector value={viewSeason} onChange={setViewSeason} />
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-3 sm:space-y-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="managers" data-testid="tab-managers">
               <Crown className="h-4 w-4 mr-2" />

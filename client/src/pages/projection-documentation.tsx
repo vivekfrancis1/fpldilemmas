@@ -50,7 +50,7 @@ export default function ProjectionDocumentation() {
           </TabsList>
 
           {/* ── OVERVIEW TAB ── */}
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-3 sm:space-y-4">
 
             <Alert className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -81,7 +81,7 @@ export default function ProjectionDocumentation() {
                   Projection System Architecture
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <p className="text-gray-700 text-lg">
                   A full-season FPL projection engine covering all ~515 Premier League players across GW1–38, using a hybrid 4-component formula for team goals and a percentage-share system for individual player distribution.
                 </p>
@@ -306,7 +306,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── LOGIC FLOW TAB ── */}
-          <TabsContent value="flow" className="space-y-6">
+          <TabsContent value="flow" className="space-y-3 sm:space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export default function ProjectionDocumentation() {
                   Complete Projection Logic Flow — 10-Step Dependency Chain
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
@@ -322,7 +322,7 @@ export default function ProjectionDocumentation() {
                   </AlertDescription>
                 </Alert>
 
-                <div className="space-y-6">
+                <div className="space-y-3 sm:space-y-4">
 
                   {/* Step 1 */}
                   <div className="border-2 border-blue-200 rounded-lg p-4">
@@ -587,7 +587,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── ALGORITHMS TAB ── */}
-          <TabsContent value="algorithms" className="space-y-6">
+          <TabsContent value="algorithms" className="space-y-3 sm:space-y-4">
             <Alert>
               <Brain className="h-4 w-4" />
               <AlertDescription>
@@ -595,7 +595,7 @@ export default function ProjectionDocumentation() {
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
 
               {/* Algorithm 1: Team Goals */}
               <Card>
@@ -767,7 +767,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── PLAYER TOOLS TAB ── */}
-          <TabsContent value="player-tools" className="space-y-6">
+          <TabsContent value="player-tools" className="space-y-3 sm:space-y-4">
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
@@ -1114,7 +1114,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── TEAM TOOLS TAB ── */}
-          <TabsContent value="team-tools" className="space-y-6">
+          <TabsContent value="team-tools" className="space-y-3 sm:space-y-4">
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
@@ -1122,7 +1122,7 @@ export default function ProjectionDocumentation() {
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
 
               <Card>
                 <CardHeader>
@@ -1300,7 +1300,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── DATA SOURCES TAB ── */}
-          <TabsContent value="data-sources" className="space-y-6">
+          <TabsContent value="data-sources" className="space-y-3 sm:space-y-4">
             <Alert>
               <Database className="h-4 w-4" />
               <AlertDescription>
@@ -1524,7 +1524,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── CONFIGURATION TAB ── */}
-          <TabsContent value="configuration" className="space-y-6">
+          <TabsContent value="configuration" className="space-y-3 sm:space-y-4">
             <Alert>
               <Settings className="h-4 w-4" />
               <AlertDescription>
@@ -1693,7 +1693,7 @@ export default function ProjectionDocumentation() {
           </TabsContent>
 
           {/* ── TROUBLESHOOTING TAB ── */}
-          <TabsContent value="troubleshooting" className="space-y-6">
+          <TabsContent value="troubleshooting" className="space-y-3 sm:space-y-4">
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>

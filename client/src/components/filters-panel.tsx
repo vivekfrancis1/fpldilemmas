@@ -62,7 +62,7 @@ export default function FiltersPanel({
         </div>
         <div className="fpl-card-content">
           {/* Search Section Loading */}
-          <div className="mb-6">
+          <div className="mb-3 sm:mb-4">
             <div className="space-y-2">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-12 w-full" />

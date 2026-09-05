@@ -95,7 +95,7 @@ function AdminProjectionWindowContent() {
       {isLoading ? (
         <div className="text-muted-foreground py-8 text-center">Loading current settings…</div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -107,7 +107,7 @@ function AdminProjectionWindowContent() {
                 default view on their next load (or within 5 minutes if already open).
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="defaultWeeks">

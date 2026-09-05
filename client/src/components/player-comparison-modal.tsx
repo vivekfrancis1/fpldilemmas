@@ -176,8 +176,8 @@ export default function PlayerComparisonModal({
           ))}
         </TabsList>
 
-          <TabsContent value="current" className="mt-6">
-            <div className="space-y-6">
+          <TabsContent value="current" className="mt-3 sm:mt-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Player Headers */}
               <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
                 {players.map(player => (
@@ -248,14 +248,14 @@ export default function PlayerComparisonModal({
 
           {/* Historical Season Tabs */}
           {seasons?.map((season) => (
-            <TabsContent key={season} value={season} className="mt-6">
+            <TabsContent key={season} value={season} className="mt-3 sm:mt-4">
               {loadingSeasons.includes(season) ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   <span className="ml-3 text-gray-600">Loading {season} season data...</span>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Player Headers */}
                   <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
                     {players.map(player => {

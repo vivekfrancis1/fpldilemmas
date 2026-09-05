@@ -384,7 +384,7 @@ export default function ProjectionAccuracy() {
     return (
       <div className="p-4 sm:p-6">
         <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-4">
             <div className="flex items-center gap-3 text-red-700">
               <AlertCircle className="h-5 w-5" />
               <p>Failed to load projection accuracy data. Please try again later.</p>

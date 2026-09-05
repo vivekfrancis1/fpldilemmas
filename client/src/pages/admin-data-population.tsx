@@ -73,14 +73,14 @@ export default function AdminDataPopulation() {
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="w-full p-4 sm:p-6">
-      <div className="mb-6">
+      <div className="mb-3 sm:mb-4">
         <h1 className="text-3xl font-bold">Historical Data Population</h1>
         <p className="text-muted-foreground mt-2">
           Populate production database with comprehensive historical player statistics across all FPL seasons.
         </p>
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-3 sm:mb-4">
         <CardHeader>
           <CardTitle>Population Progress</CardTitle>
           <CardDescription>

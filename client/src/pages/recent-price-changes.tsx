@@ -488,7 +488,7 @@ export default function RecentPriceChanges() {
 
           <TabsContent value="predicted">
             {predictionsError && (
-              <Alert variant="destructive" className="mb-6">
+              <Alert variant="destructive" className="mb-3 sm:mb-4">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Unable to load price predictions from FPL API. Please check your connection and try again.
@@ -541,7 +541,7 @@ export default function RecentPriceChanges() {
               </CardContent>
             </Card>
 
-            <Collapsible open={isPredictionFiltersOpen} onOpenChange={setIsPredictionFiltersOpen} className="mb-6">
+            <Collapsible open={isPredictionFiltersOpen} onOpenChange={setIsPredictionFiltersOpen} className="mb-3 sm:mb-4">
               <Card className="shadow-md border-0">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
@@ -890,7 +890,7 @@ export default function RecentPriceChanges() {
           </CardContent>
         </Card>
 
-        <Collapsible open={isRecentFiltersOpen} onOpenChange={setIsRecentFiltersOpen} className="mb-6">
+        <Collapsible open={isRecentFiltersOpen} onOpenChange={setIsRecentFiltersOpen} className="mb-3 sm:mb-4">
           <Card className="shadow-md border-0">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
@@ -958,7 +958,7 @@ export default function RecentPriceChanges() {
 
         {/* Error Display */}
         {changesError && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="mb-3 sm:mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Unable to load price data from FPL API. Please check your connection and try again.
@@ -968,7 +968,7 @@ export default function RecentPriceChanges() {
 
         {/* Info message for new databases */}
         {!isLoadingChanges && Array.isArray(priceChanges) && priceChanges.length === 0 && (
-          <Alert className="mb-6" data-testid="alert-no-recent-changes">
+          <Alert className="mb-3 sm:mb-4" data-testid="alert-no-recent-changes">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               No 2026/27 price changes recorded yet — this fills in once FPL starts moving player prices for the new season. Click "Refresh from FPL API" to check for the latest data.

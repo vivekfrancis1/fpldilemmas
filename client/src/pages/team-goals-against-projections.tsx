@@ -549,7 +549,7 @@ export default function TeamGoalsAgainstProjections() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-6">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-3 sm:mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
@@ -690,7 +690,7 @@ export default function TeamGoalsAgainstProjections() {
 
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <Card className="mb-6">
+            <Card className="mb-3 sm:mb-4">
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
                   <CardTitle className="flex items-center justify-between text-base">

@@ -770,7 +770,7 @@ export default function AdminGoalProjections() {
       </div>
 
 
-      <Alert className="mb-6">
+      <Alert className="mb-3 sm:mb-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           <strong>Configuration Portal - Team Goals Scored</strong><br/>
@@ -782,7 +782,7 @@ export default function AdminGoalProjections() {
         </AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs defaultValue="calculation-base" value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4">
         <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2 bg-muted rounded-lg">
           <TabsTrigger value="calculation-base" className="text-xs md:text-sm whitespace-nowrap">Projection Model</TabsTrigger>
           <TabsTrigger value="base-xg" className="text-xs md:text-sm whitespace-nowrap">Base xG Settings</TabsTrigger>
@@ -797,7 +797,7 @@ export default function AdminGoalProjections() {
         </TabsList>
 
         {/* Calculation Base Tab */}
-        <TabsContent value="calculation-base" className="space-y-6">
+        <TabsContent value="calculation-base" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -982,7 +982,7 @@ export default function AdminGoalProjections() {
         </TabsContent>
 
         {/* Base xG Settings Tab */}
-        <TabsContent value="base-xg" className="space-y-6">
+        <TabsContent value="base-xg" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1092,7 +1092,7 @@ export default function AdminGoalProjections() {
                   </table>
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-3 sm:mt-4">
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-center">
@@ -1127,7 +1127,7 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="attacking-multipliers" className="space-y-6">
+        <TabsContent value="attacking-multipliers" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1240,7 +1240,7 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="attacking-teams" className="space-y-6">
+        <TabsContent value="attacking-teams" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1379,7 +1379,7 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="defensive-multipliers" className="space-y-6">
+        <TabsContent value="defensive-multipliers" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1492,7 +1492,7 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="defensive-teams" className="space-y-6">
+        <TabsContent value="defensive-teams" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1632,7 +1632,7 @@ export default function AdminGoalProjections() {
         </TabsContent>
 
 
-        <TabsContent value="context" className="space-y-6">
+        <TabsContent value="context" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1762,7 +1762,7 @@ export default function AdminGoalProjections() {
         </TabsContent>
 
         {/* Venue Factors Tab */}
-        <TabsContent value="venue" className="space-y-6">
+        <TabsContent value="venue" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1872,7 +1872,7 @@ export default function AdminGoalProjections() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="market" className="space-y-6">
+        <TabsContent value="market" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div>
@@ -1888,7 +1888,7 @@ export default function AdminGoalProjections() {
                 </AlertDescription>
               </Alert>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Market Bounds */}
                 <div>
                   <h3 className="font-semibold mb-3">Market Multiplier Bounds</h3>
@@ -1989,7 +1989,7 @@ export default function AdminGoalProjections() {
         </TabsContent>
 
         {/* Final Bounds Tab */}
-        <TabsContent value="final-bounds" className="space-y-6">
+        <TabsContent value="final-bounds" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -2115,7 +2115,7 @@ export default function AdminGoalProjections() {
       </Tabs>
 
       {/* Actions */}
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Actions</CardTitle>

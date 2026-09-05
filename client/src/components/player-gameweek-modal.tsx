@@ -151,7 +151,7 @@ export default function PlayerGameweekModal({
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           {/* Gameweek by Gameweek Performance */}
           <div className="bg-white rounded-lg border">
             <div className="px-4 py-3 bg-gray-50 border-b">

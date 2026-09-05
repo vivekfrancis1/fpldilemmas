@@ -2129,7 +2129,7 @@ export default function PlayerTotalPoints() {
       </div>
 
       {/* View Mode Tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "past" | "future")} className="mb-6">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "past" | "future")} className="mb-3 sm:mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />

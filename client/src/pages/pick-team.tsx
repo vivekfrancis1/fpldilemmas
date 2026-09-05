@@ -290,7 +290,7 @@ export default function PickTeam() {
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
@@ -320,7 +320,7 @@ export default function PickTeam() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">

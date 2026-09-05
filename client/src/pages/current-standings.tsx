@@ -781,7 +781,7 @@ export default function CurrentStandings() {
         </Card>
 
         {/* Enhanced Legend */}
-        <Card className="mt-6">
+        <Card className="mt-3 sm:mt-4">
           <CardHeader>
             <CardTitle className="text-lg">Enhanced Table Legend</CardTitle>
           </CardHeader>

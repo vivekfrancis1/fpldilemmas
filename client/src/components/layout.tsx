@@ -56,7 +56,7 @@ export default function Layout({ children }: LayoutProps) {
 
       <Header onSidebarToggle={toggleSidebar} />
 
-      <main className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-2 sm:pt-4 lg:pt-6 min-w-0 pb-4 sm:pb-6 lg:pb-8 mobile-no-overflow">
+      <main className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-1.5 sm:pt-3 lg:pt-4 min-w-0 pb-3 sm:pb-4 lg:pb-6 mobile-no-overflow">
         <div className="w-full max-w-full">
           {children}
         </div>

@@ -286,7 +286,7 @@ export default function MyTeam() {
     
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
         <div className="w-full py-4 sm:py-8">
-          <div className="space-y-6">
+          <div className="space-y-3 sm:space-y-4">
             {/* Header Section */}
             <div className="text-center mb-6 sm:mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">

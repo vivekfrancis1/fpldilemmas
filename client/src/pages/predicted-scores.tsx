@@ -179,7 +179,7 @@ export default function PredictedScores() {
           <p className="fpl-page-subtitle">
             Match predictions with rounded scores and determined outcomes based on expected goals
           </p>
-          <div className="mt-6">
+          <div className="mt-3 sm:mt-4">
             <Button 
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -207,7 +207,7 @@ export default function PredictedScores() {
       <div className="fpl-section-spacing">
 
           {/* Controls */}
-          <Card className="mb-6">
+          <Card className="mb-3 sm:mb-4">
             <CardContent className="p-3 sm:p-6">
               <div className="flex flex-wrap gap-2 sm:gap-4 items-end">
                 <div className="flex items-center gap-2">

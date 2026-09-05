@@ -426,7 +426,7 @@ export default function PlayerGoalsConceded() {
             <TabsTrigger value="points">Points from Goals Conceded</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="conceded" className="mt-6">
+          <TabsContent value="conceded" className="mt-3 sm:mt-4">
             <div className="fpl-card">
               <div className="fpl-card-header">
                 <h2 className="fpl-card-title">Expected Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</h2>
@@ -500,7 +500,7 @@ export default function PlayerGoalsConceded() {
             </div>
           </TabsContent>
 
-          <TabsContent value="points" className="mt-6">
+          <TabsContent value="points" className="mt-3 sm:mt-4">
             <div className="fpl-card">
               <div className="fpl-card-header">
                 <h2 className="fpl-card-title">Points from Goals Conceded (GW{effectiveStartGW}-{effectiveEndGW}{includeTBC && effectiveEndGW === 39 ? ' incl. TBC' : ''})</h2>

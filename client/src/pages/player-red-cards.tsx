@@ -431,7 +431,7 @@ export default function PlayerRedCards() {
             <TabsTrigger value="points">Points from Red Cards</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="cards" className="mt-6">
+          <TabsContent value="cards" className="mt-3 sm:mt-4">
             <div className="fpl-card">
               <div className="fpl-card-header">
                 <h2 className="fpl-card-title">Expected Red Cards (Gameweeks {gameweekRange}{includeTBC ? ' incl. TBC' : ''})</h2>
@@ -519,7 +519,7 @@ export default function PlayerRedCards() {
             </div>
           </TabsContent>
 
-          <TabsContent value="points" className="mt-6">
+          <TabsContent value="points" className="mt-3 sm:mt-4">
             <div className="fpl-card">
               <div className="fpl-card-header">
                 <h2 className="fpl-card-title">Points from Red Cards (Gameweeks {gameweekRange}{includeTBC ? ' incl. TBC' : ''})</h2>

@@ -229,7 +229,7 @@ export default function ProjectedStandings() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "current" | "projected")} className="mb-6">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "current" | "projected")} className="mb-3 sm:mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="projected" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
@@ -539,7 +539,7 @@ export default function ProjectedStandings() {
           </Card>
         )}
 
-        <Card className="mt-6">
+        <Card className="mt-3 sm:mt-4">
           <CardHeader>
             <CardTitle className="text-lg">Table Legend</CardTitle>
           </CardHeader>

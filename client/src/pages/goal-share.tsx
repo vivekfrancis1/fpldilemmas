@@ -122,7 +122,7 @@ export default function GoalShare() {
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
               Each player's real share of their team's goals for the {selectedSeason} season
             </p>
-            <div className="mt-6">
+            <div className="mt-3 sm:mt-4">
               <Button
                 onClick={handleRefreshData}
                 disabled={isRefreshing}
@@ -144,7 +144,7 @@ export default function GoalShare() {
 
           {/* Controls */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <Card className="mb-6">
+            <Card className="mb-3 sm:mb-4">
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
                   <CardTitle className="flex items-center justify-between text-base">
@@ -206,7 +206,7 @@ export default function GoalShare() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               {sortedData.map((team) => (
                 <Card key={team.teamId} className="shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-4">

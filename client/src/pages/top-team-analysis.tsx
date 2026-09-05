@@ -435,7 +435,7 @@ export default function TopTeamAnalysis() {
           <Tabs
             value={activeSubTab}
             onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
-            className="space-y-6"
+            className="space-y-3 sm:space-y-4"
           >
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1">
               <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs sm:text-sm px-2 py-2">Overview</TabsTrigger>
@@ -789,7 +789,7 @@ export default function TopTeamAnalysis() {
                       const diversity = formations.length;
                       
                       return (
-                        <div className="space-y-6">
+                        <div className="space-y-3 sm:space-y-4">
                           <div className="text-center p-4 bg-blue-50 rounded-lg">
                             <div className="text-2xl font-bold text-blue-600 mb-1">
                               {mostPopular?.formation || 'N/A'}
@@ -840,7 +840,7 @@ export default function TopTeamAnalysis() {
                     {(() => {
                       const budgetData = getBudgetAnalysis;
                       return (
-                        <div className="space-y-6">
+                        <div className="space-y-3 sm:space-y-4">
                           <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                             <div className="text-3xl font-bold text-blue-600 mb-2">
                               £{budgetData.avgValue.toFixed(1)}m
@@ -888,7 +888,7 @@ export default function TopTeamAnalysis() {
                     {(() => {
                       const budgetData = getBudgetAnalysis;
                       return (
-                        <div className="space-y-6">
+                        <div className="space-y-3 sm:space-y-4">
                           <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
                             <div className="text-3xl font-bold text-green-600 mb-2">
                               £{budgetData.avgBank.toFixed(1)}m

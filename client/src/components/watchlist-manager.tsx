@@ -146,7 +146,7 @@ export default function WatchlistManager({ data, isLoading }: WatchlistManagerPr
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         {/* Header Skeleton */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -180,7 +180,7 @@ export default function WatchlistManager({ data, isLoading }: WatchlistManagerPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header with Add Button */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">

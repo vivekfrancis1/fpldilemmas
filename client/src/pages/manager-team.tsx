@@ -545,7 +545,7 @@ export default function ManagerTeam() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -564,7 +564,7 @@ export default function ManagerTeam() {
 
   if (error || !teamData) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
@@ -1010,7 +1010,7 @@ export default function ManagerTeam() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "history" | "chips")}
-        className="space-y-6"
+        className="space-y-3 sm:space-y-4"
       >
         <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1 h-auto">
           <TabsTrigger value="team" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
@@ -1036,7 +1036,7 @@ export default function ManagerTeam() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="team" className="space-y-6">
+        <TabsContent value="team" className="space-y-3 sm:space-y-4">
           {/* Team Formation */}
           {bootstrapLoading ? (
             <div className="space-y-4">
@@ -1095,7 +1095,7 @@ export default function ManagerTeam() {
           )}
         </TabsContent>
 
-        <TabsContent value="transfers" className="space-y-6">
+        <TabsContent value="transfers" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1211,7 +1211,7 @@ export default function ManagerTeam() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-6">
+        <TabsContent value="performance" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1303,7 +1303,7 @@ export default function ManagerTeam() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
+        <TabsContent value="history" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1368,7 +1368,7 @@ export default function ManagerTeam() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="chips" className="space-y-6">
+        <TabsContent value="chips" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

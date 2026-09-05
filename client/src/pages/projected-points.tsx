@@ -632,7 +632,7 @@ export default function ProjectedPoints() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4 flex items-center justify-center">
         <Card className="max-w-md w-full">
-          <CardContent className="pt-6">
+          <CardContent className="pt-3 sm:pt-4">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>

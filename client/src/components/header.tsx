@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import RefreshButton from "@/components/refresh-button";
+import InstallAppButton from "@/components/install-app-button";
 import TopNav from "@/components/top-nav";
 
 interface HeaderProps {
@@ -61,6 +62,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
 
           <div className="flex items-center space-x-2">
             <RefreshButton />
+            <InstallAppButton />
             {!isLoading && !isAuthenticated && (
               <Button
                 variant="outline"

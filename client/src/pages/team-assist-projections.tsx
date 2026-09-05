@@ -556,7 +556,7 @@ export default function TeamAssistProjections() {
 
         {/* Controls */}
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-          <Card className="mb-6">
+          <Card className="mb-3 sm:mb-4">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
                 <CardTitle className="flex items-center justify-between text-base">

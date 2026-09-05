@@ -308,7 +308,7 @@ export default function TopManagerTeam() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-4">
           <Skeleton className="h-8 w-48" />
         </div>
@@ -323,7 +323,7 @@ export default function TopManagerTeam() {
 
   if (error || !teamData || !managerInfo) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-4">
         </div>
         <Card>
@@ -845,7 +845,7 @@ export default function TopManagerTeam() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "history" | "chips")}
-        className="space-y-6"
+        className="space-y-3 sm:space-y-4"
       >
         <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
@@ -870,7 +870,7 @@ export default function TopManagerTeam() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="team" className="space-y-6">
+        <TabsContent value="team" className="space-y-3 sm:space-y-4">
           {/* Team Formation */}
           {teamData.picks && teamData.picks.length > 0 && (
             <>
@@ -971,7 +971,7 @@ export default function TopManagerTeam() {
           )}
         </TabsContent>
 
-        <TabsContent value="transfers" className="space-y-6">
+        <TabsContent value="transfers" className="space-y-3 sm:space-y-4">
           {(() => {
             const history = managerHistory?.current;
             const chips = managerHistory?.chips || [];
@@ -1124,7 +1124,7 @@ export default function TopManagerTeam() {
           )}
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-6">
+        <TabsContent value="performance" className="space-y-3 sm:space-y-4">
           {historyLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -1132,7 +1132,7 @@ export default function TopManagerTeam() {
               ))}
             </div>
           ) : filteredManagerHistory && filteredManagerHistory.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
                   <BarChart3 className="h-5 w-5 mr-2" />
@@ -1216,9 +1216,9 @@ export default function TopManagerTeam() {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
+        <TabsContent value="history" className="space-y-3 sm:space-y-4">
           {managerHistory?.past && managerHistory.past.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
                   <Calendar className="h-5 w-5 mr-2" />
@@ -1261,7 +1261,7 @@ export default function TopManagerTeam() {
           )}
         </TabsContent>
 
-        <TabsContent value="chips" className="space-y-6">
+        <TabsContent value="chips" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -184,7 +184,7 @@ export default function PlayerGoalProjections() {
       <div className="fpl-page-wrapper">
         <div className="fpl-container fpl-content-area">
           <Card className="border-0 bg-red-50 shadow-lg">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 sm:pt-4">
               <p className="text-red-600 text-center">Error loading player goal projections. Please try again.</p>
             </CardContent>
           </Card>
@@ -296,7 +296,7 @@ export default function PlayerGoalProjections() {
       </div>
 
       {/* Filters */}
-      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-3 sm:mb-4">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200">
           <CollapsibleTrigger asChild>
             <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4 flex items-center justify-between">
@@ -437,7 +437,7 @@ export default function PlayerGoalProjections() {
 
       {/* Summary Stats */}
       {sortedPlayers.length > 0 && (
-        <Card className="mt-6">
+        <Card className="mt-3 sm:mt-4">
           <CardHeader>
             <CardTitle>Summary Statistics</CardTitle>
           </CardHeader>

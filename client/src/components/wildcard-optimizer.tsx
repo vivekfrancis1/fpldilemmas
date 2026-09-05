@@ -1258,7 +1258,7 @@ export function WildcardOptimizer({
   if (!bootstrapData || isLoading) {
     return (
       <div className="w-full py-4 sm:py-8">
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="mt-4 text-muted-foreground">Loading player data...</p>
@@ -1270,7 +1270,7 @@ export function WildcardOptimizer({
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         {variant === 'page' && (
           <div className="fpl-page-header">
             <div className="fpl-page-header-content">
@@ -1290,7 +1290,7 @@ export function WildcardOptimizer({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       {/* Optimization Loading Screen */}
       {isOptimizing && (
         <div 

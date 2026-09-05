@@ -232,7 +232,7 @@ export default function TransferTracker() {
         {/* Info Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 px-1">
           <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 sm:pt-4">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-full mr-3">
                   <TrendingUp className="h-6 w-6 text-green-600" />
@@ -248,7 +248,7 @@ export default function TransferTracker() {
           </Card>
 
           <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 sm:pt-4">
               <div className="flex items-center">
                 <div className="p-3 bg-red-100 rounded-full mr-3">
                   <TrendingDown className="h-6 w-6 text-red-600" />
@@ -264,7 +264,7 @@ export default function TransferTracker() {
           </Card>
 
           <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 sm:pt-4">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 rounded-full mr-3">
                   <BarChart3 className="h-6 w-6 text-blue-600" />
@@ -324,7 +324,7 @@ export default function TransferTracker() {
 
         {/* Error Display */}
         {transfersError && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="mb-3 sm:mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Unable to load transfer data from FPL API. Please check your connection and try again.

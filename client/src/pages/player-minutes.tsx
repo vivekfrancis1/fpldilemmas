@@ -454,7 +454,7 @@ export default function PlayerMinutes() {
         </Card>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-3 sm:mb-4">
           <Card>
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">

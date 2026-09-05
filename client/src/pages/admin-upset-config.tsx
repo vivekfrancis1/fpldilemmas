@@ -362,7 +362,7 @@ export default function AdminUpsetConfig() {
         </Alert>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="poisson">Poisson</TabsTrigger>
@@ -372,7 +372,7 @@ export default function AdminUpsetConfig() {
           <TabsTrigger value="budget">Budget</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -383,7 +383,7 @@ export default function AdminUpsetConfig() {
                 Enable or disable each of the 5 upset systems that create realistic match outcomes
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -464,7 +464,7 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="variance" className="space-y-6">
+        <TabsContent value="variance" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -475,7 +475,7 @@ export default function AdminUpsetConfig() {
                 Configure random performance fluctuations applied to all teams
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
                   <h3 className="font-semibold">Enable Controlled Variance</h3>
@@ -488,7 +488,7 @@ export default function AdminUpsetConfig() {
                 />
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 <ConfigField
                   label="Variance Minimum"
                   field="varianceMin"
@@ -529,7 +529,7 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="context" className="space-y-6">
+        <TabsContent value="context" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -540,7 +540,7 @@ export default function AdminUpsetConfig() {
                 Configure situational factors that affect match outcomes
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
                   <h3 className="font-semibold">Enable Context-Based Upsets</h3>
@@ -553,7 +553,7 @@ export default function AdminUpsetConfig() {
                 />
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 <ConfigField
                   label="Giant-Killing Boost"
                   field="giantKillingBoost"
@@ -639,7 +639,7 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="rounding" className="space-y-6">
+        <TabsContent value="rounding" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -650,7 +650,7 @@ export default function AdminUpsetConfig() {
                 Configure upset-biased rounding that favors lower scores
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
                   <h3 className="font-semibold">Enable Smart Rounding</h3>
@@ -663,7 +663,7 @@ export default function AdminUpsetConfig() {
                 />
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 <ConfigField
                   label="Upset Rounding Chance"
                   field="upsetRoundingChance"
@@ -690,7 +690,7 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="budget" className="space-y-6">
+        <TabsContent value="budget" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -701,7 +701,7 @@ export default function AdminUpsetConfig() {
                 Configure major performance swings that balance out over the season
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
                   <h3 className="font-semibold">Enable Season Upset Budget</h3>
@@ -714,7 +714,7 @@ export default function AdminUpsetConfig() {
                 />
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 <ConfigField
                   label="Upset Budget Chance"
                   field="upsetBudgetChance"
@@ -769,7 +769,7 @@ export default function AdminUpsetConfig() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="poisson" className="space-y-6">
+        <TabsContent value="poisson" className="space-y-3 sm:space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -780,7 +780,7 @@ export default function AdminUpsetConfig() {
                 Configure mathematically realistic goal scoring probabilities
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg mb-6">
                 <div>
                   <h3 className="font-semibold">Enable Poisson Distribution</h3>
@@ -793,7 +793,7 @@ export default function AdminUpsetConfig() {
                 />
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 sm:space-y-4">
                 <ConfigField
                   label="Poisson Usage Rate"
                   field="poissonChance"

@@ -299,11 +299,11 @@ html {
 }
 
 .fpl-content-area {
-  @apply py-4 sm:py-6 lg:py-8;
+  @apply py-2 sm:py-4 lg:py-6;
 }
 
 .fpl-section-spacing {
-  @apply space-y-6 sm:space-y-8;
+  @apply space-y-3 sm:space-y-5;
 }
 
 /* Utility Classes */
@@ -393,7 +393,7 @@ html {
 }
 
 .fpl-card-header {
-  @apply bg-gradient-to-r from-slate-50 to-indigo-50/50 px-3 sm:px-6 py-3 sm:py-5 border-b rounded-t-2xl;
+  @apply bg-gradient-to-r from-slate-50 to-indigo-50/50 px-3 sm:px-6 py-2 sm:py-3 border-b rounded-t-2xl;
   border-color: var(--fpl-border);
 }
 
@@ -451,7 +451,7 @@ html {
 
 /* Control Bar */
 .fpl-controls {
-  @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-6;
+  @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4;
 }
 
 .fpl-controls-left {
@@ -544,7 +544,7 @@ html {
 
 /* Navigation breadcrumb */
 .fpl-breadcrumb {
-  @apply flex items-center gap-2 text-sm mb-6;
+  @apply flex items-center gap-2 text-sm mb-3 sm:mb-4;
   color: var(--fpl-text-muted);
 }
 

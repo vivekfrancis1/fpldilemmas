@@ -269,7 +269,7 @@ export default function AdminCacheManagement() {
         </div>
 
         {/* Bulk Operations */}
-        <Card className="mb-6">
+        <Card className="mb-3 sm:mb-4">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="h-5 w-5" />

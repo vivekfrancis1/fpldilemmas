@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import RefreshButton from "@/components/refresh-button";
+import InstallAppButton from "@/components/install-app-button";
 
 interface NavItem {
   path: string;
@@ -282,6 +283,7 @@ export default function TopNav() {
       {/* Right side: refresh + auth */}
       <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-purple-500/30 h-full">
         <RefreshButton className="text-purple-200 hover:text-white" />
+        <InstallAppButton className="text-purple-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (
           <Button
             variant="outline"

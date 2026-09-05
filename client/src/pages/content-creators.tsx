@@ -945,7 +945,7 @@ export default function ContentCreators() {
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "creators" | "team-analysis")}
-          className="space-y-6"
+          className="space-y-3 sm:space-y-4"
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="creators" data-testid="tab-creators">Content Creators</TabsTrigger>
@@ -1163,7 +1163,7 @@ export default function ContentCreators() {
           {/* Team Analysis Tab */}
           <TabsContent value="team-analysis">
             {/* Status Overview */}
-            <Card className="mb-6">
+            <Card className="mb-3 sm:mb-4">
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="text-center">
@@ -1224,7 +1224,7 @@ export default function ContentCreators() {
               <Tabs
                 value={activeSubTab}
                 onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
-                className="space-y-6"
+                className="space-y-3 sm:space-y-4"
               >
                 <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
@@ -1492,7 +1492,7 @@ export default function ContentCreators() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-6">
+                      <div className="space-y-3 sm:space-y-4">
                         {getFormationAnalysis.map((formation, index) => (
                           <div key={formation.formation} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex justify-between items-center mb-4">

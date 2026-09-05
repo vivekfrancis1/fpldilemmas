@@ -258,7 +258,7 @@ export default function TransferPlanner({ data, isLoading }: TransferPlannerProp
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         {/* Filters Skeleton */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -295,7 +295,7 @@ export default function TransferPlanner({ data, isLoading }: TransferPlannerProp
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-wrap items-center gap-4 mb-6">

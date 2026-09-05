@@ -366,14 +366,14 @@ export default function OpenFPLProjections() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Metric Tabs with Gameweek Columns */}
                   <Tabs
                     value={activeMetric}
                     onValueChange={(v) => setActiveMetric(v as "predicted_points" | "predicted_goals" | "predicted_assists")}
                     className="w-full"
                   >
-                    <TabsList className="grid w-full grid-cols-3 mb-6">
+                    <TabsList className="grid w-full grid-cols-3 mb-3 sm:mb-4">
                       <TabsTrigger value="predicted_points" className="text-xs">Points</TabsTrigger>
                       <TabsTrigger value="predicted_goals" className="text-xs">Goals</TabsTrigger>
                       <TabsTrigger value="predicted_assists" className="text-xs">Assists</TabsTrigger>

@@ -710,7 +710,7 @@ export default function PlayerAssistProjections() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-6">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-3 sm:mb-4">
         <TabsList className="w-full">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
@@ -1013,7 +1013,7 @@ export default function PlayerAssistProjections() {
 
         {/* Results */}
         {!isLoading && initialized && filteredAndSortedData.length > 0 && (
-          <div className="space-y-6">
+          <div className="space-y-3 sm:space-y-4">
               <div className="fpl-card">
                 <div className="fpl-card-header">
                   <h2 className="fpl-card-title flex items-center gap-2 flex-wrap">
