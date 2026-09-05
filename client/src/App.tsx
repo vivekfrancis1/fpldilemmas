@@ -12,6 +12,7 @@ import { useErrorMonitoring } from "./hooks/use-error-monitoring";
 import { Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/protected-route";
 import BmcWidget from "@/components/bmc-widget";
+import PwaUpdateToast from "@/components/pwa-update-toast";
 
 const Fixtures = lazy(() => import("./pages/fixtures"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
@@ -385,6 +386,7 @@ function App() {
           </Layout>
           <Toaster />
           <BmcWidget />
+          <PwaUpdateToast />
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>
