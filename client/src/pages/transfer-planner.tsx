@@ -6176,24 +6176,44 @@ export default function TransferPlanner() {
         );
       })()}
 
-      {/* Notification for non-logged-in users */}
-      {!user && searchedId && (() => {
+      {/* Data-source notice: which of the two very different data sources is powering this view.
+          Public lookups (any manager ID, including one auto-restored from localStorage with no
+          live connection) only ever see the last LOCKED gameweek's squad via FPL's public picks
+          endpoint — not pending transfers or a just-activated chip for the upcoming gameweek.
+          Connected accounts get a live, real-time read instead. Users were seeing this gap
+          first-hand (e.g. a remembered Manager ID showing wildcard status with no FPL account
+          connected this session) without any indication of which case applied. */}
+      {!isOwnTeam && searchedId && (() => {
         const currentGW = computeCurrentGameweek((bootstrapData?.events || []) as any);
         const upcomingGW = currentGW + 1;
-        
+
         return (
           <Alert className="bg-blue-50 border-blue-200">
             <AlertDescription className="text-sm text-blue-800">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div>
-                  The transfer planner is based on your team from GW {currentGW}. Login to FPL Dilemmas, and connect your FPL account to plan transfers based on your latest team from GW {upcomingGW}.
+                  {user ? (
+                    <>Public data — this is Manager {searchedId}'s GW {currentGW} squad (the last gameweek FPL makes public), not a live read. Connect your FPL account to plan transfers based on your real-time GW {upcomingGW} team.</>
+                  ) : (
+                    <>Public data — this is Manager {searchedId}'s GW {currentGW} squad (the last gameweek FPL makes public), not a live read. Login to FPL Dilemmas and connect your FPL account to plan transfers based on your real-time GW {upcomingGW} team.</>
+                  )}
                 </div>
               </div>
             </AlertDescription>
           </Alert>
         );
       })()}
+      {isOwnTeam && !useFallbackEndpoint && (
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-sm text-green-800">
+            <div className="flex items-start gap-2">
+              <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div>Live data — connected to your FPL account, showing your team as it stands right now.</div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Using the saved pre-season draft instead of a real (not-yet-available) squad */}
       {usingDraftFallback && !teamDataError && teamData && (
