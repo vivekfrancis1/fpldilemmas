@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { getLondonDateString } from "@shared/date-utils";
 
 // IST timezone offset (UTC+5:30)
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
@@ -117,7 +118,9 @@ export class PriceScheduler {
       const teams = bootstrapData.teams;
       const positions = bootstrapData.element_types;
       
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      // London date, not UTC — FPL applies price changes at UK midnight, which is still "yesterday"
+      // in UTC for part of the day (23:00 UTC during BST), so a plain UTC date misattributes them.
+      const today = getLondonDateString();
       const dailyRecords = [];
       const currentPlayerPrices = [];
       

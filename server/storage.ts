@@ -1,5 +1,6 @@
 import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments, CURRENT_SEASON } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
+import { getLondonDateString } from "@shared/date-utils";
 import { db, pool } from "./db";
 import { eq, sql, inArray, desc, and, gte } from "drizzle-orm";
 import { computeCbitPoints } from "./fpl-scoring-cache-service";
@@ -1218,7 +1219,7 @@ export class DatabaseStorage implements IStorage {
         const history = historiesByPlayer.get(playerId) || [];
         
         if (history.length === 0) {
-          result.set(playerId, new Date().toISOString().split('T')[0]); // Default to today
+          result.set(playerId, getLondonDateString()); // Default to today (UK date — see shared/date-utils.ts)
           continue;
         }
         
@@ -1615,8 +1616,10 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`🔍 Detecting actual price changes for ${currentPrices.length} players...`);
       const priceChangesToAdd: InsertPriceChange[] = [];
-      const today = new Date().toISOString().split('T')[0];
-      
+      // London date, not UTC — see shared/date-utils.ts for why (FPL applies price changes at
+      // UK midnight, which is still "yesterday" in UTC during BST).
+      const today = getLondonDateString();
+
       // Check if this is the first run (empty price_changes table)
       const existingChanges = await this.getPriceChanges(1);
       const isFirstRun = existingChanges.length === 0;

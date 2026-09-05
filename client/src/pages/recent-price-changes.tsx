@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getLondonDateString } from "@shared/date-utils";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -357,7 +358,10 @@ export default function RecentPriceChanges() {
       return { todayRises: 0, todayFalls: 0, todayChanges: 0 };
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    // London date, not UTC — matches how the server now stamps change_date (see
+    // shared/date-utils.ts): FPL applies price changes at UK midnight, which is still
+    // "yesterday" in UTC for part of every day during BST.
+    const today = getLondonDateString();
     const todayChanges = priceChanges.filter((c: PriceChange) => c.change_date === today);
     const todayRises = todayChanges.filter((c: PriceChange) => c.price_change > 0);
     const todayFalls = todayChanges.filter((c: PriceChange) => c.price_change < 0);
