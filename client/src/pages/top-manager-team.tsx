@@ -32,10 +32,8 @@ import {
 import {
   ArrowLeft,
   Crown,
-  DollarSign,
   Shield,
   Target,
-  Trophy,
   Users,
   Star,
   RefreshCw,
@@ -722,122 +720,59 @@ export default function TopManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-5 gap-0.5 sm:gap-4">
-          <Card className="border-l-2 sm:border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">GW Pts</div>
-                </div>
-                <Trophy className="hidden sm:block h-8 w-8 text-blue-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Total</div>
-                </div>
-                <Star className="hidden sm:block h-8 w-8 text-green-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-purple-700 truncate">
-                    #{teamData.entry_history.overall_rank?.toLocaleString()}
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Rank</div>
-                </div>
-                <Crown className="hidden sm:block h-8 w-8 text-purple-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-orange-700 truncate">
-                    £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Squad</div>
-                </div>
-                <DollarSign className="hidden sm:block h-8 w-8 text-orange-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-teal-500 bg-gradient-to-r from-teal-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-teal-700 truncate">
-                    £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Bank</div>
-                </div>
-                <DollarSign className="hidden sm:block h-8 w-8 text-teal-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-5 gap-px bg-gray-200 rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-white p-1.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-xl font-bold text-gray-900 truncate">{teamData.entry_history.points}</div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">GW Pts</div>
+          </div>
+          <div className="bg-white p-1.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-xl font-bold text-gray-900 truncate">{teamData.entry_history.total_points}</div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Total</div>
+          </div>
+          <div className="bg-white p-1.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-xl font-bold text-gray-900 truncate">
+              #{teamData.entry_history.overall_rank?.toLocaleString()}
+            </div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Rank</div>
+          </div>
+          <div className="bg-white p-1.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-xl font-bold text-gray-900 truncate">
+              £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
+            </div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Squad</div>
+          </div>
+          <div className="bg-white p-1.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-xl font-bold text-gray-900 truncate">
+              £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
+            </div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Bank</div>
+          </div>
         </div>
       )}
 
       {/* General Info Fallback */}
       {teamData?.general_info && !teamData.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{teamData.general_info.summary_overall_points}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
-                </div>
-                <Star className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-purple-700">
-                    {teamData.general_info.summary_overall_rank?.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Overall Rank</div>
-                </div>
-                <Crown className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xl font-bold text-blue-700">{teamData.general_info.name}</div>
-                  <div className="text-sm text-muted-foreground">Team Name</div>
-                </div>
-                <Trophy className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-gray-500 bg-gradient-to-r from-gray-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-bold text-gray-700">
-                    {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Manager</div>
-                </div>
-                <Users className="h-8 w-8 text-gray-500" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-200 rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-white p-2 sm:p-3 text-center">
+            <div className="text-lg sm:text-xl font-bold text-gray-900">{teamData.general_info.summary_overall_points}</div>
+            <div className="text-xs text-muted-foreground">Total Points</div>
+          </div>
+          <div className="bg-white p-2 sm:p-3 text-center">
+            <div className="text-lg sm:text-xl font-bold text-gray-900">
+              {teamData.general_info.summary_overall_rank?.toLocaleString()}
+            </div>
+            <div className="text-xs text-muted-foreground">Overall Rank</div>
+          </div>
+          <div className="bg-white p-2 sm:p-3 text-center">
+            <div className="text-base sm:text-lg font-bold text-gray-900 truncate">{teamData.general_info.name}</div>
+            <div className="text-xs text-muted-foreground">Team Name</div>
+          </div>
+          <div className="bg-white p-2 sm:p-3 text-center">
+            <div className="text-sm sm:text-base font-bold text-gray-900 truncate">
+              {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
+            </div>
+            <div className="text-xs text-muted-foreground">Manager</div>
+          </div>
         </div>
       )}
 
