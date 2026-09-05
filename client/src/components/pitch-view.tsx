@@ -167,8 +167,6 @@ function getAvailabilityInfo(player: PitchPlayer) {
 
 const FALLBACK_JERSEY_URL = "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.webp";
 
-const POSITION_LABEL: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
-
 function PlayerCard({ 
   player, 
   isGoalkeeper = false,
@@ -262,19 +260,13 @@ function PlayerCard({
               </div>
             </div>
 
-            <div className="w-full px-1 py-0.5 bg-slate-200 text-center flex items-center justify-center gap-1">
-              <span className="text-[7px] sm:text-[8px] md:text-[10px] font-bold text-slate-700 truncate">
-                {POSITION_LABEL[player.element_type] || ''}
-              </span>
-              {player.price !== undefined && (
-                <>
-                  <span className="text-[7px] sm:text-[8px] md:text-[10px] text-slate-400">•</span>
-                  <span className="text-[7px] sm:text-[8px] md:text-[10px] font-bold text-slate-700 truncate">
-                    £{player.price.toFixed(1)}m
-                  </span>
-                </>
-              )}
-            </div>
+            {player.price !== undefined && (
+              <div className="w-full px-1 py-0.5 bg-slate-200 text-center flex items-center justify-center gap-1">
+                <span className="text-[7px] sm:text-[8px] md:text-[10px] font-bold text-slate-700 truncate">
+                  £{player.price.toFixed(1)}m
+                </span>
+              </div>
+            )}
 
             {getPointsDisplay(player) !== '' && (
               <div className={`w-full px-2 py-0.5 ${getBadgeBg(getPointsDisplay(player), isBench)} text-center`}>

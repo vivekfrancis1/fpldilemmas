@@ -91,6 +91,10 @@ type TeamData = {
   };
   picks?: TeamPick[];
   gameweek?: number;
+  // The gameweek these picks actually came from — FPL's per-manager picks endpoint can lag the
+  // gameweek transition (server falls back to the previous GW's picks when the new one isn't
+  // available yet for that manager), so this can differ from bootstrap's own "current" gameweek.
+  resolvedGameweek?: number;
   manager?: string;
   general_info?: any;
   message?: string;
@@ -339,12 +343,17 @@ export default function TopManagerTeam() {
   const enrichedPicks = teamData?.picks?.map(pick => {
     const playerData = getPlayerData(pick.element);
     const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    // Prefer live_points from the API response (freshly merged server-side from FPL's live
+    // gameweek endpoint on every request) over bootstrap's event_points, which is a cached
+    // snapshot that can lag the actual live score — a stale 0 here was corrupting the
+    // DNP-vs-scored-zero distinction below for any player whose real score had already ticked up.
+    const points = pick.live_points !== undefined ? pick.live_points : (playerData?.event_points || 0);
     return {
       ...pick,
       player_name: playerData ? `${playerData.first_name} ${playerData.second_name}` : 'Unknown Player',
       team_name: teamData?.name || 'Unknown Team',
       now_cost: playerData?.now_cost || 0,
-      event_points: playerData?.event_points || 0,
+      event_points: points,
       element_type: playerData?.element_type || 1,
     };
   }) || [];
@@ -360,6 +369,14 @@ export default function TopManagerTeam() {
   };
 
   const getCurrentGameweek = (): number => {
+    // Prefer the gameweek these picks actually came from over independently recomputing
+    // "current" from bootstrap-static — FPL's per-manager picks endpoint can lag the gameweek
+    // transition (the server falls back to the previous GW's picks when a manager's new-GW
+    // picks aren't available yet), and using a different "current" for fixture-status lookups
+    // than the picks were fetched for produced a split-brain mismatch: fixture badges reflecting
+    // the new gameweek's matches laid over the previous gameweek's squad/points.
+    const resolvedGW = teamData?.resolvedGameweek ?? teamData?.entry_history?.event;
+    if (resolvedGW) return resolvedGW;
     // Floored at 1 — used as a live-data/fixtures lookup key, and GW0 isn't real.
     return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
@@ -381,13 +398,43 @@ export default function TopManagerTeam() {
     });
   };
 
+  const getCurrentGameweekFixture = (teamId: number) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return null;
+
+    const currentGW = getCurrentGameweek();
+
+    const fixture = fixturesData.find((f: any) =>
+      (f.team_h === teamId || f.team_a === teamId) && f.event === currentGW
+    );
+
+    if (!fixture) return null;
+
+    const isHome = fixture.team_h === teamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = getTeamById(opponentId);
+
+    return {
+      // finished_provisional flips true at full-time; finished only flips once bonus points are
+      // officially confirmed (often hours later). Treating either as "over" is what lets an
+      // unused player show DNP right after the match ends, instead of a bare 0 for that whole gap.
+      finished: fixture.finished || fixture.finished_provisional,
+      started: fixture.started,
+      opponent: opponent?.short_name || 'TBD',
+      isHome,
+      fixture
+    };
+  };
+
   // Map starting eleven to PitchPlayer format for pitch view
   const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
     const playerData = getPlayerData(pick.element);
     const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
     const pts = pick.live_points ?? pick.event_points ?? 0;
-    const mult = pick.multiplier || 1;
-    
+    // fixture_started/finished/opponent left for pitch-view's own getPointsDisplay to interpret
+    // (points_display is NOT set here) — it renders "-" for a fixture that hasn't kicked off yet
+    // instead of a bare 0, which otherwise looked indistinguishable from "played and scored 0".
+    const currentFixture = getCurrentGameweekFixture(playerData?.team);
+
     return {
       element: pick.element,
       element_type: pick.element_type,
@@ -402,7 +449,10 @@ export default function TopManagerTeam() {
       team_id: playerData?.team,
       team_code: teamDataLocal?.code,
       event_points: pts,
-      points_display: (pts * mult).toString(),
+      fixture_started: currentFixture?.started,
+      fixture_finished: currentFixture?.finished,
+      fixture_opponent: currentFixture?.opponent,
+      fixture_is_home: currentFixture?.isHome,
       live_minutes: pick.live_minutes ?? 0,
       provisional_bonus: pick.provisional_bonus ?? 0,
       provisional_cs_points: pick.provisional_cs_points ?? 0,
@@ -419,7 +469,8 @@ export default function TopManagerTeam() {
     const playerData = getPlayerData(pick.element);
     const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
     const pts = pick.live_points ?? pick.event_points ?? 0;
-    
+    const currentFixture = getCurrentGameweekFixture(playerData?.team);
+
     return {
       element: pick.element,
       element_type: pick.element_type,
@@ -434,6 +485,10 @@ export default function TopManagerTeam() {
       team_id: playerData?.team,
       team_code: teamDataLocal?.code,
       event_points: pts,
+      fixture_started: currentFixture?.started,
+      fixture_finished: currentFixture?.finished,
+      fixture_opponent: currentFixture?.opponent,
+      fixture_is_home: currentFixture?.isHome,
       live_minutes: pick.live_minutes ?? 0,
       provisional_bonus: pick.provisional_bonus ?? 0,
       provisional_cs_points: pick.provisional_cs_points ?? 0,
@@ -522,49 +577,6 @@ export default function TopManagerTeam() {
     return { totalLivePoints: base + provisional, hasProvisionalPoints: provisional > 0 };
   })();
   // ────────────────────────────────────────────────────────────────────────────
-
-  const getCurrentGameweekFixture = (teamId: number) => {
-    if (!fixturesData || !Array.isArray(fixturesData)) return null;
-    
-    const currentGW = getCurrentGameweek();
-    
-    const fixture = fixturesData.find((f: any) => 
-      (f.team_h === teamId || f.team_a === teamId) && f.event === currentGW
-    );
-    
-    if (!fixture) return null;
-    
-    const isHome = fixture.team_h === teamId;
-    const opponentId = isHome ? fixture.team_a : fixture.team_h;
-    const opponent = getTeamById(opponentId);
-    
-    return {
-      finished: fixture.finished,
-      started: fixture.started,
-      opponent: opponent?.short_name || 'TBD',
-      isHome,
-      fixture
-    };
-  };
-
-  const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
-    const points = player.event_points || 0;
-    const displayPoints = points * (isMultiplied ? 2 : 1);
-    
-    const currentFixture = getCurrentGameweekFixture(teamId);
-    
-    if (!currentFixture) return displayPoints.toString();
-    
-    if (!currentFixture.started || (!currentFixture.finished && points === 0)) {
-      return `vs ${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
-    }
-    
-    if (currentFixture.finished && points === 0) {
-      return '-';
-    }
-    
-    return displayPoints.toString();
-  };
 
   const statIdentifierLabels: Record<string, string> = {
     'minutes': 'Minutes played',
@@ -710,63 +722,63 @@ export default function TopManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-5 gap-1 sm:gap-4">
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+        <div className="grid grid-cols-5 gap-0.5 sm:gap-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">GW Pts</div>
+                  <div className="text-xs sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">GW Pts</div>
                 </div>
                 <Trophy className="hidden sm:block h-8 w-8 text-blue-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Total</div>
+                  <div className="text-xs sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Total</div>
                 </div>
                 <Star className="hidden sm:block h-8 w-8 text-green-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-purple-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-purple-700 truncate">
                     #{teamData.entry_history.overall_rank?.toLocaleString()}
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Rank</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Rank</div>
                 </div>
                 <Crown className="hidden sm:block h-8 w-8 text-purple-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-orange-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-orange-700 truncate">
                     £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Squad</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Squad</div>
                 </div>
                 <DollarSign className="hidden sm:block h-8 w-8 text-orange-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-teal-500 bg-gradient-to-r from-teal-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-teal-500 bg-gradient-to-r from-teal-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-teal-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-teal-700 truncate">
                     £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Bank</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Bank</div>
                 </div>
                 <DollarSign className="hidden sm:block h-8 w-8 text-teal-500 shrink-0" />
               </div>

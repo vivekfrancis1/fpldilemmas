@@ -89,6 +89,10 @@ type TeamData = {
   picks?: TeamPick[];
   automatic_subs?: { element_in: number; element_out: number; event: number; entry: number }[];
   gameweek?: number;
+  // The gameweek these picks actually came from — FPL's per-manager picks endpoint can lag the
+  // gameweek transition (server falls back to the previous GW's picks when the new one isn't
+  // available yet for that manager), so this can differ from bootstrap's own "current" gameweek.
+  resolvedGameweek?: number;
   manager?: string;
   general_info?: any;
   message?: string;
@@ -428,6 +432,14 @@ export default function ManagerTeam() {
   };
 
   const getCurrentGameweek = (): number => {
+    // Prefer the gameweek these picks actually came from over independently recomputing
+    // "current" from bootstrap-static — FPL's per-manager picks endpoint can lag the gameweek
+    // transition (the server falls back to the previous GW's picks when this manager's new-GW
+    // picks aren't available yet), and using a different "current" for fixture-status lookups
+    // than the picks were fetched for produced a split-brain mismatch: fixture badges reflecting
+    // the new gameweek's matches laid over the previous gameweek's squad/points.
+    const resolvedGW = teamData?.resolvedGameweek ?? teamData?.entry_history?.event;
+    if (resolvedGW) return resolvedGW;
     // Floored at 1 — used as a live-data lookup key/display gameweek, and GW0 isn't real.
     return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   };
@@ -442,13 +454,16 @@ export default function ManagerTeam() {
     );
     
     if (!fixture) return null;
-    
+
     const isHome = fixture.team_h === teamId;
     const opponentId = isHome ? fixture.team_a : fixture.team_h;
     const opponent = getTeamById(opponentId);
-    
+
     return {
-      finished: fixture.finished,
+      // finished_provisional flips true at full-time; finished only flips once bonus points are
+      // officially confirmed (often hours later). Treating either as "over" is what lets an
+      // unused player show DNP right after the match ends, instead of a bare 0 for that whole gap.
+      finished: fixture.finished || fixture.finished_provisional,
       started: fixture.started,
       opponent: opponent?.short_name || 'TBD',
       isHome,
@@ -872,63 +887,63 @@ export default function ManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-5 gap-1 sm:gap-4">
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+        <div className="grid grid-cols-5 gap-0.5 sm:gap-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">GW Pts</div>
+                  <div className="text-xs sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">GW Pts</div>
                 </div>
                 <Trophy className="hidden sm:block h-8 w-8 text-blue-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Total</div>
+                  <div className="text-xs sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Total</div>
                 </div>
                 <Star className="hidden sm:block h-8 w-8 text-green-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-purple-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-purple-700 truncate">
                     #{teamData.entry_history.overall_rank?.toLocaleString()}
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Rank</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Rank</div>
                 </div>
                 <Crown className="hidden sm:block h-8 w-8 text-purple-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-orange-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-orange-700 truncate">
                     £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Squad</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Squad</div>
                 </div>
                 <DollarSign className="hidden sm:block h-8 w-8 text-orange-500 shrink-0" />
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white">
-            <CardContent className="p-1.5 sm:p-4">
+          <Card className="border-l-2 sm:border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white">
+            <CardContent className="p-1 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm sm:text-2xl font-bold text-yellow-700 truncate">
+                  <div className="text-xs sm:text-2xl font-bold text-yellow-700 truncate">
                     £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground leading-tight">Bank</div>
+                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Bank</div>
                 </div>
                 <Wallet className="hidden sm:block h-8 w-8 text-yellow-500 shrink-0" />
               </div>
