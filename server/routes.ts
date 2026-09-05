@@ -504,21 +504,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // intermittent 401s on requests using a cookie from a just-completed login — the "admin-auth
   // session contention" flakiness documented across several test files.
 
-  // Unified auth user endpoint - handles both Google OAuth and local login
-  app.get('/api/auth/user', async (req: any, res) => {
-    try {
-      // Check passport user (Google OAuth) or session user (local login)
-      const user = req.user || req.session?.user;
-      if (user) {
-        res.json(user);
-      } else {
-        res.status(401).json(null);
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // NOTE: /api/auth/user is registered in server/replitAuth.ts's setupAuth(), called before
+  // this function — Express uses the first-registered handler for a path, so a duplicate here
+  // would be permanently unreachable dead code. (One used to exist at this exact spot; removed
+  // 2026-09-05 after confirming replitAuth.ts's version already covers both the Google-OAuth
+  // and local-login shapes it handled.)
 
   // Middleware to check if user is admin (for future use)
   function requireAdmin(req: any, res: any, next: any) {
