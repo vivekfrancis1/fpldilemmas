@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Calendar } from "lucide-react";
+import { BarChart3, Calendar, ChevronUp, ChevronDown } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
@@ -10,9 +10,11 @@ import PlayerComparisonModal from "../components/player-comparison-modal";
 import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { getDefaultFiltersOpen } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 
 export default function PlayerStats() {
@@ -31,6 +33,9 @@ export default function PlayerStats() {
   const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Quick Stats collapse state — open on desktop, collapsed on mobile so the badges don't push
+  // the actual player table (the point of this page) below the fold on a small screen.
+  const [isStatsOpen, setIsStatsOpen] = useState(getDefaultFiltersOpen);
   
   // Gameweek filter state
   const [startGameweek, setStartGameweek] = useState<number>(1);
@@ -246,14 +251,23 @@ export default function PlayerStats() {
         </div>
 
         {/* Quick Stats Overview */}
-        <Card className="mb-6 shadow-md border-0">
-          <CardContent className="p-3 sm:p-4">
-            <h2 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3" data-testid="text-quick-stats-title">
-              Quick Stats Overview
-            </h2>
-            <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
-          </CardContent>
-        </Card>
+        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
+          <Card className="mb-6 shadow-md border-0">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2.5 sm:py-3">
+                <CardTitle className="flex items-center justify-between text-xs sm:text-sm font-semibold text-gray-700" data-testid="text-quick-stats-title">
+                  <span>Quick Stats Overview</span>
+                  {isStatsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 p-3 sm:p-4">
+                <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Filters */}
         <Card className="mb-6 shadow-md border-0 bg-white">
