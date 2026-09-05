@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import ProtectedRoute from "@/components/protected-route";
 import BmcWidget from "@/components/bmc-widget";
 import PwaUpdateToast from "@/components/pwa-update-toast";
+import InstallPrompt from "@/components/install-prompt";
 
 const Fixtures = lazy(() => import("./pages/fixtures"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
@@ -387,6 +388,7 @@ function App() {
           <Toaster />
           <BmcWidget />
           <PwaUpdateToast />
+          <InstallPrompt />
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

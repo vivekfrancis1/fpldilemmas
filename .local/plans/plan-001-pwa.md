@@ -67,8 +67,15 @@ Make FPL Dilemmas an installable Progressive Web App: installable on desktop/mob
 - Exact theme_color / background_color hex — will read from `client/src/index.css` CSS variables rather than ask, unless ambiguous.
 - Whether to keep the Replit dev-banner script in `index.html` — unrelated to PWA, will leave as-is.
 
+## Addendum: custom install prompt (added after initial deploy)
+User asked for an in-app "Add to Home Screen" affordance to make installing easier (people were struggling to find Safari's Share icon manually). Added `client/src/components/install-prompt.tsx`:
+- Floating "Install App" pill, bottom-left (opposite the Buy-Me-a-Coffee widget slot, bottom-right).
+- Chrome/Edge/Android: listens for `beforeinstallprompt`, calls the real native `.prompt()` on click.
+- iOS Safari (no programmatic install API exists there): click opens a small dialog with 2-step instructions (Share icon → Add to Home Screen), using the same dark theme as the rest of the app.
+- Hidden entirely on iOS Chrome/Firefox (their Share sheet's add-to-home-screen path doesn't reliably carry over the manifest/SW), already-installed (standalone display-mode), and after user dismisses it (persisted in `localStorage`, not time-limited).
+- Verified in real Chrome: button appears/reacts correctly to a synthetic `beforeinstallprompt`, dismiss persists, iOS Safari UA-detection regex validated against real Safari/Chrome-iOS/Firefox-iOS/Android/Desktop UA strings.
+
 ## Out of scope for this plan
 - Push notifications
 - Background sync
 - Any caching of `/api/*` responses (explicitly rejected per user's decision above)
-- Custom "Add to Home Screen" install button UI
