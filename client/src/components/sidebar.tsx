@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -175,6 +176,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   // Combine filtered public and admin navigation items
   const allNavItems = isAdmin ? [...filteredNavItems, ...adminNavItems] : filteredNavItems;
 
+  // Auto-expand whichever category contains the current page, so opening the menu orients you
+  // to where you are rather than always landing on a fully-collapsed list.
+  const activeSectionName = allNavItems.find((section) =>
+    section.items.some((item) => isActive(item.path))
+  )?.section;
+
   // Sidebar content component (reused for mobile and desktop)
   const SidebarContent = ({ className = "" }: { className?: string }) => (
     <div className={`h-full bg-fpl-purple text-white overflow-y-auto ${className}`}>
@@ -195,58 +202,64 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-2 sm:p-3 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 pb-16 sm:pb-20">
-          {allNavItems
-            .filter((section) => section.items.length > 0) // Only show sections with visible items
-            .map((section) => (
-            <div key={section.section} className="space-y-2 sm:space-y-3">
-              <h2 className="text-purple-200 text-xs sm:text-xs font-semibold uppercase tracking-wider px-1">
-                {section.section}
-              </h2>
-              <div className="space-y-1">
-                {section.items
-                  .filter(item => !isMobile || !(item as any).mobileHidden)
-                  .map((item) => {
-                  const isCurrentPage = isActive(item.path);
-                  const Icon = item.icon;
-                  
-                  return (
-                    <Link 
-                      key={item.path} 
-                      href={item.path}
-                      onClick={handleNavItemClick}
-                    >
-                      <div className={`group flex items-center justify-between px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
-                        isCurrentPage 
-                          ? 'bg-white/10 text-white shadow-sm' 
-                          : 'text-purple-100 hover:bg-white/5 hover:text-white'
-                      }`}>
-                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
-                          <div className="min-w-0">
-                            <p className={`text-xs sm:text-sm font-medium truncate ${isCurrentPage ? 'text-white' : 'group-hover:text-white'}`}>
-                              {item.label}
-                            </p>
+        {/* Navigation — collapsed to just category headers by default (one open at a time), so
+            the menu reads as ~6 top-level items instead of every page at once. The category
+            containing the current page starts expanded so you can still see where you are. */}
+        <nav className="p-2 sm:p-3 md:p-6 pb-16 sm:pb-20">
+          <Accordion type="single" collapsible defaultValue={activeSectionName} className="space-y-1">
+            {allNavItems
+              .filter((section) => section.items.length > 0) // Only show sections with visible items
+              .map((section) => (
+              <AccordionItem key={section.section} value={section.section} className="border-b-0">
+                <AccordionTrigger className="px-1 py-2 sm:py-3 text-purple-200 text-xs sm:text-sm font-semibold uppercase tracking-wider hover:no-underline hover:text-white data-[state=open]:text-white">
+                  {section.section}
+                </AccordionTrigger>
+                <AccordionContent className="pb-1 pt-0">
+                  <div className="space-y-1">
+                    {section.items
+                      .filter(item => !isMobile || !(item as any).mobileHidden)
+                      .map((item) => {
+                      const isCurrentPage = isActive(item.path);
+                      const Icon = item.icon;
+
+                      return (
+                        <Link
+                          key={item.path}
+                          href={item.path}
+                          onClick={handleNavItemClick}
+                        >
+                          <div className={`group flex items-center justify-between px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+                            isCurrentPage
+                              ? 'bg-white/10 text-white shadow-sm'
+                              : 'text-purple-100 hover:bg-white/5 hover:text-white'
+                          }`}>
+                            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                              <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
+                              <div className="min-w-0">
+                                <p className={`text-xs sm:text-sm font-medium truncate ${isCurrentPage ? 'text-white' : 'group-hover:text-white'}`}>
+                                  {item.label}
+                                </p>
+                              </div>
+                            </div>
+                            {(item as any).new && (
+                              <Badge variant="secondary" className="bg-green-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
+                                NEW
+                              </Badge>
+                            )}
+                            {(item as any).popular && (
+                              <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] px-1.5 py-0.5 font-semibold rounded-full shadow-sm flex-shrink-0">
+                                Popular
+                              </Badge>
+                            )}
                           </div>
-                        </div>
-                        {(item as any).new && (
-                          <Badge variant="secondary" className="bg-green-500 text-white text-xs px-1.5 py-0.5 font-bold flex-shrink-0">
-                            NEW
-                          </Badge>
-                        )}
-                        {(item as any).popular && (
-                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] px-1.5 py-0.5 font-semibold rounded-full shadow-sm flex-shrink-0">
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </nav>
 
         {/* Footer */}
