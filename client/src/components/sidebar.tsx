@@ -211,7 +211,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               .filter((section) => section.items.length > 0) // Only show sections with visible items
               .map((section) => (
               <AccordionItem key={section.section} value={section.section} className="border-b-0">
-                <AccordionTrigger className="px-1 py-2 sm:py-3 text-purple-200 text-xs sm:text-sm font-semibold uppercase tracking-wider hover:no-underline hover:text-white data-[state=open]:text-white">
+                <AccordionTrigger className="px-1 py-2 sm:py-3 text-purple-200 text-xs sm:text-sm font-semibold tracking-wide hover:no-underline hover:text-white data-[state=open]:text-white">
                   {section.section}
                 </AccordionTrigger>
                 <AccordionContent className="pb-1 pt-0">
