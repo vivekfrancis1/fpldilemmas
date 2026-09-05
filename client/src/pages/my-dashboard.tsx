@@ -427,6 +427,7 @@ export default function MyDashboard() {
     needsReauth?: boolean;
   }>({
     queryKey: ["/api/fpl/status"],
+    enabled: !!user,
     retry: false,
   });
 

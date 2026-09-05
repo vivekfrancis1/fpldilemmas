@@ -85,6 +85,7 @@ export function FplConnectDialog() {
     needsReauth?: boolean;
   }>({
     queryKey: ["/api/fpl/status"],
+    enabled: isAuthenticated,
     retry: false,
   });
 
