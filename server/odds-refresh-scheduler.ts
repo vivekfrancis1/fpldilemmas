@@ -7,20 +7,25 @@ import { CURRENT_SEASON } from "@shared/schema";
  * approaches, appending a snapshot each time (see server/odds-service.ts) so
  * fixture_odds_snapshots accumulates a time series of how the market moved. Cost is 2 credits
  * per refresh (regions=uk, markets=h2h+totals) regardless of how many fixtures come back, so
- * even the tightest cadence here (every 5 minutes, only while a match is actually live) stays
- * cheap in absolute terms — the real cost driver is how many minutes per day are spent at that
- * cadence, not the per-call price.
+ * the real cost driver is how many minutes per day are spent at the tightest cadence, not the
+ * per-call price.
  *
  * Interval, in priority order (checked against real fixture kickoff/finish state each cycle):
- *   - Any fixture currently live (started, not yet finished/finished_provisional): every 5 min.
- *   - Any fixture kicking off within the next 4 hours: every 15 min.
- *   - Any fixture today (matchday, nothing live/imminent right now): every 4 hours.
+ *   - Any fixture kicking off within the next 4 hours (including one already live — a live match
+ *     falls through to the matchday tier below, since in-play odds movement isn't consumed by
+ *     anything here: the projection only needs the pre-kickoff consensus, and the odds-movement
+ *     chart's value is pre-match drift, not in-play swings): every 15 min.
+ *   - Any fixture today (matchday, nothing imminent right now): every 4 hours.
  *   - Otherwise: every 12 hours.
+ *
+ * A previous "any match live → every 5 min" tier was removed: it applied globally (any one
+ * live match anywhere tightened the refresh for the whole board, including fixtures a week
+ * out), and burned a large share of the monthly API quota over a single matchday weekend for
+ * no consumed benefit.
  *
  * No-ops entirely when ODDS_API_KEY isn't configured, rather than failing the whole server.
  */
 
-const INTERVAL_LIVE_MS = 5 * 60 * 1000;
 const INTERVAL_IMMINENT_MS = 15 * 60 * 1000;
 const INTERVAL_MATCHDAY_MS = 4 * 60 * 60 * 1000;
 const INTERVAL_DEFAULT_MS = 12 * 60 * 60 * 1000;
@@ -36,7 +41,7 @@ export class OddsRefreshScheduler {
       return;
     }
 
-    console.log("🕐 Starting Odds Refresh Scheduler (variable interval: 5min live / 15min imminent / 4h matchday / 12h default)...");
+    console.log("🕐 Starting Odds Refresh Scheduler (variable interval: 15min imminent / 4h matchday / 12h default)...");
     this.runCycle();
   }
 
@@ -49,9 +54,11 @@ export class OddsRefreshScheduler {
   }
 
   /**
-   * Determines the next refresh delay from real fixture state, in priority order (live >
-   * imminent > matchday > default). Fixtures without a scheduled kickoff (event: null, i.e. TBC)
-   * are skipped — there's nothing to be "imminent" or "live" about them yet.
+   * Determines the next refresh delay from real fixture state, in priority order (imminent >
+   * matchday > default). Fixtures without a scheduled kickoff (event: null, i.e. TBC) are
+   * skipped — there's nothing to be "imminent" about them yet. A live fixture counts as
+   * "matchday" (its own kickoff was today) rather than getting a tighter tier of its own — see
+   * the class-level comment for why in-play refreshing isn't worth its API cost.
    */
   private async computeNextDelayMs(): Promise<number> {
     try {
@@ -61,17 +68,11 @@ export class OddsRefreshScheduler {
 
       const now = Date.now();
       const todayStr = new Date(now).toDateString();
-      let hasLive = false;
       let hasImminent = false;
       let hasMatchday = false;
 
       for (const f of fixtures) {
         if (!f.kickoff_time) continue;
-        const isOver = f.finished || f.finished_provisional;
-        if (f.started && !isOver) {
-          hasLive = true;
-          break; // highest priority — no need to check further
-        }
         const kickoff = new Date(f.kickoff_time).getTime();
         const msUntilKickoff = kickoff - now;
         if (!f.started && msUntilKickoff > 0 && msUntilKickoff <= IMMINENT_WINDOW_MS) {
@@ -82,7 +83,6 @@ export class OddsRefreshScheduler {
         }
       }
 
-      if (hasLive) return INTERVAL_LIVE_MS;
       if (hasImminent) return INTERVAL_IMMINENT_MS;
       if (hasMatchday) return INTERVAL_MATCHDAY_MS;
       return INTERVAL_DEFAULT_MS;
