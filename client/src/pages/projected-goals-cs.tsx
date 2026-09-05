@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
+import { Target, TrendingUp, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
@@ -532,7 +532,7 @@ export default function ProjectedGoalsCS() {
       </div>
     );
     return (
-      <div className="hidden lg:block px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+      <div className="hidden lg:block px-2 py-1 bg-gray-50 border-t border-gray-100">
         <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-200 mb-1">
           <div style={{ width: `${homePct}%` }} className="bg-emerald-500" title={`${match.homeTeam.shortName} to win: ${homePct}%`} />
           <div style={{ width: `${drawPct}%` }} className="bg-gray-400" title={`Draw: ${drawPct}%`} />
@@ -545,51 +545,6 @@ export default function ProjectedGoalsCS() {
         </div>
       </div>
     );
-  };
-
-  const formatKickoffTime = (kickoffTime: string) => {
-    if (!kickoffTime) return '';
-    
-    const date = new Date(kickoffTime);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const matchDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
-    // Calculate days difference
-    const diffTime = matchDate.getTime() - today.getTime();
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    
-    // Format date and time in user's timezone
-    const dateOptions: Intl.DateTimeFormatOptions = { 
-      month: 'short', 
-      day: 'numeric' 
-    };
-    const timeOptions: Intl.DateTimeFormatOptions = { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    };
-    const dayOptions: Intl.DateTimeFormatOptions = { 
-      weekday: 'short' 
-    };
-    
-    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
-    const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
-    const formattedDay = date.toLocaleDateString('en-US', dayOptions);
-    
-    // Show relative date for near matches
-    let dateDisplay = formattedDate;
-    if (diffDays === 0) {
-      dateDisplay = 'Today';
-    } else if (diffDays === 1) {
-      dateDisplay = 'Tomorrow';
-    } else if (diffDays === -1) {
-      dateDisplay = 'Yesterday';
-    } else if (diffDays > 1 && diffDays <= 7) {
-      dateDisplay = formattedDay;
-    }
-    
-    return `${dateDisplay} • ${formattedTime}`;
   };
 
   const pageHeaderAndTabs = (
@@ -807,7 +762,7 @@ export default function ProjectedGoalsCS() {
                           below, unchanged. */}
                       <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1.5 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs lg:text-sm text-gray-800">
+                          <span className="font-bold text-xs text-gray-800">
                             GW{projections[0]?.gameweek}{projections[0]?.gameweek === 39 ? ' (TBC)' : ''}
                           </span>
                           <div className="lg:hidden flex items-center space-x-2">
@@ -891,13 +846,13 @@ export default function ProjectedGoalsCS() {
                       </div>
 
                       {/* Matches arranged in pairs - 2 matches per row - Compact Size */}
-                      <div className="space-y-1.5 lg:space-y-3 p-2 pt-0">
+                      <div className="space-y-1.5 p-2 pt-0">
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
 
                           return (
-                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-1.5 lg:gap-3">
+                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                               {/* First Match */}
                               {match1 && (() => {
                                 const oddsEventId1 = oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`);
@@ -907,27 +862,9 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                   onClick={oddsEventId1 ? () => setLocation(`/match-odds-history/${oddsEventId1}`) : undefined}
                                 >
-                                  {/* Kickoff Time Header */}
-                                  <div className="hidden lg:flex bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100 items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5">
-                                      <Clock className="h-3 w-3 text-gray-500" />
-                                      <span className="text-xs font-medium text-gray-700">
-                                        {match1.kickoffTime ? formatKickoffTime(match1.kickoffTime) : 'Date TBC'}
-                                      </span>
-                                    </div>
-                                    {oddsEventId1 && (
-                                      <span
-                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm"
-                                        title="See how the market odds for this fixture have moved over time"
-                                      >
-                                        <TrendingUp className="h-3.5 w-3.5" />
-                                        Odds Trend
-                                      </span>
-                                    )}
-                                  </div>
-                                  
+
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 lg:px-3 lg:py-2 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.homeTeam.id);
@@ -938,23 +875,21 @@ export default function ProjectedGoalsCS() {
                                               ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                               : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                             alt={`${match1.homeTeam.shortName} badge`}
-                                            className="w-4 h-4 lg:w-5 lg:h-5 object-contain"
+                                            className="w-4 h-4 object-contain"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                           />
                                         ) : <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
                                       })()}
-                                      <span className="font-bold text-xs lg:text-sm text-gray-800">
+                                      <span className="font-bold text-xs text-gray-800">
                                         {match1.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend — small visual indicator on mobile (the full
-                                          pill with label lives in the desktop-only kickoff header
-                                          above). Purely decorative: the whole card is clickable
-                                          (see the card's own onClick) so the tap target isn't
-                                          limited to this small icon. */}
+                                      {/* Odds trend indicator — purely decorative, the whole card
+                                          is clickable (see the card's own onClick) so the tap
+                                          target isn't limited to this small pill. */}
                                       {oddsEventId1 && (
                                         <span
-                                          className="lg:hidden inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
+                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
                                           <TrendingUp className="h-3 w-3" />
@@ -964,21 +899,21 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match1.homeTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.homeTeam.expectedGoals : match1.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getResultColor(match1.homeTeam.result)}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.homeTeam.result)}`}>
                                             {getResultText(match1.homeTeam.result)}
                                           </div>
                                         </div>
@@ -987,7 +922,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 lg:px-3 lg:py-2 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.awayTeam.id);
@@ -998,33 +933,33 @@ export default function ProjectedGoalsCS() {
                                               ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                               : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                             alt={`${match1.awayTeam.shortName} badge`}
-                                            className="w-4 h-4 lg:w-5 lg:h-5 object-contain"
+                                            className="w-4 h-4 object-contain"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                           />
                                         ) : <div className="w-2 h-2 bg-blue-500 rounded-full"></div>;
                                       })()}
-                                      <span className="font-bold text-xs lg:text-sm text-gray-800">
+                                      <span className="font-bold text-xs text-gray-800">
                                         {match1.awayTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match1.awayTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.awayTeam.expectedGoals : match1.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getResultColor(match1.awayTeam.result)}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.awayTeam.result)}`}>
                                             {getResultText(match1.awayTeam.result)}
                                           </div>
                                         </div>
@@ -1046,27 +981,10 @@ export default function ProjectedGoalsCS() {
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                   onClick={oddsEventId2 ? () => setLocation(`/match-odds-history/${oddsEventId2}`) : undefined}
                                 >
-                                  {/* Kickoff Time Header */}
-                                  <div className="hidden lg:flex bg-gradient-to-r from-gray-50 to-slate-50 px-3 py-1.5 border-b border-gray-100 items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5">
-                                      <Clock className="h-3 w-3 text-gray-500" />
-                                      <span className="text-xs font-medium text-gray-700">
-                                        {match2.kickoffTime ? formatKickoffTime(match2.kickoffTime) : 'Date TBC'}
-                                      </span>
-                                    </div>
-                                    {oddsEventId2 && (
-                                      <span
-                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm"
-                                        title="See how the market odds for this fixture have moved over time"
-                                      >
-                                        <TrendingUp className="h-3.5 w-3.5" />
-                                        Odds Trend
-                                      </span>
-                                    )}
-                                  </div>
+
                                   
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 lg:px-3 lg:py-2 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.homeTeam.id);
@@ -1077,23 +995,21 @@ export default function ProjectedGoalsCS() {
                                               ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                               : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                             alt={`${match2.homeTeam.shortName} badge`}
-                                            className="w-4 h-4 lg:w-5 lg:h-5 object-contain"
+                                            className="w-4 h-4 object-contain"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                           />
                                         ) : <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
                                       })()}
-                                      <span className="font-bold text-xs lg:text-sm text-gray-800">
+                                      <span className="font-bold text-xs text-gray-800">
                                         {match2.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend — small visual indicator on mobile (the full
-                                          pill with label lives in the desktop-only kickoff header
-                                          above). Purely decorative: the whole card is clickable
-                                          (see the card's own onClick) so the tap target isn't
-                                          limited to this small icon. */}
+                                      {/* Odds trend indicator — purely decorative, the whole card
+                                          is clickable (see the card's own onClick) so the tap
+                                          target isn't limited to this small pill. */}
                                       {oddsEventId2 && (
                                         <span
-                                          className="lg:hidden inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
+                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
                                           <TrendingUp className="h-3 w-3" />
@@ -1103,21 +1019,21 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match2.homeTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.homeTeam.expectedGoals : match2.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getResultColor(match2.homeTeam.result)}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.homeTeam.result)}`}>
                                             {getResultText(match2.homeTeam.result)}
                                           </div>
                                         </div>
@@ -1126,7 +1042,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 lg:px-3 lg:py-2 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.awayTeam.id);
@@ -1137,33 +1053,33 @@ export default function ProjectedGoalsCS() {
                                               ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                               : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                             alt={`${match2.awayTeam.shortName} badge`}
-                                            className="w-4 h-4 lg:w-5 lg:h-5 object-contain"
+                                            className="w-4 h-4 object-contain"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                           />
                                         ) : <div className="w-2 h-2 bg-blue-500 rounded-full"></div>;
                                       })()}
-                                      <span className="font-bold text-xs lg:text-sm text-gray-800">
+                                      <span className="font-bold text-xs text-gray-800">
                                         {match2.awayTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(A)</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match2.awayTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.awayTeam.expectedGoals : match2.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 lg:px-2 lg:py-1.5 rounded-lg text-xs font-bold shadow-sm min-w-[38px] lg:min-w-[45px] ${getResultColor(match2.awayTeam.result)}`}>
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.awayTeam.result)}`}>
                                             {getResultText(match2.awayTeam.result)}
                                           </div>
                                         </div>
