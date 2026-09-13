@@ -12,6 +12,17 @@ import { pool } from "./db";
 import { aggregateEventOdds, solveExpectedGoalsFromOdds, type OddsApiEvent } from "@shared/odds-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { getAdminGoalSettings } from "./team-config";
+import { storage } from "./storage";
+
+// Actual cost of one refreshFixtureOdds() call: regions=uk, markets=h2h+totals = 2 credits,
+// regardless of how many fixtures come back. Used to track monthly usage against the plan's
+// quota (see the odds-api-usage table/endpoint) — this is our own count of calls we've made,
+// not a live mirror of the provider's account dashboard.
+const CREDITS_PER_REFRESH = 2;
+
+function currentUsageMonth(): string {
+  return new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+}
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 const SPORT_KEY = "soccer_epl";
@@ -55,6 +66,9 @@ async function fetchOddsFromApi(): Promise<OddsApiEvent[]> {
  */
 export async function refreshFixtureOdds(season: string): Promise<{ fetched: number; stored: number }> {
   const events = await fetchOddsFromApi();
+  storage.incrementOddsApiUsage(currentUsageMonth(), CREDITS_PER_REFRESH).catch((err) =>
+    console.warn("Failed to record odds API usage:", err)
+  );
   let stored = 0;
 
   for (const event of events) {

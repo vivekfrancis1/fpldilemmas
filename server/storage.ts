@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, userTbcAssignments, CURRENT_SEASON } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, type OddsApiUsage, type InsertOddsApiUsage, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles, oddsApiUsage, userTbcAssignments, CURRENT_SEASON } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { getLondonDateString } from "@shared/date-utils";
 import { db, pool } from "./db";
@@ -138,6 +138,10 @@ export interface IStorage {
   upsertManagerProfile(profile: InsertManagerProfile): Promise<void>;
   bulkUpsertManagerProfiles(profiles: InsertManagerProfile[]): Promise<void>;
   searchManagerProfiles(query: string): Promise<ManagerProfile[]>;
+
+  // Odds API usage tracking (per calendar month)
+  getOddsApiUsage(month: string): Promise<OddsApiUsage | undefined>;
+  incrementOddsApiUsage(month: string, credits: number): Promise<void>;
 
   // User TBC assignments operations
   getUserTbcAssignments(userId: string): Promise<Record<number, number>>;
@@ -577,6 +581,13 @@ export class MemStorage implements IStorage {
 
   async searchManagerProfiles(query: string): Promise<ManagerProfile[]> {
     return [];
+  }
+
+  async getOddsApiUsage(_month: string): Promise<OddsApiUsage | undefined> {
+    return undefined;
+  }
+
+  async incrementOddsApiUsage(_month: string, _credits: number): Promise<void> {
   }
 
   async getUserTbcAssignments(_userId: string): Promise<Record<number, number>> {
@@ -2181,6 +2192,33 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error searching manager profiles:", error);
       return [];
+    }
+  }
+
+  async getOddsApiUsage(month: string): Promise<OddsApiUsage | undefined> {
+    try {
+      const [row] = await db.select().from(oddsApiUsage).where(eq(oddsApiUsage.month, month));
+      return row;
+    } catch (error) {
+      console.error("Error getting odds API usage:", error);
+      return undefined;
+    }
+  }
+
+  async incrementOddsApiUsage(month: string, credits: number): Promise<void> {
+    try {
+      await db
+        .insert(oddsApiUsage)
+        .values({ month, creditsUsed: credits, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: oddsApiUsage.month,
+          set: {
+            creditsUsed: sql`${oddsApiUsage.creditsUsed} + ${credits}`,
+            updatedAt: new Date(),
+          },
+        });
+    } catch (error) {
+      console.error("Error incrementing odds API usage:", error);
     }
   }
 

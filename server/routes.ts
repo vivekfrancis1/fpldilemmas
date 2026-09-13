@@ -14480,6 +14480,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Odds API credit usage for the current calendar month — our own tracked count of calls made
+  // by odds-refresh-scheduler.ts (2 credits/call), not a live mirror of the provider's dashboard.
+  const ODDS_API_MONTHLY_LIMIT = 500;
+  app.get("/api/admin/odds-api-usage", requireAdmin, async (req, res) => {
+    try {
+      const month = new Date().toISOString().slice(0, 7);
+      const usage = await storage.getOddsApiUsage(month);
+      const creditsUsed = usage?.creditsUsed || 0;
+      res.json({
+        month,
+        creditsUsed,
+        creditsRemaining: Math.max(0, ODDS_API_MONTHLY_LIMIT - creditsUsed),
+        limit: ODDS_API_MONTHLY_LIMIT,
+      });
+    } catch (error) {
+      console.error("Error fetching odds API usage:", error);
+      res.status(500).json({ error: "Failed to fetch odds API usage" });
+    }
+  });
+
   // OpenFPL Projection routes
   app.get('/api/openfpl-projections', async (req, res) => {
     try {

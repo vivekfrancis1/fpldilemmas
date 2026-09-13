@@ -743,6 +743,18 @@ export type ManagerProfile = typeof managerProfiles.$inferSelect;
 export type InsertManagerProfile = typeof managerProfiles.$inferInsert;
 export const insertManagerProfileSchema = createInsertSchema(managerProfiles).omit({ updatedAt: true });
 
+// The Odds API credit usage, tracked per calendar month (our own count of calls we've made,
+// not a mirror of the provider's dashboard) so the app can show "X used / 500 this month"
+// without needing an account-level API from the odds provider.
+export const oddsApiUsage = pgTable("odds_api_usage", {
+  month: varchar("month", { length: 7 }).primaryKey(), // 'YYYY-MM'
+  creditsUsed: integer("credits_used").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type OddsApiUsage = typeof oddsApiUsage.$inferSelect;
+export type InsertOddsApiUsage = typeof oddsApiUsage.$inferInsert;
+
 // Historical xG data cache - pre-calculated and never changes
 export const historicalXGCache = pgTable("historical_xg_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
