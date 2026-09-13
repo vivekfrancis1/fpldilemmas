@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2, ChevronDown, ChevronUp, ChevronRight, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, computeCurrentGameweek, debugGameweekCalculation, isSeasonEnded } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getBellCurveColor } from "@/lib/heatmap-colors";
@@ -225,6 +226,14 @@ export default function TeamAssistProjections() {
     if (viewMode !== "future") gameweeks.reverse();
     return gameweeks;
   }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
+
+  // On mobile, size gameweek/Total columns so a whole number always fits the visible width at
+  // rest — never a sliver of the next column.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: activeGameweeks.length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 110,
+  });
 
   const toggleGameweekSelection = (gw: number) => {
     setSelectedGameweeks(prev => {
@@ -658,8 +667,9 @@ export default function TeamAssistProjections() {
             )}
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="relative">
+            <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
+              <table className="w-full [&_th]:snap-start [&_td]:snap-start">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
@@ -670,7 +680,8 @@ export default function TeamAssistProjections() {
                       return (
                       <th
                         key={gwNumber}
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]"
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => setSortBy(`gw${gwNumber}`)}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -692,8 +703,9 @@ export default function TeamAssistProjections() {
                         GW39 (TBC)
                       </th>
                     )}
-                    <th 
-                      className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-[65px] min-w-[65px]"
+                    <th
+                      className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                      style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                       onClick={() => setSortBy('total')}
                     >
                       <div className="flex items-center justify-center gap-0.5">
@@ -737,7 +749,11 @@ export default function TeamAssistProjections() {
                           const liveIds = viewMode === "past" ? historyData?.liveTeamIds : xaHistoryData?.liveTeamIds;
                           const isLiveCell = liveGw === gwNumber && (liveIds || []).includes(team.id);
                           return (
-                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${value !== null ? getBellCurveColor(value, gwValuesMap.get(gwNumber) || []) : ''}`}>
+                            <td
+                              key={gwNumber}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${value !== null ? getBellCurveColor(value, gwValuesMap.get(gwNumber) || []) : ''} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <span className="flex items-center justify-center gap-1">
                                 {value !== null ? (viewMode === "past" ? value : value.toFixed(2)) : <span className="text-gray-400">-</span>}
                                 {isLiveCell && (
@@ -755,13 +771,21 @@ export default function TeamAssistProjections() {
                         const isDGW = fixtures.length > 1;
                         if (isDecidedCurrentGW) {
                           return (
-                            <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px]">
+                            <td
+                              key={gwNumber}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <span className="text-gray-400">-</span>
                             </td>
                           );
                         }
                         return (
-                          <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBellCurveColor(assists, gwValuesMap.get(gwNumber) || [])}`}>
+                          <td
+                            key={gwNumber}
+                            className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBellCurveColor(assists, gwValuesMap.get(gwNumber) || [])} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                            style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                          >
                             {isDGW ? (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -848,7 +872,10 @@ export default function TeamAssistProjections() {
                         const avgColorClasses = getBellCurveColor(avg, avgValues);
                         return (
                           <>
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] ${avgColorClasses}`}>
+                            <td
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center ${avgColorClasses} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <span className="text-sm md:text-lg font-bold">
                                 {viewMode === "past" ? rowTotal : rowTotal.toFixed(2)}
                               </span>
@@ -878,7 +905,11 @@ export default function TeamAssistProjections() {
                     {activeGameweeks.map(gwNumber => {
                       const gwTotal = totalAssists.gameweekTotals[gwNumber] || 0;
                       return (
-                        <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 w-[52px] min-w-[52px]">
+                        <td
+                          key={gwNumber}
+                          className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           {gwTotal > 0 ? (viewMode === "past" ? gwTotal : gwTotal.toFixed(2)) : "-"}
                         </td>
                       );
@@ -893,7 +924,10 @@ export default function TeamAssistProjections() {
                       );
                     })()}
 
-                    <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-[65px] min-w-[65px]">
+                    <td
+                      className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                      style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                    >
                       <span className="text-sm md:text-lg font-bold text-blue-900">
                         {(() => {
                           const grandTotal = totalAssists.overallTotal + filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
@@ -909,6 +943,14 @@ export default function TeamAssistProjections() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+            {gwTableScrollable && (
+              <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                  <ChevronRight className="h-3 w-3" />
+                </div>
+              </div>
+            )}
             </div>
           </CardContent>
         </Card>

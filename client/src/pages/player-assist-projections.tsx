@@ -3,11 +3,12 @@ import { useState, useMemo, useEffect } from "react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
-import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History } from "lucide-react";
+import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, ChevronRight, History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -494,6 +495,14 @@ export default function PlayerAssistProjections() {
     if (viewMode !== "future") columns.reverse();
     return columns;
   }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
+
+  // On mobile, size gameweek/Assists columns so a whole number always fits the visible width
+  // at rest — never a sliver of the next column.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: dynamicGameweekColumns.length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 130,
+  });
 
   // Calculate dynamic range label
   const rangeLabel = useMemo(() => {
@@ -1043,9 +1052,10 @@ export default function PlayerAssistProjections() {
                   </div>
                 </div>
                 <div className="fpl-card-content p-0">
-                  <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="relative">
+                  <div ref={gwTableContainerRef} className="overflow-x-auto -mx-4 sm:mx-0 snap-x snap-mandatory scroll-smooth">
                     <div className="min-w-full inline-block align-middle">
-                      <table className="min-w-full divide-y divide-gray-200">
+                      <table className="min-w-full divide-y divide-gray-200 [&_th]:snap-start [&_td]:snap-start">
                       <thead className="bg-gray-50 border-b">
                         <tr>
                           <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
@@ -1054,7 +1064,11 @@ export default function PlayerAssistProjections() {
                             </Button>
                           </th>
                           {dynamicGameweekColumns.map((gw) => (
-                            <th key={`assists-header-gw${gw}`} className="px-1 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider w-[52px] min-w-[52px]">
+                            <th
+                              key={`assists-header-gw${gw}`}
+                              className={`px-1 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
                                 <span className="md:hidden">{gw}</span>
                                 <span className="hidden md:inline">GW{gw}</span>
@@ -1067,7 +1081,10 @@ export default function PlayerAssistProjections() {
                               GW39 (TBC)
                             </th>
                           )}
-                          <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]">
+                          <th
+                            className={`px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 md:sticky md:right-[65px] z-[5] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                            style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                          >
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
                               {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
                             </Button>
@@ -1135,7 +1152,11 @@ export default function PlayerAssistProjections() {
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
                               const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
                               return (
-                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getAssistsColor(displayValue)}`}>
+                                <td
+                                  key={`assists-cell-${player.playerId}-gw${gw}`}
+                                  className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getAssistsColor(displayValue)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                  style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                                >
                                   <div className="flex flex-col items-center">
                                     {isDGW && viewMode === "future" ? (
                                       <Popover>
@@ -1217,7 +1238,10 @@ export default function PlayerAssistProjections() {
                                 )}
                               </td>
                             )}
-                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getAssistsColor(averageAssists)}`}>
+                            <td
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getAssistsColor(averageAssists)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               {(() => {
                                 const tbcContrib = showTBCColumn ? tbcAssists : 0;
                                 return hasAnyAdjustment ? (
@@ -1239,6 +1263,14 @@ export default function PlayerAssistProjections() {
                       </tbody>
                       </table>
                     </div>
+                  </div>
+                  {gwTableScrollable && (
+                    <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                      <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                        <ChevronRight className="h-3 w-3" />
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               </div>

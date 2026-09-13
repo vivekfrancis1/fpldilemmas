@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
+import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, ChevronRight, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -262,6 +263,14 @@ export default function TeamGoalsAgainstProjections() {
     if (viewMode !== "future") allGameweeks.reverse();
     return allGameweeks;
   }, [startGameweek, endGameweek, selectedGameweeks, viewMode]);
+
+  // On mobile, size gameweek/Total/Avg columns so a whole number always fits the visible width
+  // at rest — never a sliver of the next column. GW39 (TBC) stays fixed-width; it's a rare extra.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: activeGameweeks.filter(gw => gw !== 39).length + 2,
+    minWidth: 52,
+    fixedLeftWidth: 110,
+  });
 
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
@@ -819,8 +828,9 @@ export default function TeamGoalsAgainstProjections() {
               )}
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="relative">
+              <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
+                <table className="w-full [&_th]:snap-start [&_td]:snap-start">
                   <thead className="bg-gray-50 border-b">
                     <tr>
                       <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
@@ -831,7 +841,8 @@ export default function TeamGoalsAgainstProjections() {
                         return (
                         <th
                           key={gwNumber}
-                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'}`}
+                          className={`px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${gwNumber === 39 ? 'text-amber-700 bg-amber-50/60' : 'text-gray-500'} ${!columnWidth || gwNumber === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                          style={columnWidth && gwNumber !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
                           onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -854,7 +865,8 @@ export default function TeamGoalsAgainstProjections() {
                         </th>
                       )}
                       <th
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5]"
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors border-l border-gray-300 md:sticky md:right-14 z-[5] ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -864,7 +876,8 @@ export default function TeamGoalsAgainstProjections() {
                         </div>
                       </th>
                       <th
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => handleSort('average')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -911,7 +924,11 @@ export default function TeamGoalsAgainstProjections() {
                             const pastOpponentInfos = opponentMap.get(`${team.teamShort}-${gwNumber}`) ?? [];
                             const isLiveCell = historyData?.liveGameweek === gwNumber && (historyData?.liveTeamIds || []).includes(team.id);
                             return (
-                              <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(value ?? 0, gwValuesMap.get(gwNumber) || [], true)}`}>
+                              <td
+                                key={gwNumber}
+                                className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBellCurveColor(value ?? 0, gwValuesMap.get(gwNumber) || [], true)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                              >
                                 <div className="flex flex-col items-center">
                                   <span className="flex items-center gap-1">
                                     {value !== null ? value : '-'}
@@ -961,7 +978,11 @@ export default function TeamGoalsAgainstProjections() {
                           const avgGA = hasFixtures ? totalGA / fixtures.length : 0;
                           
                           return (
-                            <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'} ${getBellCurveColor(avgGA, gwValuesMap.get(gwNumber) || [], true)}`}>
+                            <td
+                              key={gwNumber}
+                              className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBellCurveColor(avgGA, gwValuesMap.get(gwNumber) || [], true)} ${!columnWidth || gwNumber === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth && gwNumber !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>
@@ -1063,10 +1084,16 @@ export default function TeamGoalsAgainstProjections() {
                             const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                             return (
                               <>
-                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses}`}>
+                                <td
+                                  className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses} ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                                  style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                                >
                                   <span className="text-sm md:text-lg font-bold">{total}</span>
                                 </td>
-                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                                <td
+                                  className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses} ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                                  style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                                >
                                   <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                                 </td>
                               </>
@@ -1088,10 +1115,16 @@ export default function TeamGoalsAgainstProjections() {
                           const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                           return (
                             <>
-                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses}`}>
+                              <td
+                                className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses} ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                                style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                              >
                                 <span className="text-sm md:text-lg font-bold">{total.toFixed(2)}</span>
                               </td>
-                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                              <td
+                                className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses} ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                                style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                              >
                                 <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                               </td>
                             </>
@@ -1116,7 +1149,11 @@ export default function TeamGoalsAgainstProjections() {
                       {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={gwNumber} className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${showOpponent ? 'w-[52px] min-w-[52px]' : 'w-[52px] min-w-[52px]'}`}>
+                          <td
+                            key={gwNumber}
+                            className={`px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${!columnWidth || gwNumber === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                            style={columnWidth && gwNumber !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                          >
                             {gwTotal > 0 ? (viewMode === "past" ? Math.round(gwTotal) : gwTotal.toFixed(2)) : "-"}
                           </td>
                         );
@@ -1131,14 +1168,20 @@ export default function TeamGoalsAgainstProjections() {
                         );
                       })()}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5]">
+                      <td
+                        className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 border-l border-gray-300 md:sticky md:right-14 z-[5] ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {viewMode === "past"
                             ? Math.round(totalGoalsAgainst.overallTotal || 0)
                             : (totalGoalsAgainst.overallTotal || 0).toFixed(2)}
                         </span>
                       </td>
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td
+                        className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-14 min-w-[56px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {(totalGoalsAgainst.averagePerGame || 0).toFixed(2)}
                         </span>
@@ -1147,6 +1190,14 @@ export default function TeamGoalsAgainstProjections() {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              {gwTableScrollable && (
+                <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                  <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                    <ChevronRight className="h-3 w-3" />
+                  </div>
+                </div>
+              )}
               </div>
             </CardContent>
           </Card>

@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from "react";
 import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, History, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -446,6 +447,14 @@ export default function PlayerDefensiveContributions() {
     // column order flips here — the filter chips (gameweeks) stay ascending.
     return viewMode !== "future" ? [...active].reverse() : active;
   }, [gameweeks, selectedGameweeks, viewMode]);
+
+  // On mobile, size gameweek/Total columns so a whole number always fits the visible width at
+  // rest — never a sliver of the next column. GW39 (TBC) stays fixed-width; it's a rare extra.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: activeGameweeks.filter(gw => gw !== 39).length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 130,
+  });
 
   // Toggle gameweek selection
   const toggleGameweekSelection = (gw: number) => {
@@ -1098,8 +1107,12 @@ export default function PlayerDefensiveContributions() {
         </div>
         <div className="fpl-card-content p-0">
           <div className="w-full mt-4">
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <Table>
+          <div className="relative">
+            <Table
+              containerRef={gwTableContainerRef}
+              containerClassName="-mx-4 sm:mx-0 snap-x snap-mandatory scroll-smooth"
+              className="[&_th]:snap-start [&_td]:snap-start"
+            >
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px] px-1 md:px-3 text-xs md:text-sm">
@@ -1109,9 +1122,10 @@ export default function PlayerDefensiveContributions() {
                   {activeGameweeks.map(gw => {
                     const isTBC = gw === 39 && tbcTeamInfoMap.size > 0 && viewMode === 'future';
                     return (
-                      <TableHead 
-                        key={gw} 
-                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors w-[52px] min-w-[52px] ${isTBC ? 'text-amber-700 bg-amber-50/60 border-l border-amber-300 hover:bg-amber-100' : 'text-gray-500 hover:bg-gray-100'}`}
+                      <TableHead
+                        key={gw}
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isTBC ? 'text-amber-700 bg-amber-50/60 border-l border-amber-300 hover:bg-amber-100' : 'text-gray-500 hover:bg-gray-100'} ${!columnWidth || gw === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                        style={columnWidth && gw !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => handleGameweekSort(gw)}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -1133,7 +1147,8 @@ export default function PlayerDefensiveContributions() {
                     );
                   })}
                   <TableHead
-                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]"
+                    className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors md:sticky md:right-[65px] z-[5] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                    style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1204,7 +1219,11 @@ export default function PlayerDefensiveContributions() {
                         const gw = player.gameweekProjections.find(g => g.gameweek === gwNum);
                         if (!gw) {
                           return (
-                            <TableCell key={gwNum} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : 'bg-gray-50'}`}>
+                            <TableCell
+                              key={gwNum}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : 'bg-gray-50'} ${!columnWidth || gwNum === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth && gwNum !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <div className="flex flex-col items-center">
                                 <span className="text-gray-400">-</span>
                                 {showOpponent && <span className="text-[9px] md:text-[10px] text-gray-400 mt-0.5">&nbsp;</span>}
@@ -1216,7 +1235,11 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : hasGwAdjustment ? 'bg-purple-50' : getDCColor(gw.defensiveContribution, player.position)}`}>
+                      <TableCell
+                        key={gw.gameweek}
+                        className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${isTBCGW ? 'bg-amber-50/60 border-l border-amber-300' : hasGwAdjustment ? 'bg-purple-50' : getDCColor(gw.defensiveContribution, player.position)} ${!columnWidth || gw.gameweek === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                        style={columnWidth && gw.gameweek !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <div className="flex flex-col items-center">
                           <span className="font-bold">
                             {hasGwAdjustment && !gw.isActual ? (
@@ -1234,7 +1257,10 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC, player.position)}`}>
+                    <TableCell
+                      className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC, player.position)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                      style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                    >
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
@@ -1252,6 +1278,13 @@ export default function PlayerDefensiveContributions() {
                 })}
               </TableBody>
             </Table>
+            {gwTableScrollable && (
+              <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                  <ChevronRight className="h-3 w-3" />
+                </div>
+              </div>
+            )}
           </div>
           </div>
         </div>

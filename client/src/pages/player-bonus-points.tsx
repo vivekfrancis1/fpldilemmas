@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Star, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Star, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded, computeNextRange } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -315,6 +316,14 @@ export default function PlayerBonusPoints() {
     }
     return columns;
   }, [startGameweek, endGameweek, selectedGameweeks]);
+
+  // On mobile, size gameweek/Total columns so a whole number always fits the visible width at
+  // rest — never a sliver of the next column.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: dynamicGameweekColumns.length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 130,
+  });
 
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: BonusPointsProjection, useAvailability: boolean = false) => {
@@ -660,8 +669,9 @@ export default function PlayerBonusPoints() {
             </div>
             <div className="fpl-card-content p-0">
               <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="relative">
+                <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
+                  <table className="w-full [&_th]:snap-start [&_td]:snap-start">
                     <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
                       <tr>
                         <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px] text-xs md:text-sm">
@@ -674,7 +684,11 @@ export default function PlayerBonusPoints() {
                           </button>
                         </th>
                         {dynamicGameweekColumns.map((gw) => (
-                          <th key={`gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm font-semibold text-gray-700 w-[52px] min-w-[52px]">
+                          <th
+                            key={`gw${gw}`}
+                            className={`text-center py-2 px-1 text-xs md:text-sm font-semibold text-gray-700 ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                            style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                          >
                             <button
                               onClick={() => handleSort(`gw${gw}`)}
                               className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors w-full"
@@ -689,7 +703,10 @@ export default function PlayerBonusPoints() {
                             GW39 (TBC)
                           </th>
                         )}
-                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-[65px] min-w-[65px] md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <th
+                          className={`text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
                             className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
@@ -752,7 +769,11 @@ export default function PlayerBonusPoints() {
                             const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
                             const isDGW = fixtures.length > 1;
                             return (
-                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBonusColor(displayValue)}`}>
+                              <td
+                                key={`bonus-cell-${projection.playerId}-gw${gw}`}
+                                className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBonusColor(displayValue)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                              >
                                 {isDGW ? (
                                   <Popover>
                                     <PopoverTrigger asChild>
@@ -822,7 +843,10 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
+                          <td
+                            className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                            style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                          >
                             {(() => {
                               const tbcBonusVal2 = showTBCColumn ? (projection.bonusPoints?.['gw39'] || 0) : 0;
                               return hasAnyAdjustment ? (
@@ -850,6 +874,14 @@ export default function PlayerBonusPoints() {
                       })}
                     </tbody>
                   </table>
+                </div>
+                {gwTableScrollable && (
+                  <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                    <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                      <ChevronRight className="h-3 w-3" />
+                    </div>
+                  </div>
+                )}
                 </div>
               </div>
             </div>

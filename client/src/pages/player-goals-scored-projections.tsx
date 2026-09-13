@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History, Calendar, Users } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, ChevronRight, History, Calendar, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -401,6 +402,14 @@ export default function PlayerGoalsScoredProjections() {
     if (viewMode !== "future") gameweeks.reverse();
     return gameweeks;
   }, [startGameweek, endGameweek, gwFilter, viewMode]);
+
+  // On mobile, size gameweek/Goals columns so a whole number always fits the visible width at
+  // rest — never a sliver of the next column. GW39 (TBC) stays fixed-width; it's a rare extra.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: activeGameweeks.length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 130,
+  });
 
   // Helper to normalize position strings for filtering
   const normalizePosition = (pos: string): string => {
@@ -1106,9 +1115,10 @@ export default function PlayerGoalsScoredProjections() {
                 </div>
               </div>
               <div className="fpl-card-content p-0">
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="relative">
+                <div ref={gwTableContainerRef} className="overflow-x-auto -mx-4 sm:mx-0 snap-x snap-mandatory scroll-smooth">
                   <div className="min-w-full inline-block align-middle">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200 [&_th]:snap-start [&_td]:snap-start">
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
@@ -1127,7 +1137,11 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {activeGameweeks.map(gw => (
-                      <th key={gw} className="px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]">
+                      <th
+                        key={gw}
+                        className={`px-1 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           <span className="md:hidden">{gw}</span>
                           <span className="hidden md:inline">GW{gw}</span>
@@ -1143,7 +1157,10 @@ export default function PlayerGoalsScoredProjections() {
                         GW39 (TBC)
                       </th>
                     )}
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]">
+                    <th
+                      className={`px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors md:sticky md:right-[65px] z-[5] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                      style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                    >
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
@@ -1219,7 +1236,11 @@ export default function PlayerGoalsScoredProjections() {
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                           
                           return (
-                            <td key={gw} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${hasGwAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(goals, gwGoalsMap.get(gw) || [])}`}>
+                            <td
+                              key={gw}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${hasGwAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(goals, gwGoalsMap.get(gw) || [])} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <div>
                                 {isDGW && viewMode === "future" ? (
                                   <Popover>
@@ -1303,7 +1324,10 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </td>
                         )}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(averageGoals, avgGoalsPopulation)}`}>
+                        <td
+                          className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(averageGoals, avgGoalsPopulation)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>
@@ -1335,7 +1359,10 @@ export default function PlayerGoalsScoredProjections() {
                         {formatGoals(tbcTotalGoals)}
                       </td>
                     )}
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5]">
+                    <td
+                      className={`px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                      style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                    >
                       <span className="text-lg font-bold text-orange-900">
                         {formatGoals(totalGoals.overallTotal + (showTBCColumn ? tbcTotalGoals : 0))}
                       </span>
@@ -1349,6 +1376,14 @@ export default function PlayerGoalsScoredProjections() {
                 </tfoot>
                     </table>
                   </div>
+                </div>
+                {gwTableScrollable && (
+                  <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                    <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                      <ChevronRight className="h-3 w-3" />
+                    </div>
+                  </div>
+                )}
                 </div>
           </div>
         </div>

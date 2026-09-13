@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, ChevronRight, Users } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +104,14 @@ export default function TeamCSProjections() {
     }
     return gameweeks;
   }, [startGameweek, endGameweek, selectedGameweeks]);
+
+  // On mobile, size gameweek/Avg columns so a whole number always fits the visible width at
+  // rest — never a sliver of the next column. GW39 (TBC) stays fixed-width; it's a rare extra.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: activeGameweeks.filter(gw => gw !== 39).length + 1,
+    minWidth: 52,
+    fixedLeftWidth: 110,
+  });
 
   const toggleGameweekSelection = (gw: number) => {
     setSelectedGameweeks(prev => {
@@ -561,8 +570,9 @@ export default function TeamCSProjections() {
               </p>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="relative">
+              <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
+                <table className="w-full [&_th]:snap-start [&_td]:snap-start">
                   <thead className="bg-gray-50 border-b">
                     <tr>
                       <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[110px] min-w-[110px]">
@@ -573,7 +583,8 @@ export default function TeamCSProjections() {
                         return (
                         <th
                           key={gwNumber}
-                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-[52px] min-w-[52px]"
+                          className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth || gwNumber === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                          style={columnWidth && gwNumber !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
                           onClick={() => handleSort(`gw${gwNumber}`)}
                         >
                           <div className="flex items-center justify-center gap-0.5">
@@ -596,8 +607,9 @@ export default function TeamCSProjections() {
                         </th>
                       )}
 
-                      <th 
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-[65px] min-w-[65px]"
+                      <th
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => handleSort('average')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -648,7 +660,11 @@ export default function TeamCSProjections() {
                           const avgCS = hasFixtures ? totalCS / fixtures.length : 0;
                           
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${getBellCurveColor(avgCS, gwValuesMap.get(gwNumber) || [])}`}>
+                            <td
+                              key={`${team.id}-gw${gwNumber}`}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBellCurveColor(avgCS, gwValuesMap.get(gwNumber) || [])} ${!columnWidth || gwNumber === 39 ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth && gwNumber !== 39 ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               {!hasFixtures ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-gray-400">-</span>
@@ -740,7 +756,10 @@ export default function TeamCSProjections() {
                           );
                         })()}
 
-                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 w-[65px] min-w-[65px]">
+                        <td
+                          className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           {(() => {
                             // Average CS% = sum of each actual fixture's CS% ÷ number of fixtures —
                             // excluding the current gameweek once this team's own fixture is decided
@@ -764,6 +783,14 @@ export default function TeamCSProjections() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              {gwTableScrollable && (
+                <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                  <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                    <ChevronRight className="h-3 w-3" />
+                  </div>
+                </div>
+              )}
               </div>
             </CardContent>
           </Card>

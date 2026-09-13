@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { getHeatmapColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search, Loader2, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SeasonBadge } from "@/components/season-badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
+import { useFitColumns } from "@/hooks/use-fit-columns";
 import JerseyIcon from "@/components/jersey-icon";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 
@@ -148,6 +149,14 @@ export default function PlayerMinutes() {
     for (let gw = startGameweek; gw <= Math.min(endGameweek, 38); gw++) columns.push(gw);
     return columns;
   }, [startGameweek, endGameweek]);
+
+  // On mobile, size the Curr/gameweek/Avg columns so a whole number always fits the visible
+  // width at rest — never a sliver of the next column.
+  const { containerRef: gwTableContainerRef, columnWidth, isScrollable: gwTableScrollable } = useFitColumns({
+    count: dynamicGameweekColumns.length + 2,
+    minWidth: 52,
+    fixedLeftWidth: 130,
+  });
 
   // Only counts gameweeks with a real (present) entry — a blanked current-GW cell isn't in
   // xMinsPerGW at all, so it's correctly excluded from the average's denominator.
@@ -557,8 +566,9 @@ export default function PlayerMinutes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="relative">
+              <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
+                <table className="w-full [&_th]:snap-start [&_td]:snap-start">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
                       <th className="px-1 md:px-3 py-2 md:py-3 text-left sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
@@ -588,7 +598,10 @@ export default function PlayerMinutes() {
                           Pos {getSortIcon('position')}
                         </Button>
                       </th>
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
+                      <th
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('currentMinutes')}
@@ -599,7 +612,11 @@ export default function PlayerMinutes() {
                         </Button>
                       </th>
                       {dynamicGameweekColumns.map((gw) => (
-                        <th key={`xmins-header-gw${gw}`} className="px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px]">
+                        <th
+                          key={`xmins-header-gw${gw}`}
+                          className={`px-1 py-2 md:py-3 text-center ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           <Button
                             variant="ghost"
                             onClick={() => handleSort(`gw${gw}`)}
@@ -611,7 +628,10 @@ export default function PlayerMinutes() {
                           </Button>
                         </th>
                       ))}
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <th
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[60px] min-w-[60px]' : ''}`}
+                        style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                      >
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('avgXMins')}
@@ -652,7 +672,10 @@ export default function PlayerMinutes() {
                             {player.position}
                           </Badge>
                         </td>
-                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center w-[52px] min-w-[52px] ${getMinutesColor(player.currentMinutesPerGame)}`}>
+                        <td
+                          className={`px-1 md:px-3 py-2 md:py-3 text-center ${getMinutesColor(player.currentMinutesPerGame)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           <div className="font-semibold text-xs md:text-sm">
                             {Math.round(player.currentMinutesPerGame)}
                           </div>
@@ -660,14 +683,21 @@ export default function PlayerMinutes() {
                         {dynamicGameweekColumns.map((gw) => {
                           const value = player.xMinsPerGW?.[`gw${gw}`];
                           return (
-                            <td key={`xmins-cell-${player.playerId}-gw${gw}`} className={`px-1 py-2 md:py-3 text-center w-[52px] min-w-[52px] ${value !== undefined ? getMinutesColor(value) : ''}`}>
+                            <td
+                              key={`xmins-cell-${player.playerId}-gw${gw}`}
+                              className={`px-1 py-2 md:py-3 text-center ${value !== undefined ? getMinutesColor(value) : ''} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                            >
                               <div className="font-medium text-xs md:text-sm">
                                 {value !== undefined ? value.toFixed(1) : <span className="text-gray-300">-</span>}
                               </div>
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 w-[60px] min-w-[60px] md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getMinutesColor(getAvgXMins(player))}`}>
+                        <td
+                          className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getMinutesColor(getAvgXMins(player))} ${!columnWidth ? 'w-[60px] min-w-[60px]' : ''}`}
+                          style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
+                        >
                           <div className="font-bold text-xs md:text-sm">
                             {getAvgXMins(player).toFixed(1)}
                           </div>
@@ -676,6 +706,14 @@ export default function PlayerMinutes() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              {gwTableScrollable && (
+                <div className="pointer-events-none absolute top-0 right-0 h-9 flex items-center md:hidden">
+                  <div className="flex items-center gap-0.5 bg-gray-900/70 text-white rounded-l-full pl-1.5 pr-1 py-1 animate-pulse">
+                    <ChevronRight className="h-3 w-3" />
+                  </div>
+                </div>
+              )}
               </div>
             </CardContent>
           </Card>
