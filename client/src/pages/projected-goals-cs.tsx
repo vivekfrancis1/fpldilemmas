@@ -773,27 +773,27 @@ export default function ProjectedGoalsCS() {
                           column labels (the match count is dropped there to make room); desktop
                           keeps the match count here and gets its own separate column-header row
                           below, unchanged. */}
-                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-1.5 border-b border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 pl-3 pr-4 py-1.5 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-gray-800">
                             GW{projections[0]?.gameweek}{projections[0]?.gameweek === 39 ? ' (TBC)' : ''}
                           </span>
                           <div className="lg:hidden flex items-center space-x-2">
-                            <div className="text-center w-[38px]">
+                            <div className="text-center w-[45px]">
                               <span className="text-[10px] font-bold text-gray-600">GOALS</span>
                             </div>
                             {projections.some(p => !p.finished && !p.isLive) && (
-                              <div className="text-center w-[38px]">
+                              <div className="text-center w-[45px]">
                                 <span className="text-[10px] font-bold text-gray-600">CS%</span>
                               </div>
                             )}
                             {projections.some(p => !p.finished && !p.isLive) && (
-                              <div className="text-center w-[38px]">
+                              <div className="text-center w-[45px]">
                                 <span className="text-[10px] font-bold text-gray-600">WIN%</span>
                               </div>
                             )}
                             {projections.some(p => p.finished || p.isLive) && (
-                              <div className="text-center w-[38px]">
+                              <div className="text-center w-[45px]">
                                 <span className="text-[10px] font-bold text-gray-600">RESULT</span>
                               </div>
                             )}

@@ -661,23 +661,6 @@ export default function MyDashboard() {
     staleTime: 60000,
   });
 
-  // FPL now updates mini-league rank in real time during a live gameweek — auto-expand the
-  // Live Table for the user's top private league instead of requiring a click on the Activity
-  // button. Only runs once (and only once the season has actually started), and only if the
-  // user hasn't already picked a league's live table themselves.
-  const hasAutoSelectedLiveLeague = useRef(false);
-  useEffect(() => {
-    if (hasAutoSelectedLiveLeague.current) return;
-    if (!leaguesData?.classic || leaguesData.classic.length === 0) return;
-    if (!bootstrapData) return;
-    hasAutoSelectedLiveLeague.current = true;
-    if (currentGameweek === 0) return; // pre-season — no gameweek in progress yet
-    const topPrivateLeague = [...leaguesData.classic]
-      .filter(league => league.league_type === 'x' && league.id > 1000 && league.entry_rank > 0)
-      .sort((a, b) => a.entry_rank - b.entry_rank)[0];
-    if (topPrivateLeague) setSelectedLiveLeague(topPrivateLeague.id);
-  }, [leaguesData, bootstrapData, currentGameweek]);
-
   // Always use public transfers endpoint — upcoming transfers are handled via nextTeamData
   const { data: transfersData, isLoading: isLoadingTransfers, error: transfersError } = useQuery<Transfer[]>({
     queryKey: ["/api/manager", searchedId, "transfers"],
@@ -1743,8 +1726,13 @@ export default function MyDashboard() {
                       <p className="text-base sm:text-lg font-bold text-amber-900">
                         {formatRank(managerData.summary_overall_rank)}
                         {getRankChange() !== null && getRankChange() !== 0 && (
-                          <span className={`ml-1.5 text-[10px] sm:text-xs font-medium ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
+                          <span className={`ml-1.5 inline-flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatRank(Math.abs(getRankChange()!))}
+                            {getRankChange()! > 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
                           </span>
                         )}
                       </p>
