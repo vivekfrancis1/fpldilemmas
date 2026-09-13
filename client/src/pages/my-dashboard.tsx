@@ -2482,53 +2482,6 @@ export default function MyDashboard() {
                     </div>
                   )}
 
-                  {(() => {
-                    const nextGW = getNextGameweekDashboard();
-                    const activeChipVal = dashboardChip;
-                    const normalizedPicks = teamData.picks.map(pick => ({
-                      ...pick,
-                      multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
-                    }));
-                    const activePicks = computeOptimizedPicks(normalizedPicks, nextGW, activeChipVal).picks;
-                    const starting11 = activePicks.filter(pick => pick.position <= 11);
-                    const bench = activePicks.filter(pick => pick.position > 11);
-                    let totalStartingXPts = 0;
-                    let totalBenchXPts = 0;
-                    for (const pick of starting11) {
-                      const proj = getProjectedPoints(pick.element, nextGW);
-                      totalStartingXPts += proj * (pick.multiplier || 1);
-                    }
-                    for (const pick of bench) {
-                      totalBenchXPts += getProjectedPoints(pick.element, nextGW);
-                    }
-                    if (activeChipVal === 'bboost') {
-                      totalStartingXPts += totalBenchXPts;
-                    }
-                    return (
-                      <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg mb-4">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2.5 bg-purple-200 rounded-full">
-                                <Target className="h-6 w-6 text-purple-700" />
-                              </div>
-                              <div>
-                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points (Optimised)</p>
-                                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(2)}</p>
-                              </div>
-                            </div>
-                            <div className="text-right space-y-1.5">
-                              {activeChipVal === 'bboost' ? (
-                                <p className="text-xs text-purple-600">Incl. bench (BB)</p>
-                              ) : (
-                                <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(2)}</p>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })()}
                 </>
               )}
 
