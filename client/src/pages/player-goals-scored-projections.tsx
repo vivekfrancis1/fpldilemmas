@@ -21,7 +21,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getBellCurveColor } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -517,6 +517,41 @@ export default function PlayerGoalsScoredProjections() {
     });
   }, [viewMode, fixtureMode, displayData, tbcTeamInfoMap, tbcFixtureIdMap, tbcAssignments, startGameweek, endGameweek, opponentMap]);
 
+  // Per-gameweek arrays of every player's projected goals that gameweek, so each cell can be
+  // colored relative to that gameweek's own spread (bell curve) instead of a fixed absolute
+  // scale — fixed cutoffs like "1.0+ goals" made almost every cell the same worst-tier color,
+  // since a single player's single-gameweek goal projection is nearly always well under 1.
+  // Built from the full (position/team/search-unfiltered) data so the scale doesn't shift just
+  // because the filters narrow what's displayed.
+  const gwGoalsMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const player of resolvedDisplayData) {
+      for (const [gwStr, val] of Object.entries(player.gameweekProjections || {})) {
+        const gw = Number(gwStr);
+        const arr = map.get(gw) || [];
+        arr.push(Number(val) || 0);
+        map.set(gw, arr);
+      }
+    }
+    return map;
+  }, [resolvedDisplayData]);
+
+  // Population of every player's average goals-per-active-gameweek, for coloring the Total/Avg
+  // columns relative to the rest of the table rather than the per-gameweek scale above.
+  const avgGoalsPopulation = useMemo(() => {
+    return resolvedDisplayData.map(player => {
+      let total = 0;
+      let weeks = 0;
+      activeGameweeks.forEach(gw => {
+        const key = gw.toString();
+        if (!(key in player.gameweekProjections)) return;
+        total += player.gameweekProjections[key] || 0;
+        weeks += 1;
+      });
+      return weeks > 0 ? total / weeks : 0;
+    });
+  }, [resolvedDisplayData, activeGameweeks]);
+
   // Whether the floating GW39 (TBC) column should be visible
   const showTBCColumn = useMemo(() => (
     endGameweek !== null && endGameweek >= 39 && (gwFilter.size === 0 || gwFilter.has(39)) &&
@@ -689,10 +724,6 @@ export default function PlayerGoalsScoredProjections() {
     await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-goals-projections"] });
     await queryClient.refetchQueries({ queryKey: ["/api/cached/player-goals-projections"] });
   };
-
-  const getGoalsColor = (goals: number) => getHeatmapColor(goals, [1.0, 1.5, 2.0, 2.5]);
-
-  const getPointsColor = (points: number) => getHeatmapColor(points, [5, 8, 12, 15]);
 
   // Format goals based on view mode - integers for past, decimals for future
   const formatGoals = (goals: number) => {
@@ -1188,7 +1219,7 @@ export default function PlayerGoalsScoredProjections() {
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                           
                           return (
-                            <td key={gw} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${hasGwAdjustment && viewMode === "future" ? 'bg-purple-50' : getGoalsColor(goals)}`}>
+                            <td key={gw} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium w-[52px] min-w-[52px] ${hasGwAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(goals, gwGoalsMap.get(gw) || [])}`}>
                               <div>
                                 {isDGW && viewMode === "future" ? (
                                   <Popover>
@@ -1272,7 +1303,7 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </td>
                         )}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getGoalsColor(averageGoals)}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(averageGoals, avgGoalsPopulation)}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>
@@ -1282,7 +1313,7 @@ export default function PlayerGoalsScoredProjections() {
                             <span className="text-sm md:text-lg font-bold">{formatGoals(adjustedTotal + tbcGoals)}</span>
                           )}
                         </td>
-                        <td className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getGoalsColor(averageGoals)}`}>
+                        <td className={`hidden md:table-cell px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getBellCurveColor(averageGoals, avgGoalsPopulation)}`}>
                           <span className="text-sm md:text-lg font-bold">{formatGoals(averageGoals)}</span>
                         </td>
                       </tr>
