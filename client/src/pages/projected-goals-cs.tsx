@@ -910,11 +910,11 @@ export default function ProjectedGoalsCS() {
                                           className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
-                                          <TrendingUp className="h-3 w-3" />
                                           <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
                                             <span className="sm:hidden">Odds</span>
                                             <span className="hidden sm:inline">View Odds Trend</span>
                                           </span>
+                                          <TrendingUp className="h-3 w-3" />
                                         </span>
                                       )}
                                     </div>
@@ -1049,11 +1049,11 @@ export default function ProjectedGoalsCS() {
                                           className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
-                                          <TrendingUp className="h-3 w-3" />
                                           <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
                                             <span className="sm:hidden">Odds</span>
                                             <span className="hidden sm:inline">View Odds Trend</span>
                                           </span>
+                                          <TrendingUp className="h-3 w-3" />
                                         </span>
                                       )}
                                     </div>
