@@ -24,7 +24,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getHeatmapColor, HEATMAP_TIERS } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -1143,6 +1143,7 @@ export default function PlayerAssistProjections() {
                               />
                             </td>
                             {dynamicGameweekColumns.map((gw) => {
+                              const hasProjection = gw.toString() in player.gameweekProjections;
                               const projValue = player.gameweekProjections[gw.toString()] || 0;
                               const fixtures: FixtureDetail[] = (player as any).fixtureDetails?.[gw.toString()] || [];
                               const isDGW = fixtures.length > 1;
@@ -1154,7 +1155,7 @@ export default function PlayerAssistProjections() {
                               return (
                                 <td
                                   key={`assists-cell-${player.playerId}-gw${gw}`}
-                                  className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getAssistsColor(displayValue)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                  className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${hasProjection ? getAssistsColor(displayValue) : HEATMAP_TIERS[2]} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
                                   style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                                 >
                                   <div className="flex flex-col items-center">

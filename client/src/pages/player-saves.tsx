@@ -21,7 +21,7 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getHeatmapColor, HEATMAP_TIERS } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -996,6 +996,7 @@ export default function PlayerSaves() {
                           {dynamicGameweekColumns.map((gw) => {
                             const teamShort = teamNameToShort.get(projection.teamName) || '';
                             const opponentInfo = opponentMap.get(`${teamShort}-${gw}`);
+                            const hasProjection = `gw${gw}` in (projection.saves || {});
                             const rawValue = projection.saves?.[`gw${gw}`] || 0;
                             const multiplier = gwMultipliers[gw] ?? 1;
                             const displayValue = rawValue * multiplier;
@@ -1006,7 +1007,7 @@ export default function PlayerSaves() {
                             return (
                               <td
                                 key={`saves-cell-${projection.playerId}-gw${gw}`}
-                                className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getSavesColor(displayValue)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${hasProjection ? getSavesColor(displayValue) : HEATMAP_TIERS[2]} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
                                 style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                               >
                                 <div className="flex flex-col items-center">

@@ -19,7 +19,7 @@ import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { getDefaultFiltersOpen } from "@/lib/utils";
-import { getHeatmapColor } from "@/lib/heatmap-colors";
+import { getHeatmapColor, HEATMAP_TIERS } from "@/lib/heatmap-colors";
 
 interface FixtureDetail {
   opponent: string;
@@ -762,6 +762,7 @@ export default function PlayerBonusPoints() {
                             />
                           </td>
                           {dynamicGameweekColumns.map((gw) => {
+                            const hasProjection = `gw${gw}` in (projection.bonusPoints || {});
                             const rawValue = projection.bonusPoints?.[`gw${gw}`] || 0;
                             const multiplier = gwMultipliers[gw] ?? 1;
                             const displayValue = rawValue * multiplier;
@@ -771,7 +772,7 @@ export default function PlayerBonusPoints() {
                             return (
                               <td
                                 key={`bonus-cell-${projection.playerId}-gw${gw}`}
-                                className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${getBonusColor(displayValue)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                                className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${hasProjection ? getBonusColor(displayValue) : HEATMAP_TIERS[2]} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
                                 style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                               >
                                 {isDGW ? (
