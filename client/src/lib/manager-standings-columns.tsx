@@ -39,7 +39,7 @@ export interface ManagerStandingsData {
     bank?: number | string;
     totalTransfers?: number;
     chipsUsed?: number;
-    secondHalfChipsUsed?: number;
+    firstHalfChipsUsed?: number;
   };
 }
 
@@ -249,18 +249,18 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'chipsAvailable',
-      header: <span className="leading-tight">Chips<br/>Available<br/>GW{ftGameweek}</span>,
+      header: <span className="leading-tight">Chips<br/>Available<br/>(1st Half)</span>,
       priority: 'optional',
       align: 'right',
-      mobileLabel: `Chips GW${ftGameweek}`,
+      mobileLabel: `Chips (1st Half)`,
       cardOrder: 115,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
         const chips = item.historyData?.chips || [];
-        const secondHalfChipsUsed = (item.latestTracking as any)?.secondHalfChipsUsed ??
-          chips.filter(c => c.event >= 20).length;
-        return Math.max(0, 4 - secondHalfChipsUsed);
+        const firstHalfChipsUsed = (item.latestTracking as any)?.firstHalfChipsUsed ??
+          chips.filter(c => c.event < 20).length;
+        return Math.max(0, 4 - firstHalfChipsUsed);
       }
     },
     {
@@ -353,9 +353,9 @@ export function getSharedSortValue<T extends ManagerStandingsData>(
     }
     case 'chipsAvailable': {
       const chips = item.historyData?.chips || [];
-      const secondHalfUsed = (item.latestTracking as any)?.secondHalfChipsUsed ??
-        chips.filter(c => c.event >= 20).length;
-      return Math.max(0, 4 - secondHalfUsed);
+      const firstHalfUsed = (item.latestTracking as any)?.firstHalfChipsUsed ??
+        chips.filter(c => c.event < 20).length;
+      return Math.max(0, 4 - firstHalfUsed);
     }
     case 'projected_points':
       return (item as any).projected_points || 0;

@@ -58,7 +58,7 @@ type TopManagerRow = {
     bank: number;
     totalTransfers: number;
     chipsUsed?: number;
-    secondHalfChipsUsed?: number;
+    firstHalfChipsUsed?: number;
   };
   projected_points?: number;
   projected_bench_points?: number;
@@ -120,8 +120,8 @@ const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Reco
     gwTransfersKeyField: 'managerId',
   });
 
-  // Column order: Rank | Manager | Overall Rank | Rank Gain | Total Pts | Pts (GW) | Chip (GW) | ...rest
-  return [allTimeRankCol, nameCol, ...sharedCols.slice(0, 4), chipCol, ...sharedCols.slice(4)];
+  // Column order: Rank | Manager | Total Pts | Overall Rank | Rank Gain | Pts (GW) | Chip (GW) | ...rest
+  return [allTimeRankCol, nameCol, sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
 };
 
 interface BootstrapData {
@@ -293,7 +293,7 @@ export default function TopManagers() {
           };
         }
         const chips = m.historyData?.chips || [];
-        const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
+        const firstHalfChipsUsed = chips.filter((c: { event: number }) => c.event < 20).length;
         const projData = projectedPointsMap.get(m.managerId);
 
         return {
@@ -309,7 +309,7 @@ export default function TopManagers() {
             bank: m.managerData.last_deadline_bank,
             totalTransfers: m.managerData.last_deadline_total_transfers,
             chipsUsed: chips.length,
-            secondHalfChipsUsed: secondHalfChipsUsed,
+            firstHalfChipsUsed: firstHalfChipsUsed,
           } : undefined,
           historyData: m.historyData ? {
             current: m.historyData.current || [],

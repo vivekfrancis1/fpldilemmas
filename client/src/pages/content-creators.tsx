@@ -326,8 +326,8 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     gwTransfersKeyField: 'id',
   });
 
-  // Column order: Creator | Overall Rank | Rank Gain | Total Pts | Pts (GW) | Chip (GW) | ...rest
-  return [nameColumn, ...sharedCols.slice(0, 4), chipCol, ...sharedCols.slice(4)];
+  // Column order: Creator | Total Pts | Overall Rank | Rank Gain | Pts (GW) | Chip (GW) | ...rest
+  return [nameColumn, sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
 };
 
 // Main Content Creators Component
@@ -698,9 +698,6 @@ export default function ContentCreators() {
         const cachedCreator = cachedCreatorsData.creators.find(c => c.managerId === creator.managerId);
         const projData = projectedPointsMap.get(creator.managerId);
         if (cachedCreator) {
-          const chips = cachedCreator.historyData?.chips || [];
-          const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
-          
           return {
             ...creator,
             latestTracking: cachedCreator.managerData && creator.latestTracking ? {

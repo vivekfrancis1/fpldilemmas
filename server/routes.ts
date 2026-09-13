@@ -4117,10 +4117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const historyData = historyResponse.data;
             const managerData = managerResponse;
             
-            // Calculate chips available (4 chips in second half - chips used in GW20+)
+            // Calculate chips available (4 chips in the first half of the season - GW1-19)
             const chips = historyData?.chips || [];
-            const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
-            const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
+            const firstHalfChipsUsed = chips.filter((c: { event: number }) => c.event < 20).length;
+            const chipsAvailable = Math.max(0, 4 - firstHalfChipsUsed);
             
             // Get latest GW rank from history
             const latestGWHistory = historyData?.current?.length > 0 
