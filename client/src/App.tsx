@@ -112,7 +112,11 @@ function Router() {
             <TeamOptimizer />
           </ProtectedRoute>
         </Route>
-        <Route path="/transfer-recommendations" component={TransferRecommendations} />
+        <Route path="/transfer-recommendations">
+          <ProtectedRoute requireAdmin={true}>
+            <TransferRecommendations />
+          </ProtectedRoute>
+        </Route>
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/transfer-planner" component={TransferPlanner} />
