@@ -151,14 +151,32 @@ export default function ResultsAndFixtures() {
     return Math.max(1, computeCurrentGameweek((bootstrapData?.events || []) as any));
   }, [bootstrapData]);
 
-  // Update selected gameweek to current gameweek when data loads. Skipped once if a gw was
+  // Once every fixture in the current gameweek has finished, keep it as the default for a 6-hour
+  // grace period after the last match ends (so results stay front-and-center right when a GW
+  // wraps up) before the default advances to the next gameweek. Estimates "match end" as kickoff
+  // + 2h (covers 90 min + stoppage/extra time) since fixtures don't carry an explicit end time.
+  const effectiveDefaultGameweek = useMemo(() => {
+    if (!currentGameweek || !liveFixturesData) return currentGameweek;
+    const gwFixtures = liveFixturesData.filter(f => f.event === currentGameweek);
+    if (gwFixtures.length === 0) return currentGameweek;
+    const allFinished = gwFixtures.every(f => f.finished || f.finished_provisional);
+    if (!allFinished) return currentGameweek;
+    const lastKickoff = Math.max(...gwFixtures.map(f => new Date(f.kickoff_time).getTime()));
+    const graceEnd = lastKickoff + (2 + 6) * 60 * 60 * 1000;
+    if (Date.now() < graceEnd) return currentGameweek;
+    const nextIdx = availableGameweeks.indexOf(currentGameweek) + 1;
+    return nextIdx > 0 && nextIdx < availableGameweeks.length ? availableGameweeks[nextIdx] : currentGameweek;
+  }, [currentGameweek, liveFixturesData, availableGameweeks]);
+
+  // Update selected gameweek to the effective default when data loads. Skipped once if a gw was
   // restored from the URL (e.g. returning from match-stats), so it isn't immediately overwritten.
   useEffect(() => {
     if (isHistorical) return;
     if (!bootstrapData?.events || !currentGameweek) return; // still loading — don't consume the skip below
+    if (!liveFixturesData) return; // wait for fixtures before deciding whether to advance
     if (skipGwAutoDefault.current) { skipGwAutoDefault.current = false; return; }
-    setSelectedGameweek(currentGameweek);
-  }, [bootstrapData, currentGameweek, isHistorical]);
+    setSelectedGameweek(effectiveDefaultGameweek);
+  }, [bootstrapData, currentGameweek, isHistorical, liveFixturesData, effectiveDefaultGameweek]);
 
   // Process fixtures data. Historical fixtures embed their own team name/short name/crest
   // (see the Fixture interface comment) instead of being joined against the current bootstrap
