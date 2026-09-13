@@ -1193,12 +1193,12 @@ export default function CreatorTeam() {
                                       <span className={`ml-2 flex items-center text-xs ${
                                         rankChange > 0 ? 'text-green-600' : rankChange < 0 ? 'text-red-600' : 'text-gray-500'
                                       }`}>
-                                        {rankChange > 0 ? (
-                                          <TrendingUp className="h-3 w-3 mr-1" />
-                                        ) : rankChange < 0 ? (
-                                          <TrendingDown className="h-3 w-3 mr-1" />
-                                        ) : null}
                                         {rankChange !== 0 && Math.abs(rankChange).toLocaleString()}
+                                        {rankChange > 0 ? (
+                                          <TrendingUp className="h-3 w-3 ml-1" />
+                                        ) : rankChange < 0 ? (
+                                          <TrendingDown className="h-3 w-3 ml-1" />
+                                        ) : null}
                                       </span>
                                     )}
                                   </div>

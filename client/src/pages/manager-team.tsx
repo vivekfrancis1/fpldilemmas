@@ -191,15 +191,15 @@ function getRankChangeDisplay(rankChange: number) {
   if (rankChange > 0) {
     return (
       <span className="text-green-600 text-xs font-medium flex items-center">
-        <TrendingUp className="h-3 w-3 mr-1" />
         +{rankChange.toLocaleString()}
+        <TrendingUp className="h-3 w-3 ml-1" />
       </span>
     );
   } else if (rankChange < 0) {
     return (
       <span className="text-red-600 text-xs font-medium flex items-center">
-        <TrendingDown className="h-3 w-3 mr-1" />
         {rankChange.toLocaleString()}
+        <TrendingDown className="h-3 w-3 ml-1" />
       </span>
     );
   } else {

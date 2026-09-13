@@ -75,15 +75,15 @@ export function renderRankChange(change: number | undefined | null) {
   if (change > 0) {
     return (
       <div className="flex items-center justify-end text-green-600 font-medium">
-        <TrendingUp className="h-3 w-3 mr-1" />
         {change.toLocaleString()}
+        <TrendingUp className="h-3 w-3 ml-1" />
       </div>
     );
   }
   return (
     <div className="flex items-center justify-end text-red-600 font-medium">
-      <TrendingDown className="h-3 w-3 mr-1" />
       {Math.abs(change).toLocaleString()}
+      <TrendingDown className="h-3 w-3 ml-1" />
     </div>
   );
 }

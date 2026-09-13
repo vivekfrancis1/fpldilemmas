@@ -2048,13 +2048,13 @@ export default function MyDashboard() {
                                     }`}>
                                       {league.entry_last_rank > league.entry_rank ? (
                                         <>
-                                          <TrendingUp className="h-3 w-3" />
                                           <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
+                                          <TrendingUp className="h-3 w-3" />
                                         </>
                                       ) : (
                                         <>
-                                          <TrendingDown className="h-3 w-3" />
                                           <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
+                                          <TrendingDown className="h-3 w-3" />
                                         </>
                                       )}
                                     </div>
@@ -2111,13 +2111,13 @@ export default function MyDashboard() {
                                       }`}>
                                         {league.entry_last_rank > league.entry_rank ? (
                                           <>
-                                            <TrendingUp className="h-3 w-3" />
                                             <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
+                                            <TrendingUp className="h-3 w-3" />
                                           </>
                                         ) : (
                                           <>
-                                            <TrendingDown className="h-3 w-3" />
                                             <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
+                                            <TrendingDown className="h-3 w-3" />
                                           </>
                                         )}
                                       </div>
@@ -3535,13 +3535,13 @@ export default function MyDashboard() {
                                       <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         {rankChange > 0 ? (
                                           <>
-                                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                                             <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                                           </>
                                         ) : (
                                           <>
-                                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
                                             <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
                                           </>
                                         )}
                                       </div>
@@ -3624,8 +3624,13 @@ export default function MyDashboard() {
                                         <TableCell className="text-xs sm:text-sm">#{gw.overall_rank?.toLocaleString()}</TableCell>
                                         <TableCell className="text-xs sm:text-sm">
                                           {previousGW ? (
-                                            <span className={`font-medium ${rankGain > 0 ? 'text-green-600' : rankGain < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                                            <span className={`inline-flex items-center gap-0.5 font-medium ${rankGain > 0 ? 'text-green-600' : rankGain < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                                               {rankGain > 0 ? '+' : ''}{rankGain.toLocaleString()}
+                                              {rankGain > 0 ? (
+                                                <TrendingUp className="h-3 w-3" />
+                                              ) : rankGain < 0 ? (
+                                                <TrendingDown className="h-3 w-3" />
+                                              ) : null}
                                             </span>
                                           ) : (
                                             <span className="text-gray-400">-</span>
