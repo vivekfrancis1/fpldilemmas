@@ -476,6 +476,19 @@ export default function ProjectedGoalsCS() {
     return map;
   }, [projectionsData]);
 
+  // Per-gameweek win% (home/away, draw ignored) for the mobile-only Win% column's bell-curve
+  // coloring. Sparse by design — matches without odds market data yet contribute nothing.
+  const gwWinProbMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const match of projectionsData || []) {
+      if (match.homeWinProb == null || match.awayWinProb == null) continue;
+      const arr = map.get(match.gameweek) || [];
+      arr.push(match.homeWinProb * 100, match.awayWinProb * 100);
+      map.set(match.gameweek, arr);
+    }
+    return map;
+  }, [projectionsData]);
+
   // Group by gameweek for display
   const groupedProjections = useMemo(() => {
     const groups: { [key: string]: MatchProjection[] } = {};
@@ -774,6 +787,11 @@ export default function ProjectedGoalsCS() {
                                 <span className="text-[10px] font-bold text-gray-600">CS%</span>
                               </div>
                             )}
+                            {projections.some(p => !p.finished && !p.isLive) && (
+                              <div className="text-center w-[38px]">
+                                <span className="text-[10px] font-bold text-gray-600">WIN%</span>
+                              </div>
+                            )}
                             {projections.some(p => p.finished || p.isLive) && (
                               <div className="text-center w-[38px]">
                                 <span className="text-[10px] font-bold text-gray-600">RESULT</span>
@@ -884,16 +902,19 @@ export default function ProjectedGoalsCS() {
                                         {match1.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend indicator — purely decorative, the whole card
-                                          is clickable (see the card's own onClick) so the tap
-                                          target isn't limited to this small pill. */}
+                                      {/* Odds trend button — styled to feel clickable even though the
+                                          whole card is already clickable (see the card's own onClick),
+                                          so the tap target isn't limited to this small pill. */}
                                       {oddsEventId1 && (
                                         <span
-                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
+                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
                                           <TrendingUp className="h-3 w-3" />
-                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">Odds Trend</span>
+                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
+                                            <span className="sm:hidden">Odds</span>
+                                            <span className="hidden sm:inline">View Odds Trend</span>
+                                          </span>
                                         </span>
                                       )}
                                     </div>
@@ -908,6 +929,14 @@ export default function ProjectedGoalsCS() {
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeTeam.cleanSheetOdds)}%
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {!match1.finished && !match1.isLive && match1.homeWinProb != null && (
+                                        <div className="lg:hidden text-center w-[45px]">
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
+                                            {Math.round(match1.homeWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
@@ -954,6 +983,14 @@ export default function ProjectedGoalsCS() {
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayTeam.cleanSheetOdds)}%
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {!match1.finished && !match1.isLive && match1.awayWinProb != null && (
+                                        <div className="lg:hidden text-center w-[45px]">
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
+                                            {Math.round(match1.awayWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
@@ -1004,16 +1041,19 @@ export default function ProjectedGoalsCS() {
                                         {match2.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend indicator — purely decorative, the whole card
-                                          is clickable (see the card's own onClick) so the tap
-                                          target isn't limited to this small pill. */}
+                                      {/* Odds trend button — styled to feel clickable even though the
+                                          whole card is already clickable (see the card's own onClick),
+                                          so the tap target isn't limited to this small pill. */}
                                       {oddsEventId2 && (
                                         <span
-                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-1.5 py-0.5 shrink-0"
+                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
                                           title="See how the market odds for this fixture have moved over time"
                                         >
                                           <TrendingUp className="h-3 w-3" />
-                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">Odds Trend</span>
+                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
+                                            <span className="sm:hidden">Odds</span>
+                                            <span className="hidden sm:inline">View Odds Trend</span>
+                                          </span>
                                         </span>
                                       )}
                                     </div>
@@ -1028,6 +1068,14 @@ export default function ProjectedGoalsCS() {
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeTeam.cleanSheetOdds)}%
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {!match2.finished && !match2.isLive && match2.homeWinProb != null && (
+                                        <div className="lg:hidden text-center w-[45px]">
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
+                                            {Math.round(match2.homeWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
@@ -1074,6 +1122,14 @@ export default function ProjectedGoalsCS() {
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayTeam.cleanSheetOdds)}%
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {!match2.finished && !match2.isLive && match2.awayWinProb != null && (
+                                        <div className="lg:hidden text-center w-[45px]">
+                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
+                                            {Math.round(match2.awayWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
