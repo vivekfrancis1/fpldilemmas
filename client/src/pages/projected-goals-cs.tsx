@@ -658,15 +658,15 @@ export default function ProjectedGoalsCS() {
       <div className="fpl-section-spacing">
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
-          <Card className="mb-3 shadow-sm border-0">
-            <CardContent className="pt-3 pb-3">
-              <div className="flex flex-wrap gap-3 items-center">
+          <Card className="mb-2 shadow-sm border-0">
+            <CardContent className="pt-2 pb-2">
+              <div className="flex flex-wrap gap-2 items-center">
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">From:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-20 h-7 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -679,11 +679,11 @@ export default function ProjectedGoalsCS() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">To:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-20 h-7 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

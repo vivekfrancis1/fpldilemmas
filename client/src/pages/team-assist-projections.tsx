@@ -516,13 +516,13 @@ export default function TeamAssistProjections() {
       <div className="fpl-section-spacing">
 
         {/* Gameweek range — always visible, not buried behind the collapsible */}
-        <Card className="mb-3">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-600">Start GW:</label>
+        <Card className="mb-2">
+          <CardContent className="p-2 sm:p-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3 items-end">
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-gray-600">Start:</label>
                 <Select value={startGameweek} onValueChange={setStartGameweek}>
-                  <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`} data-testid="select-start-gameweek">
+                  <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`} data-testid="select-start-gameweek">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -535,10 +535,10 @@ export default function TeamAssistProjections() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-600">End GW:</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-gray-600">End:</label>
                 <Select value={endGameweek} onValueChange={setEndGameweek}>
-                  <SelectTrigger className={`h-8 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`} data-testid="select-end-gameweek">
+                  <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`} data-testid="select-end-gameweek">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -556,10 +556,10 @@ export default function TeamAssistProjections() {
 
         {/* Controls */}
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-          <Card className="mb-3 sm:mb-4">
+          <Card className="mb-2 sm:mb-3">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
-                <CardTitle className="flex items-center justify-between text-base">
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2">
+                <CardTitle className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     <span>Filters</span>
@@ -569,7 +569,7 @@ export default function TeamAssistProjections() {
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0 pb-6">
+              <CardContent className="pt-0 pb-3 sm:pb-4">
                 <div className="w-full mt-3 space-y-3">
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-1 mb-1">

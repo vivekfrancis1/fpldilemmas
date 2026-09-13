@@ -281,11 +281,11 @@ export default function ProjectedStandings() {
       )}
 
       <div className="fpl-section-spacing">
-        <Card className="mb-6 shadow-md border-0">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-4 items-center justify-between">
-                <div className="flex flex-wrap gap-4 items-center">
+        <Card className="mb-2 sm:mb-3 shadow-md border-0">
+          <CardContent className="p-2 sm:p-3">
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3 items-center justify-between">
+                <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-purple-600" />
                     <span className="text-xs md:text-sm font-semibold text-gray-700">
@@ -293,7 +293,7 @@ export default function ProjectedStandings() {
                     </span>
                   </div>
                 </div>
-                
+
                 {viewMode === "projected" && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-purple-600" />
@@ -305,7 +305,7 @@ export default function ProjectedStandings() {
                       onValueChange={handleEndGameweekChange}
                       disabled={!bootstrapData || selectedEndGameweek === null}
                     >
-                      <SelectTrigger className="w-20" data-testid="select-end-gameweek">
+                      <SelectTrigger className="w-20 h-7 text-xs" data-testid="select-end-gameweek">
                         <SelectValue placeholder="..." />
                       </SelectTrigger>
                       <SelectContent>

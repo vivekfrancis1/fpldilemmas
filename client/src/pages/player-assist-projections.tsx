@@ -804,13 +804,13 @@ export default function PlayerAssistProjections() {
       <div className="fpl-section-spacing">
 
         {/* Gameweek range + search — always visible, not buried behind the collapsible */}
-        <div className="fpl-card mb-3">
-          <div className="p-3 sm:p-4">
+        <div className="fpl-card mb-2">
+          <div className="p-2 sm:p-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-600">From GW</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">From</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-7 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -821,10 +821,10 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-600">To GW</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">To</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-7 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -835,10 +835,9 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-2">
-                  <Search className="h-4 w-4 text-gray-500" />
+              <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                  <Search className="h-3.5 w-3.5 text-gray-500" />
                   Search
                 </label>
                 <Input
@@ -846,10 +845,9 @@ export default function PlayerAssistProjections() {
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-7 text-xs"
                 />
               </div>
-
 
               <div className="flex items-center gap-2 text-sm text-gray-600 sm:col-span-2 lg:col-span-3 xl:col-span-1 justify-center sm:justify-end">
                 <TrendingUp className="h-4 w-4" />
@@ -860,24 +858,24 @@ export default function PlayerAssistProjections() {
         </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-3 md:mb-4">
           <CollapsibleTrigger asChild>
             <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-purple-600" />
+                <Filter className="h-4 w-4 text-purple-600" />
                 <h2 className="fpl-card-title">Filters</h2>
               </div>
               <div className="flex items-center gap-2">
                 {isFiltersOpen ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
                 )}
               </div>
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-          <div className="p-3 sm:p-4">
+          <div className="p-2 sm:p-3">
             {(viewMode === "past" || viewMode === "pastXa") && (
               <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
                 <span className="text-xs text-gray-500">Quick:</span>

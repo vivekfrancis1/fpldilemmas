@@ -398,13 +398,13 @@ export default function PlayerMinutes() {
         </div>
 
         {/* Gameweek range + search — always visible, not buried behind the collapsible */}
-        <Card className="mb-3">
-          <CardContent className="p-3 sm:p-4">
+        <Card className="mb-2">
+          <CardContent className="p-2 sm:p-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">From GW:</label>
+                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">From:</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -416,9 +416,9 @@ export default function PlayerMinutes() {
               </div>
 
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">To GW:</label>
+                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">To:</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -430,7 +430,7 @@ export default function PlayerMinutes() {
               </div>
 
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Search:</label>
+                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">Search:</label>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                   <Input
@@ -438,13 +438,13 @@ export default function PlayerMinutes() {
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 text-xs pl-8 border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                    className="h-7 text-xs pl-8 border-2 border-gray-200 hover:border-blue-400 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="flex items-end">
-                <div className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 h-8 rounded-md text-xs font-medium border border-blue-100">
+                <div className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 h-7 rounded-md text-xs font-medium border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>{filteredAndSortedData.length} players</span>
                 </div>
@@ -454,31 +454,31 @@ export default function PlayerMinutes() {
         </Card>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-3 sm:mb-4">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-2 sm:mb-3">
           <Card>
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2 px-3 sm:px-4">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-blue-600" />
-                    <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
+                    <Filter className="h-4 w-4 text-blue-600" />
+                    <CardTitle className="text-sm">Filters</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
                     {isFiltersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                      <ChevronUp className="h-4 w-4 text-gray-500" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
                     )}
                   </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-          <CardContent className="p-6 pt-0">
-            <div className="max-w-[220px] mb-4">
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Min Minutes:</label>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="max-w-[220px] mb-3">
+              <label className="text-xs font-semibold text-gray-600 mb-0.5 block">Min Minutes:</label>
               <Select value={minMinutes} onValueChange={setMinMinutes}>
-                <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
