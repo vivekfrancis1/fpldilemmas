@@ -1624,9 +1624,16 @@ export default function MyDashboard() {
             <AlertDescription className="text-red-700 text-sm sm:text-base">
               {error instanceof Error && error.message.includes('session expired')
                 ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team.`
-                : error instanceof Error
-                  ? error.message
-                  : "Failed to load manager data. Please check the Manager ID and try again."
+                // A raw network-level failure (fetch() itself throwing, not an HTTP error
+                // response) surfaces here as the browser's own generic message — e.g. "Failed
+                // to fetch" in Chrome, "Load failed" in Safari, "NetworkError..." in Firefox.
+                // Showing that verbatim is meaningless to a user, so translate it into
+                // something actionable instead.
+                : error instanceof Error && /failed to fetch|networkerror|load failed/i.test(error.message)
+                  ? "Couldn't reach the server. Check your internet connection and try again."
+                  : error instanceof Error
+                    ? error.message
+                    : "Failed to load manager data. Please check the Manager ID and try again."
               }
             </AlertDescription>
           </Alert>
