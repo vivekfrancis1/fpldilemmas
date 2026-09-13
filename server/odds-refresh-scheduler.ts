@@ -31,6 +31,13 @@ const INTERVAL_MATCHDAY_MS = 4 * 60 * 60 * 1000;
 const INTERVAL_DEFAULT_MS = 12 * 60 * 60 * 1000;
 const IMMINENT_WINDOW_MS = 4 * 60 * 60 * 1000;
 
+// TEMPORARY: The Odds API credit balance is running low for September (400+/500 used with
+// most of the month still to go), so force the cheapest flat 12h cadence through the end of
+// the month regardless of imminent/matchday fixtures, rather than risk running out entirely.
+// Remove this block (and computeNextDelayMs goes back to the normal tiered behavior below) once
+// past this date or once the plan's credit situation is resolved.
+const BUDGET_MODE_UNTIL = new Date("2026-10-01T00:00:00Z");
+
 export class OddsRefreshScheduler {
   private timeoutId: NodeJS.Timeout | null = null;
   private isRunning = false;
@@ -41,7 +48,10 @@ export class OddsRefreshScheduler {
       return;
     }
 
-    console.log("🕐 Starting Odds Refresh Scheduler (variable interval: 15min imminent / 4h matchday / 12h default)...");
+    const cadenceDesc = Date.now() < BUDGET_MODE_UNTIL.getTime()
+      ? `flat 12h (budget mode until ${BUDGET_MODE_UNTIL.toISOString()})`
+      : "variable: 15min imminent / 4h matchday / 12h default";
+    console.log(`🕐 Starting Odds Refresh Scheduler (${cadenceDesc})...`);
     this.runCycle();
   }
 
@@ -61,6 +71,9 @@ export class OddsRefreshScheduler {
    * the class-level comment for why in-play refreshing isn't worth its API cost.
    */
   private async computeNextDelayMs(): Promise<number> {
+    if (Date.now() < BUDGET_MODE_UNTIL.getTime()) {
+      return INTERVAL_DEFAULT_MS;
+    }
     try {
       const response = await internalFetch("api/fixtures");
       if (!response.ok) return INTERVAL_DEFAULT_MS;
