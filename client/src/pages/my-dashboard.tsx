@@ -383,13 +383,20 @@ export default function MyDashboard() {
     }
   }, []);
 
-  // Name search handler — queries local manager_profiles DB via backend
-  const handleNameSearch = async () => {
+  // Name search — queries local manager_profiles DB via backend. `silent` is used by the
+  // debounced as-you-type autocomplete below: it populates suggestions without flipping the
+  // loading spinner or the "No managers found" error banner, which are reserved for an explicit
+  // Search click/Enter so a merely-still-typing partial query doesn't look like a failed search.
+  const handleNameSearch = async (opts: { silent?: boolean } = {}) => {
     const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
-    if (query.length < 2) return;
-    setIsNameSearching(true);
-    setNameSearchError("");
-    setNameSearchResults([]);
+    if (query.length < 2) {
+      setNameSearchResults([]);
+      return;
+    }
+    if (!opts.silent) {
+      setIsNameSearching(true);
+      setNameSearchError("");
+    }
     try {
       const res = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
@@ -406,13 +413,32 @@ export default function MyDashboard() {
           return;
         }
       }
-      setNameSearchError("no_results");
+      setNameSearchResults([]);
+      if (!opts.silent) setNameSearchError("no_results");
     } catch {
-      setNameSearchError("no_results");
+      setNameSearchResults([]);
+      if (!opts.silent) setNameSearchError("no_results");
     } finally {
-      setIsNameSearching(false);
+      if (!opts.silent) setIsNameSearching(false);
     }
   };
+
+  // Live-as-you-type suggestions: debounced so we're not firing a request per keystroke.
+  // Clears any stale "No managers found" banner from a previous explicit search as soon as the
+  // user edits either field again.
+  useEffect(() => {
+    setNameSearchError("");
+    const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
+    if (query.length < 2) {
+      setNameSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      handleNameSearch({ silent: true });
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameSearchTeam, nameSearchManager]);
 
   // Data queries
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -1486,6 +1512,7 @@ export default function MyDashboard() {
                     setManagerId(extractedId);
                   }}
                   onKeyPress={handleKeyPress}
+                  autoComplete="off"
                   className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                   data-testid="input-manager-id"
                 />
@@ -1509,10 +1536,10 @@ export default function MyDashboard() {
                     <label className="text-xs font-medium text-gray-500 pl-1">FPL Team Name</label>
                     <Input
                       type="text"
-                      placeholder="e.g. Maverick FC"
                       value={nameSearchTeam}
                       onChange={(e) => setNameSearchTeam(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
+                      autoComplete="off"
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-team-name"
                     />
@@ -1521,17 +1548,17 @@ export default function MyDashboard() {
                     <label className="text-xs font-medium text-gray-500 pl-1">Manager Name <span className="text-gray-400">(optional)</span></label>
                     <Input
                       type="text"
-                      placeholder="e.g. John Smith"
                       value={nameSearchManager}
                       onChange={(e) => setNameSearchManager(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
+                      autoComplete="off"
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-manager-name"
                     />
                   </div>
                   <div className="flex gap-2 sm:self-end">
                     <Button
-                      onClick={handleNameSearch}
+                      onClick={() => handleNameSearch()}
                       disabled={(!nameSearchTeam.trim() && !nameSearchManager.trim()) || isNameSearching}
                       className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
                       data-testid="button-search-name"

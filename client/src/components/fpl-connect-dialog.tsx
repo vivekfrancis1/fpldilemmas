@@ -332,9 +332,9 @@ export function FplConnectDialog() {
                   <Input
                     id="fpl-manager-id"
                     type="text"
-                    placeholder="Paste: https://fantasy.premierleague.com/entry/577434/event/10"
                     value={fplManagerId}
                     onChange={(e) => handleManagerIdInput(e.target.value)}
+                    autoComplete="off"
                     data-testid="input-fpl-manager-id"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -346,9 +346,9 @@ export function FplConnectDialog() {
                   <Label htmlFor="fpl-token">Paste cURL Command or Bearer Token</Label>
                   <textarea
                     id="fpl-token"
-                    placeholder="Paste entire cURL command here (or just the Bearer token)"
                     value={fplToken}
                     onChange={(e) => setFplToken(e.target.value)}
+                    autoComplete="off"
                     data-testid="input-fpl-token"
                     className="w-full min-h-[100px] p-2 text-xs font-mono border rounded-md resize-y"
                   />
