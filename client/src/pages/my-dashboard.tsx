@@ -2332,7 +2332,7 @@ export default function MyDashboard() {
                               <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
                                 <div className="text-[10px] sm:text-xs font-medium text-gray-600 mb-0.5 sm:mb-1">GW{gw}</div>
                                 <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 mb-0.5 sm:mb-1">
-                                  {(gwResult?.totalPoints || 0).toFixed(1)}
+                                  {(gwResult?.totalPoints || 0).toFixed(2)}
                                 </div>
                                 {formation && (
                                   <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
@@ -2522,79 +2522,9 @@ export default function MyDashboard() {
                       </Card>
                     );
                   })()}
-
-                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
-                    <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
-                      <CardTitle className="text-lg sm:text-xl text-amber-900">
-                        GW {getNextGameweekDashboard()} Fixtures & Projections
-                      </CardTitle>
-                      <CardDescription className="text-amber-700 mt-1">
-                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your optimised team.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                        <PitchView
-                          players={getOptimizedPicksForNextGW(teamData.picks, dashboardChip).filter(pick => pick.position <= 11).map(pick => {
-                            const player = getPlayerById(pick.element);
-                            if (!player) return null;
-                            const playerTeam = getPlayerTeam(player);
-                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                            const nextGW = getNextGameweekDashboard();
-                            const projected = getProjectedPoints(pick.element, nextGW);
-                            const upcomingChip = getUpcomingActiveChip();
-                            const multiplier = pick.is_captain ? (upcomingChip === '3xc' ? 3 : 2) : 1;
-                            const displayPts = projected * multiplier;
-                            return {
-                              element: pick.element,
-                              element_type: player.element_type,
-                              position: pick.position,
-                              is_captain: pick.is_captain,
-                              is_vice_captain: pick.is_vice_captain,
-                              multiplier: multiplier,
-                              web_name: player.web_name,
-                              team_short_name: playerTeam?.short_name,
-                              team_id: player.team,
-                              team_code: playerTeam?.code || playerTeam?.id || 0,
-                              price: getPickPrice(pick, player),
-                              points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
-                              fixtures: fixtureInfos as PitchPlayerFixture[],
-                              status: player.status,
-                              chance_of_playing: player.chance_of_playing_next_round,
-                              news: player.news,
-                            };
-                          }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={getOptimizedPicksForNextGW(teamData.picks, dashboardChip).filter(pick => pick.position > 11).map(pick => {
-                            const player = getPlayerById(pick.element);
-                            if (!player) return null;
-                            const playerTeam = getPlayerTeam(player);
-                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                            const nextGW = getNextGameweekDashboard();
-                            const projected = getProjectedPoints(pick.element, nextGW);
-                            return {
-                              element: pick.element,
-                              element_type: player.element_type,
-                              position: pick.position,
-                              is_captain: false,
-                              is_vice_captain: false,
-                              web_name: player.web_name,
-                              team_short_name: playerTeam?.short_name,
-                              team_id: player.team,
-                              team_code: playerTeam?.code || playerTeam?.id || 0,
-                              price: getPickPrice(pick, player),
-                              points_display: projected > 0 ? projected.toFixed(2) : '-',
-                              fixtures: fixtureInfos as PitchPlayerFixture[],
-                              status: player.status,
-                              chance_of_playing: player.chance_of_playing_next_round,
-                              news: player.news,
-                            };
-                          }).filter(Boolean) as PitchPlayer[]}
-                          onPlayerClick={handleProjectionPlayerClick}
-                        />
-                    </CardContent>
-                  </Card>
                 </>
               )}
-              
+
               {/* Show error or loading state when FPL IS connected but no data */}
               {fplStatus?.connected && !isLoadingNextTeam && !nextTeamData && (
                 <>
