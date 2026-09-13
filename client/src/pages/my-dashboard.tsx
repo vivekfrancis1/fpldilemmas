@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
+import { isNetworkLevelError } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1612,7 +1613,7 @@ export default function MyDashboard() {
                 // to fetch" in Chrome, "Load failed" in Safari, "NetworkError..." in Firefox.
                 // Showing that verbatim is meaningless to a user, so translate it into
                 // something actionable instead.
-                : error instanceof Error && /failed to fetch|networkerror|load failed/i.test(error.message)
+                : isNetworkLevelError(error)
                   ? "Couldn't reach the server. Check your internet connection and try again."
                   : error instanceof Error
                     ? error.message
