@@ -611,7 +611,7 @@ export default function PlayerMinutes() {
                           </Button>
                         </th>
                       ))}
-                      <th className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 w-[60px] min-w-[60px] md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('avgXMins')}
@@ -667,7 +667,7 @@ export default function PlayerMinutes() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 w-[60px] min-w-[60px] sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getMinutesColor(getAvgXMins(player))}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 w-[60px] min-w-[60px] md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${getMinutesColor(getAvgXMins(player))}`}>
                           <div className="font-bold text-xs md:text-sm">
                             {getAvgXMins(player).toFixed(1)}
                           </div>

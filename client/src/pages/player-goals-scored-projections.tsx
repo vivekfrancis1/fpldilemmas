@@ -1143,7 +1143,7 @@ export default function PlayerGoalsScoredProjections() {
                         GW39 (TBC)
                       </th>
                     )}
-                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] sticky right-0 md:right-[65px] z-[5]">
+                    <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
                         {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
@@ -1303,7 +1303,7 @@ export default function PlayerGoalsScoredProjections() {
                             )}
                           </td>
                         )}
-                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(averageGoals, avgGoalsPopulation)}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : getBellCurveColor(averageGoals, avgGoalsPopulation)}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal + tbcGoals)}</span>
@@ -1335,12 +1335,12 @@ export default function PlayerGoalsScoredProjections() {
                         {formatGoals(tbcTotalGoals)}
                       </td>
                     )}
-                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-14 border-l border-gray-300 sticky right-0 md:right-[65px] z-[5]">
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100 w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5]">
                       <span className="text-lg font-bold text-orange-900">
                         {formatGoals(totalGoals.overallTotal + (showTBCColumn ? tbcTotalGoals : 0))}
                       </span>
                     </td>
-                    <td className="hidden md:table-cell px-2 sm:px-4 py-2 sm:py-4 text-center bg-emerald-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <td className="hidden md:table-cell px-2 sm:px-4 py-2 sm:py-4 text-center bg-emerald-100 w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       <span className="text-lg font-bold text-emerald-900">
                         {formatGoals(totalGoals.averagePerGame)}
                       </span>

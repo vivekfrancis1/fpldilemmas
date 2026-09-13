@@ -925,7 +925,7 @@ export default function PlayerSaves() {
                             GW39 (TBC)
                           </th>
                         )}
-                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-[65px] min-w-[65px] sticky right-0 md:right-[65px] z-[5]">
+                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]">
                           <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
                             Total {getSortIcon('totalSaves')}
                           </Button>
@@ -1071,7 +1071,7 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getSavesColor(adjustedAverage)}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getSavesColor(adjustedAverage)}`}>
                             {(() => {
                               const tbcVal2 = showTBCColumn ? getUnabsorbedTBCSavesForPlayer(projection) : 0;
                               return hasAnyAdjustment ? (

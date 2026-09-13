@@ -854,7 +854,7 @@ export default function TeamGoalsAgainstProjections() {
                         </th>
                       )}
                       <th
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-14 z-[5]"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5]"
                         onClick={() => handleSort('total')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -864,7 +864,7 @@ export default function TeamGoalsAgainstProjections() {
                         </div>
                       </th>
                       <th
-                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                         onClick={() => handleSort('average')}
                       >
                         <div className="flex items-center justify-center gap-0.5">
@@ -1063,10 +1063,10 @@ export default function TeamGoalsAgainstProjections() {
                             const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                             return (
                               <>
-                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
+                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses}`}>
                                   <span className="text-sm md:text-lg font-bold">{total}</span>
                                 </td>
-                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                                <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
                                   <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                                 </td>
                               </>
@@ -1088,10 +1088,10 @@ export default function TeamGoalsAgainstProjections() {
                           const avgColorClasses = getBellCurveColor(avg, avgValues, true);
                           return (
                             <>
-                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-14 z-[5] ${avgColorClasses}`}>
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5] ${avgColorClasses}`}>
                                 <span className="text-sm md:text-lg font-bold">{total.toFixed(2)}</span>
                               </td>
-                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
+                              <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${avgColorClasses}`}>
                                 <span className="text-sm md:text-lg font-bold">{avg.toFixed(2)}</span>
                               </td>
                             </>
@@ -1131,14 +1131,14 @@ export default function TeamGoalsAgainstProjections() {
                         );
                       })()}
                       
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-14 z-[5]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-14 z-[5]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {viewMode === "past"
                             ? Math.round(totalGoalsAgainst.overallTotal || 0)
                             : (totalGoalsAgainst.overallTotal || 0).toFixed(2)}
                         </span>
                       </td>
-                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 border-l border-gray-300 sticky right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 w-14 min-w-[56px] border-l border-gray-300 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
                           {(totalGoalsAgainst.averagePerGame || 0).toFixed(2)}
                         </span>

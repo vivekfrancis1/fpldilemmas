@@ -1133,7 +1133,7 @@ export default function PlayerDefensiveContributions() {
                     );
                   })}
                   <TableHead
-                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] sticky right-0 md:right-[65px] z-[5]"
+                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors w-[65px] min-w-[65px] md:sticky md:right-[65px] z-[5]"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1234,7 +1234,7 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC, player.position)}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getDCColor(averageDC, player.position)}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
                           <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>

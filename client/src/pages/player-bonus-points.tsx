@@ -689,7 +689,7 @@ export default function PlayerBonusPoints() {
                             GW39 (TBC)
                           </th>
                         )}
-                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-[65px] min-w-[65px] sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 w-[65px] min-w-[65px] md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
                             className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
@@ -822,7 +822,7 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })()}
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 sticky right-0 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[65px] min-w-[65px] border-l border-gray-300 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
                             {(() => {
                               const tbcBonusVal2 = showTBCColumn ? (projection.bonusPoints?.['gw39'] || 0) : 0;
                               return hasAnyAdjustment ? (
