@@ -149,9 +149,9 @@ class ProjectionCacheWorker {
       const bootstrapData = await bootstrapResponse.json();
       console.log(`📥 Retrieved ${data.length} goal projections`);
       
-      // Clear existing data for this season
-      await db.delete(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, CURRENT_SEASON));
+      // Clear the whole table: its primary key excludes season, so a season-filtered delete would
+      // leave another season's rows behind and the insert below would collide with them.
+      await db.delete(playerGoalsProjections);
       
       // Apply adjustments and prepare records for batch insert
       const records = [];
@@ -329,9 +329,9 @@ class ProjectionCacheWorker {
       const data: ProjectionData[] = await projResponse.json();
       console.log(`📥 Retrieved ${data.length} assist projections for GW${startGameweek}-${endGameweek}`);
       
-      // Clear existing data for this season
-      await db.delete(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, CURRENT_SEASON));
+      // Clear the whole table: its primary key excludes season, so a season-filtered delete would
+      // leave another season's rows behind and the insert below would collide with them.
+      await db.delete(playerAssistProjections);
       
       // Apply adjustments and prepare records for batch insert
       const records = [];
@@ -523,9 +523,9 @@ class ProjectionCacheWorker {
       const teamData = await response.json();
       console.log(`📥 Retrieved ${teamData.length} team CS projections`);
       
-      // Clear existing data for this season
-      await db.delete(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, '2025/26'));
+      // Clear the whole table: its primary key excludes season, so a season-filtered delete would
+      // leave another season's rows behind and the insert below would collide with them.
+      await db.delete(teamCleanSheetProjections);
       
       // Prepare records for batch insert
       const records = [];
@@ -538,7 +538,7 @@ class ProjectionCacheWorker {
               records.push({
                 teamId: team.id || team.teamId,
                 gameweek: gw,
-                season: '2025/26',
+                season: CURRENT_SEASON,
                 cleanSheetProbability: Number(cleanSheetProbability),
                 calculatedAt: new Date()
               });
@@ -581,9 +581,9 @@ class ProjectionCacheWorker {
       
       console.log(`📥 Retrieved ${players.length} players from bootstrap`);
       
-      // Clear existing data for this season
-      await db.delete(playerMinutesProjections)
-        .where(eq(playerMinutesProjections.season, '2025/26'));
+      // Clear the whole table: its primary key excludes season, so a season-filtered delete would
+      // leave another season's rows behind and the insert below would collide with them.
+      await db.delete(playerMinutesProjections);
       
       // Prepare records for batch insert based on recent performance
       const records = [];
@@ -597,7 +597,7 @@ class ProjectionCacheWorker {
               records.push({
                 playerId: player.id,
                 gameweek: gw,
-                season: '2025/26',
+                season: CURRENT_SEASON,
                 minutes: Number(expectedMinutes.toFixed(1)),
                 calculatedAt: new Date()
               });
@@ -641,7 +641,7 @@ class ProjectionCacheWorker {
       
       // Clear existing data for this season
       await db.delete(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'));
+        .where(eq(teamProjections.season, CURRENT_SEASON));
       
       // Prepare records for batch insert
       const records = [];
@@ -657,7 +657,7 @@ class ProjectionCacheWorker {
           gameweekRange: '4-38',
           startGameweek: 4,
           endGameweek: 38,
-          season: '2025/26'
+          season: CURRENT_SEASON
         });
       }
       
@@ -688,16 +688,15 @@ class ProjectionCacheWorker {
       const data: any[] = await response.json();
       console.log(`📥 Retrieved ${data.length} defensive projections`);
       
-      // Season string stays '2025/26' to match the reader (/api/cached/player-defensive-projections).
-      const records = buildDefensiveRecords(data, '2025/26');
+      const records = buildDefensiveRecords(data, CURRENT_SEASON);
       if (records.length === 0) {
         // Never wipe the cache on an unparseable/empty payload — that's how it silently went empty.
         throw new Error(`Defensive projections produced 0 records from ${data.length} players — leaving existing cache untouched`);
       }
 
-      // Clear existing data for this season
-      await db.delete(playerDefensiveProjections)
-        .where(eq(playerDefensiveProjections.season, '2025/26'));
+      // Clear the whole table: its primary key excludes season, so a season-filtered delete would
+      // leave another season's rows behind and the insert below would collide with them.
+      await db.delete(playerDefensiveProjections);
 
       // Insert in batches
       if (records.length > 0) {
@@ -746,7 +745,7 @@ class ProjectionCacheWorker {
               })
               .where(and(
                 eq(teamProjections.teamId, teamGoals.teamId),
-                eq(teamProjections.season, '2025/26')
+                eq(teamProjections.season, CURRENT_SEASON)
               ));
           }
           

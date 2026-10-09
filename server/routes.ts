@@ -8099,7 +8099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, '2025/26'));
+        .where(eq(teamCleanSheetProjections.season, CURRENT_SEASON));
       
       console.log("Clean sheet admin settings updated, projection model will use new parameters");
       
@@ -8150,7 +8150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, '2025/26'));
+        .where(eq(teamCleanSheetProjections.season, CURRENT_SEASON));
       
       console.log("Clean sheet admin settings reset to default values");
       
@@ -17128,7 +17128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if we have recent cached data
       const cachedGoals = await db.select()
         .from(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, "2025/26"));
+        .where(eq(playerGoalsProjections.season, CURRENT_SEASON));
       
       if (cachedGoals.length > 0) {
         // Check if cache is recent (less than 12 hours old)
@@ -17194,7 +17194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear existing cache
       await db.delete(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, "2025/26"));
+        .where(eq(playerGoalsProjections.season, CURRENT_SEASON));
       
       // Insert new cache data
       const cacheInserts = [];
@@ -17251,7 +17251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check cached data
       const cachedAssists = await db.select()
         .from(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, "2025/26"));
+        .where(eq(playerAssistProjections.season, CURRENT_SEASON));
       
       if (cachedAssists.length > 0) {
         const cacheAge = Date.now() - new Date(cachedAssists[0].calculatedAt || 0).getTime();
@@ -17312,7 +17312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Cache the results
       await db.delete(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, "2025/26"));
+        .where(eq(playerAssistProjections.season, CURRENT_SEASON));
       
       const cacheInserts = [];
       for (const playerData of liveData) {
@@ -17353,7 +17353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check cached data
       const cachedMinutes = await db.select()
         .from(playerMinutesProjections)
-        .where(eq(playerMinutesProjections.season, "2025/26"));
+        .where(eq(playerMinutesProjections.season, CURRENT_SEASON));
       
       if (cachedMinutes.length > 0) {
         const cacheAge = Date.now() - new Date(cachedMinutes[0].calculatedAt || 0).getTime();
@@ -17414,7 +17414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Cache the results
       await db.delete(playerMinutesProjections)
-        .where(eq(playerMinutesProjections.season, "2025/26"));
+        .where(eq(playerMinutesProjections.season, CURRENT_SEASON));
       
       const cacheInserts = [];
       for (const playerData of liveData) {
@@ -17456,7 +17456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check cached data
       const cachedCS = await db.select()
         .from(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, "2025/26"));
+        .where(eq(teamCleanSheetProjections.season, CURRENT_SEASON));
       
       if (cachedCS.length > 0) {
         const cacheAge = Date.now() - new Date(cachedCS[0].calculatedAt || 0).getTime();
@@ -17514,7 +17514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Cache the results
       await db.delete(teamCleanSheetProjections)
-        .where(eq(teamCleanSheetProjections.season, "2025/26"));
+        .where(eq(teamCleanSheetProjections.season, CURRENT_SEASON));
       
       const cacheInserts = [];
       for (const teamData of liveData) {
@@ -19306,7 +19306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         goals: playerGoalsProjections.goals
       })
         .from(playerGoalsProjections)
-        .where(eq(playerGoalsProjections.season, '2025/26'))
+        .where(eq(playerGoalsProjections.season, CURRENT_SEASON))
         .orderBy(desc(playerGoalsProjections.goals));
       
       // If no cached data, fallback to live API
@@ -19381,7 +19381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assists: playerAssistProjections.assists
       })
         .from(playerAssistProjections)
-        .where(eq(playerAssistProjections.season, '2025/26'));
+        .where(eq(playerAssistProjections.season, CURRENT_SEASON));
       
       // If no cached data, fall back to live API
       if (!cachedData || cachedData.length === 0) {
@@ -19478,7 +19478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
         .from(playerGoalsProjections)
         .where(and(
-          eq(playerGoalsProjections.season, '2025/26'),
+          eq(playerGoalsProjections.season, CURRENT_SEASON),
           inArray(playerGoalsProjections.playerId, playerIds),
           gte(playerGoalsProjections.gameweek, startGameweek),
           lte(playerGoalsProjections.gameweek, endGameweek)
@@ -19588,7 +19588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
         .from(playerAssistProjections)
         .where(and(
-          eq(playerAssistProjections.season, '2025/26'),
+          eq(playerAssistProjections.season, CURRENT_SEASON),
           inArray(playerAssistProjections.playerId, playerIds),
           gte(playerAssistProjections.gameweek, startGameweek),
           lte(playerAssistProjections.gameweek, endGameweek)
@@ -19666,7 +19666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player minutes data from database");
       const cachedData = await db.select().from(playerMinutesProjections)
-        .where(eq(playerMinutesProjections.season, '2025/26'));
+        .where(eq(playerMinutesProjections.season, CURRENT_SEASON));
       
       // Sort in JavaScript as a workaround for SQL syntax error
       const sortedData = cachedData.sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
@@ -19682,7 +19682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player defensive data from database");
       const cachedData = await db.select().from(playerDefensiveProjections)
-        .where(eq(playerDefensiveProjections.season, '2025/26'))
+        .where(eq(playerDefensiveProjections.season, CURRENT_SEASON))
         .orderBy(desc(playerDefensiveProjections.defensiveContribution));
       
       res.json(cachedData);
@@ -19710,7 +19710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dbRows = await db.select().from(teamCleanSheetProjections)
         .where(
           and(
-            eq(teamCleanSheetProjections.season, '2025/26'),
+            eq(teamCleanSheetProjections.season, CURRENT_SEASON),
             gte(teamCleanSheetProjections.gameweek, nextGameweek)
           )
         )

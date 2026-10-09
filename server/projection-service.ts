@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { eq, and, desc, gte, sql } from "drizzle-orm";
+import { CURRENT_SEASON } from "../shared/schema";
 
 interface ProjectionCache {
   lastUpdated: Date;
@@ -565,7 +566,7 @@ class ProjectionService {
             WHERE player_id = ${player.playerId} 
               AND start_gameweek = ${startGameweek}
               AND end_gameweek = ${endGameweek}
-              AND season = '2025/26'
+              AND season = ${CURRENT_SEASON}
           `);
 
           // Insert new record with detailed point breakdowns
@@ -584,7 +585,7 @@ class ProjectionService {
               ${player.position}, ${player.elementType}, ${player.currentPrice}, ${player.ownership},
               ${JSON.stringify(player.gameweekProjections)}, ${player.totalExpectedPoints},
               ${player.averagePerGameweek}, ${player.seasonTotalPoints}, ${`${startGameweek}-${endGameweek}`},
-              ${startGameweek}, ${endGameweek}, '2025/26',
+              ${startGameweek}, ${endGameweek}, ${CURRENT_SEASON},
               ${JSON.stringify(player.pointsFromGoals)}, ${JSON.stringify(player.pointsFromAssists)}, 
               ${JSON.stringify(player.pointsFromCleanSheets)}, ${JSON.stringify(player.pointsFromDefensiveContributions)},
               ${JSON.stringify(player.pointsFromMinutes)}, ${JSON.stringify(player.pointsFromBonus)},
@@ -666,7 +667,7 @@ class ProjectionService {
       DELETE FROM player_projections 
       WHERE start_gameweek = ${startGameweek} 
         AND end_gameweek = ${endGameweek} 
-        AND season = '2025/26'
+        AND season = ${CURRENT_SEASON}
     `);
 
     // Recalculate
