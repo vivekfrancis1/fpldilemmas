@@ -1,3 +1,4 @@
+import { buildDefensiveRecords } from "./defensive-cache-records";
 import { db } from "./db";
 import { 
   playerGoalsProjections, 
@@ -687,63 +688,17 @@ class ProjectionCacheWorker {
       const data: any[] = await response.json();
       console.log(`📥 Retrieved ${data.length} defensive projections`);
       
+      // Season string stays '2025/26' to match the reader (/api/cached/player-defensive-projections).
+      const records = buildDefensiveRecords(data, '2025/26');
+      if (records.length === 0) {
+        // Never wipe the cache on an unparseable/empty payload — that's how it silently went empty.
+        throw new Error(`Defensive projections produced 0 records from ${data.length} players — leaving existing cache untouched`);
+      }
+
       // Clear existing data for this season
       await db.delete(playerDefensiveProjections)
         .where(eq(playerDefensiveProjections.season, '2025/26'));
-      
-      // Prepare records for batch insert - create individual gameweek records
-      const records = [];
 
-      // Dynamically extract the gameweek range from the actual data instead of hardcoding
-      const gwSet = new Set<number>();
-      for (const player of data) {
-        if (player.gameweekProjections && typeof player.gameweekProjections === 'object') {
-          Object.keys(player.gameweekProjections).forEach(key => {
-            const gw = parseInt(key);
-            if (!isNaN(gw) && gw >= 1 && gw <= 38) gwSet.add(gw);
-          });
-        }
-      }
-      const gameweekRange = Array.from(gwSet).sort((a, b) => a - b);
-      console.log(`📅 Defensive projections: dynamic GW range detected: GW${gameweekRange[0]}-${gameweekRange[gameweekRange.length - 1]} (${gameweekRange.length} gameweeks)`);
-
-      for (const player of data) {
-        if (player.gameweekProjections && typeof player.gameweekProjections === 'object') {
-          // Extract gameweek data if available
-          for (const gw of gameweekRange) {
-            const gwKey = gw.toString();
-            const defensiveContribution = player.gameweekProjections[gwKey] || player.averagePerGameweek || 0;
-            
-            if (defensiveContribution > 0) {
-              records.push({
-                playerId: player.playerId,
-                gameweek: gw,
-                season: '2025/26',
-                defensiveContribution: Number(defensiveContribution.toFixed(2)),
-                points: 0, // Will be calculated separately if needed
-                calculatedAt: new Date()
-              });
-            }
-          }
-        } else {
-          // Fallback: Use average per gameweek for each gameweek in range
-          const avgDefensive = player.averagePerGameweek || player.defensiveContribution || 0;
-          
-          if (avgDefensive > 0) {
-            for (const gw of gameweekRange) {
-              records.push({
-                playerId: player.playerId,
-                gameweek: gw,
-                season: '2025/26',
-                defensiveContribution: Number(avgDefensive.toFixed(2)),
-                points: 0, // Will be calculated separately if needed
-                calculatedAt: new Date()
-              });
-            }
-          }
-        }
-      }
-      
       // Insert in batches
       if (records.length > 0) {
         for (let i = 0; i < records.length; i += this.BATCH_SIZE) {
