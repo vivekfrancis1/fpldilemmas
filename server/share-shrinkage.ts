@@ -12,8 +12,14 @@ export interface ShareInput {
   combined: number; // 0.5×goals + 0.5×xG (or the assist equivalent)
 }
 
-// Returns each player's adjusted `combined`, rescaled so the team total is unchanged.
-export function shrinkCombinedByMinutes(players: ShareInput[]): Map<number, number> {
+// Returns each player's adjusted `combined`. By default rescaled so the team total is unchanged
+// (right for shares of a fixed pie); pass conserveTotal:false for per-player quantities like
+// bonus points, where there is no fixed total to redistribute.
+export function shrinkCombinedByMinutes(
+  players: ShareInput[],
+  options: { conserveTotal?: boolean } = {}
+): Map<number, number> {
+  const conserveTotal = options.conserveTotal ?? true;
   const result = new Map<number, number>();
   const originalTotal = players.reduce((s, p) => s + p.combined, 0);
 
@@ -35,7 +41,7 @@ export function shrinkCombinedByMinutes(players: ShareInput[]): Map<number, numb
   }
 
   const adjustedTotal = [...result.values()].reduce((s, v) => s + v, 0);
-  if (adjustedTotal > 0 && originalTotal > 0) {
+  if (conserveTotal && adjustedTotal > 0 && originalTotal > 0) {
     const scale = originalTotal / adjustedTotal;
     for (const [id, v] of result) result.set(id, v * scale);
   }

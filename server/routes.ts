@@ -18794,6 +18794,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
+        const shrunkBonusByPlayerId = new Map<number, number>();
+        {
+          const byTeam = new Map<number, any[]>();
+          for (const el of activePlayers) {
+            if (!byTeam.has(el.team)) byTeam.set(el.team, []);
+            byTeam.get(el.team)!.push(el);
+          }
+          for (const members of byTeam.values()) {
+            const adjusted = shrinkCombinedByMinutes(
+              members.map((el: any) => ({ id: el.id, position: el.element_type, minutes: el.minutes || 0, combined: el.bonus || 0 })),
+              { conserveTotal: false }
+            );
+            adjusted.forEach((v, id) => shrunkBonusByPlayerId.set(id, v));
+          }
+        }
+
         // Bonus per fixture uses this season's bonus-per-start only.
         const bonusPointsProjections = await Promise.all(activePlayers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -18816,8 +18832,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // (player.bonus/appearances otherwise still reflect 2025/26's frozen pre-kickoff carryover).
           // No minimum-appearances gate — a player's rate from even 1-2 appearances is used as-is
           // rather than projecting a flat 0 until they clear an arbitrary threshold.
+          // Bonus total is shrunk toward same-team same-position teammates when the player has
+          // under 270 minutes (see server/share-shrinkage.ts): a sub's per-cameo rate would
+          // otherwise be scaled up by the reallocation ratio as if it held over a full match.
           const thisSeasonBonusPerFixture = finishedGWs > 0 && playerAppearances > 0
-            ? (player.bonus || 0) / playerAppearances
+            ? (shrunkBonusByPlayerId.get(player.id) ?? (player.bonus || 0)) / playerAppearances
             : undefined;
 
           // This season's data only — a player with no usable current-season rate yet (new

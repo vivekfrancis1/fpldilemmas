@@ -51,4 +51,14 @@ describe("shrinkCombinedByMinutes", () => {
     expect(out.get(1)).toBe(0);
     expect(out.get(2)).toBeCloseTo(3, 6);
   });
+
+  it("with conserveTotal:false, shrinks a hot sub without redistributing to teammates", () => {
+    const out = shrinkCombinedByMinutes([
+      { id: 1, position: FWD, minutes: 399, combined: 3 },
+      { id: 2, position: FWD, minutes: 117, combined: 3 },
+    ], { conserveTotal: false });
+    expect(out.get(1)).toBe(3); // starter above threshold: untouched, not boosted
+    expect(out.get(2)!).toBeLessThan(3);
+    expect(out.get(2)!).toBeGreaterThan(0);
+  });
 });
