@@ -30,14 +30,17 @@ describe('Minutes projection: no fallback for players with 0 current-season minu
   });
 
   it('promoted-team MID with real current-season minutes (Rudoni, Coventry) reflects his actual games played, not any fallback', () => {
-    // Rudoni has genuinely played across two separate fixtures (his own team's GW1 and GW2
-    // matches have both finished, even though the wider GW2 window hasn't for every team yet —
-    // current-standings/history counts per-fixture, not per-gameweek): 20 + 70 minutes.
+    // Rudoni has real current-season minutes, so his projection must come from his own games
+    // played (minutes / appearances), not any fallback. Derived from the endpoint's own
+    // current-season fields rather than a hardcoded snapshot, so it holds as the season advances.
     const rudoni = minutesData.find((p: any) => p.playerId === 183);
     expect(rudoni).toBeDefined();
     expect(rudoni.teamShort).toBe('COV');
-    expect(rudoni.currentMinutesPerGame).toBe(45);
-    expect(rudoni.expectedMinutesPerGame).toBe(45);
+    expect(rudoni.currentMinutes).toBeGreaterThan(0);
+    expect(rudoni.playerAppearances).toBeGreaterThan(0);
+    const actualPerGame = rudoni.currentMinutes / rudoni.playerAppearances;
+    expect(rudoni.currentMinutesPerGame).toBeCloseTo(actualPerGame, 0);
+    expect(Math.abs(rudoni.expectedMinutesPerGame - Math.min(90, actualPerGame))).toBeLessThanOrEqual(1);
   });
 
   it('a promoted-team starting goalkeeper with real minutes projects those real minutes, same as any other club\'s starter', () => {
