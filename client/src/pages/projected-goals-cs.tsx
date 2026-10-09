@@ -526,40 +526,6 @@ export default function ProjectedGoalsCS() {
     return '-';
   };
 
-  // A compact 3-segment bar (Home Win / Draw / Away Win) for matches where the Odds API
-  // currently has a market open — sparse by design (see winDrawLossByTeams), so this renders
-  // nothing when the fixture's probabilities aren't available yet.
-  const renderWinDrawLossBar = (match: MatchProjection) => {
-    if (match.finished || match.isLive) return null;
-    if (match.homeWinProb == null || match.drawProb == null || match.awayWinProb == null) return null;
-    const homePct = Math.round(match.homeWinProb * 100);
-    const drawPct = Math.round(match.drawProb * 100);
-    const awayPct = Math.round(match.awayWinProb * 100);
-    // Each label/percentage sits centered over its own segment's actual width (not evenly
-    // spaced) so "Draw" and its % always land over the grey portion of the bar, wherever that
-    // happens to fall — a near-nailed-on favorite can shrink the draw segment to a sliver.
-    const segment = (pct: number, label: string, colorClass: string) => (
-      <div style={{ width: `${pct}%` }} className="flex flex-col items-center min-w-0">
-        <span className="text-[9px] font-semibold text-gray-500 truncate max-w-full">{label}</span>
-        <span className={`text-[10px] font-bold mt-1 ${colorClass}`}>{pct}%</span>
-      </div>
-    );
-    return (
-      <div className="hidden lg:block px-2 py-1 bg-gray-50 border-t border-gray-100">
-        <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-200 mb-1">
-          <div style={{ width: `${homePct}%` }} className="bg-emerald-500" title={`${match.homeTeam.shortName} to win: ${homePct}%`} />
-          <div style={{ width: `${drawPct}%` }} className="bg-gray-400" title={`Draw: ${drawPct}%`} />
-          <div style={{ width: `${awayPct}%` }} className="bg-blue-500" title={`${match.awayTeam.shortName} to win: ${awayPct}%`} />
-        </div>
-        <div className="flex items-start">
-          {segment(homePct, `${match.homeTeam.shortName} Win`, "text-emerald-700")}
-          {segment(drawPct, "Draw", "text-gray-600")}
-          {segment(awayPct, `${match.awayTeam.shortName} Win`, "text-blue-700")}
-        </div>
-      </div>
-    );
-  };
-
   const pageHeaderAndTabs = (
     <>
       <div className="fpl-page-header">
@@ -816,6 +782,11 @@ export default function ProjectedGoalsCS() {
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
                                 </div>
                               )}
+                              {projections.some(p => !p.finished && !p.isLive) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
+                                </div>
+                              )}
                               {projections.some(p => p.finished || p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">RESULT</span>
@@ -838,6 +809,11 @@ export default function ProjectedGoalsCS() {
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
                                 </div>
                               )}
+                              {projections.some(p => !p.finished && !p.isLive) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
+                                </div>
+                              )}
                               {projections.some(p => p.finished || p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">RESULT</span>
@@ -851,6 +827,11 @@ export default function ProjectedGoalsCS() {
                               {projections.some(p => !p.finished && !p.isLive) && (
                                 <div className="text-center w-[45px]">
                                   <span className="text-xs font-bold text-gray-600">CS%</span>
+                                </div>
+                              )}
+                              {projections.some(p => !p.finished && !p.isLive) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
                                 </div>
                               )}
                               {projections.some(p => p.finished || p.isLive) && (
@@ -932,9 +913,9 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
-                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.homeWinProb != null && (
-                                        <div className="lg:hidden text-center w-[45px]">
+                                        <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeWinProb * 100)}%
                                           </div>
@@ -986,9 +967,9 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
-                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.awayWinProb != null && (
-                                        <div className="lg:hidden text-center w-[45px]">
+                                        <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayWinProb * 100)}%
                                           </div>
@@ -1003,8 +984,6 @@ export default function ProjectedGoalsCS() {
                                       )}
                                     </div>
                                   </div>
-
-                                  {renderWinDrawLossBar(match1)}
                                 </div>
                                 );
                               })()}
@@ -1071,9 +1050,9 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
-                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.homeWinProb != null && (
-                                        <div className="lg:hidden text-center w-[45px]">
+                                        <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeWinProb * 100)}%
                                           </div>
@@ -1125,9 +1104,9 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
-                                      {/* Win% (draw ignored) — mobile only, desktop keeps the full win/draw/loss bar below */}
+                                      {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.awayWinProb != null && (
-                                        <div className="lg:hidden text-center w-[45px]">
+                                        <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayWinProb * 100)}%
                                           </div>
@@ -1142,8 +1121,6 @@ export default function ProjectedGoalsCS() {
                                       )}
                                     </div>
                                   </div>
-
-                                  {renderWinDrawLossBar(match2)}
                                 </div>
                                 );
                               })()}
