@@ -1,3 +1,4 @@
+import { shrinkCombinedByMinutes } from "./share-shrinkage";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
@@ -10561,8 +10562,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const team2627Combined = 0.5 * teamGoals2627 + 0.5 * teamXG2627;
       const teamGoalProjections = games2627 > 0 ? team2627Combined / games2627 : 0;
 
+      // Small-sample shrinkage (server/share-shrinkage.ts): a sub with a few hot minutes shouldn't
+      // have his raw rate scaled up when reallocation gives him a starter's minutes.
+      const adjustedCombined = shrinkCombinedByMinutes(teamPlayersList.map((p: any) => ({
+        id: p.id,
+        position: p.element_type,
+        minutes: p.minutes || 0,
+        combined: 0.5 * (this27Goals.get(p.id) || 0) + 0.5 * (this27XG.get(p.id) || 0),
+      })));
+
       const players = teamPlayersList.map((p: any) => {
-        const player2627Combined = 0.5 * (this27Goals.get(p.id) || 0) + 0.5 * (this27XG.get(p.id) || 0);
+        const player2627Combined = adjustedCombined.get(p.id) ?? 0;
         const finalShare = team2627Combined > 0 ? player2627Combined / team2627Combined : 0;
         const projectedGoals = finalShare * teamGoalProjections;
 
@@ -10604,8 +10614,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const team2627Combined = 0.5 * teamAssists2627 + 0.5 * teamXA2627;
       const teamAssistProjections = games2627 > 0 ? team2627Combined / games2627 : 0;
 
+      // Small-sample shrinkage (server/share-shrinkage.ts): same idea for assists.
+      const adjustedCombined = shrinkCombinedByMinutes(teamPlayersList.map((p: any) => ({
+        id: p.id,
+        position: p.element_type,
+        minutes: p.minutes || 0,
+        combined: 0.5 * (this27Assists.get(p.id) || 0) + 0.5 * (this27XA.get(p.id) || 0),
+      })));
+
       const players = teamPlayersList.map((p: any) => {
-        const player2627Combined = 0.5 * (this27Assists.get(p.id) || 0) + 0.5 * (this27XA.get(p.id) || 0);
+        const player2627Combined = adjustedCombined.get(p.id) ?? 0;
         const finalShare = team2627Combined > 0 ? player2627Combined / team2627Combined : 0;
         const projectedAssists = finalShare * teamAssistProjections;
 
