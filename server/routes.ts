@@ -13207,6 +13207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         {
           const { reallocateGroupXmins } = await import('./xmins-reallocation');
           const { getEffectiveBaseXMins } = await import('./copilot-xmins-override');
+          const { minutesPointsForGW } = await import('./minutes-points');
           const events: BootstrapEvent[] = bootstrapData.events || [];
           const { computeNextRange } = await import("../shared/gameweek-utils");
           const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
@@ -13277,7 +13278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const ratio = baseXMins > 0 ? adjustedXMins / baseXMins : 0;
                 const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;
                 xMinsPerGWById.get(id)![`gw${gw}`] = Math.round(adjustedXMins * 10) / 10;
-                pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(baseMinutesPoints * ratio * 100) / 100;
+                pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(minutesPointsForGW(baseMinutesPoints, baseXMinsById.get(id) || 0, adjustedXMins) * 100) / 100;
                 availabilityRatioPerGWById.get(id)![`gw${gw}`] = Math.round(ratio * 1000) / 1000;
               }
             }

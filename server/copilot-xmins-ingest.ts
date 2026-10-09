@@ -18,7 +18,7 @@ interface CopilotPlayerRow {
   [key: string]: unknown; // GW{n}_xMins / GW{n}_xPts fields, keyed dynamically per gameweek
 }
 
-interface CopilotExport {
+export interface CopilotExport {
   source: string;
   current_gw: number;
   gameweeks: number[];
@@ -34,6 +34,20 @@ export interface CopilotXminsIngestResult {
   sourceMtimeMs: number;
 }
 
+// Reads both export formats: the original `GW6_xMins` and the current `xMins_6`.
+export function extractCopilotRows(data: CopilotExport): Array<{ playerId: number; gameweek: number; xMins: number; xPts: number | null }> {
+  const rows: Array<{ playerId: number; gameweek: number; xMins: number; xPts: number | null }> = [];
+  for (const player of data.players) {
+    for (const gw of data.gameweeks) {
+      const xMins = player[`xMins_${gw}`] ?? player[`GW${gw}_xMins`];
+      const xPts = player[`xPts_${gw}`] ?? player[`GW${gw}_xPts`];
+      if (typeof xMins !== "number") continue; // no data for this player+gameweek — skip, don't zero it
+      rows.push({ playerId: player.id, gameweek: gw, xMins, xPts: typeof xPts === "number" ? xPts : null });
+    }
+  }
+  return rows;
+}
+
 // Returns null when the source file doesn't exist (e.g. not yet dropped by the refresh job) —
 // callers should treat that as "nothing to do" rather than an error.
 export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | null> {
@@ -43,20 +57,7 @@ export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | n
   const raw = fs.readFileSync(COPILOT_XMINS_JSON_PATH, "utf-8");
   const data: CopilotExport = JSON.parse(raw);
 
-  const rows: Array<{ playerId: number; gameweek: number; xMins: number; xPts: number | null }> = [];
-  for (const player of data.players) {
-    for (const gw of data.gameweeks) {
-      const xMins = player[`GW${gw}_xMins`];
-      const xPts = player[`GW${gw}_xPts`];
-      if (typeof xMins !== "number") continue; // no data for this player+gameweek — skip, don't zero it
-      rows.push({
-        playerId: player.id,
-        gameweek: gw,
-        xMins,
-        xPts: typeof xPts === "number" ? xPts : null,
-      });
-    }
-  }
+  const rows = extractCopilotRows(data);
 
   await pool.query(
     `DELETE FROM copilot_xmins_projections WHERE season = $1 AND gameweek = ANY($2)`,
