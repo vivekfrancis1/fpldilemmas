@@ -92,3 +92,42 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
   `enabled: !!user`. The endpoint's own `isAuthenticated` middleware always 401s for a logged-out
   session, so this was a guaranteed console error on every anonymous load of the home page.
   Added the same `enabled: !!user` / `enabled: isAuthenticated` guard to both.
+
+## 2026-10-10 — Goals/assists projection caches silently stale since 2026-07-28; season labels wrong
+
+- **Where:** `server/projection-cache-worker.ts` (+ readers in `server/routes.ts`, `server/projection-service.ts`).
+- **Status:** Fixed — commit `57e887d7`. One-off data step: `scripts/relabel-projection-season.ts --apply` after deploy.
+- **Notes:** The projection tables' primary key is (player/team id, gameweek) with no season, so the
+  cachers' season-filtered deletes left old rows behind and every later insert collided with them.
+  Cachers now clear whole tables; all projection-table reads/writes use `CURRENT_SEASON`
+  (guarded by `tests/projection-season-label.test.ts`).
+
+## 2026-10-10 — Defensive Contributions cache empty
+
+- **Where:** `server/projection-cache-worker.ts` `cacheDefensiveProjections`.
+- **Status:** Fixed — commit `38d37321`.
+- **Notes:** Payload keys changed to `gw6` with `{dc, points}` values; `parseInt("gw6")` was NaN so zero records
+  were built, yet the old rows were still deleted. Now parsed by `server/defensive-cache-records.ts` and the
+  cacher refuses to wipe the table on 0 records.
+
+## 2026-10-10 — Copilot xMins file never reaches production
+
+- **Where:** `server/copilot-xmins-ingest.ts`; file lives in untracked `Manual Uploads/xMins/`.
+- **Status:** Fixed — admin upload at `POST /api/admin/copilot-xmins/upload` + card on `/admin-cache-management`.
+- **Notes:** The export is third-party data deliberately not committed, so Railway never had it. Also the ingest
+  read `GW6_xMins` while the export now uses `xMins_6` (both accepted now). Each new drop: upload it on the
+  Cache Management page, then refresh Minutes and Player Total Points.
+
+## 2026-10-10 — Dead Player Goal Projections page and legacy endpoint
+
+- **Where:** `client/src/pages/player-goal-projections.tsx`, `GET /api/player-goal-projections`.
+- **Status:** Fixed — removed; `/player-goal-projections` now redirects to `/player-goals-scored-projections`.
+- **Notes:** Admin-only, unlinked page whose field names never matched its API; the endpoint had no consumers.
+  The earlier "Player pages fold-in" blocker note is obsolete.
+
+## 2026-10-10 — Not issues (checked)
+
+- **Top 25 Managers ID renumbering:** resolved — list is now Top 100, verified 2026-09-04, all 100 `confirmed: true`.
+- **`/api/gameweek-projections`:** reads `gameweek_projections`/`gameweek_team_projections`, which hold only a
+  one-off GW4 2025/26 snapshot; no writers or client consumers. The hardcoded `'2025/26'` matches the data.
+- **Team Goals Against "In-memory" badge:** by design — no DB table, refresh just clears the in-memory cache.

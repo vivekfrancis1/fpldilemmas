@@ -48,6 +48,21 @@ export function extractCopilotRows(data: CopilotExport): Array<{ playerId: numbe
   return rows;
 }
 
+// Throws a descriptive Error if `data` isn't a usable Copilot export — used for uploads, where the
+// content comes from a person rather than the scheduler's own file.
+export function validateCopilotExport(data: unknown): CopilotExport {
+  const d = data as any;
+  if (!d || typeof d !== "object") throw new Error("Export must be a JSON object");
+  if (!Array.isArray(d.players)) throw new Error("Export is missing a players array");
+  if (!Array.isArray(d.gameweeks) || d.gameweeks.length === 0 ||
+      !d.gameweeks.every((g: unknown) => Number.isInteger(g) && (g as number) >= 1 && (g as number) <= 38)) {
+    throw new Error("Export gameweeks must be a non-empty array of integers 1-38");
+  }
+  if (!d.players.every((p: any) => p && Number.isInteger(p.id))) throw new Error("Every player needs a numeric id");
+  if (extractCopilotRows(d as CopilotExport).length === 0) throw new Error("Export contains no xMins values");
+  return d as CopilotExport;
+}
+
 // Returns null when the source file doesn't exist (e.g. not yet dropped by the refresh job) —
 // callers should treat that as "nothing to do" rather than an error.
 export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | null> {
@@ -55,8 +70,11 @@ export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | n
 
   const stat = fs.statSync(COPILOT_XMINS_JSON_PATH);
   const raw = fs.readFileSync(COPILOT_XMINS_JSON_PATH, "utf-8");
-  const data: CopilotExport = JSON.parse(raw);
+  return ingestCopilotExport(JSON.parse(raw), stat.mtimeMs);
+}
 
+// Writes an already-parsed export to copilot_xmins_projections (replacing the gameweeks it covers).
+export async function ingestCopilotExport(data: CopilotExport, sourceMtimeMs: number): Promise<CopilotXminsIngestResult> {
   const rows = extractCopilotRows(data);
 
   await pool.query(
@@ -80,5 +98,5 @@ export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | n
     );
   }
 
-  return { written: rows.length, gameweeks: data.gameweeks, lastUpdated: data.last_updated, sourceMtimeMs: stat.mtimeMs };
+  return { written: rows.length, gameweeks: data.gameweeks, lastUpdated: data.last_updated, sourceMtimeMs };
 }

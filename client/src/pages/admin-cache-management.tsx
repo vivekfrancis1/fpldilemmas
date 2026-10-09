@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Database, Clock, CheckCircle, AlertCircle, Zap, Activity, Users, Shield, BarChart3, Info } from "lucide-react";
+import { Loader2, RefreshCw, Upload, Database, Clock, CheckCircle, AlertCircle, Zap, Activity, Users, Shield, BarChart3, Info } from "lucide-react";
 
 function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
@@ -79,6 +79,33 @@ export default function AdminCacheManagement() {
   };
 
   useEffect(() => { fetchCacheStatus(); }, []);
+
+  const [uploadingCopilot, setUploadingCopilot] = useState(false);
+
+  const uploadCopilotXmins = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingCopilot(true);
+    try {
+      const text = await file.text();
+      // text/plain bypasses the app's 100kb JSON body limit (exports are ~250kb)
+      const response = await fetch("/api/admin/copilot-xmins/upload", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        credentials: "include",
+        body: text,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        toast({ title: "Copilot xMins loaded", description: data.message });
+      } else {
+        toast({ title: "Upload failed", description: data.message || `Server returned ${response.status}`, variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Upload failed", description: "Could not read or send the file", variant: "destructive" });
+    } finally {
+      setUploadingCopilot(false);
+    }
+  };
 
   const refreshCache = async (type: string, displayName: string) => {
     setRefreshing(prev => ({ ...prev, [type]: true }));
@@ -267,6 +294,32 @@ export default function AdminCacheManagement() {
             </p>
           </div>
         </div>
+
+        {/* Copilot xMins upload */}
+        <Card className="mb-3 sm:mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Upload className="h-5 w-5" />
+              Copilot xMins Upload
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              Upload the latest <code>copilot_xmins_xpts_next6.json</code>. It replaces the gameweeks it covers.
+              Afterwards refresh Minutes, then Player Total Points.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="application/json,.json"
+                disabled={uploadingCopilot}
+                onChange={(e) => { uploadCopilotXmins(e.target.files?.[0]); e.target.value = ""; }}
+                className="text-sm"
+              />
+              {uploadingCopilot && <Loader2 className="h-4 w-4 animate-spin" />}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Bulk Operations */}
         <Card className="mb-3 sm:mb-4">

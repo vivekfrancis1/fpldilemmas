@@ -1,4 +1,5 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
+import express from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
@@ -11194,149 +11195,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to convert database response format to teamSeasonTotals format
-  function convertResponseToTeamSeasonTotals(response: any[]): any {
-    const teamSeasonTotals: { [teamId: number]: { expectedGoals: number, players: { [playerId: number]: any } } } = {};
-    
-    if (!Array.isArray(response)) {
-      console.error(`ERROR: Expected array response, got:`, typeof response);
-      return {};
-    }
-    
-    response.forEach((teamData: any) => {
-      if (teamData && teamData.teamId && Array.isArray(teamData.players)) {
-        const teamId = teamData.teamId;
-        teamSeasonTotals[teamId] = {
-          expectedGoals: teamData.expectedGoals || 0,
-          players: {}
-        };
-        
-        teamData.players.forEach((player: any) => {
-          const playerId = player.id || player.playerId;
-          if (playerId) {
-            teamSeasonTotals[teamId].players[playerId] = {
-              name: player.name || player.playerName,
-              position: player.position,
-              projectedGoals: player.projectedGoals || 0,
-              goalShare: player.goalShare || 0
-            };
-          }
-        });
-      }
-    });
-    
-    console.log(`DEBUG: Converted ${response.length} team responses to teamSeasonTotals format with ${Object.keys(teamSeasonTotals).length} teams`);
-    return teamSeasonTotals;
-  }
-
-  // Player Total Goal Projections endpoint - uses saved Goal Share data
-  app.get("/api/player-goal-projections", async (req, res) => {
-    try {
-      console.log(`DEBUG: Player Goal Projections API called`);
-      
-      // Check if we have saved goal share data
-      if (!savedGoalShareData) {
-        console.log(`DEBUG: No saved goal share data found, triggering Goal Share calculation first`);
-        // Trigger goal share calculation first
-        const goalShareResponse = await internalFetch("api/goal-share-season");
-        if (!goalShareResponse.ok) {
-          throw new Error("Failed to fetch goal share data");
-        }
-        await goalShareResponse.json(); // This will populate savedGoalShareData
-      }
-      
-      if (!savedGoalShareData) {
-        throw new Error("Could not generate goal share data");
-      }
-      
-      console.log(`DEBUG: Using saved Goal Share data from ${new Date(savedGoalShareData.timestamp).toISOString()}`);
-      
-      // Debug the structure of savedGoalShareData safely
-      console.log(`DEBUG: savedGoalShareData type:`, typeof savedGoalShareData);
-      console.log(`DEBUG: savedGoalShareData exists:`, !!savedGoalShareData);
-      if (savedGoalShareData && typeof savedGoalShareData === 'object') {
-        console.log(`DEBUG: savedGoalShareData keys:`, Object.keys(savedGoalShareData));
-        console.log(`DEBUG: teamSeasonTotals type:`, typeof savedGoalShareData.teamSeasonTotals);
-        console.log(`DEBUG: response type:`, typeof savedGoalShareData.response);
-      }
-      
-      // Handle both data structure formats - CRITICAL FIX for undefined teamSeasonTotals
-      let teamSeasonTotals: any;
-      let bootstrapData: any;
-      
-      if (savedGoalShareData.teamSeasonTotals) {
-        // Format 1: Fresh calculation with teamSeasonTotals object
-        teamSeasonTotals = savedGoalShareData.teamSeasonTotals;
-        bootstrapData = savedGoalShareData.bootstrapData;
-        console.log(`DEBUG: Using direct teamSeasonTotals format`);
-      } else if (savedGoalShareData.response && Array.isArray(savedGoalShareData.response)) {
-        // Format 2: Database response with response array - convert to expected format
-        console.log(`DEBUG: Converting database response format to teamSeasonTotals format`);
-        teamSeasonTotals = convertResponseToTeamSeasonTotals(savedGoalShareData.response);
-        bootstrapData = savedGoalShareData.bootstrapData;
-      } else {
-        console.error(`ERROR: savedGoalShareData has unexpected structure:`, savedGoalShareData);
-        throw new Error(`Invalid savedGoalShareData structure - missing both teamSeasonTotals and response`);
-      }
-      
-      // Safety check: ensure teamSeasonTotals exists and is valid before trying to iterate
-      if (!teamSeasonTotals || typeof teamSeasonTotals !== 'object' || Object.keys(teamSeasonTotals).length === 0) {
-        console.error(`ERROR: teamSeasonTotals is invalid or empty:`, teamSeasonTotals);
-        throw new Error(`Invalid team season totals data: ${typeof teamSeasonTotals}, keys: ${teamSeasonTotals ? Object.keys(teamSeasonTotals).length : 0}`);
-      }
-      
-      if (!bootstrapData || !bootstrapData.teams || !bootstrapData.elements) {
-        console.error(`ERROR: bootstrapData is invalid:`, bootstrapData);
-        throw new Error('Invalid bootstrap data');
-      }
-      
-      const teams = bootstrapData.teams;
-      const players = bootstrapData.elements;
-      const positions = bootstrapData.element_types;
-      
-      // Convert the saved goal share data to individual player projections with minutes scaling
-      const allPlayerProjections: any[] = [];
-      
-      for (const teamIdStr of Object.keys(teamSeasonTotals)) {
-        const teamId = parseInt(teamIdStr);
-        const team = teams.find((t: any) => t.id === teamId);
-        const teamData = teamSeasonTotals[teamId];
-        
-        if (team && teamData.expectedGoals > 0 && teamData.players) {
-          for (const playerIdStr of Object.keys(teamData.players)) {
-            const playerId = parseInt(playerIdStr);
-            const playerData = teamData.players[playerId];
-            const currentPlayer = players.find((p: any) => p.id === playerId);
-            
-            if (currentPlayer && playerData.projectedGoals > 0) {
-              const goalShare = (playerData.projectedGoals / teamData.expectedGoals) * 100;
-              
-              allPlayerProjections.push({
-                id: playerId,
-                name: playerData.name,
-                team: team.name,
-                teamShort: team.short_name,
-                position: playerData.position,
-                currentPrice: currentPlayer.now_cost / 10,
-                projectedGoals: Math.round(playerData.projectedGoals * 100) / 100,
-                goalShare: Math.round(goalShare * 10) / 10,
-              });
-            }
-          }
-        }
-      }
-      
-      // Sort by projected goals (highest first)
-      allPlayerProjections.sort((a, b) => b.projectedGoals - a.projectedGoals);
-      
-      console.log(`DEBUG: Generated player goal projections for ${allPlayerProjections.length} players using saved Goal Share data`);
-      res.json(allPlayerProjections);
-    } catch (error) {
-      console.error("Error generating player goal projections:", error);
-      res.status(500).json({ error: "Failed to generate player goal projections" });
-    }
-  });
-
   // Player Assist Projections endpoint - API-first with cache fallback
   app.get("/api/player-assist-projections", async (req, res) => {
     // Add cache-busting headers to prevent 304 responses
@@ -15771,6 +15629,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting cache status:", error);
       res.status(500).json({ error: "Failed to get cache status" });
+    }
+  });
+
+  // Upload a fplcopilot.com xMins export (copilot_xmins_xpts_next6.json) straight to the database.
+  // The file is third-party data that is deliberately not committed to git (so it never reaches
+  // Railway's filesystem); this lets an admin drop each new export into production directly.
+  // Sent as text/plain so the app's global 100kb JSON body limit doesn't apply (exports are ~250kb).
+  app.post("/api/admin/copilot-xmins/upload", requireAdmin, express.text({ type: "*/*", limit: "10mb" }), async (req, res) => {
+    try {
+      const { validateCopilotExport, ingestCopilotExport } = await import('./copilot-xmins-ingest');
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(typeof req.body === "string" ? req.body : "");
+      } catch {
+        return res.status(400).json({ success: false, message: "Body is not valid JSON" });
+      }
+      let data;
+      try {
+        data = validateCopilotExport(parsed);
+      } catch (e) {
+        return res.status(400).json({ success: false, message: e instanceof Error ? e.message : String(e) });
+      }
+      const result = await ingestCopilotExport(data, Date.now());
+      res.json({
+        success: true,
+        written: result.written,
+        gameweeks: result.gameweeks,
+        lastUpdated: result.lastUpdated,
+        message: `Loaded ${result.written} rows for GW${result.gameweeks.join(", GW")}. Now refresh Minutes, then Player Total Points.`,
+      });
+    } catch (error) {
+      console.error("Error uploading Copilot xMins:", error);
+      res.status(500).json({ success: false, message: "Failed to ingest Copilot xMins export" });
     }
   });
 

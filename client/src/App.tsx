@@ -17,7 +17,6 @@ import PwaUpdateToast from "@/components/pwa-update-toast";
 const Fixtures = lazy(() => import("./pages/fixtures"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
 const AssistShare = lazy(() => import("./pages/assist-share"));
-const PlayerGoalProjections = lazy(() => import("./pages/player-goal-projections"));
 const PlayerGoalsScoredProjections = lazy(() => import("./pages/player-goals-scored-projections"));
 const PlayerAssistProjections = lazy(() => import("./pages/player-assist-projections"));
 const PlayerMinutes = lazy(() => import("./pages/player-minutes"));
@@ -171,11 +170,7 @@ function Router() {
         <Route path="/goal-share" component={GoalShare} />
         <Route path="/assist-share" component={AssistShare} />
         <Route path="/player-goal-projections">
-          <ProtectedRoute requireAdmin={true}>
-            <Suspense fallback={<PageLoader />}>
-              <PlayerGoalProjections />
-            </Suspense>
-          </ProtectedRoute>
+          <Redirect to="/player-goals-scored-projections" />
         </Route>
         <Route path="/player-assist-projections" component={PlayerAssistProjections} />
         <Route path="/player-defensive-contributions" component={PlayerDefensiveContributions} />

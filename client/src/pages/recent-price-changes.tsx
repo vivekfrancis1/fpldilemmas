@@ -665,11 +665,12 @@ export default function RecentPriceChanges() {
                         <tr className="border-b bg-muted/20">
                           <th className="text-left p-1 sm:p-3 font-medium">Player</th>
                           <th
-                            className="hidden sm:table-cell text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                            className="text-right p-1 sm:p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => handlePredictionSort('current_price')}
                           >
                             <div className="flex items-center justify-end gap-1">
-                              Current Price
+                              <span className="sm:hidden">Price</span>
+                              <span className="hidden sm:inline">Current Price</span>
                               {predictionSortField === 'current_price' && (
                                 predictionSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                               )}
@@ -761,7 +762,7 @@ export default function RecentPriceChanges() {
                                 <p className="text-[0.85em] text-muted-foreground leading-tight">{prediction.team_name} · {prediction.position}</p>
                               </div>
                             </td>
-                            <td className="hidden sm:table-cell p-3 text-right font-medium">
+                            <td className="p-1 sm:p-3 text-right font-medium whitespace-nowrap">
                               {formatPrice(prediction.current_price)}
                             </td>
                             <td className="hidden sm:table-cell p-3 text-right text-muted-foreground">
