@@ -1,4 +1,4 @@
-import { shrinkCombinedByMinutes } from "./share-shrinkage";
+import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, type UpsetConfig } from "./storage";
@@ -17745,6 +17745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to only goalkeepers and implement new formula
       const goalkeepers = fplData.elements.filter((player: any) => player.element_type === 1);
 
+      const shrunkSavesByPlayerId = shrinkTotalsByTeam(goalkeepers, (el: any) => el.saves || 0);
       const savesProjections = await Promise.all(
         goalkeepers.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -17755,7 +17756,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalPoints = 0;
 
           // Get total season saves from current FPL data
-          const currentSeasonSaves = player.saves || 0;
+          const rawSeasonSaves = player.saves || 0;
+          // Small-sample shrinkage factor (see server/share-shrinkage.ts), applied to both the
+          // per-team-game and API per-90 saves rates below.
+          const savesShrinkFactor = rawSeasonSaves > 0 ? (shrunkSavesByPlayerId.get(player.id) ?? rawSeasonSaves) / rawSeasonSaves : 1;
+          const currentSeasonSaves = rawSeasonSaves * savesShrinkFactor;
 
           // Get actual completed games for this player's team
           const teamGamesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1); // Ensure at least 1 to avoid division by zero
@@ -17769,7 +17774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // handful of minutes gets a noisier rate, not a suppressed one; the client's own
           // appearance-rate filter (hide players below 50% of their team's games played,
           // toggleable) is what protects the view from tiny-sample noise, not this formula.
-          const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0');
+          const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0') * savesShrinkFactor;
           const thisSeasonSavesPer90 = finishedGWCount > 0 && (player.minutes || 0) > 0
             ? (savesPer90FromAPI > 0 ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI : savesPerTeamGame)
             : undefined;
@@ -17856,7 +17861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3)),
             savesPerTeamGame: savesPerTeamGame, // Include for verification
             teamGamesPlayed: teamGamesPlayed, // Include for verification
-            seasonTotalSaves: currentSeasonSaves, // Include raw saves value
+            seasonTotalSaves: rawSeasonSaves, // Include raw saves value
             playerAppearances: player.starts || 0 // For the client's appearance-rate filter (starts / teamGamesPlayed)
           };
         })
@@ -18005,6 +18010,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Team completed fixtures calculated. Example: Team 1 has played ${teamCompletedFixtures.get(1)} games`);
       
+      const shrunkDCByPlayerId = shrinkTotalsByTeam(playersWithDefensiveData, (el: any) =>
+        el.element_type === 2
+          ? (el.clearances_blocks_interceptions || 0) + (el.tackles || 0)
+          : (el.clearances_blocks_interceptions || 0) + (el.tackles || 0) + (el.recoveries || 0));
       const defensiveProjections = await Promise.all(
         playersWithDefensiveData.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -18022,6 +18031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let seasonDefensiveContribution = player.element_type === 2 
             ? cbi + tackles  // Defenders: CBIT only
             : cbi + tackles + recoveries;  // Mids/Forwards: CBIRT
+          // Small-sample shrinkage (see server/share-shrinkage.ts) — used for the per-90 rate only.
+          const shrunkDCTotal = shrunkDCByPlayerId.get(player.id) ?? seasonDefensiveContribution;
           
           // Determine threshold based on position (10 for DEF, 12 for MID/FWD)
           const threshold = player.element_type === 2 ? 10 : 12;
@@ -18040,7 +18051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // appearance-rate filter (hide players below 50% of their team's games played,
           // toggleable) is what protects the view from tiny-sample noise, not this formula.
           const thisSeasonDCPer90 = finishedGWCount > 0 && (player.minutes || 0) > 0
-            ? (seasonDefensiveContribution / (player.minutes || 1)) * 90
+            ? (shrunkDCTotal / (player.minutes || 1)) * 90
             : undefined;
 
           // This season's data only — a player with no minutes yet (new signing, promoted-team
@@ -18399,6 +18410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
+        const shrunkYCByPlayerId = shrinkTotalsByTeam(fplData.elements, (el: any) => el.yellow_cards || 0);
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -18415,7 +18427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // handful of minutes gets a noisier rate, not a suppressed one; the client's own
           // appearance-rate filter (hide players below 50% of their team's games played,
           // toggleable) is what protects the view from tiny-sample noise, not this formula.
-          const seasonYellowCards = player.yellow_cards || 0;
+          const seasonYellowCards = shrunkYCByPlayerId.get(player.id) ?? (player.yellow_cards || 0); // small-sample shrinkage
           const thisSeasonYCPer90 = finishedGWCountYC > 0 && (player.minutes || 0) > 0
             ? (seasonYellowCards / player.minutes) * 90
             : undefined;
@@ -18581,6 +18593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Extract red card data for all players using historical data
+        const shrunkRCByPlayerId = shrinkTotalsByTeam(fplData.elements, (el: any) => el.red_cards || 0);
         const redCardProjections = await Promise.all(fplData.elements.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -18595,7 +18608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // minutes gets a noisier rate, not a suppressed one; the client's own appearance-rate
           // filter (hide players below 50% of their team's games played, toggleable) is what
           // protects the view from tiny-sample noise, not this formula.
-          const seasonRedCards = player.red_cards || 0;
+          const seasonRedCards = shrunkRCByPlayerId.get(player.id) ?? (player.red_cards || 0); // small-sample shrinkage
           const thisSeasonRCPer90 = finishedGWCountRC > 0 && (player.minutes || 0) > 0
             ? (seasonRedCards / player.minutes) * 90
             : undefined;
@@ -18794,21 +18807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
-        const shrunkBonusByPlayerId = new Map<number, number>();
-        {
-          const byTeam = new Map<number, any[]>();
-          for (const el of activePlayers) {
-            if (!byTeam.has(el.team)) byTeam.set(el.team, []);
-            byTeam.get(el.team)!.push(el);
-          }
-          for (const members of byTeam.values()) {
-            const adjusted = shrinkCombinedByMinutes(
-              members.map((el: any) => ({ id: el.id, position: el.element_type, minutes: el.minutes || 0, combined: el.bonus || 0 })),
-              { conserveTotal: false }
-            );
-            adjusted.forEach((v, id) => shrunkBonusByPlayerId.set(id, v));
-          }
-        }
+        const shrunkBonusByPlayerId = shrinkTotalsByTeam(activePlayers, (el: any) => el.bonus || 0);
 
         // Bonus per fixture uses this season's bonus-per-start only.
         const bonusPointsProjections = await Promise.all(activePlayers.map(async (player: any) => {
@@ -18833,7 +18832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // No minimum-appearances gate — a player's rate from even 1-2 appearances is used as-is
           // rather than projecting a flat 0 until they clear an arbitrary threshold.
           // Bonus total is shrunk toward same-team same-position teammates when the player has
-          // under 270 minutes (see server/share-shrinkage.ts): a sub's per-cameo rate would
+          // under 360 minutes (see server/share-shrinkage.ts): a sub's per-cameo rate would
           // otherwise be scaled up by the reallocation ratio as if it held over a full match.
           const thisSeasonBonusPerFixture = finishedGWs > 0 && playerAppearances > 0
             ? (shrunkBonusByPlayerId.get(player.id) ?? (player.bonus || 0)) / playerAppearances
