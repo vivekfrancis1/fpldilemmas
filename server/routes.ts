@@ -19155,11 +19155,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
               }
+              // Recompute the total from the adjusted gameweeks, exactly as the live aggregator's
+              // applyAvailabilityAdjustments does. Zeroing a gameweek (injured / left the club) without
+              // this left the stored raw total in place, so a cache HIT disagreed with the cache MISS
+              // (live path) for the same player until the next cold start.
+              const adjustedTotal = Object.values(gameweekProjections).reduce((sum: number, v: number) => sum + v, 0);
               const result: any = {
                 ...player,
                 ...unscaledComponentOverrides,
                 ...unscaledTotalOverrides,
                 gameweekProjections,
+                totalExpectedPoints: Math.round(adjustedTotal * 100) / 100,
                 chanceOfPlayingNextRound: chanceNextRound,
                 status: bpStatus,
                 news: bootstrapPlayer?.news || '',

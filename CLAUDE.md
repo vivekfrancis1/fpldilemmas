@@ -12,7 +12,7 @@ Local-Only Workflow: Commit to local git as work progresses (logical chunks, cle
 Before pushing/deploying: run `npx tsc --noEmit -p .` and `npx vitest run`, and confirm both are clean (aside from documented pre-existing flaky tests — see below) before asking the user to deploy.
 
 ### Known pre-existing test flakiness (not regressions)
-A handful of tests fail intermittently under full-suite parallel load but pass cleanly in isolation — this is resource contention (DB connections, auth/session state), not a real bug. Before treating a failure as a regression, re-run just that file in isolation; if it passes alone, it's this known pattern. Clusters seen so far: `tests/projection-consistency.test.ts`'s "Server-Side Availability Adjustments" and "Cached vs Live Endpoint Consistency" tests, `tests/projection-validation-historical-compare.test.ts` (admin-auth session contention), `tests/promoted-team-admin-settings.test.ts`, `tests/cache-integrity.test.ts`.
+A handful of tests fail intermittently under full-suite parallel load but pass cleanly in isolation — this is resource contention (DB connections, auth/session state), not a real bug. Before treating a failure as a regression, re-run just that file in isolation; if it passes alone, it's this known pattern. Clusters seen so far: `tests/projection-consistency.test.ts`'s "Server-Side Availability Adjustments" and "Cached vs Live Endpoint Consistency" tests, `tests/projection-validation-historical-compare.test.ts` (admin-auth session contention), `tests/promoted-team-admin-settings.test.ts`. (`tests/cache-integrity.test.ts` used to be on this list — it was a real cold-start bug, fixed 2026-10-15; if it fails now, treat it as a regression.)
 
 ## System Architecture
 

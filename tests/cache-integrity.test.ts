@@ -215,6 +215,28 @@ describe('Cache Immutability – player-total-points (response stability)', () =
 });
 
 describe('Cache Immutability – cached/player-total-points (response stability)', () => {
+  // Regression test for the cold-start vs warm-cache inconsistency: the cache-miss path (live
+  // aggregator) and the cache-hit path (stored data + availability adjustment) must satisfy the same
+  // invariant. The hit path used to zero a player's gameweeks (injured/left the club) but keep the
+  // stored raw total, so the first response after a restart and later ones disagreed.
+  it('every player\'s totalExpectedPoints equals the sum of their gameweekProjections (warm cache)', async () => {
+    const url = '/api/cached/player-total-points';
+    await fetchJSON(url); // make sure the in-memory cache is populated, so the next call is a cache HIT
+    const warm: any[] = await fetchJSON(url);
+    expect(warm.length).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    for (const p of warm) {
+      const sum = Object.entries(p.gameweekProjections || {})
+        .filter(([gw]) => gw !== '39')
+        .reduce((s: number, [, v]) => s + (v as number), 0);
+      if (Math.abs(p.totalExpectedPoints - sum) > 0.05) {
+        offenders.push(`${p.playerName}: total ${p.totalExpectedPoints} vs sum of gameweeks ${sum.toFixed(2)} (status ${p.status})`);
+      }
+    }
+    expect(offenders, offenders.slice(0, 8).join('\n')).toEqual([]);
+  }, 120000);
+
   it('returns stable totalExpectedPoints across multiple requests', async () => {
     const url = '/api/cached/player-total-points';
 

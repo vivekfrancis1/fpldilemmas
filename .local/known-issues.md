@@ -131,3 +131,9 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **`/api/gameweek-projections`:** reads `gameweek_projections`/`gameweek_team_projections`, which hold only a
   one-off GW4 2025/26 snapshot; no writers or client consumers. The hardcoded `'2025/26'` matches the data.
 - **Team Goals Against "In-memory" badge:** by design — no DB table, refresh just clears the in-memory cache.
+
+## 2026-10-15 — "Flaky" cache-integrity test was a real cold-start inconsistency
+
+- **Where:** `GET /api/cached/player-total-points` in `server/routes.ts` (cache-hit path); caught by `tests/cache-integrity.test.ts`.
+- **Status:** Fixed — commit pending (see git log "Fix cache-hit totals...").
+- **Notes:** The first response after a server restart (cache MISS -> live aggregator) and later responses (cache HIT -> stored data plus an inline availability adjustment) disagreed for players whose gameweeks are all zeroed by availability (status unavailable/injured, e.g. players who left the club): the hit path zeroed the per-gameweek values but kept the stored raw total (e.g. 9.5 vs 0). The hit path's inline copy of the availability logic now recomputes `totalExpectedPoints` from the adjusted gameweeks, like the live aggregator's `applyAvailabilityAdjustments`. Regression test: "every player's totalExpectedPoints equals the sum of their gameweekProjections (warm cache)". Remaining smell: the cache-hit path still duplicates ~100 lines of `applyAvailabilityAdjustments` (and neither recomputes `averagePerGameweek`); consider extracting one shared function.
