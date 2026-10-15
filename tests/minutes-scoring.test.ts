@@ -83,3 +83,46 @@ describe("expected-minutes mode switch and coverage", () => {
     expect(coveredXMins(undefined, 7, true)).toBeUndefined();
   });
 });
+
+import { fractionOfMatch, mixtureOverMinutes, savesPointsFromXMins } from "../server/minutes-scoring";
+
+describe("fractionOfMatch", () => {
+  it("is expected minutes over 90, clamped to [0, 1]", () => {
+    expect(fractionOfMatch(0)).toBe(0);
+    expect(fractionOfMatch(45)).toBe(0.5);
+    expect(fractionOfMatch(90)).toBe(1);
+    expect(fractionOfMatch(120)).toBe(1);
+    expect(fractionOfMatch(-3)).toBe(0);
+  });
+});
+
+describe("mixtureOverMinutes", () => {
+  it("weights sum to 1: a constant function is returned unchanged", () => {
+    for (const x of [0, 10, 45, 88, 90]) expect(mixtureOverMinutes(x, () => 1)).toBeCloseTo(1, 9);
+  });
+  it("is consistent with the mean: averaging the match fraction gives about xMins/90", () => {
+    for (const x of [10, 30, 45, 60, 88]) expect(Math.abs(mixtureOverMinutes(x, (f) => f) - x / 90)).toBeLessThan(0.07);
+  });
+});
+
+describe("savesPointsFromXMins", () => {
+  const poissonAtLeast = (lambda: number, k: number) => {
+    if (lambda <= 0) return 0;
+    let cdf = 0, term = Math.exp(-lambda);
+    for (let i = 0; i < k; i++) { cdf += term; term *= lambda / (i + 1); }
+    return 1 - cdf;
+  };
+  const plain = (lambda: number) => [3, 6, 9, 12].reduce((s, k) => s + poissonAtLeast(lambda, k), 0);
+
+  it("is 0 for a keeper expected to play 0 minutes and grows with minutes", () => {
+    expect(savesPointsFromXMins(3.5, 0, poissonAtLeast)).toBe(0);
+    expect(savesPointsFromXMins(3.5, 88, poissonAtLeast)).toBeGreaterThan(savesPointsFromXMins(3.5, 45, poissonAtLeast));
+  });
+  it("a nailed-on keeper is close to the plain full-match calculation", () => {
+    const withMins = savesPointsFromXMins(3.5, 90, poissonAtLeast);
+    expect(Math.abs(withMins - plain(3.5 * 89.49 / 90))).toBeLessThan(0.02);
+  });
+  it("a rotation keeper (45 xMins) gets well under a starter's saves points", () => {
+    expect(savesPointsFromXMins(3.5, 45, poissonAtLeast)).toBeLessThan(0.8 * savesPointsFromXMins(3.5, 88, poissonAtLeast));
+  });
+});

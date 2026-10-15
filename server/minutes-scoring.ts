@@ -75,3 +75,33 @@ export function thresholdChanceFromXMins(
   }
   return chance;
 }
+
+// Expected minutes as a fraction of a full match — for components that are linear in minutes
+// (cards, expected counts): expected events = per-90 rate x fractionOfMatch(xMins).
+export function fractionOfMatch(xMins: number): number {
+  return Math.min(90, Math.max(0, xMins)) / 90;
+}
+
+// Average of fn(fraction of a match played) over the calibrated minutes distribution — for
+// nonlinear components (thresholds such as saves points) where only the mean minutes would mislead.
+export function mixtureOverMinutes(xMins: number, fn: (fractionOfMatch: number) => number): number {
+  const d = minutesDistribution(xMins);
+  let total = 0;
+  for (const key of BUCKET_KEYS) {
+    const p = d[distKey[key]];
+    if (p > 0) total += p * fn(BUCKET_MINUTES[key] / 90);
+  }
+  return total;
+}
+
+// Goalkeeper saves points (1 per 3 saves) averaged over the minutes distribution.
+// lambdaPer90 is the expected saves over a full match (before any minutes scaling).
+export function savesPointsFromXMins(
+  lambdaPer90: number,
+  xMins: number,
+  poissonAtLeast: (lambda: number, k: number) => number
+): number {
+  return mixtureOverMinutes(xMins, (f) =>
+    [3, 6, 9, 12].reduce((sum, k) => sum + poissonAtLeast(lambdaPer90 * f, k), 0)
+  );
+}

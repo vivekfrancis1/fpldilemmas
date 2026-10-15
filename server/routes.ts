@@ -1,7 +1,7 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import { copilotDataChange } from "./copilot-xmins-sync-utils";
-import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty } from "./minutes-scoring";
+import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty, fractionOfMatch, savesPointsFromXMins } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
@@ -17591,10 +17591,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fplData = await fplResponse.json();
         const fixturesData = await fixturesResponse.json();
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        const minutesEntryByPlayerId = new Map<number, any>();
         if (minutesResponse.ok) {
           const minutesData = await minutesResponse.json();
           for (const m of minutesData) {
-            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
           }
         }
         const currentGameweek = computeCurrentGameweek(fplData.events);
@@ -17719,6 +17720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             let gwExpectedSaves = 0;
+            let gwFullMatchSaves = 0; // expected saves over full matches (before minutes scaling)
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; saves: number }> = [];
             
             // Sum saves across all fixtures in this gameweek
@@ -17731,8 +17733,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const opponentAGR = teamAvgGoalsForMap.get(opponentId) || 0;
 
               // Apply formula: blended saves/game × opponent's blended goals-for/1.35 × availability
-              const fixtureSaves = blendedSavesPerGame * (opponentAGR / 1.35) * availabilityProb;
+              // Copilot-covered gameweek: saves scale with expected minutes (not just availability) —
+              // see server/minutes-scoring.ts; points below average over the minutes distribution.
+              const savesCoveredX = coveredXMins(minutesEntryByPlayerId.get(player.id), gw);
+              const fixtureSaves = blendedSavesPerGame * (opponentAGR / 1.35) * (savesCoveredX !== undefined ? fractionOfMatch(savesCoveredX) : availabilityProb);
               gwExpectedSaves += fixtureSaves;
+              gwFullMatchSaves += blendedSavesPerGame * (opponentAGR / 1.35);
               
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
@@ -17752,10 +17758,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
               return 1 - cumulativeProb;
             };
-            const expectedPoints = poissonProbAtLeast(gwExpectedSaves, 3)
-              + poissonProbAtLeast(gwExpectedSaves, 6)
-              + poissonProbAtLeast(gwExpectedSaves, 9)
-              + poissonProbAtLeast(gwExpectedSaves, 12);
+            const gwSavesCoveredX = coveredXMins(minutesEntryByPlayerId.get(player.id), gw);
+            const expectedPoints = gwSavesCoveredX !== undefined
+              ? savesPointsFromXMins(gwFullMatchSaves, Math.min(90, gwSavesCoveredX), poissonProbAtLeast)
+              : poissonProbAtLeast(gwExpectedSaves, 3)
+                + poissonProbAtLeast(gwExpectedSaves, 6)
+                + poissonProbAtLeast(gwExpectedSaves, 9)
+                + poissonProbAtLeast(gwExpectedSaves, 12);
             
             saves[`gw${gw}`] = parseFloat(gwExpectedSaves.toFixed(3));
             pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(3));
@@ -17930,6 +17939,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         el.element_type === 2
           ? (el.clearances_blocks_interceptions || 0) + (el.tackles || 0)
           : (el.clearances_blocks_interceptions || 0) + (el.tackles || 0) + (el.recoveries || 0));
+      // Per-gameweek expected minutes (Copilot-covered gameweeks only — see server/minutes-scoring.ts).
+      const dcMinutesEntryByPlayerId = new Map<number, any>();
+      try {
+        const dcMinutesResponse = await internalFetch("api/player-minutes-projections");
+        if (dcMinutesResponse.ok) {
+          for (const m of await dcMinutesResponse.json()) dcMinutesEntryByPlayerId.set(m.playerId, m);
+        }
+      } catch (e) {
+        console.warn("DC projections: minutes projections unavailable, using full-match rates", e);
+      }
       const defensiveProjections = await Promise.all(
         playersWithDefensiveData.map(async (player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -18000,7 +18019,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // docstring above computeNextRangeDC) and no threshold-averaging: a player's own
             // dcPerGame is the estimate, not something to be pulled halfway toward the position's
             // scoring threshold regardless of how little they've actually contributed.
-            const projectedDC = dcPerGame * (opponentDCC / 80);
+            // Copilot-covered gameweek: expected DC scales with expected minutes, and the threshold
+            // chance is averaged over the calibrated minutes distribution. Elsewhere (and when
+            // EXPECTED_MINUTES_MODE=off) the legacy full-match, no-availability maths applies.
+            const dcCoveredX = coveredXMins(dcMinutesEntryByPlayerId.get(player.id), gw);
+            const projectedDC = dcPerGame * (opponentDCC / 80) * (dcCoveredX !== undefined ? fractionOfMatch(dcCoveredX) : 1);
 
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
@@ -18008,7 +18031,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
             // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
             // Cap at maximum 2 points (FPL maximum for DC in a single gameweek)
-            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
+            const gwChanceOfHittingThreshold = dcCoveredX !== undefined
+              ? thresholdChanceFromXMins(dcPerGame, threshold, Math.min(90, dcCoveredX), poissonProbAtLeastDC)
+              : chanceOfHittingThreshold;
+            let points = Math.min(gwChanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
             // Goalkeepers don't get points from defensive contributions
             if (player.element_type === 1) {
               points = 0;
@@ -18294,10 +18320,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         const fixturesData = await fixturesResponse.json();
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        const minutesEntryByPlayerId = new Map<number, any>();
         if (ycMinutesResponse.ok) {
           const ycMinutesData = await ycMinutesResponse.json();
           for (const m of ycMinutesData) {
-            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
           }
         }
 
@@ -18368,7 +18395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const fdr = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
               const opponentMult = fdrMultiplierYC[fdr] ?? 1.00;
 
-              const fixtureYC = blendedYCRate * opponentMult * availabilityProb;
+              // Copilot-covered gameweek: cards scale with expected minutes (per-90 rate x minutes/90)
+              const ycCoveredX = coveredXMins(minutesEntryByPlayerId.get(player.id), gw);
+              const fixtureYC = blendedYCRate * opponentMult * (ycCoveredX !== undefined ? fractionOfMatch(ycCoveredX) : availabilityProb);
               gwYellowCards += fixtureYC;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
@@ -18476,10 +18505,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         const fixturesData = await fixturesResponse.json();
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        const minutesEntryByPlayerId = new Map<number, any>();
         if (rcMinutesResponse.ok) {
           const rcMinutesData = await rcMinutesResponse.json();
           for (const m of rcMinutesData) {
-            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
           }
         }
 
@@ -18549,7 +18579,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const fdrRC = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
               const rcOpponentMult = fdrMultiplierRC[fdrRC] ?? 1.00;
 
-              const fixtureRC = blendedRCRate * availabilityProb * rcOpponentMult;
+              // Copilot-covered gameweek: cards scale with expected minutes (per-90 rate x minutes/90)
+              const rcCoveredX = coveredXMins(minutesEntryByPlayerId.get(player.id), gw);
+              const fixtureRC = blendedRCRate * (rcCoveredX !== undefined ? fractionOfMatch(rcCoveredX) : availabilityProb) * rcOpponentMult;
               gwRedCards += fixtureRC;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
