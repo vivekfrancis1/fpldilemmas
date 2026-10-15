@@ -13,7 +13,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 - **Where:** `server/routes.ts`'s `app.all("/api/manager/:managerId/team", ...)` handler
   (~line 4357); consumed by `manager-team.tsx`, `top-manager-team.tsx`, `creator-team.tsx`.
-- **Status:** Fixed — commit pending.
+- **Status:** Fixed (commit not identified in history).
 - **Notes:** Root cause pinned down (not the caching race first suspected): FPL's per-manager
   picks endpoint (`entry/{id}/event/{gw}/picks/`) can 404 for a manager even after the new
   gameweek has started — some managers' entries lag the transition on FPL's own backend — and
@@ -33,7 +33,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 ## 2026-09-05 — Vite dev server 504 "Outdated Optimize Dep" churn
 
 - **Where:** `vite.config.ts` (dev server only, no production impact).
-- **Status:** Fixed — commit pending.
+- **Status:** Fixed — commit `532881ec`.
 - **Notes:** Hit repeatedly this session after adding a new shadcn/Radix import
   (`@radix-ui/react-accordion`) — Vite's cold-start dependency crawler doesn't always discover a
   package that's only reachable through a lazy-loaded route, so the first visit to a page using
@@ -46,7 +46,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 - **Where:** `client/src/pages/top-manager-team.tsx` and `client/src/pages/manager-team.tsx`
   (both feed `client/src/components/pitch-view.tsx`'s `PitchPlayer`).
-- **Status:** Fixed — commit pending.
+- **Status:** Fixed — commit `8af83495`.
 - **Notes:** User-reported (top-managers/2/team showing Hall/Gabriel as "0" pre-kickoff).
   `pitch-view.tsx` already had correct fallback logic (`-` not started, `DNP` finished-with-zero-
   minutes, raw points otherwise) but `top-manager-team.tsx` always set `points_display`
@@ -66,7 +66,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
   `app.get("/api/auth/user", ...)`. `server/index.ts` calls `setupAuth(app)` (replitAuth.ts)
   before `registerRoutes(app)` (routes.ts), and Express uses the first-registered handler for a
   path — so `routes.ts:508`'s version was dead code, never actually reached.
-- **Status:** Fixed — commit pending.
+- **Status:** Fixed — commit `532881ec`.
 - **Notes:** Confirmed `routes.ts:508`'s version was a straight subset of `replitAuth.ts`'s
   (same passport/session-user check, just reshaped the response slightly less completely) —
   genuinely redundant, not an unfinished migration. Removed and left an explanatory comment
@@ -135,11 +135,24 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 ## 2026-10-15 — "Flaky" cache-integrity test was a real cold-start inconsistency
 
 - **Where:** `GET /api/cached/player-total-points` in `server/routes.ts` (cache-hit path); caught by `tests/cache-integrity.test.ts`.
-- **Status:** Fixed — commit pending (see git log "Fix cache-hit totals...").
-- **Notes:** The first response after a server restart (cache MISS -> live aggregator) and later responses (cache HIT -> stored data plus an inline availability adjustment) disagreed for players whose gameweeks are all zeroed by availability (status unavailable/injured, e.g. players who left the club): the hit path zeroed the per-gameweek values but kept the stored raw total (e.g. 9.5 vs 0). The hit path's inline copy of the availability logic now recomputes `totalExpectedPoints` from the adjusted gameweeks, like the live aggregator's `applyAvailabilityAdjustments`. Regression test: "every player's totalExpectedPoints equals the sum of their gameweekProjections (warm cache)". Remaining smell: the cache-hit path still duplicates ~100 lines of `applyAvailabilityAdjustments` (and neither recomputes `averagePerGameweek`); consider extracting one shared function.
+- **Status:** Fixed — commit `3c1c898c`.
+- **Notes:** The first response after a server restart (cache MISS -> live aggregator) and later responses (cache HIT -> stored data plus an inline availability adjustment) disagreed for players whose gameweeks are all zeroed by availability (status unavailable/injured, e.g. players who left the club): the hit path zeroed the per-gameweek values but kept the stored raw total (e.g. 9.5 vs 0). The hit path's inline copy of the availability logic now recomputes `totalExpectedPoints` from the adjusted gameweeks, like the live aggregator's `applyAvailabilityAdjustments`. Regression test: "every player's totalExpectedPoints equals the sum of their gameweekProjections (warm cache)". Follow-up done 2026-10-16 (`e5d559d9`): both paths now share `adjustPlayerForAvailability`, which also recomputes `averagePerGameweek`/`averageValue`.
 
 ## 2026-10-16 — Remaining "known flaky" tests investigated: not reproducible
 
 - **Where:** `tests/projection-consistency.test.ts`, `tests/projection-validation-historical-compare.test.ts` (and the stale `promoted-team-admin-settings` entry).
 - **Status:** Not reproducible — documentation corrected; no behaviour change. Hardening only: clearer failure messages in the goal/assist structural tests; `scripts/flake-hunt.sh` for catching a recurrence.
 - **Notes:** Tried: 3 warm full-suite runs (all green), 3 cold-start cycles, 3 runs with a forced total-points refresh 2/6/12 s into projection-consistency, 3 concurrent copies of both files, 40 admin logins each followed immediately by an admin-gated request (0 non-200). The "resource contention" explanation in CLAUDE.md was unsupported and has been replaced. If either fails again, capture the server log at that moment before assuming contention (see CLAUDE.md).
+
+## 2026-10-16 — Fixed (commits `50b146ce`, `6efb7a5a`, `e5d559d9`, `2a6b328a`)
+
+- **Copilot refresh needed a manual step after every deploy** — the watcher only recorded a baseline on startup. Now the last-refreshed marker is persisted (`copilot_refresh_state`), so a deploy refreshes once if data was loaded but never refreshed; ordinary restarts do nothing.
+- **Copilot data age was invisible** — Cache Management page now shows Up to date / Older than expected (>4 days) / Stale (>7 days or no upcoming gameweeks covered) from `GET /api/admin/copilot-xmins/status`.
+- **Duplicated availability logic** between the live aggregator and the cache-hit path — one shared `adjustPlayerForAvailability` (`server/availability-player-adjustment.ts`); totals, averages and value now follow the adjusted gameweeks in both.
+- **Projection accuracy scheduler** hardcoded 2025/26 and GW29-38 (idle and mislabelled for 28 gameweeks) — now current season, GW1-38, per-gameweek expected minutes, production-only capture; `/api/projection-accuracy/*` default to the current season (summary/player no longer mix seasons).
+
+## Still open (need a decision or can't be verified yet)
+
+- **Low-scoring-team defender distortion** (e.g. Van Hecke ~0.64 goals/GW from 1 goal in 540 min): remaining cause is dividing by a tiny team goal total then applying it to a larger odds-based team projection. Position-average priors and last-season blending are ruled out by decision; needs a new approach.
+- **Double-gameweek Copilot format is an assumption** (>90 = total, <=90 = per fixture): no DGW exists this season yet — verify against the first DGW export.
+- **Local dev servers and tests share the production database** (`.env` DATABASE_URL), so schedulers, snapshots and caches started locally can touch production; mitigated per-job (production-only gates) but a separate dev/test database is the real fix.
