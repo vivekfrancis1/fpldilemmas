@@ -20055,7 +20055,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("⚠️ Copilot xMins watcher check failed:", e);
       }
     };
-    checkForNewCopilotData();
+    // First check after a delay: routes register BEFORE the server is listening, and the refresh calls
+    // this server's own endpoints — running it immediately made the first attempt fail with "fetch failed".
+    setTimeout(checkForNewCopilotData, 2 * 60 * 1000);
     setInterval(checkForNewCopilotData, 5 * 60 * 1000);
   }
 
