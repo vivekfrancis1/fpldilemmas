@@ -63,3 +63,25 @@ Rollout safety: behind an admin setting (like goal `calculationMode`) with shado
 3. Beyond Copilot's ~6-gameweek window: keep the legacy path (recommended for now), or extend Copilot's last-known role forward with decay?
 4. Store Copilot upload history (small table) to enable real back-testing?
 5. Start with P0 + P5(a) (calibration + Copilot xPts comparison) since they change no numbers and sharpen every later decision?
+
+---
+
+## 7. Addendum 2026-10-15 — findings from P0 (calibration) and P5(a) (Copilot xPts comparison)
+
+Both were built and run (no projection numbers changed). Commit: see git log "Calibrate minutes distribution + Copilot xPts comparison".
+
+**P0 result** (2025/26, 5-game trailing mean -> next-gameweek minutes): even players averaging ~90 recently play 75+ only 85% of the time (realised mean 81). Recent form is a noisy forecast, so the table is indexed by *expected* minutes (bin realised mean), not by the proxy, so it stays valid for Copilot's xMins (which already include news/injury risk). Resulting curve: P(60+) = 0.97 at 88 expected minutes, 0.63 at 59, 0.46 at 45, 0.19 at 22. Files: `server/minutes-calibration.ts`, `scripts/calibrate-minutes-distribution.ts`, `shared/minutes-distribution.generated.ts`, `shared/minutes-model.ts` (+ tests).
+
+**P5(a) result** (`scripts/compare-copilot-xpts.ts`, against production, GW6-11, 3,335 player-gameweeks):
+- Overall agreement is already strong: rank correlation 0.917, bias +0.04, mean abs diff 0.37.
+- By Copilot expected minutes: <45 min bias +0.07, 45-74 +0.19, 75+ -0.06. **Minutes are NOT the main source of disagreement.** The minutes rework (P1/P2) will matter mainly for edge cases (rotation players), less than assumed in sections 1-4.
+- 52 player-gameweeks (13 players) where we project 0 and Copilot >1: injuries newer than the export (the export is dated 2026-09-30).
+- The largest real over-projections are defenders (Van Hecke 7.8 vs 3.97, Tarkowski 7.2 vs 4.5, Davis, Dasilva). Root cause for Van Hecke traced: 1 goal + 0.69 xG in 540 min (about 0.14 goals/game) is projected at 0.64 goals/gameweek. A defender's tiny numerator is divided by a tiny team total (Spurs have scored ~0.5/game), giving a ~33% goal share, which is then applied to a much larger odds-based team projection. The 360-minute shrinkage doesn't help (he has 540 minutes).
+
+**Revised priority.** The biggest accuracy lever is the goal/assist (and bonus) *rate* model, not minutes:
+1. **P3 first**: per-90 rates shrunk toward a POSITION prior (pseudo-minutes style: rate = (events + k x prior_rate_pos x minutes_equiv) / (minutes + k)), weights w_i = shrunk rate x xMins, normalised to the team's projected goals/assists per gameweek. Fixes the defender/low-scoring-team distortion and the Isidor-type cases together, and uses Copilot's per-gameweek xMins (injuries redistribute automatically).
+2. Then P1/P2 (calibrated minutes distribution for minutes points, clean sheets, goals conceded, cards, DC, saves).
+3. P4 UI + P5(b)/(c) as before.
+Position priors would be calibrated from 2025/26 full-season data (goals/assists per 90 by position), same method spirit as P0.
+
+New decision needed: approve the revised order (P3 first, with position priors).
