@@ -4,17 +4,19 @@
 // project as if they start), not as a target to match.
 //
 // Usage: npx tsx scripts/compare-copilot-xpts.ts            (checks https://fpldilemmas.com)
-//        BASE_URL=http://localhost:5050 npx tsx scripts/compare-copilot-xpts.ts
+//        BASE_URL=http://localhost:5050 ENDPOINT="/api/player-total-points?startGameweek=7&endGameweek=12" npx tsx scripts/compare-copilot-xpts.ts
 import fs from "fs";
 import path from "path";
 import { comparePredictions, type CompareRow } from "../server/projection-compare";
 
 const BASE_URL = process.env.BASE_URL || "https://fpldilemmas.com";
+// Point at the live (uncached) calculation with e.g. ENDPOINT="/api/player-total-points?startGameweek=7&endGameweek=12"
+const ENDPOINT = process.env.ENDPOINT || "/api/cached/player-total-points";
 const FILE = path.join(process.cwd(), "Manual Uploads/xMins/Copilot projections/copilot_xmins_xpts_next6.json");
 
 (async () => {
   const exp = JSON.parse(fs.readFileSync(FILE, "utf-8"));
-  const res = await fetch(`${BASE_URL}/api/cached/player-total-points`);
+  const res = await fetch(`${BASE_URL}${ENDPOINT}`);
   if (!res.ok) throw new Error(`total points endpoint returned ${res.status}`);
   const ours: any[] = await res.json();
   const byId = new Map(ours.map((p) => [p.playerId, p]));
