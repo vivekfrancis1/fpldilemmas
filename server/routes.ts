@@ -21567,8 +21567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projection Accuracy API endpoints
   app.get("/api/projection-accuracy/summary", async (req, res) => {
     try {
+      // Current season by default — the table also holds earlier seasons' gameweeks, which must not mix in.
+      const season = (req.query.season as string) || CURRENT_SEASON;
       const result = await db.execute(sql`
         SELECT * FROM projection_accuracy_summary 
+        WHERE season = ${season}
         ORDER BY gameweek DESC
       `);
       res.json(result.rows);
@@ -21581,7 +21584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projection-accuracy/gameweek/:gw", async (req, res) => {
     try {
       const gameweek = parseInt(req.params.gw);
-      const season = req.query.season || '2025/26';
+      const season = req.query.season || CURRENT_SEASON;
       
       // Check if snapshot exists (deadline has passed)
       const snapshot = await db.execute(sql`
@@ -21942,10 +21945,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projection-accuracy/player/:playerId", async (req, res) => {
     try {
       const playerId = parseInt(req.params.playerId);
+      const season = (req.query.season as string) || CURRENT_SEASON;
       
       const result = await db.execute(sql`
         SELECT * FROM player_projection_records 
-        WHERE player_id = ${playerId}
+        WHERE player_id = ${playerId} AND season = ${season}
         ORDER BY gameweek DESC
       `);
       

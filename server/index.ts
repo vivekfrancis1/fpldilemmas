@@ -179,9 +179,15 @@ app.use((req, res, next) => {
         console.error("Failed to start daily projections scheduler:", error);
       });
       
-      // Start projection accuracy scheduler (tracks GW25-38 projections vs actuals)
-      projectionAccuracyScheduler.start();
-      console.log("✓ Projection accuracy scheduler started");
+      // Start projection accuracy scheduler (freezes each gameweek's projections at its deadline and
+      // records the actuals afterwards). Production only: it writes snapshots to the database, and a
+      // local dev server shares that database — it must not win the race to capture a deadline snapshot.
+      if (process.env.NODE_ENV === "production") {
+        projectionAccuracyScheduler.start();
+        console.log("✓ Projection accuracy scheduler started");
+      } else {
+        console.log("⏭️ Projection accuracy scheduler skipped (production only)");
+      }
 
       // Start odds refresh scheduler (every 4 hours; no-ops if ODDS_API_KEY isn't set)
       import('./odds-refresh-scheduler').then(({ oddsRefreshScheduler }) => {

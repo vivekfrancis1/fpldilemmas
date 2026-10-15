@@ -2,6 +2,7 @@ import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { playerTotalPointsSnapshots, playerTotalPointsWindows } from '@shared/schema';
 import { internalFetch } from './config';
+import { PROJECTION_ACCURACY_TRACKING, projectedMinutesFor } from './projection-accuracy-config';
 
 interface PlayerProjectionRecord {
   player_id: number;
@@ -33,12 +34,13 @@ class ProjectionAccuracyScheduler {
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
   private readonly CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
-  private readonly SEASON = '2025/26';
-  private readonly START_GAMEWEEK = 29;
-  private readonly END_GAMEWEEK = 38;
+  // See server/projection-accuracy-config.ts (current season, every gameweek)
+  private readonly SEASON = PROJECTION_ACCURACY_TRACKING.season;
+  private readonly START_GAMEWEEK = PROJECTION_ACCURACY_TRACKING.startGameweek;
+  private readonly END_GAMEWEEK = PROJECTION_ACCURACY_TRACKING.endGameweek;
 
   start(): void {
-    console.log('📊 Starting Projection Accuracy Scheduler (GW29-38 tracking)...');
+    console.log(`📊 Starting Projection Accuracy Scheduler (${this.SEASON} GW${this.START_GAMEWEEK}-${this.END_GAMEWEEK} tracking)...`);
     
     this.intervalId = setInterval(() => {
       this.checkAndProcess();
@@ -85,7 +87,7 @@ class ProjectionAccuracyScheduler {
       const nextInRange = nextGW >= this.START_GAMEWEEK && nextGW <= this.END_GAMEWEEK;
       
       if (!currentInRange && !nextInRange) {
-        console.log(`📊 Neither current GW${currentGW} nor next GW${nextGW} is in tracking range (GW25-38)`);
+        console.log(`📊 Neither current GW${currentGW} nor next GW${nextGW} is in tracking range (GW${this.START_GAMEWEEK}-${this.END_GAMEWEEK})`);
         return;
       }
 
@@ -369,7 +371,7 @@ class ProjectionAccuracyScheduler {
           cleanSheet: player.pointsFromCleanSheets?.[gwKey] || 0,
           bonus: player.pointsFromBonus?.[gwKey] || 0,
           saves: player.pointsFromSaves?.[gwKey] || 0,
-          minutes: player.avgMinutesPerGameweek || 0
+          minutes: projectedMinutesFor(player, gwKey)
         } : null;
         
         if (projectedPoints !== undefined && projectedPoints > 0) {
