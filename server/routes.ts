@@ -2,6 +2,7 @@ import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import { copilotDataChange } from "./copilot-xmins-sync-utils";
 import { playerWeight, allocateTeamTotal } from "./minutes-allocation";
+import { fixtureCountsByTeamGW } from "./fixture-multiplicity";
 import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty, fractionOfMatch, savesPointsFromXMins } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
@@ -13133,7 +13134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // calculateAvailabilityProbability already used elsewhere.
         {
           const { reallocateGroupXmins } = await import('./xmins-reallocation');
-          const { getEffectiveBaseXMins } = await import('./copilot-xmins-override');
+          const { getEffectiveBaseXMins, copilotPerFixtureXMins } = await import('./copilot-xmins-override');
           const { minutesPointsForGW } = await import('./minutes-points');
           const events: BootstrapEvent[] = bootstrapData.events || [];
           const { computeNextRange } = await import("../shared/gameweek-utils");
@@ -13142,16 +13143,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // fold-in already applied to Team Projections; this endpoint's range is otherwise
           // shared/cached ('default' key above) so it can't take an explicit override per-request.
           let xminsCurrentGWHasUnstarted = false;
+          let xminsAllFixtures: any[] = [];
           try {
             const xminsFixturesRes = await internalFetch("api/fixtures");
             if (xminsFixturesRes.ok) {
               const xminsFixtures = await xminsFixturesRes.json();
+              xminsAllFixtures = xminsFixtures;
               xminsCurrentGWHasUnstarted = gameweekRange.currentGameweek > 0 &&
                 xminsFixtures.some((f: any) => f.event === gameweekRange.currentGameweek && !f.started);
             }
           } catch { /* fold-in is best-effort */ }
           const gwStart = xminsCurrentGWHasUnstarted ? gameweekRange.currentGameweek : gameweekRange.start;
           const gwEnd = gameweekRange.end;
+          // Fixtures per team per gameweek — Copilot's xMins for a double gameweek is split per fixture
+          // (see copilotPerFixtureXMins). If fixtures couldn't be fetched, assume single fixtures.
+          const xminsFixtureCounts = fixtureCountsByTeamGW(xminsAllFixtures, gwStart, gwEnd);
 
           const playerById = playerByIdForXmins;
           const groups = new Map<string, number[]>(); // `${team}_${elementType}` -> playerIds
@@ -13179,7 +13185,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const effectiveBaseXMinsById = new Map<number, number>(
               playerMinutesProjections.map((r: any) => [
                 r.playerId,
-                getEffectiveBaseXMins(gw, copilotXminsByPlayerId.get(r.playerId), baseXMinsById.get(r.playerId) || 0),
+                (() => {
+                  const copilotByGW = copilotXminsByPlayerId.get(r.playerId);
+                  const raw = getEffectiveBaseXMins(gw, copilotByGW, baseXMinsById.get(r.playerId) || 0);
+                  if (copilotByGW?.has(gw) !== true) return raw; // history-based estimate: already per appearance
+                  const teamId = playerById.get(r.playerId)?.team;
+                  const nFixtures = xminsAllFixtures.length > 0 && teamId !== undefined
+                    ? (xminsFixtureCounts.get(`${teamId}-${gw}`) || 0)
+                    : 1;
+                  return copilotPerFixtureXMins(raw, nFixtures);
+                })(),
               ])
             );
             for (const playerIds of groups.values()) {
@@ -15386,7 +15401,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const xMinsPerGWOut: { [gw: string]: number } = {};
         if (expectedMinutesModeEnabled() && minutesPlayer?.xMinsPerGW) {
           for (const [k, v] of Object.entries(minutesPlayer.xMinsPerGW as Record<string, number>)) {
-            if (minutesPlayer.xMinsFromCopilotPerGW?.[k]) xMinsPerGWOut[k.replace(/^gw/, '')] = v;
+            if (!minutesPlayer.xMinsFromCopilotPerGW?.[k]) continue;
+            const gwNum = k.replace(/^gw/, '');
+            // Per-fixture expectation x fixtures = the gameweek total (a blank gameweek shows 0).
+            const nFixturesForMins = fixtureDetails[gwNum] ? fixtureDetails[gwNum].length : 1;
+            xMinsPerGWOut[gwNum] = Math.round(v * nFixturesForMins * 10) / 10;
           }
         }
         
@@ -18059,19 +18078,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Find fixture for this team in this gameweek (handles GW39 TBC fixture where event=null)
-            const fixture = fixturesData.find((f: any) => 
+            // Fixtures for this team in this gameweek (handles GW39 TBC fixtures where event=null). A
+            // double gameweek has two: DC points here are a PER-FIXTURE constant (the aggregators
+            // multiply by the fixture count), so average over the gameweek's opponents instead of
+            // looking only at the first one. A blank gameweek falls back to a single default
+            // opponent (it is zeroed downstream anyway).
+            const gwFixtures = fixturesData.filter((f: any) =>
               (f.event === gw || (gw === 39 && (f.event === null || f.event === undefined))) &&
               (f.team_h === player.team || f.team_a === player.team)
             );
-            
-            let opponentId = 1; // Default fallback
-            if (fixture) {
-              opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
-            }
-            
-            // Opponent's DCC per game (this season only)
-            const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0;
+            const opponentIds: number[] = gwFixtures.length > 0
+              ? gwFixtures.map((f: any) => (f.team_h === player.team ? f.team_a : f.team_h))
+              : [1]; // default fallback
 
             // Projected DC = this player's own DC/game rate × (Opponent DCC / 80), where 80 is
             // the league-average DCC/game baseline — no availability multiplier (see the
@@ -18082,23 +18100,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // chance is averaged over the calibrated minutes distribution. Elsewhere (and when
             // EXPECTED_MINUTES_MODE=off) the legacy full-match, no-availability maths applies.
             const dcCoveredX = coveredXMins(dcMinutesEntryByPlayerId.get(player.id), gw);
-            const projectedDC = dcPerGame * (opponentDCC / 80) * (dcCoveredX !== undefined ? fractionOfMatch(dcCoveredX) : 1);
-
-            // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
-            const normalizedDC = parseFloat(projectedDC.toFixed(1));
-
-            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
-            // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
-            // Cap at maximum 2 points (FPL maximum for DC in a single gameweek)
             const gwChanceOfHittingThreshold = dcCoveredX !== undefined
               ? thresholdChanceFromXMins(dcPerGame, threshold, Math.min(90, dcCoveredX), poissonProbAtLeastDC)
               : chanceOfHittingThreshold;
-            let points = Math.min(gwChanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
+
+            let projectedDC = 0;
+            let points = 0;
+            for (const opponentId of opponentIds) {
+              const opponentDCC = teamDCCPerGameMap.get(opponentId) || 0; // opponent's DCC per game (this season only)
+              projectedDC += dcPerGame * (opponentDCC / 80) * (dcCoveredX !== undefined ? fractionOfMatch(dcCoveredX) : 1);
+              // % chance of hitting the threshold × (Opponent DCC / 80) × 2, capped at the FPL maximum of 2
+              points += Math.min(gwChanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
+            }
+            projectedDC /= opponentIds.length;
+            points /= opponentIds.length;
             // Goalkeepers don't get points from defensive contributions
             if (player.element_type === 1) {
               points = 0;
             }
-            
+
             gameweekProjections[`gw${gw}`] = {
               dc: parseFloat(projectedDC.toFixed(1)),
               points: parseFloat(points.toFixed(2))

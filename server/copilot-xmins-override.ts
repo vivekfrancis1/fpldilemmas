@@ -14,3 +14,14 @@ export function getEffectiveBaseXMins(
   const value = copilotByGW.get(gameweek);
   return value !== undefined ? value : historicalBaseXMins;
 }
+
+// The rest of the pipeline works per fixture (per-gameweek minutes are a per-match constant that
+// gets multiplied across a double gameweek's fixtures). Copilot's xMins is a per-gameweek figure:
+// a value above 90 can only be a total across several fixtures, so it is split evenly; a value of
+// 90 or less is read as the per-fixture expectation. (This season has no double gameweeks yet, so
+// the format is unverified — see plan-002.) A blank gameweek has nothing to play.
+export function copilotPerFixtureXMins(xMins: number, nFixtures: number): number {
+  if (nFixtures <= 0) return 0;
+  const perFixture = xMins > 90 ? xMins / nFixtures : xMins;
+  return Math.min(90, perFixture);
+}

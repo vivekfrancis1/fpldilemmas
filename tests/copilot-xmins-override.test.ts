@@ -21,3 +21,27 @@ describe("getEffectiveBaseXMins", () => {
     expect(getEffectiveBaseXMins(3, copilotByGW, 45)).toBe(0);
   });
 });
+
+import { copilotPerFixtureXMins } from "../server/copilot-xmins-override";
+
+describe("copilotPerFixtureXMins (double and blank gameweeks)", () => {
+  it("single fixture: passes the value through, capped at 90", () => {
+    expect(copilotPerFixtureXMins(88, 1)).toBe(88);
+    expect(copilotPerFixtureXMins(95, 1)).toBe(90);
+  });
+  it("blank gameweek (no fixtures): 0", () => {
+    expect(copilotPerFixtureXMins(88, 0)).toBe(0);
+  });
+  it("double gameweek: a figure above 90 can only be a total over both fixtures, so it is split", () => {
+    expect(copilotPerFixtureXMins(170, 2)).toBe(85);
+    expect(copilotPerFixtureXMins(180, 2)).toBe(90);
+    expect(copilotPerFixtureXMins(130, 2)).toBe(65);
+  });
+  it("double gameweek: a figure of 90 or less is read as the per-fixture expectation", () => {
+    expect(copilotPerFixtureXMins(88, 2)).toBe(88);
+    expect(copilotPerFixtureXMins(45, 2)).toBe(45);
+  });
+  it("triple gameweek splits totals by three", () => {
+    expect(copilotPerFixtureXMins(240, 3)).toBe(80);
+  });
+});

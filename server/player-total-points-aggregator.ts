@@ -9,6 +9,7 @@ import {
 import { internalFetch } from "./config";
 import { storage } from "./storage";
 import { sql } from "drizzle-orm";
+import { fixtureCountsByTeamGW, applyFixtureMultiplicity } from "./fixture-multiplicity";
 
 interface GWBreakdown {
   goals: number;
@@ -107,16 +108,11 @@ export class PlayerTotalPointsAggregator {
             playerTeamMap.set(element.id, element.team);
           }
 
-          // Set of "teamId-gwNum" strings for every fixture in the GW range
-          const teamsWithFixture = new Set<string>();
-          for (const fixture of allFixtures) {
-            const gw = fixture.event;
-            if (gw === null || gw === undefined) continue;
-            if (gw < startGameweek || gw > endGameweek) continue;
-            teamsWithFixture.add(`${fixture.team_h}-${gw}`);
-            teamsWithFixture.add(`${fixture.team_a}-${gw}`);
-          }
+          // "teamId-gwNum" -> number of fixtures in the GW range
+          const fixtureCounts = fixtureCountsByTeamGW(allFixtures, startGameweek, endGameweek);
 
+          // Blank gameweeks (no fixture) are zeroed; double gameweeks multiply the per-fixture
+          // components (minutes, defensive contributions) — see server/fixture-multiplicity.ts.
           let blankGWsZeroed = 0;
           for (const [playerId, player] of Array.from(playerMap.entries())) {
             const teamId = playerTeamMap.get(playerId);
@@ -124,20 +120,9 @@ export class PlayerTotalPointsAggregator {
             for (const [gwKey, breakdown] of Object.entries(player.gameweekBreakdown)) {
               const gwNum = parseInt(gwKey);
               if (isNaN(gwNum)) continue;
-              if (!teamsWithFixture.has(`${teamId}-${gwNum}`)) {
-                breakdown.goals = 0;
-                breakdown.assists = 0;
-                breakdown.cleanSheets = 0;
-                breakdown.minutes = 0;
-                breakdown.goalsConceded = 0;
-                breakdown.yellowCards = 0;
-                breakdown.redCards = 0;
-                breakdown.bonus = 0;
-                breakdown.saves = 0;
-                breakdown.defensiveContributions = 0;
-                breakdown.points = 0;
-                blankGWsZeroed++;
-              }
+              const n = fixtureCounts.get(`${teamId}-${gwNum}`) || 0;
+              if (n === 0) blankGWsZeroed++;
+              applyFixtureMultiplicity(breakdown as any, n);
             }
           }
           console.log(`🚫 Blank GW zeroing: cleared ${blankGWsZeroed} player-GW entries with no fixture`);
