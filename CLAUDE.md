@@ -11,8 +11,14 @@ Plan Storage: Never overwrite or delete old plans. Each plan is saved as a separ
 Local-Only Workflow: Commit to local git as work progresses (logical chunks, clean history), but never `git push` or trigger a deploy until the user explicitly says to (e.g. "deploy", "push", "ship it"). Railway auto-deploys from the `main` branch on GitHub, so pushing to `origin` is itself the deploy trigger — treat it with the same caution as a manual deploy step.
 Before pushing/deploying: run `npx tsc --noEmit -p .` and `npx vitest run`, and confirm both are clean (aside from documented pre-existing flaky tests — see below) before asking the user to deploy.
 
-### Known pre-existing test flakiness (not regressions)
-A handful of tests fail intermittently under full-suite parallel load but pass cleanly in isolation — this is resource contention (DB connections, auth/session state), not a real bug. Before treating a failure as a regression, re-run just that file in isolation; if it passes alone, it's this known pattern. Clusters seen so far: `tests/projection-consistency.test.ts`'s "Server-Side Availability Adjustments" and "Cached vs Live Endpoint Consistency" tests, `tests/projection-validation-historical-compare.test.ts` (admin-auth session contention), `tests/promoted-team-admin-settings.test.ts`. (`tests/cache-integrity.test.ts` used to be on this list — it was a real cold-start bug, fixed 2026-10-15; if it fails now, treat it as a regression.)
+### Test flakiness — status as of 2026-10-16 (investigated, no known flaky tests)
+The earlier belief that some tests fail intermittently from "resource contention" did **not** hold up when investigated:
+- `tests/cache-integrity.test.ts` was a **real cold-start bug** (cache-hit and cache-miss paths of `/api/cached/player-total-points` disagreed for unavailable players), fixed 2026-10-15 with a regression test. If it fails now, treat it as a regression.
+- `tests/promoted-team-admin-settings.test.ts` no longer exists (removed with the promoted-team assumptions).
+- `tests/projection-consistency.test.ts` and `tests/projection-validation-historical-compare.test.ts` could **not be reproduced** under repeated warm runs, cold starts, a forced background cache refresh mid-test, 3 concurrent suite copies, or 40 rapid admin logins. Failures seen earlier coincided with state being changed underneath (e.g. projection tables not yet rebuilt after a code/schema change).
+- The API tests are plain HTTP clients: they need the dev server running on port 5050 (`ECONNREFUSED` everywhere = server not running, not 42 real failures).
+
+If a test fails intermittently: re-run it alone; if it then passes, do **not** assume contention — run `scripts/flake-hunt.sh [runs] [test files]` (restart the server first to test a cold start; `FORCE_REFRESH_AFTER=4` also forces a cache refresh mid-run, as the background schedulers do) and capture the server log at the moment of failure. Background jobs that can change data mid-run: the startup cache orchestrator, the scoring scheduler (25 min after start, then every 12h), the projection cache scheduler (35 min after start, then hourly), the odds refresh (every 4h), the Copilot watcher.
 
 ## System Architecture
 

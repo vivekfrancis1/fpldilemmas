@@ -543,8 +543,11 @@ describe('Cross-Endpoint Projection Consistency', () => {
       return;
     }
 
-    expect(Array.isArray(goalProjections)).toBe(true);
-    expect(goalProjections.length).toBeGreaterThan(0);
+    // Messages say what the endpoint actually returned, so a failure is diagnosable from the output
+    // alone (an empty array here has meant "the cache fell back to an unpopulated table").
+    const goalSample = JSON.stringify(goalProjections).slice(0, 200);
+    expect(Array.isArray(goalProjections), `goal endpoint did not return an array: ${goalSample}`).toBe(true);
+    expect(goalProjections.length, `goal endpoint returned no players: ${goalSample}`).toBeGreaterThan(0);
 
     const goalMap = new Map(goalProjections.map((p: any) => [p.playerId, p]));
     let matchedPlayers = 0;
@@ -557,7 +560,7 @@ describe('Cross-Endpoint Projection Consistency', () => {
       }
     }
 
-    expect(matchedPlayers).toBeGreaterThan(10);
+    expect(matchedPlayers, `only ${matchedPlayers} of the top 30 cached players were found among ${goalProjections.length} goal projections`).toBeGreaterThan(10);
   });
 
   it('individual assist projections are available and structurally consistent', async () => {
@@ -569,8 +572,11 @@ describe('Cross-Endpoint Projection Consistency', () => {
       return;
     }
 
-    expect(Array.isArray(assistProjections)).toBe(true);
-    expect(assistProjections.length).toBeGreaterThan(0);
+    // Messages say what the endpoint actually returned, so a failure is diagnosable from the output
+    // alone (an empty array here has meant "the cache fell back to an unpopulated table").
+    const assistSample = JSON.stringify(assistProjections).slice(0, 200);
+    expect(Array.isArray(assistProjections), `assist endpoint did not return an array: ${assistSample}`).toBe(true);
+    expect(assistProjections.length, `assist endpoint returned no players: ${assistSample}`).toBeGreaterThan(0);
 
     const assistMap = new Map(assistProjections.map((p: any) => [p.playerId, p]));
     let matchedPlayers = 0;
@@ -583,7 +589,7 @@ describe('Cross-Endpoint Projection Consistency', () => {
       }
     }
 
-    expect(matchedPlayers).toBeGreaterThan(10);
+    expect(matchedPlayers, `only ${matchedPlayers} of the top 30 cached players were found among ${assistProjections.length} assist projections`).toBeGreaterThan(10);
   });
 
   it('minutes projections are available for all players with total points', async () => {
