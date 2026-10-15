@@ -1,5 +1,6 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
+import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
@@ -13158,7 +13159,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;
                 xMinsPerGWById.get(id)![`gw${gw}`] = Math.round(adjustedXMins * 10) / 10;
                 copilotCoveredPerGWById.get(id)![`gw${gw}`] = copilotXminsByPlayerId.get(id)?.has(gw) === true;
-                pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(minutesPointsForGW(baseMinutesPoints, baseXMinsById.get(id) || 0, adjustedXMins) * 100) / 100;
+                // Copilot-covered gameweek: minutes points from the calibrated minutes distribution
+                // (see server/minutes-scoring.ts); otherwise the legacy history-scaled value.
+                const gwMinutesPoints = (expectedMinutesModeEnabled() && copilotXminsByPlayerId.get(id)?.has(gw) === true)
+                  ? minutesPointsFromXMins(adjustedXMins)
+                  : minutesPointsForGW(baseMinutesPoints, baseXMinsById.get(id) || 0, adjustedXMins);
+                pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(gwMinutesPoints * 100) / 100;
                 availabilityRatioPerGWById.get(id)![`gw${gw}`] = Math.round(ratio * 1000) / 1000;
               }
             }
@@ -13365,13 +13371,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // a same-team-same-position teammate's absence, in the same multiplicative slot.
           const availabilityProb = playerMinutes.availabilityRatioPerGW?.[`gw${gw}`]
             ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
-          // 60+ minute chance from this gameweek's projected minutes (see server/clean-sheet-minutes.ts) —
-          // only for gameweeks Copilot actually forecasts; beyond them xMins is a flat history-based
-          // average (per appearance), too thin to treat as a certain 60+, so the historical share applies.
-          // The xMins-based factor already includes availability, so availabilityProb isn't multiplied in again.
+          // 60+ minute chance from this gameweek's expected minutes via the calibrated minutes model
+          // (see server/clean-sheet-minutes.ts) — only for gameweeks Copilot actually forecasts; beyond
+          // them xMins is a flat history-based average (per appearance), too thin, so the legacy
+          // availability x historical share applies. The xMins-based factor already includes availability.
           const minutesFactor = cleanSheetMinutesFactor({
-            adjustedXMins: playerMinutes.xMinsFromCopilotPerGW?.[`gw${gw}`] ? playerMinutes.xMinsPerGW?.[`gw${gw}`] : undefined,
-            availabilityRatio: playerMinutes.availabilityRatioPerGW?.[`gw${gw}`],
+            adjustedXMins: coveredXMins(playerMinutes, gw),
             historicalPct60Plus: adjustedPct60Plus,
             availabilityProb,
           });
@@ -18176,33 +18181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Reallocation-aware ratio (see server/xmins-reallocation.ts)
                 const availabilityProb = playerMinutes?.availabilityRatioPerGW?.[`gw${gw}`]
                   ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
-                gwGoalsConceded = cleanSheetMinutesFactor({
-                  adjustedXMins: playerMinutes?.xMinsFromCopilotPerGW?.[`gw${gw}`] ? playerMinutes?.xMinsPerGW?.[`gw${gw}`] : undefined,
-                  availabilityRatio: playerMinutes?.availabilityRatioPerGW?.[`gw${gw}`],
-                  historicalPct60Plus: pct60Plus * 100,
-                  availabilityProb,
-                }) * parseFloat(teamGoalsAgainst);
-                
-                // Poisson-based goals conceded points calculation
-                // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)
-                // E[points] = -Σ floor(k/2) * P(X=k) for k=0,1,2,...
-                const lambda = gwGoalsConceded;
-                if (lambda > 0) {
-                  let expectedPenalty = 0;
-                  let cumulativeProb = 0;
-                  let logFactorial = 0;
-                  const maxK = Math.max(20, Math.ceil(lambda * 3));
-                  for (let k = 0; k <= maxK; k++) {
-                    if (k > 0) logFactorial += Math.log(k);
-                    const logProb = -lambda + k * Math.log(lambda) - logFactorial;
-                    const prob = Math.exp(logProb);
-                    cumulativeProb += prob;
-                    expectedPenalty += Math.floor(k / 2) * prob;
-                    if (cumulativeProb > 0.9999) break;
-                  }
-                  gwPoints = -expectedPenalty;
+                const coveredX = coveredXMins(playerMinutes, gw);
+                if (coveredX !== undefined) {
+                  // Copilot-covered gameweek: exposure and the penalty are averaged over the calibrated
+                  // minutes distribution (see server/minutes-scoring.ts); availability is already inside xMins.
+                  const r = expectedGoalsConcededFromXMins(parseFloat(teamGoalsAgainst), coveredX);
+                  gwGoalsConceded = r.expectedGoalsConceded;
+                  gwPoints = -r.expectedPenalty;
                 } else {
-                  gwPoints = 0;
+                  gwGoalsConceded = availabilityProb * pct60Plus * parseFloat(teamGoalsAgainst);
+                  // FPL rule: -1pt per 2 goals conceded; E[points] = -sum floor(k/2) P(X=k) (Poisson)
+                  gwPoints = -poissonGoalsConcededPenalty(gwGoalsConceded);
                 }
               }
             }

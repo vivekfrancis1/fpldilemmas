@@ -1,31 +1,31 @@
 import { describe, it, expect } from "vitest";
 import { cleanSheetMinutesFactor } from "../server/clean-sheet-minutes";
+import { pAtLeast60 } from "../shared/minutes-model";
 
 describe("cleanSheetMinutesFactor", () => {
-  it("treats a fit player projected for 60+ minutes as a full clean sheet chance (Konsa case)", () => {
-    // Copilot 88 xMins, fully available, historical pct60Plus only 60% from a short early cameo
-    expect(cleanSheetMinutesFactor({ adjustedXMins: 88, availabilityRatio: 1, historicalPct60Plus: 60, availabilityProb: 1 })).toBe(1);
+  it("uses the calibrated 60+ chance for the gameweek's expected minutes (Konsa: 88 xMins, ignores his 60% early-season history)", () => {
+    const f = cleanSheetMinutesFactor({ adjustedXMins: 88, historicalPct60Plus: 60, availabilityProb: 1 });
+    expect(f).toBeCloseTo(pAtLeast60(88), 9);
+    expect(f).toBeGreaterThan(0.9);
   });
 
-  it("scales a player projected for under 60 minutes proportionally", () => {
-    expect(cleanSheetMinutesFactor({ adjustedXMins: 45, availabilityRatio: 1, historicalPct60Plus: 100, availabilityProb: 1 })).toBeCloseTo(0.75, 6);
+  it("a rotation player (59 xMins) is NOT treated as a certain 60+ player", () => {
+    const f = cleanSheetMinutesFactor({ adjustedXMins: 59, historicalPct60Plus: 100, availabilityProb: 1 });
+    expect(f).toBeLessThan(0.75);
+    expect(f).toBeGreaterThan(0.5);
   });
 
-  it("does not double-count availability: a 75%-available 88-minute starter gets 0.75, not 1", () => {
-    // adjusted = 88 * 0.75 = 66, ratio = 0.75 -> base 88 -> 66 / 88
-    expect(cleanSheetMinutesFactor({ adjustedXMins: 66, availabilityRatio: 0.75, historicalPct60Plus: 100, availabilityProb: 0.75 })).toBeCloseTo(0.75, 6);
+  it("does not multiply availability in again (adjusted xMins already include it)", () => {
+    const withAvail = cleanSheetMinutesFactor({ adjustedXMins: 66, historicalPct60Plus: 100, availabilityProb: 0.75 });
+    const without = cleanSheetMinutesFactor({ adjustedXMins: 66, historicalPct60Plus: 100, availabilityProb: 1 });
+    expect(withAvail).toBe(without);
   });
 
-  it("gives a backup boosted to a starter's minutes (teammate out) full credit", () => {
-    // base 20 -> ratio 4.5 -> adjusted 90
-    expect(cleanSheetMinutesFactor({ adjustedXMins: 90, availabilityRatio: 4.5, historicalPct60Plus: 0, availabilityProb: 4.5 })).toBe(1);
+  it("gives 0 for a player expected to play 0 minutes", () => {
+    expect(cleanSheetMinutesFactor({ adjustedXMins: 0, historicalPct60Plus: 100, availabilityProb: 1 })).toBe(0);
   });
 
-  it("gives 0 when the player is projected for 0 minutes", () => {
-    expect(cleanSheetMinutesFactor({ adjustedXMins: 0, availabilityRatio: 0, historicalPct60Plus: 100, availabilityProb: 0 })).toBe(0);
-  });
-
-  it("falls back to the legacy availability x historical pct60Plus when no per-GW xMins exists", () => {
-    expect(cleanSheetMinutesFactor({ adjustedXMins: undefined, availabilityRatio: undefined, historicalPct60Plus: 60, availabilityProb: 0.5 })).toBeCloseTo(0.3, 6);
+  it("falls back to the legacy availability x historical pct60Plus when no covered xMins exist", () => {
+    expect(cleanSheetMinutesFactor({ adjustedXMins: undefined, historicalPct60Plus: 60, availabilityProb: 0.5 })).toBeCloseTo(0.3, 6);
   });
 });
