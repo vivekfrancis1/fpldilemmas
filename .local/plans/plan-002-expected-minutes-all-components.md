@@ -89,3 +89,28 @@ New decision needed: approve the revised order (P3 first, with position priors).
 ## 8. Decision 2026-10-15 — no position-average shrinkage
 
 The user rejected shrinking goal/assist/bonus rates toward position averages (or position+price priors). Section 7's "P3 first, with position priors" is withdrawn. The existing minutes-based shrinkage (360 min, capped at same-team same-position teammates' pooled rate) stays. The Van Hecke/low-scoring-team defender distortion found in section 7 is therefore still open; any fix must avoid position-average priors (and last-season blending). Remaining plan phases are unchanged and still need the user's go-ahead.
+
+## 9. Status 2026-10-15 — implemented (local commits, not yet deployed)
+
+Decisions taken (user: "go with your recommendations" / "do the rest of plan 002"): single mode (expected points incl. minutes risk); calibrated curve supersedes the 60-minute rule; legacy maths beyond Copilot's window; Copilot upload history stored; no position-average priors.
+
+- **P0** calibration — done (`b7e44308`, `c1be6bb3`): real per-bucket mean minutes (13.1 / 44.7 / 67.5 / 89.5) feed the model.
+- **P1** minutes points, clean sheets, goals conceded — `8e76bb1f`.
+- **P2** cards, saves, defensive contributions — `f0bab200`.
+- **P3** goals, assists, bonus — `5f26d1ce` (per-90 minutes-shrunk rate x expected minutes, scaled to the team projection; no priors).
+- **P4** UI — Mins column shows average expected minutes over the selected covered gameweeks; disclaimer reworded.
+- **P5(a)** vs Copilot xPts — `scripts/compare-copilot-xpts.ts`. **P5(b)** upload history — `copilot_xmins_history` (created on demand, hash-idempotent). **P5(c)**: `scripts/backtest-copilot-minutes.ts` back-tests stored forecasts vs realised minutes and checks the calibrated model; it needs a finished gameweek with a stored forecast (first usable after GW7). Snapshotting OUR projections for a points back-test is NOT done.
+- Rollout switch: `EXPECTED_MINUTES_MODE=off` (Railway env var) restores legacy maths everywhere.
+
+Agreement with Copilot's xPts on identical data (GW7-12, 4,002 player-gameweeks), ours minus Copilot:
+
+| stage | bias | mean abs diff | rank correlation |
+|---|---|---|---|
+| legacy | +0.04 | 0.33 | 0.959 |
+| after P1 | +0.01 | 0.30 | 0.960 |
+| after P2 | -0.03 | 0.27 | 0.981 |
+| after P3 | -0.01 | 0.24 | 0.985 |
+
+Automation added alongside: `scripts/sync-copilot-xmins.ts` + launchd watcher (`scripts/copilot-sync/`, installed 2026-10-15) load new exports into the database; the production server watches `copilot_xmins_projections` and refreshes Minutes + Player Total Points itself.
+
+Known limits: double gameweeks treat Copilot xMins as per-fixture (capped at 90); the Van Hecke-type goal-share distortion on low-scoring teams is reduced but not eliminated (no position priors by decision); Copilot's export is only as fresh as its last update, so newer injuries are handled by the FPL-status availability layer only.

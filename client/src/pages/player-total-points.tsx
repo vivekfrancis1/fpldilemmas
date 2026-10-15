@@ -642,6 +642,8 @@ interface PlayerTotalPointsData {
   averagePerGameweek: number;
   averageValue: number;
   avgMinutesPerGameweek: number;
+  // Expected minutes per Copilot-covered gameweek (keys match gameweekProjections)
+  xMinsPerGW?: { [key: string]: number };
   // Availability status fields
   chanceOfPlayingNextRound?: number;
   status?: string;
@@ -1543,9 +1545,18 @@ export default function PlayerTotalPoints() {
         }
       }
 
+      // Mins column: average expected minutes over the selected gameweeks that Copilot covers;
+      // otherwise keep the history-based average.
+      const xm = player.xMinsPerGW;
+      const coveredMins = xm ? Object.keys(filtered).map((k) => xm[k]).filter((v) => typeof v === 'number') : [];
+      const minsOverride = coveredMins.length > 0
+        ? { avgMinutesPerGameweek: coveredMins.reduce((a, b) => a + b, 0) / coveredMins.length }
+        : {};
+
       return {
         ...player,
         ...componentOverrides,
+        ...minsOverride,
         gameweekProjections: filtered,
         totalExpectedPoints: newTotal,
         averagePerGameweek: newTotal / numGWs,

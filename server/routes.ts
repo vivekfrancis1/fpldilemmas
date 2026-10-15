@@ -15379,6 +15379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate average expected minutes per gameweek (from minutes player data)
         const avgMinutesPerGameweek = minutesPlayer?.expectedMinutesPerGame || 0;
+
+        // Per-gameweek expected minutes for the Copilot-covered gameweeks (keys are bare gameweek
+        // numbers, matching gameweekProjections) — the client's Mins column averages these over the
+        // selected gameweeks. Empty when expected-minutes mode is off or nothing is covered.
+        const xMinsPerGWOut: { [gw: string]: number } = {};
+        if (expectedMinutesModeEnabled() && minutesPlayer?.xMinsPerGW) {
+          for (const [k, v] of Object.entries(minutesPlayer.xMinsPerGW as Record<string, number>)) {
+            if (minutesPlayer.xMinsFromCopilotPerGW?.[k]) xMinsPerGWOut[k.replace(/^gw/, '')] = v;
+          }
+        }
         
         // Calculate component totals first - these are the authoritative values
         const totalPointsFromGoals = Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0);
@@ -15421,6 +15431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averagePerGameweek: Math.round(avgPointsPerGameweek * 100) / 100,
           averageValue: Math.round(averageValue * 100) / 100,
           avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
+          xMinsPerGW: xMinsPerGWOut,
           // Add availability status fields from bootstrap data
           chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
           status: bootstrapPlayer?.status || 'a',
