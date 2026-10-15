@@ -49,7 +49,7 @@ describe("calibrateBucketMinutes", () => {
     // next-gameweek outcomes after a window of 90s: 90, 70, 20, 45, 0
     const history = [90, 90, 90, 90, 90];
     const mk = (id: number, next: number) => rows(id, [...history, next]);
-    const all = [mk(1, 90), mk(2, 70), mk(3, 20), mk(4, 45), mk(5, 0), mk(6, 80)];
+    const all = [mk(1, 90), mk(2, 70), mk(3, 20), mk(4, 45), mk(5, 0), mk(6, 80)].flat();
     const b = calibrateBucketMinutes(all, { window: 5, minGameweek: 6 });
     expect(b.zero).toBe(0);
     expect(b.p1to29).toBe(20);
