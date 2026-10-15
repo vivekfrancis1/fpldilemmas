@@ -1,6 +1,7 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import { copilotDataChange } from "./copilot-xmins-sync-utils";
+import { playerWeight, allocateTeamTotal } from "./minutes-allocation";
 import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty, fractionOfMatch, savesPointsFromXMins } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
@@ -10587,6 +10588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position,
           goalShare: Math.round(finalShare * 100 * 100) / 100,
           projectedGoals: Math.round(projectedGoals * 100) / 100,
+          // Per-90 goals+xG rate (minutes-shrunk) — the basis for expected-minutes weighting
+          // in the goals projections (server/minutes-allocation.ts).
+          goalRate90: (p.minutes || 0) > 0 ? Math.round((player2627Combined / p.minutes) * 90 * 10000) / 10000 : 0,
         };
       }).sort((a: any, b: any) => b.goalShare - a.goalShare);
 
@@ -10638,6 +10642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position,
           assistShare: Math.round(finalShare * 100 * 100) / 100,
           projectedAssists: Math.round(projectedAssists * 100) / 100,
+          assistRate90: (p.minutes || 0) > 0 ? Math.round((player2627Combined / p.minutes) * 90 * 10000) / 10000 : 0,
         };
       }).sort((a: any, b: any) => b.assistShare - a.assistShare);
 
@@ -11089,10 +11094,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // calculateAvailabilityProbability call (same multiplicative slot, not an additional
           // factor, so this doesn't double-count goalShare's already-baked-in playing-time rate).
           const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+          const minutesEntryByPlayerId = new Map<number, any>();
           if (minutesResponse.ok) {
             const minutesData = await minutesResponse.json();
             for (const m of minutesData) {
-              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
             }
           }
           
@@ -11109,6 +11115,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const teamProjections = teamProjectionsMap[team.teamId];
             
             if (team.players && Array.isArray(team.players) && teamProjections) {
+              // Copilot-covered gameweeks: split the team's projected goals by (per-90 rate x expected
+              // minutes) so the squad adds up to the team projection and an absent teammate's share
+              // redistributes (server/minutes-allocation.ts). Other gameweeks keep share x availability.
+              const goalAllocByGW = new Map<number, Map<number, number> | null>();
+              const goalFractionOf = (pl: any, gw: number): number | undefined => {
+                if (coveredXMins(minutesEntryByPlayerId.get(pl.playerId), gw) === undefined) return undefined;
+                if (!goalAllocByGW.has(gw)) {
+                  const weights = new Map<number, number>();
+                  for (const mate of team.players) {
+                    const mx = coveredXMins(minutesEntryByPlayerId.get(mate.playerId), gw);
+                    weights.set(mate.playerId, mx === undefined ? 0 : playerWeight(mate.goalRate90 || 0, mx));
+                  }
+                  goalAllocByGW.set(gw, allocateTeamTotal(1, weights));
+                }
+                return goalAllocByGW.get(gw)?.get(pl.playerId);
+              };
               team.players.forEach((player: any) => {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
@@ -11131,7 +11153,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // NOTE: Do NOT apply recentP60 or startingRate here.
                   // goalShare already encodes selection frequency — a rotation player scores fewer goals
                   // per season → lower goalShare. Adding a further playing-time multiplier double-counts.
-                  gameweekProjections[gameweek] = Math.round((goalShare / 100) * (teamGoals as number) * availability * 100) / 100;
+                  const goalFraction = goalFractionOf(player, gwNum);
+                  gameweekProjections[gameweek] = goalFraction !== undefined
+                    ? Math.round(goalFraction * (teamGoals as number) * 100) / 100
+                    : Math.round((goalShare / 100) * (teamGoals as number) * availability * 100) / 100;
 
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -11139,7 +11164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      goals: Math.round((goalShare / 100) * (f.goals || 0) * availability * 100) / 100
+                      goals: goalFraction !== undefined
+                        ? Math.round(goalFraction * (f.goals || 0) * 100) / 100
+                        : Math.round((goalShare / 100) * (f.goals || 0) * availability * 100) / 100
                     }));
                   }
                 });
@@ -11249,10 +11276,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // calculateAvailabilityProbability call below (same slot, not an addition), so it
           // doesn't double-count assistShare's already-baked-in playing-time rate.
           const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+          const minutesEntryByPlayerId = new Map<number, any>();
           if (minutesResponse.ok) {
             const minutesData = await minutesResponse.json();
             for (const m of minutesData) {
-              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+              if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
             }
           }
 
@@ -11269,6 +11297,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const teamProjections = teamProjectionsMap[team.teamId];
             
             if (team.players && Array.isArray(team.players) && teamProjections) {
+              // Copilot-covered gameweeks: split the team's projected assists by (per-90 rate x expected
+              // minutes) — same method as goals (server/minutes-allocation.ts).
+              const assistAllocByGW = new Map<number, Map<number, number> | null>();
+              const assistFractionOf = (pl: any, gw: number): number | undefined => {
+                if (coveredXMins(minutesEntryByPlayerId.get(pl.playerId), gw) === undefined) return undefined;
+                if (!assistAllocByGW.has(gw)) {
+                  const weights = new Map<number, number>();
+                  for (const mate of team.players) {
+                    const mx = coveredXMins(minutesEntryByPlayerId.get(mate.playerId), gw);
+                    weights.set(mate.playerId, mx === undefined ? 0 : playerWeight(mate.assistRate90 || 0, mx));
+                  }
+                  assistAllocByGW.set(gw, allocateTeamTotal(1, weights));
+                }
+                return assistAllocByGW.get(gw)?.get(pl.playerId);
+              };
               team.players.forEach((player: any) => {
                 const assistShare = player.assistShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
@@ -11287,7 +11330,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // NOTE: Do NOT apply recentP60 or a form multiplier here.
                   // assistShare already encodes selection frequency and recent assist form through
                   // the additive pool formula. Adding a further multiplier double-counts.
-                  gameweekProjections[gameweek] = Math.round((assistShare / 100) * (teamAssists as number) * availability * 100) / 100;
+                  const assistFraction = assistFractionOf(player, gwNum);
+                  gameweekProjections[gameweek] = assistFraction !== undefined
+                    ? Math.round(assistFraction * (teamAssists as number) * 100) / 100
+                    : Math.round((assistShare / 100) * (teamAssists as number) * availability * 100) / 100;
 
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -11295,7 +11341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      assists: Math.round((assistShare / 100) * (f.assists || 0) * availability * 100) / 100
+                      assists: assistFraction !== undefined
+                        ? Math.round(assistFraction * (f.assists || 0) * 100) / 100
+                        : Math.round((assistShare / 100) * (f.assists || 0) * availability * 100) / 100
                     }));
                   }
                 });
@@ -18695,6 +18743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const hasTBCBonus = allFixtures.some((f: any) => f.event === null || f.event === undefined);
         const endGameweek = hasTBCBonus ? 39 : (bpHasExplicitRange ? bpQueryEnd : gameweekRange.end);
         const availabilityRatioByPlayerId = new Map<number, { [key: string]: number }>();
+        const minutesEntryByPlayerId = new Map<number, any>();
         // True per-fixture appearance count (starts + sub appearances with real minutes), from
         // the same per-gameweek history the minutes-projections endpoint already parses. Using
         // this instead of bootstrap's `starts` field avoids overstating a player's bonus-per-fixture
@@ -18704,7 +18753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (bonusMinutesResponse.ok) {
           const bonusMinutesData = await bonusMinutesResponse.json();
           for (const m of bonusMinutesData) {
-            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW);
+            if (m.availabilityRatioPerGW) availabilityRatioByPlayerId.set(m.playerId, m.availabilityRatioPerGW); minutesEntryByPlayerId.set(m.playerId, m);
             if (m.playerAppearances) appearancesByPlayerId.set(m.playerId, m.playerAppearances);
           }
         }
@@ -18779,6 +18828,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // signing, promoted-team squad member, or 0 appearances so far) projects 0 bonus/fixture
           // until they've actually featured at least once.
           const bonusPerFixture = thisSeasonBonusPerFixture ?? 0;
+          // Minutes-shrunk bonus per 90 minutes — used for Copilot-covered gameweeks.
+          const bonusPer90 = finishedGWs > 0 && (player.minutes || 0) > 0
+            ? ((shrunkBonusByPlayerId.get(player.id) ?? (player.bonus || 0)) / player.minutes) * 90
+            : 0;
 
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = computeCurrentGameweek(fplData.events);
@@ -18814,7 +18867,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Hard-capped at 3 — FPL awards bonus points only to the top 3 BPS scorers in a
               // single match (3/2/1), so no projection for one fixture can exceed 3 regardless of
               // how the underlying rate was computed.
-              const fixtureBonus = Math.min(bonusPerFixture * clampedFactor * availabilityProb, 3);
+              // Copilot-covered gameweek: per-90 bonus rate x expected minutes (the per-appearance rate
+              // would treat a short cameo as a full match). Hard-capped at 3 either way.
+              const bonusCoveredX = coveredXMins(minutesEntryByPlayerId.get(player.id), gw);
+              const fixtureBonus = bonusCoveredX !== undefined
+                ? Math.min(bonusPer90 * fractionOfMatch(bonusCoveredX) * clampedFactor, 3)
+                : Math.min(bonusPerFixture * clampedFactor * availabilityProb, 3);
               gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({
