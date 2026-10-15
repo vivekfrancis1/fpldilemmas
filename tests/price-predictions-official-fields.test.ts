@@ -86,7 +86,7 @@ describe('/api/price-predictions uses real official FPL fields', () => {
   // anything else is "Unlikely to change". This matched every example checked, including cases
   // that looked inconsistent under a current-progress-based or likelihood-based reading (e.g. a
   // player at -94.6% current progress but -101.5% predicted showing "Very likely to drop").
-  it('status is keyed off predicted progress crossing >100%/>=95%, not current progress or the likelihood scale', () => {
+  it('status is keyed off predicted progress crossing >100%/>=95%, not current progress or the likelihood scale', (ctx) => {
     const barelyMoving = bootstrapElements.find((p: any) => {
       const proj = p.price_change_projections || [];
       const predicted = Math.abs(proj[0] ? parseFloat(proj[0].projected_percent) : 0);
@@ -100,17 +100,20 @@ describe('/api/price-predictions uses real official FPL fields', () => {
       const proj = p.price_change_projections || [];
       return proj[0] && parseFloat(proj[0].projected_percent) < -100;
     });
-    expect(barelyMoving).toBeDefined();
-    expect(strongRiser).toBeDefined();
-    expect(strongFaller).toBeDefined();
+    // This reads FPL's live price projections, so which cases exist depends on the time of day
+    // (e.g. right after a price update nobody may be above 100%). Check each case that currently
+    // exists, and skip only if none does.
+    const cases: Array<[any, (status: string) => void]> = [];
+    if (barelyMoving) cases.push([barelyMoving, (s) => expect(s).toBe('Unlikely to change today')]);
+    if (strongRiser) cases.push([strongRiser, (s) => expect(s.toLowerCase()).toBe('very likely to rise today')]);
+    if (strongFaller) cases.push([strongFaller, (s) => expect(s.toLowerCase()).toBe('very likely to drop today')]);
+    if (cases.length === 0) ctx.skip();
 
-    const barelyPred = predictions.find((p: any) => p.player_id === barelyMoving.id);
-    const risePred = predictions.find((p: any) => p.player_id === strongRiser.id);
-    const fallPred = predictions.find((p: any) => p.player_id === strongFaller.id);
-
-    expect(barelyPred.status).toBe('Unlikely to change today');
-    expect(risePred.status.toLowerCase()).toBe('very likely to rise today');
-    expect(fallPred.status.toLowerCase()).toBe('very likely to drop today');
+    for (const [element, assertStatus] of cases) {
+      const pred = predictions.find((p: any) => p.player_id === element.id);
+      expect(pred).toBeDefined();
+      assertStatus(pred.status);
+    }
   });
 
   it('hourly_rate is (predicted_progress - progress) / hours remaining until the next 00:00 UK price update', () => {

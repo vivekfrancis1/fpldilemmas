@@ -1,4 +1,5 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
+import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import express from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
@@ -13117,6 +13118,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const xMinsPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
           const pointsFromMinutesPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
           const availabilityRatioPerGWById = new Map<number, { [key: string]: number }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
+          // Which gameweeks' xMins come from Copilot's real per-gameweek forecast (vs the flat history-based estimate).
+          const copilotCoveredPerGWById = new Map<number, { [key: string]: boolean }>(playerMinutesProjections.map((r: any) => [r.playerId, {}]));
 
           for (let gw = gwStart; gw <= gwEnd; gw++) {
             // Copilot's per-gameweek xMins export overrides the flat, history-based baseXMins
@@ -13154,6 +13157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const ratio = baseXMins > 0 ? adjustedXMins / baseXMins : 0;
                 const baseMinutesPoints = baseMinutesPointsById.get(id) || 0;
                 xMinsPerGWById.get(id)![`gw${gw}`] = Math.round(adjustedXMins * 10) / 10;
+                copilotCoveredPerGWById.get(id)![`gw${gw}`] = copilotXminsByPlayerId.get(id)?.has(gw) === true;
                 pointsFromMinutesPerGWById.get(id)![`gw${gw}`] = Math.round(minutesPointsForGW(baseMinutesPoints, baseXMinsById.get(id) || 0, adjustedXMins) * 100) / 100;
                 availabilityRatioPerGWById.get(id)![`gw${gw}`] = Math.round(ratio * 1000) / 1000;
               }
@@ -13171,6 +13175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ratioPerGW['gw39'] = p ? calculateAvailabilityProbability(p, 39, currentGameweek, events) : 1;
             (result as any).pointsFromMinutesPerGW = perGW;
             (result as any).xMinsPerGW = xMinsPerGWById.get(result.playerId) || {};
+            (result as any).xMinsFromCopilotPerGW = copilotCoveredPerGWById.get(result.playerId) || {};
             // Reallocation-aware per-GW multiplier — reflects both this player's own injury
             // status AND any boost from a same-team-same-position teammate's absence (see
             // server/xmins-reallocation.ts). Other components' projections should use this in
@@ -13360,18 +13365,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // a same-team-same-position teammate's absence, in the same multiplicative slot.
           const availabilityProb = playerMinutes.availabilityRatioPerGW?.[`gw${gw}`]
             ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
+          // 60+ minute chance from this gameweek's projected minutes (see server/clean-sheet-minutes.ts) —
+          // only for gameweeks Copilot actually forecasts; beyond them xMins is a flat history-based
+          // average (per appearance), too thin to treat as a certain 60+, so the historical share applies.
+          // The xMins-based factor already includes availability, so availabilityProb isn't multiplied in again.
+          const minutesFactor = cleanSheetMinutesFactor({
+            adjustedXMins: playerMinutes.xMinsFromCopilotPerGW?.[`gw${gw}`] ? playerMinutes.xMinsPerGW?.[`gw${gw}`] : undefined,
+            availabilityRatio: playerMinutes.availabilityRatioPerGW?.[`gw${gw}`],
+            historicalPct60Plus: adjustedPct60Plus,
+            availabilityProb,
+          });
           let cleanSheetPointsForGW = 0;
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
           if (teamCleanSheetPercent !== undefined) {
             const absenceFactor = defensiveAbsenceMap.get(player.team) ?? 1.0;
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
+                const fixtureCSPoints = minutesFactor * (fd.cleanSheetOdds / 100) * absenceFactor * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({ opponent: fd.opponent, isHome: fd.isHome, cleanSheetPoints: Math.round(fixtureCSPoints * 100) / 100 });
               });
             } else {
-              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
+              cleanSheetPointsForGW = minutesFactor * (teamCleanSheetPercent / 100) * absenceFactor * cleanSheetPoints;
               gwFixtureDetails.push({ opponent: 'OPP', isHome: true, cleanSheetPoints: Math.round(cleanSheetPointsForGW * 100) / 100 });
             }
           }
@@ -18161,7 +18176,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Reallocation-aware ratio (see server/xmins-reallocation.ts)
                 const availabilityProb = playerMinutes?.availabilityRatioPerGW?.[`gw${gw}`]
                   ?? calculateAvailabilityProbability(player, gw, currentGameweek, events);
-                gwGoalsConceded = availabilityProb * pct60Plus * parseFloat(teamGoalsAgainst);
+                gwGoalsConceded = cleanSheetMinutesFactor({
+                  adjustedXMins: playerMinutes?.xMinsFromCopilotPerGW?.[`gw${gw}`] ? playerMinutes?.xMinsPerGW?.[`gw${gw}`] : undefined,
+                  availabilityRatio: playerMinutes?.availabilityRatioPerGW?.[`gw${gw}`],
+                  historicalPct60Plus: pct60Plus * 100,
+                  availabilityProb,
+                }) * parseFloat(teamGoalsAgainst);
                 
                 // Poisson-based goals conceded points calculation
                 // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)

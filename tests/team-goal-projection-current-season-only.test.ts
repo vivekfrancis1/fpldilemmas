@@ -72,6 +72,12 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
       return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
     };
 
-    expect(avgProjected(bestAttack.shortName) - avgProjected(worstAttack.shortName)).toBeGreaterThan(0.5);
+    // Scale the bar to how far apart the two teams' real attacks actually are (the attack half of
+    // the dynamic formula is 0.25 x goals/game + 0.25 x xG/game), not a fixed number that only
+    // holds when results happen to be extreme. The exact formula is checked by the test above.
+    const attackSpread =
+      0.25 * (bestAttack.goalsFor / bestAttack.played - worstAttack.goalsFor / worstAttack.played) +
+      0.25 * (bestAttack.expectedGoalsFor / bestAttack.played - worstAttack.expectedGoalsFor / worstAttack.played);
+    expect(avgProjected(bestAttack.shortName) - avgProjected(worstAttack.shortName)).toBeGreaterThan(0.4 * attackSpread);
   });
 });
