@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { pool } from "./db";
 import { CURRENT_SEASON } from "../shared/schema";
+import { hashCopilotExport } from "./copilot-xmins-sync-utils";
 
 export const COPILOT_XMINS_JSON_PATH = path.join(
   process.cwd(),
@@ -70,33 +71,93 @@ export async function ingestCopilotXmins(): Promise<CopilotXminsIngestResult | n
 
   const stat = fs.statSync(COPILOT_XMINS_JSON_PATH);
   const raw = fs.readFileSync(COPILOT_XMINS_JSON_PATH, "utf-8");
-  return ingestCopilotExport(JSON.parse(raw), stat.mtimeMs);
+  return ingestCopilotExport(JSON.parse(raw), stat.mtimeMs, { fileHash: hashCopilotExport(raw) });
 }
 
-// Writes an already-parsed export to copilot_xmins_projections (replacing the gameweeks it covers).
-export async function ingestCopilotExport(data: CopilotExport, sourceMtimeMs: number): Promise<CopilotXminsIngestResult> {
+// Snapshot history of every distinct export that has been loaded, so forecasts can later be
+// back-tested against realised minutes/points. Created on demand so no manual schema push is needed.
+export async function ensureCopilotHistoryTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS copilot_xmins_history (
+      file_hash text NOT NULL,
+      source_last_updated text,
+      season text NOT NULL,
+      gameweek integer NOT NULL,
+      player_id integer NOT NULL,
+      x_mins real NOT NULL,
+      x_pts real,
+      loaded_at timestamptz NOT NULL DEFAULT now()
+    )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS copilot_xmins_history_hash_idx ON copilot_xmins_history (file_hash)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS copilot_xmins_history_player_gw_idx ON copilot_xmins_history (player_id, gameweek)`);
+}
+
+export async function isCopilotFileAlreadyLoaded(fileHash: string): Promise<boolean> {
+  await ensureCopilotHistoryTable();
+  const { rows } = await pool.query(`SELECT 1 FROM copilot_xmins_history WHERE file_hash = $1 LIMIT 1`, [fileHash]);
+  return rows.length > 0;
+}
+
+const INSERT_CHUNK = 2000; // rows per multi-row INSERT (keeps parameter counts far below Postgres' 65535 limit)
+
+// Writes an already-parsed export to copilot_xmins_projections (replacing the gameweeks it covers)
+// and appends a snapshot to copilot_xmins_history, all in one transaction. When `fileHash` is given
+// and that exact file was already loaded, nothing is written and `alreadyLoaded` is true.
+export async function ingestCopilotExport(
+  data: CopilotExport,
+  sourceMtimeMs: number,
+  opts: { fileHash?: string } = {}
+): Promise<CopilotXminsIngestResult & { alreadyLoaded?: boolean }> {
   const rows = extractCopilotRows(data);
+  const base = { written: 0, gameweeks: data.gameweeks, lastUpdated: data.last_updated, sourceMtimeMs };
 
-  await pool.query(
-    `DELETE FROM copilot_xmins_projections WHERE season = $1 AND gameweek = ANY($2)`,
-    [CURRENT_SEASON, data.gameweeks],
-  );
+  await ensureCopilotHistoryTable();
+  if (opts.fileHash && (await isCopilotFileAlreadyLoaded(opts.fileHash))) return { ...base, alreadyLoaded: true };
 
-  // Bulk insert via a single multi-row statement — a one-row-at-a-time loop over ~3,700 rows
-  // (626 players x 6 gameweeks) took minutes; this takes a fraction of a second.
-  if (rows.length > 0) {
-    const values: string[] = [];
-    const params: unknown[] = [];
-    rows.forEach((row, i) => {
-      const base = i * 5;
-      values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
-      params.push(row.playerId, CURRENT_SEASON, row.gameweek, row.xMins, row.xPts);
-    });
-    await pool.query(
-      `INSERT INTO copilot_xmins_projections (player_id, season, gameweek, x_mins, x_pts) VALUES ${values.join(", ")}`,
-      params,
-    );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`DELETE FROM copilot_xmins_projections WHERE season = $1 AND gameweek = ANY($2)`, [CURRENT_SEASON, data.gameweeks]);
+
+    // Bulk multi-row inserts — a one-row-at-a-time loop over ~4,000 rows took minutes.
+    for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
+      const chunk = rows.slice(start, start + INSERT_CHUNK);
+      const values: string[] = [];
+      const params: unknown[] = [];
+      chunk.forEach((row, i) => {
+        const b = i * 5;
+        values.push(`($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5})`);
+        params.push(row.playerId, CURRENT_SEASON, row.gameweek, row.xMins, row.xPts);
+      });
+      await client.query(
+        `INSERT INTO copilot_xmins_projections (player_id, season, gameweek, x_mins, x_pts) VALUES ${values.join(", ")}`,
+        params,
+      );
+    }
+
+    if (opts.fileHash) {
+      for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
+        const chunk = rows.slice(start, start + INSERT_CHUNK);
+        const values: string[] = [];
+        const params: unknown[] = [];
+        chunk.forEach((row, i) => {
+          const b = i * 7;
+          values.push(`($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7})`);
+          params.push(opts.fileHash, data.last_updated, CURRENT_SEASON, row.gameweek, row.playerId, row.xMins, row.xPts);
+        });
+        await client.query(
+          `INSERT INTO copilot_xmins_history (file_hash, source_last_updated, season, gameweek, player_id, x_mins, x_pts) VALUES ${values.join(", ")}`,
+          params,
+        );
+      }
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
   }
 
-  return { written: rows.length, gameweeks: data.gameweeks, lastUpdated: data.last_updated, sourceMtimeMs };
+  return { ...base, written: rows.length };
 }

@@ -1,5 +1,6 @@
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
+import { copilotDataChange } from "./copilot-xmins-sync-utils";
 import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
@@ -15659,6 +15660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/copilot-xmins/upload", requireAdmin, express.text({ type: "*/*", limit: "10mb" }), async (req, res) => {
     try {
       const { validateCopilotExport, ingestCopilotExport } = await import('./copilot-xmins-ingest');
+      const { hashCopilotExport } = await import('./copilot-xmins-sync-utils');
       let parsed: unknown;
       try {
         parsed = JSON.parse(typeof req.body === "string" ? req.body : "");
@@ -15671,7 +15673,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (e) {
         return res.status(400).json({ success: false, message: e instanceof Error ? e.message : String(e) });
       }
-      const result = await ingestCopilotExport(data, Date.now());
+      const result = await ingestCopilotExport(data, Date.now(), { fileHash: hashCopilotExport(req.body as string) });
+      if (result.alreadyLoaded) {
+        return res.json({ success: true, written: 0, gameweeks: result.gameweeks, lastUpdated: result.lastUpdated, message: "This exact file is already loaded — nothing changed." });
+      }
       res.json({
         success: true,
         written: result.written,
@@ -20031,6 +20036,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const cbitGWRangeCache = new Map<string, any>();
   const minutesGWRangeCache = new Map<string, any>();
   const savePointsGWRangeCache = new Map<string, any>();
+
+  // ── Auto-refresh when new Copilot xMins land ─────────────────────────────────────────────
+  // The Copilot export is loaded into copilot_xmins_projections by scripts/sync-copilot-xmins.ts
+  // (run by a file watcher on the admin's machine, or via the admin upload). This watcher notices
+  // the new data and runs the same two refreshes the admin would click — Minutes, then Player
+  // Total Points — so projections update without anyone touching the Cache Management page.
+  // Production only; the first check just records a baseline, so a restart never refreshes by itself.
+  if (process.env.NODE_ENV === "production") {
+    let lastCopilotMarker: string | null | undefined = undefined;
+    let copilotRefreshRunning = false;
+    let copilotRefreshFailures = 0;
+    const checkForNewCopilotData = async () => {
+      if (copilotRefreshRunning) return;
+      try {
+        const { rows } = await pool.query(`SELECT max(calculated_at) AS m FROM copilot_xmins_projections WHERE season = $1`, [CURRENT_SEASON]);
+        const current: string | null = rows[0]?.m ? new Date(rows[0].m).toISOString() : null;
+        const change = copilotDataChange(lastCopilotMarker, current);
+        if (change === "baseline") { lastCopilotMarker = current; return; }
+        if (change === "unchanged") { copilotRefreshFailures = 0; return; }
+        copilotRefreshRunning = true;
+        console.log(`🧭 New Copilot xMins detected (${current}) — refreshing Minutes and Player Total Points caches...`);
+        try {
+          const { projectionCacheWorker } = await import('./projection-cache-worker');
+          playerMinutesCache.clear();
+          await projectionCacheWorker.cacheMinutesProjections();
+          await fplScoringCacheService.updateAllScoringData();
+          cbitGWRangeCache.clear();
+          minutesGWRangeCache.clear();
+          savePointsGWRangeCache.clear();
+          lastCopilotMarker = current;
+          copilotRefreshFailures = 0;
+          console.log("✅ Copilot xMins auto-refresh complete");
+        } catch (e) {
+          copilotRefreshFailures++;
+          console.error(`⚠️ Copilot xMins auto-refresh failed (attempt ${copilotRefreshFailures}/3):`, e);
+          if (copilotRefreshFailures >= 3) lastCopilotMarker = current; // give up until the next new load
+        } finally {
+          copilotRefreshRunning = false;
+        }
+      } catch (e) {
+        console.error("⚠️ Copilot xMins watcher check failed:", e);
+      }
+    };
+    checkForNewCopilotData();
+    setInterval(checkForNewCopilotData, 5 * 60 * 1000);
+  }
 
   function transformSavePointsData(rawData: any[], sgw: number | null, egw: number | null): { [playerId: number]: { gameweeks: any[], seasonTotal: number } } {
     const transformedData: { [playerId: number]: { gameweeks: any[], seasonTotal: number } } = {};
