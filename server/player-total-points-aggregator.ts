@@ -148,6 +148,19 @@ export class PlayerTotalPointsAggregator {
       console.log(`✅ Player Total Points aggregation completed successfully - ${aggregatedData.length} players cached`);
       
       await this.saveToDatabaseStorage(aggregatedData, startGameweek, endGameweek);
+
+      // Snapshot this aggregation for later accuracy back-testing (server/projection-snapshots.ts).
+      // Production only — local dev servers share the production database and must not add rows —
+      // and never allowed to fail the aggregation itself.
+      if (process.env.NODE_ENV === "production") {
+        try {
+          const { saveProjectionSnapshot } = await import("./projection-snapshots");
+          const id = await saveProjectionSnapshot(aggregatedData, startGameweek, endGameweek);
+          console.log(`📸 Projection snapshot saved (${id}) for GW${startGameweek}-${endGameweek}`);
+        } catch (snapshotError) {
+          console.warn("⚠️ Projection snapshot failed (non-fatal):", (snapshotError as Error).message);
+        }
+      }
       
     } catch (error) {
       console.error("❌ Player Total Points aggregation failed:", error);
