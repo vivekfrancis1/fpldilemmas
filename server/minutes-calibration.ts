@@ -70,3 +70,29 @@ export function calibrateMinutes(
     p75plus: s.n ? s.d / s.n : 0,
   }));
 }
+
+// Average realised minutes inside each outcome bucket, over the same samples as calibrateMinutes.
+// Used so per-bucket maths (e.g. Poisson exposure = minutes / 90) uses real bucket means.
+export function calibrateBucketMinutes(
+  rows: MinutesRow[],
+  opts: { window: number; minGameweek: number }
+): { zero: number; p1to29: number; p30to59: number; p60to74: number; p75plus: number } {
+  const sum = { zero: 0, p1to29: 0, p30to59: 0, p60to74: 0, p75plus: 0 };
+  const cnt = { zero: 0, p1to29: 0, p30to59: 0, p60to74: 0, p75plus: 0 };
+  const byPlayer = new Map<number, MinutesRow[]>();
+  for (const r of rows) {
+    if (!byPlayer.has(r.playerId)) byPlayer.set(r.playerId, []);
+    byPlayer.get(r.playerId)!.push(r);
+  }
+  for (const history of byPlayer.values()) {
+    history.sort((p, q) => p.gameweek - q.gameweek);
+    for (let i = opts.window; i < history.length; i++) {
+      if (history[i].gameweek < opts.minGameweek) continue;
+      const m = history[i].minutes;
+      const key = m === 0 ? "zero" : m < 30 ? "p1to29" : m < 60 ? "p30to59" : m < 75 ? "p60to74" : "p75plus";
+      sum[key] += m; cnt[key]++;
+    }
+  }
+  const mean = (k: keyof typeof sum) => (cnt[k] ? sum[k] / cnt[k] : 0);
+  return { zero: 0, p1to29: mean("p1to29"), p30to59: mean("p30to59"), p60to74: mean("p60to74"), p75plus: mean("p75plus") };
+}

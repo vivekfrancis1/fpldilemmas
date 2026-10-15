@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calibrateMinutes, X_BIN_EDGES } from "../server/minutes-calibration";
+import { calibrateMinutes, calibrateBucketMinutes, X_BIN_EDGES } from "../server/minutes-calibration";
 
 const rows = (playerId: number, mins: number[]) => mins.map((minutes, i) => ({ playerId, gameweek: i + 1, minutes }));
 
@@ -41,5 +41,20 @@ describe("calibrateMinutes", () => {
 
   it("exposes ascending, contiguous bin edges", () => {
     for (let i = 1; i < X_BIN_EDGES.length; i++) expect(X_BIN_EDGES[i]).toBeGreaterThan(X_BIN_EDGES[i - 1]);
+  });
+});
+
+describe("calibrateBucketMinutes", () => {
+  it("returns the average realised minutes inside each outcome bucket", () => {
+    // next-gameweek outcomes after a window of 90s: 90, 70, 20, 45, 0
+    const history = [90, 90, 90, 90, 90];
+    const mk = (id: number, next: number) => rows(id, [...history, next]);
+    const all = [mk(1, 90), mk(2, 70), mk(3, 20), mk(4, 45), mk(5, 0), mk(6, 80)];
+    const b = calibrateBucketMinutes(all, { window: 5, minGameweek: 6 });
+    expect(b.zero).toBe(0);
+    expect(b.p1to29).toBe(20);
+    expect(b.p30to59).toBe(45);
+    expect(b.p60to74).toBe(70);
+    expect(b.p75plus).toBeCloseTo(85, 6); // mean of 90 and 80
   });
 });

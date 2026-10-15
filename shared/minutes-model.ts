@@ -4,7 +4,7 @@
 // the table was built from. That makes it valid for any forecast whose mean is right — notably
 // Copilot's xMins, which already include injury/news risk. Anchored at 0 (never plays) and 90
 // (always a 75+ appearance), and linearly interpolated, so every output is a proper distribution.
-import { MINUTES_BINS } from "./minutes-distribution.generated";
+import { MINUTES_BINS, BUCKET_MEAN_MINUTES } from "./minutes-distribution.generated";
 
 export interface MinutesDistribution {
   pZero: number;
@@ -14,9 +14,9 @@ export interface MinutesDistribution {
   p75plus: number;
 }
 
-// Representative minutes within each bucket, for turning a distribution back into a mean or
-// feeding per-bucket maths (e.g. Poisson with mean = rate x minutes / 90).
-export const BUCKET_MINUTES = { zero: 0, p1to29: 15, p30to59: 45, p60to74: 67, p75plus: 86 } as const;
+// Real average minutes within each bucket (from the calibration data), for turning a
+// distribution back into a mean or feeding per-bucket maths (Poisson mean = rate x minutes / 90).
+export const BUCKET_MINUTES = BUCKET_MEAN_MINUTES;
 
 type Knot = { e: number } & MinutesDistribution;
 

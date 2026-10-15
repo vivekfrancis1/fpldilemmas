@@ -2,6 +2,9 @@
 // Calibrated on: 2025/26 (trailing 5-gameweek mean minutes -> next-gameweek minutes).
 import type { MinutesBin } from "../server/minutes-calibration";
 
+// Average realised minutes inside each outcome bucket.
+export const BUCKET_MEAN_MINUTES = {"zero":0,"p1to29":13.11,"p30to59":44.65,"p60to74":67.46,"p75plus":89.49} as const;
+
 export const MINUTES_BINS: MinutesBin[] = [
   {
     "lo": 0,
