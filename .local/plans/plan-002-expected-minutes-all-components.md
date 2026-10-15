@@ -85,3 +85,7 @@ Both were built and run (no projection numbers changed). Commit: see git log "Ca
 Position priors would be calibrated from 2025/26 full-season data (goals/assists per 90 by position), same method spirit as P0.
 
 New decision needed: approve the revised order (P3 first, with position priors).
+
+## 8. Decision 2026-10-15 — no position-average shrinkage
+
+The user rejected shrinking goal/assist/bonus rates toward position averages (or position+price priors). Section 7's "P3 first, with position priors" is withdrawn. The existing minutes-based shrinkage (360 min, capped at same-team same-position teammates' pooled rate) stays. The Van Hecke/low-scoring-team defender distortion found in section 7 is therefore still open; any fix must avoid position-average priors (and last-season blending). Remaining plan phases are unchanged and still need the user's go-ahead.
