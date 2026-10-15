@@ -24,3 +24,19 @@ describe("copilotDataChange", () => {
     expect(copilotDataChange(undefined, null)).toBe("baseline");
   });
 });
+
+describe("copilotDataChange with a persisted 'last refreshed' marker (restart behaviour)", () => {
+  const loaded = "2026-10-15T17:46:00.000Z";
+  it("a deploy with Copilot data loaded but never refreshed (no persisted marker -> null) triggers one refresh", () => {
+    expect(copilotDataChange(null, loaded)).toBe("changed");
+  });
+  it("an ordinary restart (persisted marker equals the newest load) does not refresh again", () => {
+    expect(copilotDataChange(loaded, loaded)).toBe("unchanged");
+  });
+  it("a restart after a newer load landed while the server was down refreshes", () => {
+    expect(copilotDataChange("2026-10-09T11:29:50.825Z", loaded)).toBe("changed");
+  });
+  it("when persisted state can't be read (undefined) it only records a baseline, never refreshing blindly", () => {
+    expect(copilotDataChange(undefined, loaded)).toBe("baseline");
+  });
+});

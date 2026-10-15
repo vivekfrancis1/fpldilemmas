@@ -20169,14 +20169,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // (run by a file watcher on the admin's machine, or via the admin upload). This watcher notices
   // the new data and runs the same two refreshes the admin would click — Minutes, then Player
   // Total Points — so projections update without anyone touching the Cache Management page.
-  // Production only; the first check just records a baseline, so a restart never refreshes by itself.
+  // Production only. Which load the caches were last refreshed for is persisted, so a deploy refreshes
+  // once if Copilot data was loaded but never refreshed, and ordinary restarts do nothing.
   if (process.env.NODE_ENV === "production") {
+    // Initialised from the persisted "last refreshed" marker (server/copilot-refresh-state.ts): on a
+    // deploy with Copilot data loaded but never refreshed this triggers exactly one refresh; on an
+    // ordinary restart the marker matches and nothing happens. undefined (unreadable) = baseline only.
     let lastCopilotMarker: string | null | undefined = undefined;
+    let copilotMarkerLoaded = false;
     let copilotRefreshRunning = false;
     let copilotRefreshFailures = 0;
     const checkForNewCopilotData = async () => {
       if (copilotRefreshRunning) return;
       try {
+        if (!copilotMarkerLoaded) {
+          const { loadRefreshedMarker } = await import('./copilot-refresh-state');
+          lastCopilotMarker = await loadRefreshedMarker();
+          copilotMarkerLoaded = true;
+        }
         const { rows } = await pool.query(`SELECT max(calculated_at) AS m FROM copilot_xmins_projections WHERE season = $1`, [CURRENT_SEASON]);
         const current: string | null = rows[0]?.m ? new Date(rows[0].m).toISOString() : null;
         const change = copilotDataChange(lastCopilotMarker, current);
@@ -20194,11 +20204,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           savePointsGWRangeCache.clear();
           lastCopilotMarker = current;
           copilotRefreshFailures = 0;
+          if (current) {
+            const { saveRefreshedMarker } = await import('./copilot-refresh-state');
+            await saveRefreshedMarker(current);
+          }
           console.log("✅ Copilot xMins auto-refresh complete");
         } catch (e) {
           copilotRefreshFailures++;
           console.error(`⚠️ Copilot xMins auto-refresh failed (attempt ${copilotRefreshFailures}/3):`, e);
-          if (copilotRefreshFailures >= 3) lastCopilotMarker = current; // give up until the next new load
+          // After 3 failures stop retrying in this process (in memory only — the marker is NOT persisted,
+          // so a restart will try again).
+          if (copilotRefreshFailures >= 3) lastCopilotMarker = current;
         } finally {
           copilotRefreshRunning = false;
         }
