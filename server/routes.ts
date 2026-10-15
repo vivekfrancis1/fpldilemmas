@@ -3,6 +3,7 @@ import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import { copilotDataChange } from "./copilot-xmins-sync-utils";
 import { playerWeight, allocateTeamTotal } from "./minutes-allocation";
 import { fixtureCountsByTeamGW } from "./fixture-multiplicity";
+import { adjustPlayerForAvailability } from "./availability-player-adjustment";
 import { expectedMinutesModeEnabled, coveredXMins, minutesPointsFromXMins, expectedGoalsConcededFromXMins, thresholdChanceFromXMins, poissonGoalsConcededPenalty, fractionOfMatch, savesPointsFromXMins } from "./minutes-scoring";
 import express from "express";
 import type { Express } from "express";
@@ -14819,112 +14820,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Helper: apply availability adjustments to a raw projections array.
       // Called both on cache-hit (adjusted path) and after fresh computation.
       const applyAvailabilityAdjustments = (rawData: any[]): any[] => {
-        const bpEvts: BootstrapEvent[] = bootstrapData?.events || [];
-        const adjCompKeys = [
-          'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
-          'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
-          'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
-          'pointsFromDefensiveContributions'
-        ];
-        return rawData.map((player: any) => {
-          const bsPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
-          if (!bsPlayer) return { ...player, availabilityAdjustments: {} };
-          const chanceNextRound = bsPlayer.chance_of_playing_next_round;
-          const bpSt = bsPlayer.status || 'a';
-          const nextGW = currentGameweek + 1;
-          const availAdj: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
-          const origGWProj: { [gw: string]: number } = {};
-          const gwProj = { ...player.gameweekProjections };
-          const sortedGWNums = Object.keys(gwProj).map(Number).sort((a, b) => a - b);
-
-          // Compute per-GW probabilities once
-          const gwProbMap: { [gw: number]: number } = {};
-          for (const gwNum of sortedGWNums) {
-            gwProbMap[gwNum] = calculateAvailabilityProbability(bsPlayer, gwNum, currentGameweek, bpEvts);
-          }
-
-          // Unscale component breakdowns so adjusted and raw responses carry the same
-          // per-component values — only gameweekProjections/totalExpectedPoints are zeroed.
-          // Pass 1: unscale prob > 0 GWs
-          const unscaledComps: { [key: string]: { [gw: number]: number } } = {};
-          for (const gwNum of sortedGWNums) {
-            const p = gwProbMap[gwNum];
-            if (p > 0) {
-              const sf = p < 1.0 ? 1 / p : 1.0;
-              for (const key of adjCompKeys) {
-                if (!unscaledComps[key]) unscaledComps[key] = {};
-                unscaledComps[key][gwNum] = Math.round(((player[key]?.[gwNum.toString()] || 0) * sf) * 100) / 100;
-              }
-            }
-          }
-          // Pass 2: prob=0 GWs — estimate from nearest future non-zero-prob GW
-          for (const gwNum of sortedGWNums) {
-            if (gwProbMap[gwNum] > 0) continue;
-            const refGW = sortedGWNums.find(g => g > gwNum && unscaledComps[adjCompKeys[0]]?.[g] !== undefined)
-              ?? sortedGWNums.find(g => unscaledComps[adjCompKeys[0]]?.[g] !== undefined);
-            for (const key of adjCompKeys) {
-              if (!unscaledComps[key]) unscaledComps[key] = {};
-              unscaledComps[key][gwNum] = refGW !== undefined ? (unscaledComps[key]?.[refGW] ?? 0) : 0;
-            }
-          }
-          // Build unscaled component objects (only for keys that exist on the player)
-          const unscaledCompResult: { [key: string]: { [gw: string]: number } } = {};
-          for (const key of adjCompKeys) {
-            if (!player[key]) continue;
-            unscaledCompResult[key] = { ...player[key] };
-            for (const gwNum of sortedGWNums) {
-              if (unscaledComps[key]?.[gwNum] !== undefined) {
-                unscaledCompResult[key][gwNum.toString()] = unscaledComps[key][gwNum];
-              }
-            }
-          }
-          // Recalculate rolled-up totalPoints* fields to match the unscaled per-GW
-          // breakdowns.  Without this the totalPoints* fields stay at their original
-          // (probability-weighted) values while the per-GW entries are unscaled,
-          // causing sum(pointsFromGoals[gw]) ≠ totalPointsFromGoals for
-          // availability-adjusted players.
-          const unscaledTotals: { [key: string]: number } = {};
-          for (const key of Object.keys(unscaledCompResult)) {
-            const totalKey = 'total' + key.charAt(0).toUpperCase() + key.slice(1);
-            unscaledTotals[totalKey] = Math.round(
-              Object.values(unscaledCompResult[key] as Record<string, number>)
-                .reduce((sum: number, v: number) => sum + (v ?? 0), 0) * 100
-            ) / 100;
-          }
-
-          for (const gwKey of Object.keys(gwProj)) {
-            const gw = parseInt(gwKey);
-            const prob = gwProbMap[gw] ?? 1.0;
-            if (prob >= 1.0) continue;
-            const rawVal = gwProj[gwKey] ?? 0;
-            if (prob === 0) {
-              origGWProj[gwKey] = rawVal;
-              gwProj[gwKey] = 0;
-              const reason = bpSt === 's' ? 'Suspended' : bpSt === 'i' ? 'Injured' : 'Unavailable';
-              availAdj[gwKey] = { original: rawVal, adjusted: 0, reason };
-            } else if (rawVal > 0) {
-              const original = Math.round((rawVal / prob) * 100) / 100;
-              let reason: string;
-              if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
-                reason = `${chanceNextRound}% chance of playing`;
-              } else {
-                reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
-              }
-              availAdj[gwKey] = { original, adjusted: Math.round(rawVal * 100) / 100, reason };
-            }
-          }
-          const scaledTotal = (Object.values(gwProj) as number[]).reduce((s: number, v: number) => s + v, 0);
-          const out: any = {
-            ...player,
-            ...unscaledCompResult,
-            ...unscaledTotals,
-            gameweekProjections: gwProj,
-            totalExpectedPoints: Math.round(scaledTotal * 100) / 100,
-            availabilityAdjustments: availAdj,
-          };
-          if (Object.keys(origGWProj).length > 0) out.originalGameweekProjections = origGWProj;
-          return out;
-        });
+        // Single shared implementation — see server/availability-player-adjustment.ts
+        const ctx = { currentGameweek, events: (bootstrapData?.events || []) as BootstrapEvent[] };
+        return rawData.map((player: any) =>
+          adjustPlayerForAvailability(player, bootstrapData?.elements?.find((p: any) => p.id === player.playerId), ctx)
+        );
       };
 
       // Helper: reconstruct raw (full-health) projections by reversing per-GW availability discounting.
@@ -19095,135 +18995,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPointsCache.delete(currentCacheKey);
             // Continue to fresh calculation below
           } else {
-            // Adjusted mode: enrich cached data with latest availability info from bootstrap.
-            // Deep-clone the cached array before any transformation so that nested objects
-            // (e.g. fixtureDetails sub-arrays) are not shared between the cache and the output.
-            // Without this, a shallow { ...player } spread leaves nested refs intact, and any
-            // mutation downstream would silently corrupt the stored cache entry.
-            const adjustedCompKeys = [
-              'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
-              'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
-              'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
-              'pointsFromDefensiveContributions'
-            ];
+            // Adjusted mode: enrich cached data with the latest availability info from bootstrap, using the
+            // same shared implementation as the live aggregator (server/availability-player-adjustment.ts).
+            // The cached array is deep-cloned first so nested objects are never shared with the stored entry.
+            const hitCtx = { currentGameweek, events: (bootstrapData?.events || []) as BootstrapEvent[] };
             const enrichedData = (structuredClone(cachedData.data) as any[]).map((player: any) => {
               const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
-              const chanceNextRound = bootstrapPlayer?.chance_of_playing_next_round ?? 100;
-              const bpStatus = bootstrapPlayer?.status || 'a';
-              const nextGW = currentGameweek + 1;
-              const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
-              const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
-              const originalGameweekProjections: { [gw: string]: number } = {};
-              const gameweekProjections: { [gw: string]: number } = { ...player.gameweekProjections };
-              // Strip GW39 from response
-              delete gameweekProjections['39'];
-
-              // Unscale component breakdowns so adjusted and raw responses carry the same
-              // per-component values — only gameweekProjections/totalExpectedPoints are zeroed.
-              const gwProbs: { [gw: number]: number } = {};
-              const sortedGWs = Object.keys(gameweekProjections).map(Number).sort((a, b) => a - b);
-              let unscaledComponentOverrides: { [key: string]: any } = {};
-              let unscaledTotalOverrides: { [key: string]: number } = {};
-
-              if (bootstrapPlayer) {
-                for (const gwNum of sortedGWs) {
-                  gwProbs[gwNum] = calculateAvailabilityProbability(bootstrapPlayer, gwNum, currentGameweek, bpEvents);
-                }
-                // Unscale component breakdowns: pass 1 (prob > 0 GWs)
-                const unscaledComps: { [key: string]: { [gw: number]: number } } = {};
-                for (const gwNum of sortedGWs) {
-                  const p = gwProbs[gwNum];
-                  if (p > 0) {
-                    const sf = p < 1.0 ? 1 / p : 1.0;
-                    for (const key of adjustedCompKeys) {
-                      if (!unscaledComps[key]) unscaledComps[key] = {};
-                      unscaledComps[key][gwNum] = Math.round(((player[key]?.[gwNum.toString()] || 0) * sf) * 100) / 100;
-                    }
-                  }
-                }
-                // Pass 2: prob=0 GWs — estimate from nearest future non-zero-prob GW
-                for (const gwNum of sortedGWs) {
-                  if (gwProbs[gwNum] > 0) continue;
-                  const refGW = sortedGWs.find(g => g > gwNum && unscaledComps[adjustedCompKeys[0]]?.[g] !== undefined)
-                    ?? sortedGWs.find(g => unscaledComps[adjustedCompKeys[0]]?.[g] !== undefined);
-                  for (const key of adjustedCompKeys) {
-                    if (!unscaledComps[key]) unscaledComps[key] = {};
-                    unscaledComps[key][gwNum] = refGW !== undefined ? (unscaledComps[key]?.[refGW] ?? 0) : 0;
-                  }
-                }
-                // Build unscaled component copies WITHOUT mutating the cached player object.
-                // Mutating player[key] directly would corrupt the in-memory cache on each request,
-                // causing exponential unscaling on every subsequent cache hit.
-                // structuredClone on each component map makes the isolation intent explicit at
-                // each mutation site, independent of the outer structuredClone guard above.
-                unscaledComponentOverrides = {};
-                for (const key of adjustedCompKeys) {
-                  if (!player[key]) continue;
-                  const compCopy: { [gw: string]: number } = structuredClone(player[key]);
-                  for (const gwNum of sortedGWs) {
-                    if (unscaledComps[key]?.[gwNum] !== undefined) {
-                      compCopy[gwNum.toString()] = unscaledComps[key][gwNum];
-                    }
-                  }
-                  unscaledComponentOverrides[key] = compCopy;
-                }
-                // Recalculate rolled-up totalPoints* fields to match the unscaled per-GW
-                // breakdowns.  Without this the totalPoints* fields stay at their original
-                // (probability-weighted) values while the per-GW entries are unscaled,
-                // causing sum(pointsFromGoals[gw]) ≠ totalPointsFromGoals for
-                // availability-adjusted players.
-                for (const key of Object.keys(unscaledComponentOverrides)) {
-                  const totalKey = 'total' + key.charAt(0).toUpperCase() + key.slice(1);
-                  unscaledTotalOverrides[totalKey] = Math.round(
-                    Object.values(unscaledComponentOverrides[key] as Record<string, number>)
-                      .reduce((sum: number, v: number) => sum + (v ?? 0), 0) * 100
-                  ) / 100;
-                }
-
-                for (const gwKey of Object.keys(gameweekProjections)) {
-                  const gw = parseInt(gwKey);
-                  const prob = gwProbs[gw] ?? 1.0;
-                  if (prob >= 1.0) continue;
-                  const rawValue = gameweekProjections[gwKey] ?? 0;
-                  if (prob === 0) {
-                    originalGameweekProjections[gwKey] = rawValue;
-                    gameweekProjections[gwKey] = 0;
-                    const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
-                    availabilityAdjustments[gwKey] = { original: rawValue, adjusted: 0, reason };
-                  } else if (rawValue > 0) {
-                    const original = Math.round((rawValue / prob) * 100) / 100;
-                    let reason: string;
-                    if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
-                      reason = `${chanceNextRound}% chance of playing`;
-                    } else {
-                      reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
-                    }
-                    availabilityAdjustments[gwKey] = { original, adjusted: Math.round(rawValue * 100) / 100, reason };
-                  }
-                }
-              }
-              // Recompute the total from the adjusted gameweeks, exactly as the live aggregator's
-              // applyAvailabilityAdjustments does. Zeroing a gameweek (injured / left the club) without
-              // this left the stored raw total in place, so a cache HIT disagreed with the cache MISS
-              // (live path) for the same player until the next cold start.
-              const adjustedTotal = Object.values(gameweekProjections).reduce((sum: number, v: number) => sum + v, 0);
-              const result: any = {
-                ...player,
-                ...unscaledComponentOverrides,
-                ...unscaledTotalOverrides,
-                gameweekProjections,
-                totalExpectedPoints: Math.round(adjustedTotal * 100) / 100,
-                chanceOfPlayingNextRound: chanceNextRound,
-                status: bpStatus,
+              return {
+                // GW39 is a synthetic TBC bucket and is never exposed from the cached endpoint
+                ...adjustPlayerForAvailability(player, bootstrapPlayer, hitCtx, { stripGW39: true }),
+                chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+                status: bootstrapPlayer?.status || 'a',
                 news: bootstrapPlayer?.news || '',
-                availabilityAdjustments
               };
-              if (Object.keys(originalGameweekProjections).length > 0) {
-                result.originalGameweekProjections = originalGameweekProjections;
-              }
-              return result;
             });
-            
+
             console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${enrichedData.length} players)`);
             return res.json(enrichedData);
           }
