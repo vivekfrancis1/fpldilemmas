@@ -81,6 +81,20 @@ export default function AdminCacheManagement() {
   useEffect(() => { fetchCacheStatus(); }, []);
 
   const [uploadingCopilot, setUploadingCopilot] = useState(false);
+  const [copilotStatus, setCopilotStatus] = useState<{ level: string; message: string; loadedAt: string | null } | null>(null);
+
+  const fetchCopilotStatus = async () => {
+    try {
+      const response = await fetch("/api/admin/copilot-xmins/status", { credentials: "include" });
+      if (response.ok) setCopilotStatus(await response.json());
+    } catch {
+      // status line is informational only
+    }
+  };
+
+  useEffect(() => {
+    fetchCopilotStatus();
+  }, []);
 
   const uploadCopilotXmins = async (file: File | undefined) => {
     if (!file) return;
@@ -97,6 +111,7 @@ export default function AdminCacheManagement() {
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
         toast({ title: "Copilot xMins loaded", description: data.message });
+        fetchCopilotStatus();
       } else {
         toast({ title: "Upload failed", description: data.message || `Server returned ${response.status}`, variant: "destructive" });
       }
@@ -304,6 +319,20 @@ export default function AdminCacheManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {copilotStatus && (
+              <div className="mb-3 flex items-center gap-2 text-xs">
+                <Badge
+                  className={
+                    copilotStatus.level === "fresh" ? "bg-green-600"
+                      : copilotStatus.level === "aging" ? "bg-amber-500"
+                      : "bg-red-600"
+                  }
+                >
+                  {copilotStatus.level === "fresh" ? "Up to date" : copilotStatus.level === "aging" ? "Older than expected" : copilotStatus.level === "none" ? "Nothing loaded" : "Stale"}
+                </Badge>
+                <span className="text-muted-foreground">{copilotStatus.message}</span>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mb-3">
               Upload the latest <code>copilot_xmins_xpts_next6.json</code>. It replaces the gameweeks it covers.
               Afterwards refresh Minutes, then Player Total Points.

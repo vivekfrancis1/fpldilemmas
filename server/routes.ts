@@ -15731,6 +15731,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // How fresh the loaded Copilot export is (see server/copilot-freshness.ts) — shown on the Cache
+  // Management page so a lapse in the twice-weekly updates is visible.
+  app.get("/api/admin/copilot-xmins/status", requireAdmin, async (_req, res) => {
+    try {
+      const { describeCopilotFreshness } = await import('./copilot-freshness');
+      let info: { sourceLastUpdated: string | null; loadedAt: string; gameweeks: number[] } | null = null;
+      try {
+        const latest = await pool.query(
+          `SELECT file_hash, source_last_updated, max(loaded_at) AS loaded_at
+             FROM copilot_xmins_history WHERE season = $1
+            GROUP BY file_hash, source_last_updated ORDER BY max(loaded_at) DESC LIMIT 1`,
+          [CURRENT_SEASON]
+        );
+        if (latest.rows[0]) {
+          const gws = await pool.query(
+            `SELECT DISTINCT gameweek FROM copilot_xmins_history WHERE file_hash = $1 ORDER BY gameweek`,
+            [latest.rows[0].file_hash]
+          );
+          info = {
+            sourceLastUpdated: latest.rows[0].source_last_updated,
+            loadedAt: new Date(latest.rows[0].loaded_at).toISOString(),
+            gameweeks: gws.rows.map((r: any) => r.gameweek),
+          };
+        }
+      } catch {
+        // history table not created yet (nothing loaded through the sync/upload) — fall through
+      }
+      if (!info) {
+        // Older loads (before history existed) still show up in the live projections table.
+        const live = await pool.query(
+          `SELECT max(calculated_at) AS loaded_at, array_agg(DISTINCT gameweek ORDER BY gameweek) AS gws
+             FROM copilot_xmins_projections WHERE season = $1`,
+          [CURRENT_SEASON]
+        );
+        if (live.rows[0]?.loaded_at) {
+          info = { sourceLastUpdated: null, loadedAt: new Date(live.rows[0].loaded_at).toISOString(), gameweeks: live.rows[0].gws || [] };
+        }
+      }
+      const bootstrapRes = await internalFetch("api/bootstrap-static");
+      const currentGW = bootstrapRes.ok ? computeCurrentGameweek((await bootstrapRes.json()).events) : 0;
+      res.json({ ...describeCopilotFreshness(info, new Date(), currentGW), sourceLastUpdated: info?.sourceLastUpdated ?? null, loadedAt: info?.loadedAt ?? null, gameweeks: info?.gameweeks ?? [] });
+    } catch (error) {
+      console.error("Error reading Copilot xMins status:", error);
+      res.status(500).json({ level: "none", message: "Could not read Copilot xMins status." });
+    }
+  });
+
   // Upload a fplcopilot.com xMins export (copilot_xmins_xpts_next6.json) straight to the database.
   // The file is third-party data that is deliberately not committed to git (so it never reaches
   // Railway's filesystem); this lets an admin drop each new export into production directly.
