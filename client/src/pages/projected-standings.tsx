@@ -330,11 +330,11 @@ export default function ProjectedStandings() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden shadow-lg border-0">
-          <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3">
+        <Card className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
+          <CardHeader className="border-b border-gray-100 bg-white py-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Trophy className="h-5 w-5" />
+                <Trophy className="h-5 w-5 text-indigo-500" />
                 {viewMode === "projected" ? "Projected Table" : "Current Table"}
               </CardTitle>
               <div className="flex items-center gap-2">
@@ -343,13 +343,13 @@ export default function ProjectedStandings() {
                   disabled={isRefreshing}
                   variant="outline"
                   size="sm"
-                  className="bg-white/10 hover:bg-white/20 border-white/30 text-white text-xs"
+                  className="text-xs text-gray-600"
                   data-testid="button-refresh-standings"
                 >
                   <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
                   {isRefreshing ? '...' : 'Refresh'}
                 </Button>
-                <span className="px-2 py-1 text-xs bg-white/20 text-white border border-white/30 rounded">
+                <span className="px-2.5 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
                   {viewMode === "projected"
                     ? `To ${totalGameweeks === 39 ? 'GW39 (TBC)' : `GW${totalGameweeks}`}`
                     : `GW${totalGameweeks}`}

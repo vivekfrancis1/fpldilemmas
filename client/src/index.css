@@ -299,11 +299,11 @@ html {
 }
 
 .fpl-content-area {
-  @apply py-1 sm:py-2;
+  @apply py-2 sm:py-4;
 }
 
 .fpl-section-spacing {
-  @apply space-y-2 sm:space-y-3;
+  @apply space-y-3 sm:space-y-4;
 }
 
 /* Utility Classes */
@@ -343,104 +343,97 @@ html {
   color: var(--fpl-text-muted);
 }
 
-/* Compact table rows: lets a whole 20-row team table fit on a laptop screen. Applied per page on the container. */
+/* ---------------------------------------------------------------------------------------------
+   Data pages: comfortable density. Rows ~40px, readable type, soft separators. Pages fit the screen
+   by LAYOUT (side-by-side panels, fewer rows per page), not by squeezing rows. Applied per page on
+   the container via the `compact-rows` class (kept for the pages that already opt in).
+   --------------------------------------------------------------------------------------------- */
 .compact-rows table td,
 .compact-rows table th {
-  padding-top: 1px !important;
-  padding-bottom: 1px !important;
-  line-height: 1.2;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
 }
-.compact-rows table td img { max-height: 1.125rem; }
+.compact-rows table td img { max-height: 1.5rem; max-width: 1.5rem; }
+.compact-rows table tbody tr { border-color: var(--fpl-border); }
 /* Player name cells with a fixed 110px width: a little wider, and the "in my team" icon stays on the name line */
 .compact-rows table td [class*="md:w-[110px]"] { width: 9.5rem !important; }
 .compact-rows table td .flex.flex-wrap.items-center { flex-wrap: nowrap; }
 /* Team/player name column: never wrap onto two lines */
 .compact-rows table td.sticky,
 .compact-rows table th.sticky { white-space: nowrap; }
-/* Rank bubbles and the small grey sub-label under a team/player name (e.g. the short code) */
+/* Rank bubbles */
 .compact-rows table td [class*="rounded-full"][class*="md:w-6"],
-.compact-rows table td [class*="rounded-full"][class~="w-7"] { width: 1.25rem !important; height: 1.25rem !important; font-size: 0.6875rem !important; }
-.compact-rows table td div[class*="text-[10px]"][class*="text-gray-500"] { display: none !important; }
-/* fpl-card pages (player tables): slimmer card headers and titles */
-.compact-rows .fpl-card-header { padding: 0.25rem 0.75rem !important; }
-.compact-rows .fpl-card-title { font-size: 0.9375rem !important; line-height: 1.25rem !important; }
-.compact-rows .fpl-card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 0.75rem; }
-.compact-rows .fpl-card-content { padding-top: 0 !important; }
-/* Search + "More Filters" row (player statistics): single slim row */
-.compact-rows .fpl-filters .fpl-card-content { padding: 0.25rem 0.5rem !important; }
+.compact-rows table td [class*="rounded-full"][class~="w-7"] { width: 1.5rem !important; height: 1.5rem !important; font-size: 0.75rem !important; }
+/* fpl-card pages (player tables): card headers and titles */
+.compact-rows .fpl-card-header { padding: 0.625rem 1rem !important; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 0.75rem; }
+.compact-rows .fpl-card-title { font-size: 1rem !important; line-height: 1.5rem !important; }
+.compact-rows .fpl-filters .fpl-card-content { padding: 0.5rem 0.75rem !important; }
 .compact-rows .fpl-filters { margin-bottom: 0 !important; }
-.compact-rows .fpl-filters input { height: 2rem; }
+.compact-rows .fpl-filters input { height: 2.25rem; }
 /* Control grids (From / To / Search ...): label beside its input instead of above it */
-.compact-rows .grid > .space-y-1 { display: flex; align-items: center; gap: 0.375rem; }
+.compact-rows .grid > .space-y-1 { display: flex; align-items: center; gap: 0.5rem; }
 .compact-rows .grid > .space-y-1 > * { margin-top: 0 !important; }
 .compact-rows .grid > .space-y-1 > label { white-space: nowrap; }
-/* Name + small grey "TEAM · POS" line become one line; jersey/badge images stay small */
-.compact-rows table td div.flex.flex-col.overflow-hidden { flex-direction: row !important; align-items: baseline; column-gap: 0.375rem; }
-.compact-rows table td img { max-width: 1.25rem; }
-/* Looser vertical stacks (space-y-4 / space-y-6) get tighter on compact pages */
-.compact-rows .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem !important; }
-.compact-rows .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
-/* Big card bottom margins on compact pages (spacing between sections comes from the section's own gap) */
-.compact-rows [class~="mb-6"] { margin-bottom: 0.5rem !important; }
+/* Redundant small grey short-code under a full team name (e.g. "Man City / MCI"): hide it, rows stay one line */
+.compact-rows table td div[class*="text-[10px]"][class*="text-gray-500"][class*="md:block"] { display: none !important; }
+/* Name + small grey "TEAM · POS" line on one line */
+.compact-rows table td div.flex.flex-col.overflow-hidden { flex-direction: row !important; align-items: baseline; column-gap: 0.5rem; }
+/* Vertical rhythm */
+.compact-rows .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
+.compact-rows .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
+.compact-rows [class~="mb-6"] { margin-bottom: 0.75rem !important; }
 .compact-rows .fpl-section-spacing > [class~="mb-4"],
 .compact-rows .fpl-section-spacing > [class~="mb-3"],
 .compact-rows .fpl-section-spacing > [class*="md:mb-4"] { margin-bottom: 0 !important; }
-.compact-rows [class~="sm:p-4"] { padding: 0.375rem 0.5rem !important; }
-/* Tab strip under the page header: shorter, with a small gap */
-.compact-rows [role="tablist"] { height: 2rem !important; }
-.compact-rows > [class*="mb-3"], .compact-rows > [class*="mb-4"] { margin-bottom: 0.5rem !important; }
-.compact-rows table td [class*="text-lg"],
-.compact-rows table td [class*="text-xl"],
-.compact-rows table td [class*="text-2xl"],
-.compact-rows table td [class*="text-base"] { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-/* Card headers/content: less padding, smaller titles */
+.compact-rows [class~="sm:p-4"] { padding: 0.5rem 0.75rem !important; }
+.compact-rows [role="tablist"] { height: 2.5rem !important; }
+.compact-rows > [class*="mb-3"], .compact-rows > [class*="mb-4"] { margin-bottom: 0.75rem !important; }
 .compact-rows [class~="p-6"],
 .compact-rows [class~="sm:p-6"],
-.compact-rows [class~="lg:p-6"] { padding: 0.375rem 0.75rem !important; }
-.compact-rows [class~="sm:p-3"] { padding: 0.375rem 0.5rem !important; }
-/* Dropdown triggers (they render ~44px tall by default) */
-.compact-rows button[role="combobox"] { height: 1.75rem !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+.compact-rows [class~="lg:p-6"] { padding: 0.75rem 1rem !important; }
+.compact-rows [class~="sm:p-3"] { padding: 0.5rem 0.75rem !important; }
+.compact-rows button[role="combobox"] { height: 2rem !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 .compact-rows [class*="text-2xl"],
-.compact-rows [class*="sm:text-xl"] { font-size: 1.125rem !important; line-height: 1.5rem !important; }
+.compact-rows [class*="sm:text-xl"] { font-size: 1.25rem !important; line-height: 1.75rem !important; }
 
-/* Unified Page Headers - Compact for My FPL tools */
+/* ---------------------------------------------------------------------------------------------
+   Page header: light. Title, a one-line muted subtitle, hairline underneath. Controls can sit on the
+   right of the title row (see .fpl-page-actions). No gradient banner.
+   --------------------------------------------------------------------------------------------- */
 .fpl-page-header {
-  background: linear-gradient(135deg, var(--fpl-primary-start) 0%, var(--fpl-primary-middle) 50%, var(--fpl-primary-end) 100%);
-  @apply text-white rounded-xl p-1.5 sm:p-2 mb-2 relative overflow-hidden;
-  box-shadow: var(--fpl-shadow-lg);
+  @apply relative mb-4 pb-3;
+  color: var(--fpl-text-primary);
+  border-bottom: 1px solid var(--fpl-border);
 }
 
-.fpl-page-header::before {
-  content: '';
-  @apply absolute inset-0 opacity-10 pointer-events-none;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    rgba(255,255,255,0.1) 2px,
-    rgba(255,255,255,0.1) 4px
-  );
-}
+.fpl-page-header::before { display: none; }
 
 .fpl-page-header-content {
-  @apply relative z-10 flex flex-wrap items-center gap-x-3;
+  @apply relative z-10 flex flex-wrap items-center gap-x-3 gap-y-1;
 }
 
 .fpl-page-title {
-  @apply flex items-center gap-2;
+  @apply flex items-center gap-2.5;
 }
 
 .fpl-page-title h1 {
-  @apply text-lg sm:text-xl font-bold;
+  @apply text-2xl font-semibold tracking-tight;
+  color: var(--fpl-text-primary);
 }
 
 .fpl-page-title svg {
-  @apply h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0;
+  @apply h-6 w-6 flex-shrink-0;
+  color: var(--fpl-primary-start);
 }
 
-/* One line with the title on wide screens; hidden on small ones to save height */
 .fpl-page-subtitle {
-  @apply text-sm opacity-90 leading-tight hidden lg:block whitespace-nowrap overflow-hidden text-ellipsis min-w-0 flex-1;
+  @apply text-sm leading-snug block w-full m-0;
+  color: var(--fpl-text-secondary);
+}
+
+/* Right-aligned controls in the header row (gameweek range, filters toggle, refresh ...) */
+.fpl-page-actions {
+  @apply ml-auto flex flex-wrap items-center gap-2;
 }
 
 .fpl-page-tagline {

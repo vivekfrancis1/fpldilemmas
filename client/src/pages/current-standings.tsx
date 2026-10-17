@@ -390,11 +390,11 @@ export default function CurrentStandings() {
         </Card>
 
         {/* Enhanced Current Standings Table */}
-        <Card className="overflow-hidden shadow-lg border-0">
-          <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+        <Card className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
+          <CardHeader className="border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <Trophy className="h-6 w-6" />
+                <Trophy className="h-5 w-5 text-indigo-500" />
                 Enhanced Premier League Table
               </CardTitle>
               <div className="flex items-center gap-2">
@@ -403,13 +403,13 @@ export default function CurrentStandings() {
                   disabled={isRefreshing}
                   variant="outline"
                   size="sm"
-                  className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                  className="text-gray-600"
                   data-testid="button-refresh-current-standings"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                   {isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </Button>
-                <Badge className="bg-white/20 text-white border-white/30">
+                <Badge variant="secondary" className="rounded-full">
                   Detailed Statistics
                 </Badge>
               </div>
