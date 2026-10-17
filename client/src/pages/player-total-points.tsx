@@ -1023,7 +1023,7 @@ export default function PlayerTotalPoints() {
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 50");
+  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 15");
   const [selectedAvailability, setSelectedAvailability] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -2164,7 +2164,7 @@ export default function PlayerTotalPoints() {
   if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
       <div className="fpl-page-wrapper">
-        <div className="fpl-container fpl-content-area fpl-section-spacing">
+        <div className="fpl-container fpl-content-area fpl-section-spacing compact-rows">
           {pageHeaderAndTabs}
           <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Points History" />
         </div>
@@ -2226,15 +2226,15 @@ export default function PlayerTotalPoints() {
         </div>
       )}
       
-      <div className="fpl-container fpl-content-area fpl-section-spacing">
+      <div className="fpl-container fpl-content-area fpl-section-spacing compact-rows">
           {pageHeaderAndTabs}
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
           <div className="fpl-card mb-2">
             <div className="p-2 sm:p-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>
-                  <Label className="text-xs font-medium text-gray-600 mb-0.5 block">From</Label>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs font-medium text-gray-600 block">From</Label>
                   <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                     <SelectTrigger className="h-7 text-xs">
                       <SelectValue />
@@ -2246,8 +2246,8 @@ export default function PlayerTotalPoints() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label className="text-xs font-medium text-gray-600 mb-0.5 block">To</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs font-medium text-gray-600 block">To</Label>
                   <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                     <SelectTrigger className="h-7 text-xs">
                       <SelectValue />
@@ -2259,8 +2259,8 @@ export default function PlayerTotalPoints() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2">
-                  <Label className="text-xs font-medium text-gray-600 mb-0.5 block flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                  <Label className="text-xs font-medium text-gray-600 block flex items-center gap-1.5">
                     <Search className="h-3.5 w-3.5 text-gray-500" />
                     Search
                   </Label>
@@ -2268,36 +2268,26 @@ export default function PlayerTotalPoints() {
                     placeholder="Search players or teams..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-7 text-xs"
+                    className="h-7 text-xs flex-1"
                     data-testid="input-search-players"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((open) => !open)}
+                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  data-testid="button-toggle-filters"
+                >
+                  <Filter className="h-4 w-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
               </div>
             </div>
           </div>
 
           {/* Filters */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-3 md:mb-4">
-            <CollapsibleTrigger asChild>
-              <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-indigo-600" />
-                    <h2 className="fpl-card-title">Filters</h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 md:hidden">
-                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                    </span>
-                    {isFiltersOpen ? (
-                      <ChevronUp className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CollapsibleTrigger>
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
             <CollapsibleContent>
             <div className="p-2 sm:p-3">
               {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
@@ -2325,7 +2315,9 @@ export default function PlayerTotalPoints() {
                     <SelectContent className="text-xs">
                       <SelectItem value="all" className="text-xs">All</SelectItem>
                       <SelectItem value="My Team" className="text-xs">My Team</SelectItem>
+                      <SelectItem value="Top 15" className="text-xs">Top 15</SelectItem>
                       <SelectItem value="Top 50" className="text-xs">Top 50</SelectItem>
+                      <SelectItem value="Value 15" className="text-xs">Value 15</SelectItem>
                       <SelectItem value="Value 50" className="text-xs">Value 50</SelectItem>
                     </SelectContent>
                   </Select>

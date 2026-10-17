@@ -1132,30 +1132,8 @@ export default function PlayerStatsTable({
                 </div>
               </PopoverContent>
             </Popover>
-            <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
-              Showing {filteredAndSortedPlayers.length} players
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Venue filter notice */}
-      {venueFilter !== 'all' && (
-        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-          <p className="text-sm text-blue-700">
-            Showing {venueFilter === 'home' ? 'Home' : 'Away'} matches only 
-            {venueStatsData && Object.keys(venueStatsData).length === 0 && (
-              <span className="ml-2 text-blue-600">
-                (Venue data not yet available - showing all matches)
-              </span>
-            )}
-          </p>
-        </div>
-      )}
-
-      {/* Zoom Control */}
-      <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-3 max-w-lg">
+            {/* Zoom control: sits in the toolbar so it does not take a row of its own */}
+        <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Zoom:</span>
           <Button
             variant="outline"
@@ -1173,7 +1151,7 @@ export default function PlayerStatsTable({
             min={50}
             max={200}
             step={10}
-            className="flex-1 min-w-[100px]"
+            className="w-24"
             data-testid="slider-table-zoom"
           />
           <Button
@@ -1199,7 +1177,27 @@ export default function PlayerStatsTable({
             Reset
           </Button>
         </div>
+            <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
+              Showing {filteredAndSortedPlayers.length} players
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Venue filter notice */}
+      {venueFilter !== 'all' && (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
+          <p className="text-sm text-blue-700">
+            Showing {venueFilter === 'home' ? 'Home' : 'Away'} matches only 
+            {venueStatsData && Object.keys(venueStatsData).length === 0 && (
+              <span className="ml-2 text-blue-600">
+                (Venue data not yet available - showing all matches)
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
 
       {/* Comprehensive Player Statistics Table */}
       <div 
@@ -1312,7 +1310,7 @@ export default function PlayerStatsTable({
       </div>
 
       {/* Table Footer with Pagination */}
-      <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-200">
+      <div className="px-6 py-1.5 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-200">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600" data-testid="text-pagination-info">
             Showing <span className="font-medium text-blue-600">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}

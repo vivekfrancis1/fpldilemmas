@@ -299,7 +299,7 @@ html {
 }
 
 .fpl-content-area {
-  @apply py-2 sm:py-4 lg:py-6;
+  @apply py-1 sm:py-2;
 }
 
 .fpl-section-spacing {
@@ -351,6 +351,9 @@ html {
   line-height: 1.2;
 }
 .compact-rows table td img { max-height: 1.125rem; }
+/* Player name cells with a fixed 110px width: a little wider, and the "in my team" icon stays on the name line */
+.compact-rows table td [class*="md:w-[110px]"] { width: 9.5rem !important; }
+.compact-rows table td .flex.flex-wrap.items-center { flex-wrap: nowrap; }
 /* Team/player name column: never wrap onto two lines */
 .compact-rows table td.sticky,
 .compact-rows table th.sticky { white-space: nowrap; }
@@ -365,6 +368,7 @@ html {
 .compact-rows .fpl-card-content { padding-top: 0 !important; }
 /* Search + "More Filters" row (player statistics): single slim row */
 .compact-rows .fpl-filters .fpl-card-content { padding: 0.25rem 0.5rem !important; }
+.compact-rows .fpl-filters { margin-bottom: 0 !important; }
 .compact-rows .fpl-filters input { height: 2rem; }
 /* Control grids (From / To / Search ...): label beside its input instead of above it */
 .compact-rows .grid > .space-y-1 { display: flex; align-items: center; gap: 0.375rem; }
