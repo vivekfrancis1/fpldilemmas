@@ -9,6 +9,24 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ---
 
+## 2026-10-17 — Clean sheet points: team-level "defensive absence factor" double-counted odds and hit backups
+
+- **Where:** `app.get("/api/player-cleansheet-points", ...)` in `server/routes.ts` (the removed
+  `defensiveAbsenceMap`).
+- **Status:** Fixed — commit `2a6c5555` (local, not yet pushed). Regression test:
+  `tests/cleansheet-points-no-team-penalty.test.ts`.
+- **Notes:** Noticed because Spurs had a better GW7 clean sheet % than Brighton (38.3% vs 36.1%)
+  yet Kinsky projected fewer clean sheet points than Verbruggen (1.07 vs 1.43). The factor
+  multiplied every GKP/DEF/MID on a team by x0.87 if any keeper costing >=4.5m had <75% chance of
+  playing and by x0.88 if two defenders costing >=5.0m did — without checking they would have
+  started. Spurs' 0-minute, status-`u` Vicario/Romero triggered both. It also double-counted what
+  the bookmaker odds already price in. Removed outright. Not changed on purpose: the FDR
+  multipliers on bonus (1.30-0.65) and cards (0.75-1.30) — measured at ~+2.7% total bonus if
+  removed (median player +3%, GW7-12 range -5% to +11%), so left as is. Legacy
+  `performanceMultiplier` / `positionMultiplier` in the goal/assist-share helpers are not in the
+  live scoring path. Beyond GW8 team clean sheet % comes from the goals model, not odds (league
+  mean 23.2% vs 24.5% for odds, narrower spread) — no obvious bias found.
+
 ## 2026-09-05 — `/api/manager/:managerId/team`'s picks and fixture-status gameweek could disagree
 
 - **Where:** `server/routes.ts`'s `app.all("/api/manager/:managerId/team", ...)` handler
