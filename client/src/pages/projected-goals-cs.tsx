@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
@@ -8,7 +8,6 @@ import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
-import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,7 +156,23 @@ export default function ProjectedGoalsCS() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   // Filter section collapse state - expanded on desktop, collapsed on mobile
-  const [isFiltersOpen, setIsFiltersOpen] = useState(getDefaultFiltersOpen); // open on desktop, collapsed on mobile
+  // Collapsed by default on every screen size so a whole gameweek fits on screen without scrolling.
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Height available to one gameweek block = what is left of the window below where the table starts.
+  // Exposed as a CSS variable so the gameweek blocks (side by side on desktop, stacked on mobile) each fill
+  // the screen height; if the window is too short for the rows' minimum height the block simply grows and the page scrolls.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const setFitHeight = () => {
+    const el = fitRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    el.style.setProperty('--gw-fit', `${Math.max(0, Math.round(window.innerHeight - top - 12))}px`);
+  };
+  useLayoutEffect(setFitHeight); // after every render: the table's position moves when anything above it changes
+  useEffect(() => {
+    window.addEventListener('resize', setFitHeight);
+    return () => window.removeEventListener('resize', setFitHeight);
+  }, []);
 
   // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
   const { data: tbcFixtures } = useQuery<any[]>({
@@ -528,13 +543,13 @@ export default function ProjectedGoalsCS() {
 
   const pageHeaderAndTabs = (
     <>
-      <div className="fpl-page-header">
+      <div className="fpl-page-header !p-2 sm:!p-2 lg:!p-2 !mb-2">
         <div className="fpl-page-header-content">
-          <div className="fpl-page-title">
+          <div className="fpl-page-title !mb-0 [&_svg]:!h-5 [&_svg]:!w-5 [&_h1]:!text-lg">
             <Target className="h-8 w-8" />
             <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1><SeasonBadge />
           </div>
-          <p className="fpl-page-subtitle">
+          <p className="fpl-page-subtitle !hidden">
             {viewMode === "future"
               ? "Projected goals and clean sheet odds for upcoming matches"
               : "Actual results and scores from past matches"}
@@ -542,8 +557,8 @@ export default function ProjectedGoalsCS() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-3 sm:mb-4">
-        <TabsList className="w-full">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past")} className="mb-2">
+        <TabsList className="w-full h-8">
           <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
             <Calendar className="h-4 w-4" />
             Match Predictions
@@ -621,18 +636,18 @@ export default function ProjectedGoalsCS() {
     <div className="fpl-page-container">
       {pageHeaderAndTabs}
 
-      <div className="fpl-section-spacing">
+      <div className="fpl-section-spacing !space-y-2">
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
           <Card className="mb-2 shadow-sm border-0">
-            <CardContent className="pt-2 pb-2">
-              <div className="flex flex-wrap gap-2 items-center">
+            <CardContent className="py-1">
+              <div className="flex flex-wrap gap-x-2 gap-y-1 items-center">
 
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">From:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className="w-20 h-7 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-[72px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -649,7 +664,7 @@ export default function ProjectedGoalsCS() {
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">To:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className="w-20 h-7 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-[72px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -661,24 +676,24 @@ export default function ProjectedGoalsCS() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((open) => !open)}
+                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  data-testid="button-toggle-filters"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
               </div>
             </CardContent>
           </Card>
 
           {/* Controls - Compact */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <Card className="mb-3 shadow-sm border-0">
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2">
-                  <CardTitle className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filters</span>
-                    </div>
-                    {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </CardTitle>
-                </CardHeader>
-              </CollapsibleTrigger>
+            <Card className={`${isFiltersOpen ? 'mb-2' : 'hidden'} shadow-sm border-0`}>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-2">
                   {/* Fixture mode toggle — only relevant in future mode when TBC exists */}
@@ -729,24 +744,24 @@ export default function ProjectedGoalsCS() {
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
             <CardContent className="p-0">
-              <div className={Object.keys(groupedProjections).length > 1
+              <div ref={fitRef} className={Object.keys(groupedProjections).length > 1
                 ? "space-y-0 lg:space-y-0 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-200"
                 : "space-y-0 lg:max-w-3xl lg:mx-auto"}>
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
                   const gwInfo = groupKey; // Just the gameweek info like "GW2"
                   
                   return (
-                    <div key={groupKey}>
+                    <div key={groupKey} className="flex flex-col" style={{ minHeight: 'var(--gw-fit, 0px)' }}>
                       {/* Day Header - Compact. On mobile this line also carries the GOALS/CS%/RESULT
                           column labels (the match count is dropped there to make room); desktop
                           keeps the match count here and gets its own separate column-header row
                           below, unchanged. */}
-                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 pl-3 pr-4 py-1.5 border-b border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 pl-3 pr-4 py-1 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-gray-800">
                             GW{projections[0]?.gameweek}{projections[0]?.gameweek === 39 ? ' (TBC)' : ''}
                           </span>
-                          <div className="lg:hidden flex items-center space-x-2">
+                          <div className="flex items-center space-x-2">
                             <div className="text-center w-[45px]">
                               <span className="text-[10px] font-bold text-gray-600">GOALS</span>
                             </div>
@@ -766,54 +781,29 @@ export default function ProjectedGoalsCS() {
                               </div>
                             )}
                           </div>
-                          <span className="hidden lg:inline text-xs text-gray-600 font-medium">{projections.length} {projections.length === 1 ? 'match' : 'matches'}</span>
-                        </div>
-                      </div>
-
-                      {/* Column Headers - Desktop only: one match per row, so a single row of labels */}
-                      <div className="hidden lg:block px-2 pt-2 pb-1">
-                        <div className="flex items-center justify-end px-3 space-x-2">
-                          <div className="text-center w-[45px]">
-                            <span className="text-xs font-bold text-gray-600">GOALS</span>
-                          </div>
-                          {projections.some(p => !p.finished && !p.isLive) && (
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">CS%</span>
-                            </div>
-                          )}
-                          {projections.some(p => !p.finished && !p.isLive) && (
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">WIN%</span>
-                            </div>
-                          )}
-                          {projections.some(p => p.finished || p.isLive) && (
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">RESULT</span>
-                            </div>
-                          )}
                         </div>
                       </div>
 
                       {/* Matches listed one below the other (the pair wrapper just keeps each pair's markup together) */}
-                      <div className="space-y-1.5 p-2 pt-0">
+                      <div className="flex-1 flex flex-col gap-px p-2 pt-1">
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
 
                           return (
-                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 gap-1.5">
+                            <div key={`pair-${pairIndex}`} className="contents">
                               {/* First Match */}
                               {match1 && (() => {
                                 const oddsEventId1 = oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`);
                                 return (
                                 <div
-                                  className={`relative bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId1 ? 'cursor-pointer' : ''}`}
+                                  className={`relative flex-1 min-h-[34px] flex flex-col bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId1 ? 'cursor-pointer' : ''}`}
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                   onClick={oddsEventId1 ? () => setLocation(`/match-odds-history/${oddsEventId1}`) : undefined}
                                 >
 
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.homeTeam.id);
@@ -836,14 +826,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.homeTeam.expectedGoals : match1.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -851,14 +841,14 @@ export default function ProjectedGoalsCS() {
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.homeWinProb != null && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.homeWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.homeWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.homeTeam.result)}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.homeTeam.result)}`}>
                                             {getResultText(match1.homeTeam.result)}
                                           </div>
                                         </div>
@@ -867,7 +857,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.awayTeam.id);
@@ -890,14 +880,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.expectedGoals, gwGoalsMap.get(match1.gameweek) || [])}`}>
                                           {(match1.finished || match1.isLive) ? match1.awayTeam.expectedGoals : match1.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match1.finished && !match1.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayTeam.cleanSheetOdds, gwCSMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -905,14 +895,14 @@ export default function ProjectedGoalsCS() {
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.awayWinProb != null && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match1.awayWinProb * 100, gwWinProbMap.get(match1.gameweek) || [])}`}>
                                             {Math.round(match1.awayWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.awayTeam.result)}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.awayTeam.result)}`}>
                                             {getResultText(match1.awayTeam.result)}
                                           </div>
                                         </div>
@@ -928,14 +918,14 @@ export default function ProjectedGoalsCS() {
                                 const oddsEventId2 = oddsHistoryEventIdByTeams.get(`${match2.homeTeam.id}-${match2.awayTeam.id}`);
                                 return (
                                 <div
-                                  className={`relative bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId2 ? 'cursor-pointer' : ''}`}
+                                  className={`relative flex-1 min-h-[34px] flex flex-col bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId2 ? 'cursor-pointer' : ''}`}
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                   onClick={oddsEventId2 ? () => setLocation(`/match-odds-history/${oddsEventId2}`) : undefined}
                                 >
 
                                   
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.homeTeam.id);
@@ -958,14 +948,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.homeTeam.expectedGoals : match2.homeTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -973,14 +963,14 @@ export default function ProjectedGoalsCS() {
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.homeWinProb != null && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.homeWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.homeWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.homeTeam.result)}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.homeTeam.result)}`}>
                                             {getResultText(match2.homeTeam.result)}
                                           </div>
                                         </div>
@@ -989,7 +979,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.awayTeam.id);
@@ -1012,14 +1002,14 @@ export default function ProjectedGoalsCS() {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
-                                        <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
+                                        <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.expectedGoals, gwGoalsMap.get(match2.gameweek) || [])}`}>
                                           {(match2.finished || match2.isLive) ? match2.awayTeam.expectedGoals : match2.awayTeam.expectedGoals.toFixed(2)}
                                         </div>
                                       </div>
                                       {/* Only show CS% for upcoming matches */}
                                       {!match2.finished && !match2.isLive && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayTeam.cleanSheetOdds, gwCSMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayTeam.cleanSheetOdds)}%
                                           </div>
                                         </div>
@@ -1027,14 +1017,14 @@ export default function ProjectedGoalsCS() {
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.awayWinProb != null && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getBellCurveColor(match2.awayWinProb * 100, gwWinProbMap.get(match2.gameweek) || [])}`}>
                                             {Math.round(match2.awayWinProb * 100)}%
                                           </div>
                                         </div>
                                       )}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
-                                          <div className={`px-1.5 py-1 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.awayTeam.result)}`}>
+                                          <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.awayTeam.result)}`}>
                                             {getResultText(match2.awayTeam.result)}
                                           </div>
                                         </div>
