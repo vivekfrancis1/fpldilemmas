@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Target, TrendingUp, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
+import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
@@ -729,7 +729,9 @@ export default function ProjectedGoalsCS() {
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
             <CardContent className="p-0">
-              <div className="space-y-0">
+              <div className={Object.keys(groupedProjections).length > 1
+                ? "space-y-0 lg:space-y-0 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-200"
+                : "space-y-0 lg:max-w-3xl lg:mx-auto"}>
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
                   const gwInfo = groupKey; // Just the gameweek info like "GW2"
                   
@@ -768,90 +770,38 @@ export default function ProjectedGoalsCS() {
                         </div>
                       </div>
 
-                      {/* Column Headers - Desktop only: single or dual columns based on match count */}
+                      {/* Column Headers - Desktop only: one match per row, so a single row of labels */}
                       <div className="hidden lg:block px-2 pt-2 pb-1">
-                        {/* Desktop header - single column when only 1 match, aligned to left column */}
-                        {projections.length === 1 && (
-                          <div className="hidden lg:grid lg:grid-cols-2 gap-3">
-                            <div className="flex items-center justify-end px-3 space-x-2">
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">GOALS</span>
-                              </div>
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">CS%</span>
-                                </div>
-                              )}
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
-                                </div>
-                              )}
-                              {projections.some(p => p.finished || p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
-                                </div>
-                              )}
-                            </div>
-                            <div></div>
+                        <div className="flex items-center justify-end px-3 space-x-2">
+                          <div className="text-center w-[45px]">
+                            <span className="text-xs font-bold text-gray-600">GOALS</span>
                           </div>
-                        )}
-                        
-                        {/* Desktop header - dual columns when multiple matches */}
-                        {projections.length > 1 && (
-                          <div className="hidden lg:grid lg:grid-cols-2 gap-3">
-                            <div className="flex items-center justify-end px-3 space-x-2">
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">GOALS</span>
-                              </div>
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">CS%</span>
-                                </div>
-                              )}
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
-                                </div>
-                              )}
-                              {projections.some(p => p.finished || p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
-                                </div>
-                              )}
+                          {projections.some(p => !p.finished && !p.isLive) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">CS%</span>
                             </div>
-                            <div className="flex items-center justify-end px-3 space-x-2">
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">GOALS</span>
-                              </div>
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">CS%</span>
-                                </div>
-                              )}
-                              {projections.some(p => !p.finished && !p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">WIN%</span>
-                                </div>
-                              )}
-                              {projections.some(p => p.finished || p.isLive) && (
-                                <div className="text-center w-[45px]">
-                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
-                                </div>
-                              )}
+                          )}
+                          {projections.some(p => !p.finished && !p.isLive) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">WIN%</span>
                             </div>
-                          </div>
-                        )}
+                          )}
+                          {projections.some(p => p.finished || p.isLive) && (
+                            <div className="text-center w-[45px]">
+                              <span className="text-xs font-bold text-gray-600">RESULT</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Matches arranged in pairs - 2 matches per row - Compact Size */}
+                      {/* Matches listed one below the other (the pair wrapper just keeps each pair's markup together) */}
                       <div className="space-y-1.5 p-2 pt-0">
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
 
                           return (
-                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 gap-1.5">
                               {/* First Match */}
                               {match1 && (() => {
                                 const oddsEventId1 = oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`);
@@ -883,21 +833,6 @@ export default function ProjectedGoalsCS() {
                                         {match1.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend button — styled to feel clickable even though the
-                                          whole card is already clickable (see the card's own onClick),
-                                          so the tap target isn't limited to this small pill. */}
-                                      {oddsEventId1 && (
-                                        <span
-                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
-                                          title="See how the market odds for this fixture have moved over time"
-                                        >
-                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
-                                            <span className="sm:hidden">Odds</span>
-                                            <span className="hidden sm:inline">View Odds Trend</span>
-                                          </span>
-                                          <TrendingUp className="h-3 w-3" />
-                                        </span>
-                                      )}
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
@@ -1020,21 +955,6 @@ export default function ProjectedGoalsCS() {
                                         {match2.homeTeam.shortName}
                                       </span>
                                       <span className="text-xs text-gray-600 px-1.5 py-0.5 font-bold">(H)</span>
-                                      {/* Odds trend button — styled to feel clickable even though the
-                                          whole card is already clickable (see the card's own onClick),
-                                          so the tap target isn't limited to this small pill. */}
-                                      {oddsEventId2 && (
-                                        <span
-                                          className="inline-flex items-center gap-0.5 min-w-0 min-h-0 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 shrink-0 shadow-sm hover:bg-emerald-100 hover:border-emerald-400 hover:shadow transition-colors cursor-pointer"
-                                          title="See how the market odds for this fixture have moved over time"
-                                        >
-                                          <span className="text-[8px] font-semibold leading-none whitespace-nowrap">
-                                            <span className="sm:hidden">Odds</span>
-                                            <span className="hidden sm:inline">View Odds Trend</span>
-                                          </span>
-                                          <TrendingUp className="h-3 w-3" />
-                                        </span>
-                                      )}
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       <div className="text-center w-[45px]">
