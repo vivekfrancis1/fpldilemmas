@@ -52,13 +52,15 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     }
   });
 
-  it('predicted_progress matches the official offset-0 projection when FPL has a real signal (nonzero likelihood)', () => {
+  it('predicted_progress matches the official offset-0 projection when FPL has a real signal (nonzero likelihood)', (ctx) => {
     const withProjection = bootstrapElements.find((p: any) => {
       const proj = p.price_change_projections || [];
       const offset0 = proj.find((pr: any) => pr.offset === 0);
       return offset0 && offset0.likelihood !== 0;
     });
-    expect(withProjection).toBeDefined();
+    // FPL's live data decides whether such a player exists (e.g. none while its price model is
+    // "calibrating" right after a gameweek starts) — nothing to assert against then.
+    if (!withProjection) return ctx.skip();
     const pred = predictions.find((p: any) => p.player_id === withProjection.id);
     const officialOffset0 = withProjection.price_change_projections.find((pr: any) => pr.offset === 0);
     expect(pred.predicted_progress).toBeCloseTo(parseFloat(officialOffset0.projected_percent), 5);
@@ -133,12 +135,17 @@ describe('/api/price-predictions uses real official FPL fields', () => {
     expect(Math.abs(mover.hourly_rate - expectedRate)).toBeLessThan(0.05);
   });
 
-  it('hours_to_threshold/days_to_threshold extrapolate the current hourly rate to the ±100% price-change threshold', () => {
+  it('hours_to_threshold/days_to_threshold extrapolate the current hourly rate to the ±100% price-change threshold', (ctx) => {
+    // Which of these cases exist depends on FPL's live data at the time of day; check each one that does.
+    let checkedAny = false;
+
     // Already past the threshold: crossing is immediate.
     const pastThreshold = predictions.find((p: any) => Math.abs(p.progress) >= 100);
-    expect(pastThreshold).toBeDefined();
-    expect(pastThreshold.hours_to_threshold).toBe(0);
-    expect(pastThreshold.days_to_threshold).toBe(0);
+    if (pastThreshold) {
+      checkedAny = true;
+      expect(pastThreshold.hours_to_threshold).toBe(0);
+      expect(pastThreshold.days_to_threshold).toBe(0);
+    }
 
     // Trending toward the threshold: hours_to_threshold should match a straight-line
     // extrapolation of the current progress at the current hourly rate.
@@ -147,13 +154,15 @@ describe('/api/price-predictions uses real official FPL fields', () => {
       const movingToward = (p.progress >= 0 && p.hourly_rate > 0) || (p.progress < 0 && p.hourly_rate < 0);
       return magnitude > 1 && magnitude < 100 && movingToward && Math.abs(p.hourly_rate) > 0.01;
     });
-    expect(trendingToward).toBeDefined();
-    // progress/hourly_rate in the response are already rounded to 1-2dp, so recomputing from them
-    // only approximates the server's unrounded internal math — allow a generous margin rather than
-    // asserting exact equality.
-    const expectedHours = (100 - Math.abs(trendingToward.progress)) / Math.abs(trendingToward.hourly_rate);
-    expect(Math.abs(trendingToward.hours_to_threshold - expectedHours)).toBeLessThan(5);
-    expect(Math.abs(trendingToward.days_to_threshold - expectedHours / 24)).toBeLessThan(1);
+    if (trendingToward) {
+      checkedAny = true;
+      // progress/hourly_rate in the response are already rounded to 1-2dp, so recomputing from them
+      // only approximates the server's unrounded internal math — allow a generous margin rather than
+      // asserting exact equality.
+      const expectedHours = (100 - Math.abs(trendingToward.progress)) / Math.abs(trendingToward.hourly_rate);
+      expect(Math.abs(trendingToward.hours_to_threshold - expectedHours)).toBeLessThan(5);
+      expect(Math.abs(trendingToward.days_to_threshold - expectedHours / 24)).toBeLessThan(1);
+    }
 
     // Trending away from the threshold (rate sign opposes progress sign): no meaningful ETA.
     const trendingAway = predictions.find((p: any) => {
@@ -161,25 +170,33 @@ describe('/api/price-predictions uses real official FPL fields', () => {
       const movingAway = (p.progress >= 0 && p.hourly_rate < 0) || (p.progress < 0 && p.hourly_rate > 0);
       return magnitude > 1 && magnitude < 100 && movingAway;
     });
-    expect(trendingAway).toBeDefined();
-    expect(trendingAway.hours_to_threshold).toBeNull();
-    expect(trendingAway.days_to_threshold).toBeNull();
+    if (trendingAway) {
+      checkedAny = true;
+      expect(trendingAway.hours_to_threshold).toBeNull();
+      expect(trendingAway.days_to_threshold).toBeNull();
+    }
+
+    if (!checkedAny) ctx.skip();
   });
 
-  it('ownership_trend direction matches the sign of this gameweek\'s net transfers', () => {
+  it('ownership_trend direction matches the sign of this gameweek\'s net transfers', (ctx) => {
     const netPositive = bootstrapElements.find(
       (p: any) => (p.transfers_in_event || 0) - (p.transfers_out_event || 0) > 10000
     );
     const netNegative = bootstrapElements.find(
       (p: any) => (p.transfers_in_event || 0) - (p.transfers_out_event || 0) < -10000
     );
-    expect(netPositive).toBeDefined();
-    expect(netNegative).toBeDefined();
+    // Right after a gameweek rolls over, nobody has net transfers beyond the threshold yet.
+    if (!netPositive && !netNegative) return ctx.skip();
 
-    const upPred = predictions.find((p: any) => p.player_id === netPositive.id);
-    const downPred = predictions.find((p: any) => p.player_id === netNegative.id);
-    expect(upPred.ownership_trend).toBe('up');
-    expect(downPred.ownership_trend).toBe('down');
+    if (netPositive) {
+      const upPred = predictions.find((p: any) => p.player_id === netPositive.id);
+      expect(upPred.ownership_trend).toBe('up');
+    }
+    if (netNegative) {
+      const downPred = predictions.find((p: any) => p.player_id === netNegative.id);
+      expect(downPred.ownership_trend).toBe('down');
+    }
   });
 
   it('every prediction has a finite current_price sourced from now_cost', () => {
