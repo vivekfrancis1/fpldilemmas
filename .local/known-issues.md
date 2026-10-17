@@ -20,8 +20,10 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
   team-fixtures from `fixture_odds` (GW2-8 of 2026/27): error vs odds' implied goals 0.341 (old 0.416),
   leave-one-out 0.350. xG-only rating beat every goals/xG blend (goals-only was worst). TO REVISIT:
   (1) refit STRENGTH_MAX_WEIGHT / STRENGTH_HALF_GAMES on more odds history; (2) check the clean-sheet %
-  also improved; (3) home/away multiplier 1.15/0.87 looked too strong vs the odds (odds imply ~1.07/0.93,
-  actual results ~1.10/0.90; best fit in the new model ~1.05-1.07) — decision pending with the owner;
+  also improved; (3) home/away multiplier changed
+  1.15/0.87 -> 1.07/0.93 (odds imply ~1.05/0.95, actual results ~1.10/0.90, best fit in the new model
+  ~1.05-1.07) — recheck on more data; unrelated copies of 1.15/0.87 remain in `routes.ts` (~1368 fast
+  projection helper, ~7700 Match Projections admin settings) and the DB schema default;
   (4) per-team venue multiplier (kicks in at >=5 home and away games) is noisy and uncapped-ish.
 
 ## 2026-10-17 — Clean sheet points: team-level "defensive absence factor" double-counted odds and hit backups
