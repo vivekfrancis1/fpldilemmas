@@ -12401,7 +12401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // server/copilot-xmins-override.ts and scripts/build-copilot-xmins-projections.ts)
         // overrides our own history-based estimate for whichever gameweeks it actually covers —
         // it only genuinely forecasts a handful of gameweeks ahead, so gameweeks outside that
-        // range fall back to the historical estimate below rather than a flatlined placeholder.
+        // range hold each player's last forecast value flat (extendCopilotXMinsForward).
         const copilotXminsByPlayerId = new Map<number, Map<number, number>>();
         {
           const { copilotXminsProjections, CURRENT_SEASON: copilotSeason } = await import('@shared/schema');
@@ -12410,6 +12410,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const row of copilotRows) {
             if (!copilotXminsByPlayerId.has(row.playerId)) copilotXminsByPlayerId.set(row.playerId, new Map());
             copilotXminsByPlayerId.get(row.playerId)!.set(row.gameweek, row.xMins);
+          }
+          // Carry each player's last forecast value flat through GW38 (see extendCopilotXMinsForward),
+          // unless the export is stale (its last gameweek is already in the past).
+          const { extendCopilotXMinsForward } = await import('./copilot-xmins-override');
+          const { computeCurrentGameweek: copilotCurrentGW } = await import('../shared/gameweek-utils');
+          const copilotMinLastGW = copilotCurrentGW(bootstrapData.events);
+          for (const [pid, byGW] of copilotXminsByPlayerId) {
+            copilotXminsByPlayerId.set(pid, extendCopilotXMinsForward(byGW, 38, copilotMinLastGW));
           }
           console.log(`🧭 Copilot xMins loaded: ${copilotXminsByPlayerId.size} players`);
         }
@@ -14724,6 +14732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const [k, v] of Object.entries(minutesPlayer.xMinsPerGW as Record<string, number>)) {
             if (!minutesPlayer.xMinsFromCopilotPerGW?.[k]) continue;
             const gwNum = k.replace(/^gw/, '');
+            if (gameweekProjections[gwNum] === undefined) continue; // outside the projected range
             // Per-fixture expectation x fixtures = the gameweek total (a blank gameweek shows 0).
             const nFixturesForMins = fixtureDetails[gwNum] ? fixtureDetails[gwNum].length : 1;
             xMinsPerGWOut[gwNum] = Math.round(v * nFixturesForMins * 10) / 10;

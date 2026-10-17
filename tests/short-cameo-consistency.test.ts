@@ -15,7 +15,9 @@ async function fetchJSON(path: string) {
   return res.json();
 }
 
-export interface ConsistencyRow { name: string; team: string; position: string; minutes: number; gwPoints: number[] }
+// copilotMinutes: this player's expected minutes come from Copilot's forecast (which already prices
+// in who is starting), not from his thin season-minutes sample — so inflation can't be the cause.
+export interface ConsistencyRow { name: string; team: string; position: string; minutes: number; gwPoints: number[]; copilotMinutes?: boolean }
 
 export function findShortCameoInflation(rows: ConsistencyRow[], minReliable: number, tolerance: number) {
   const violations: Array<{ name: string; avg: number; reference: string; referenceMax: number }> = [];
@@ -32,7 +34,7 @@ export function findShortCameoInflation(rows: ConsistencyRow[], minReliable: num
       .map(m => ({ m, max: Math.max(0, ...m.gwPoints) }))
       .sort((a, b) => b.max - a.max)[0];
     for (const m of members) {
-      if (m.minutes <= 0 || m.minutes >= minReliable || m.gwPoints.length === 0) continue;
+      if (m.minutes <= 0 || m.minutes >= minReliable || m.gwPoints.length === 0 || m.copilotMinutes) continue;
       const avg = m.gwPoints.reduce((s, v) => s + v, 0) / m.gwPoints.length;
       if (avg > best.max * tolerance) violations.push({ name: m.name, avg, reference: best.m.name, referenceMax: best.max });
     }
@@ -48,6 +50,10 @@ describe('findShortCameoInflation (logic)', () => {
   });
   it('allows a sub at or below the healthy starter', () => {
     expect(findShortCameoInflation([mk('Starter', 400, [0, 5, 5.5]), mk('Sub', 117, [5, 5, 5])], 360, 1.15)).toEqual([]);
+  });
+  it('exempts a sub whose minutes come from Copilot\'s forecast (e.g. the new first-choice keeper)', () => {
+    const sub = { ...mk('Sub', 117, [8, 8, 7]), copilotMinutes: true };
+    expect(findShortCameoInflation([mk('Starter', 400, [0, 5, 5.5]), sub], 360, 1.15)).toEqual([]);
   });
   it('skips groups with no reliable-sample teammate and players with a reliable sample', () => {
     expect(findShortCameoInflation([mk('A', 100, [9]), mk('B', 120, [1])], 360, 1.15)).toEqual([]);
@@ -74,6 +80,7 @@ describe('Short-cameo consistency (live API)', () => {
         position: p.position,
         minutes: minutesByName.get(p.fullName || p.playerName) ?? minutesByName.get(p.playerName) ?? -1,
         gwPoints: Object.values(p.gameweekProjections || {}).map(Number),
+        copilotMinutes: Object.keys(p.xMinsPerGW || {}).length > 0,
       }))
       .filter((r: ConsistencyRow) => r.minutes >= 0);
     checked = rows.length;
