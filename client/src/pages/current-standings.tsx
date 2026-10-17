@@ -292,7 +292,7 @@ export default function CurrentStandings() {
 
   if (error) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="flex justify-center items-center min-h-screen">
           <Card className="p-6">
             <CardContent>
@@ -309,7 +309,7 @@ export default function CurrentStandings() {
 
   return (
     <TooltipProvider>
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">

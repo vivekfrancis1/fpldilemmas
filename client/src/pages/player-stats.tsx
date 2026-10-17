@@ -185,7 +185,7 @@ export default function PlayerStats() {
 
   if (error) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="flex justify-center items-center min-h-screen">
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
             <h1 className="text-lg font-semibold text-red-800 mb-3">Failed to load player data</h1>
@@ -204,7 +204,7 @@ export default function PlayerStats() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Page Header - Simplified */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">

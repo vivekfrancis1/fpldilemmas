@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useFitToViewport } from "@/hooks/use-fit-to-viewport";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
@@ -158,21 +159,8 @@ export default function ProjectedGoalsCS() {
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   // Collapsed by default on every screen size so a whole gameweek fits on screen without scrolling.
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  // Height available to one gameweek block = what is left of the window below where the table starts.
-  // Exposed as a CSS variable so the gameweek blocks (side by side on desktop, stacked on mobile) each fill
-  // the screen height; if the window is too short for the rows' minimum height the block simply grows and the page scrolls.
-  const fitRef = useRef<HTMLDivElement>(null);
-  const setFitHeight = () => {
-    const el = fitRef.current;
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY;
-    el.style.setProperty('--gw-fit', `${Math.max(0, Math.round(window.innerHeight - top - 12))}px`);
-  };
-  useLayoutEffect(setFitHeight); // after every render: the table's position moves when anything above it changes
-  useEffect(() => {
-    window.addEventListener('resize', setFitHeight);
-    return () => window.removeEventListener('resize', setFitHeight);
-  }, []);
+  // Each gameweek block fills the rest of the window height (see use-fit-to-viewport).
+  const fitRef = useFitToViewport();
 
   // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
   const { data: tbcFixtures } = useQuery<any[]>({
@@ -751,7 +739,7 @@ export default function ProjectedGoalsCS() {
                   const gwInfo = groupKey; // Just the gameweek info like "GW2"
                   
                   return (
-                    <div key={groupKey} className="flex flex-col" style={{ minHeight: 'var(--gw-fit, 0px)' }}>
+                    <div key={groupKey} className="flex flex-col" style={{ minHeight: 'var(--fit, 0px)' }}>
                       {/* Day Header - Compact. On mobile this line also carries the GOALS/CS%/RESULT
                           column labels (the match count is dropped there to make room); desktop
                           keeps the match count here and gets its own separate column-header row

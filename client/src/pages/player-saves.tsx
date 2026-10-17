@@ -645,7 +645,7 @@ export default function PlayerSaves() {
 
   if (viewMode === "future" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         {pageHeaderAndTabs}
         <SeasonEndedNotice onViewPast={() => setViewMode("past")} pastLabel="Saves History" />
       </div>
@@ -655,7 +655,7 @@ export default function PlayerSaves() {
   // Show loading state while data is loading
   if (isDataLoading) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
@@ -698,7 +698,7 @@ export default function PlayerSaves() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {pageHeaderAndTabs}
 
       <div className="fpl-section-spacing">

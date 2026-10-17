@@ -9,6 +9,16 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ---
 
+## 2026-10-17 — `projection-consistency` "fully available players identical in adjusted vs raw" failed on a long-running dev server
+
+- **Where:** `tests/projection-consistency.test.ts` (adjusted vs raw cached player totals).
+- **Status:** Not reproduced after a cold restart (passes 70/70); noted, not fixed.
+- **Notes:** On a dev server that had been up for hours (and was hit by ~60 page loads), two fully-available
+  players (e.g. Dewsbury-Hall, 166.91 adjusted vs 167.01 raw) differed by ~0.1 points; failed twice in a row
+  on that server, passed on a fresh one. Consistent with the adjusted and raw cached totals having been built
+  at different moments after some input (odds / availability / xMins) changed — see the "state changed
+  underneath" pattern in CLAUDE.md. If it recurs on a fresh server, treat as a real bug.
+
 ## 2026-10-17 — Team goals (no-odds fixtures): squad-value prior added to the original formula; REVISIT after ~GW10-12
 
 - **Where:** `server/team-goals-squad-value.ts` + `calculateFixtureGoalsDynamic` (`server/team-goals-service.ts`);

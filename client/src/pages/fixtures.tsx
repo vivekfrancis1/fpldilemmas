@@ -660,7 +660,7 @@ export default function Fixtures() {
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="fpl-page-header">
           <div className="fpl-page-title">
             <Calendar className="h-6 w-6 sm:h-8 sm:w-8" />
@@ -674,7 +674,7 @@ export default function Fixtures() {
 
   if (isLoading) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="fpl-page-header">
           <div className="fpl-page-title">
             <Calendar className="h-6 w-6 sm:h-8 sm:w-8" />
@@ -709,7 +709,7 @@ export default function Fixtures() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-title">

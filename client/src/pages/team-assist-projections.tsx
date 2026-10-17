@@ -489,7 +489,7 @@ export default function TeamAssistProjections() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
@@ -559,24 +559,23 @@ export default function TeamAssistProjections() {
                   </SelectContent>
                 </Select>
               </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((open) => !open)}
+                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  data-testid="button-toggle-filters"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
             </div>
           </CardContent>
         </Card>
 
         {/* Controls */}
         <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-          <Card className="mb-2 sm:mb-3">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2">
-                <CardTitle className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    <span>Filters</span>
-                  </div>
-                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
+          <Card className={`${isFiltersOpen ? 'mb-2 sm:mb-3' : 'hidden'}`}>
             <CollapsibleContent>
               <CardContent className="pt-0 pb-3 sm:pb-4">
                 <div className="w-full mt-3 space-y-3">

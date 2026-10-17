@@ -246,7 +246,7 @@ export default function ProjectedStandings() {
 
   if (viewMode === "projected" && bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         {pageHeaderAndTabs}
         <div className="fpl-section-spacing">
           <SeasonEndedNotice onViewPast={() => setViewMode("current")} pastLabel="Current Standings" />
@@ -266,7 +266,7 @@ export default function ProjectedStandings() {
   const totalGameweeks = selectedEndGameweek || (viewMode === "projected" ? maxEndGameweek : lastFinishedGameweek);
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {pageHeaderAndTabs}
 
       {tbcTeamImpactMap.size > 0 && viewMode === "projected" && (

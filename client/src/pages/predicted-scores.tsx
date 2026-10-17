@@ -168,7 +168,7 @@ export default function PredictedScores() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">

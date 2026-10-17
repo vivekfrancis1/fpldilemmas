@@ -303,7 +303,7 @@ html {
 }
 
 .fpl-section-spacing {
-  @apply space-y-3 sm:space-y-5;
+  @apply space-y-2 sm:space-y-3;
 }
 
 /* Utility Classes */
@@ -343,10 +343,38 @@ html {
   color: var(--fpl-text-muted);
 }
 
+/* Compact table rows: lets a whole 20-row team table fit on a laptop screen. Applied per page on the container. */
+.compact-rows table td,
+.compact-rows table th {
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  line-height: 1.2;
+}
+.compact-rows table td img { max-height: 1.125rem; }
+/* Rank bubbles and the small grey sub-label under a team/player name (e.g. the short code) */
+.compact-rows table td [class*="rounded-full"][class*="md:w-6"] { width: 1.25rem !important; height: 1.25rem !important; }
+.compact-rows table td div[class*="text-[10px]"][class*="text-gray-500"] { display: none !important; }
+/* Tab strip under the page header: shorter, with a small gap */
+.compact-rows [role="tablist"] { height: 2rem !important; }
+.compact-rows > [class*="mb-3"], .compact-rows > [class*="mb-4"] { margin-bottom: 0.5rem !important; }
+.compact-rows table td [class*="text-lg"],
+.compact-rows table td [class*="text-xl"],
+.compact-rows table td [class*="text-2xl"],
+.compact-rows table td [class*="text-base"] { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+/* Card headers/content: less padding, smaller titles */
+.compact-rows [class~="p-6"],
+.compact-rows [class~="sm:p-6"],
+.compact-rows [class~="lg:p-6"] { padding: 0.375rem 0.75rem !important; }
+.compact-rows [class~="sm:p-3"] { padding: 0.375rem 0.5rem !important; }
+/* Dropdown triggers (they render ~44px tall by default) */
+.compact-rows button[role="combobox"] { height: 1.75rem !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+.compact-rows [class*="text-2xl"],
+.compact-rows [class*="sm:text-xl"] { font-size: 1.125rem !important; line-height: 1.5rem !important; }
+
 /* Unified Page Headers - Compact for My FPL tools */
 .fpl-page-header {
   background: linear-gradient(135deg, var(--fpl-primary-start) 0%, var(--fpl-primary-middle) 50%, var(--fpl-primary-end) 100%);
-  @apply text-white rounded-xl p-3 sm:p-4 lg:p-5 mb-3 sm:mb-4 relative overflow-hidden;
+  @apply text-white rounded-xl p-1.5 sm:p-2 mb-2 relative overflow-hidden;
   box-shadow: var(--fpl-shadow-lg);
 }
 
@@ -363,23 +391,24 @@ html {
 }
 
 .fpl-page-header-content {
-  @apply relative z-10;
+  @apply relative z-10 flex flex-wrap items-center gap-x-3;
 }
 
 .fpl-page-title {
-  @apply flex items-center gap-2 mb-1;
+  @apply flex items-center gap-2;
 }
 
 .fpl-page-title h1 {
-  @apply text-lg sm:text-xl lg:text-2xl font-bold;
+  @apply text-lg sm:text-xl font-bold;
 }
 
 .fpl-page-title svg {
-  @apply h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 flex-shrink-0;
+  @apply h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0;
 }
 
+/* One line with the title on wide screens; hidden on small ones to save height */
 .fpl-page-subtitle {
-  @apply text-xs sm:text-sm opacity-90 leading-tight hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis max-w-full;
+  @apply text-sm opacity-90 leading-tight hidden lg:block whitespace-nowrap overflow-hidden text-ellipsis min-w-0 flex-1;
 }
 
 .fpl-page-tagline {
