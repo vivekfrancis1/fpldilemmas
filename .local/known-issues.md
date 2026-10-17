@@ -9,6 +9,23 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ---
 
+## 2026-10-17 — Team goals (no-odds fixtures): squad-value prior added to the original formula; REVISIT after ~GW10-12
+
+- **Where:** `server/team-goals-squad-value.ts` + `calculateFixtureGoalsDynamic` (`server/team-goals-service.ts`);
+  home/away multiplier now 1.10 / 0.90 (`MASTER_TEAM_DEFAULTS` in `server/team-config.ts`).
+- **Status:** Built (local commit); constants fitted once, refit after more gameweeks of odds.
+- **Notes:** Original 25/25/25/25 formula + (0.06 / max(games, 3)) x (squad value A - squad value B) in
+  goals, squad value = sum of the 14 most expensive FPL players' prices (£m), x venue. Adjustments cancel
+  between the two sides, so a fixture's total is unchanged; the weight fades with games played.
+  Evidence: odds sample (88 team-fixtures) average gap to odds 3+ games 0.289 -> 0.223, all 0.416 -> 0.362;
+  GW7-8 live: 0.253 -> 0.178, clean-sheet % gap to odds 5.7 -> 4.0 pts, favourite disagreements 7 -> 4;
+  last season (700 team-fixtures, actual goals): a constant squad-value weight made the fit worse, the
+  fading form helped in both halves (best c 0.060 / 0.065). Venue: last season's real goals ratio was
+  1.11/0.89 (xG 1.10/0.90); odds-implied ~1.05/0.95. TO REVISIT: refit c, the floor of 3 games and venue on more
+  odds history; squad value uses current prices (a prior from outside the match results, owner-approved);
+  the per-team venue multiplier (switches on at >=5 home and away games, ~GW10) was not part of these
+  backtests and is noisy; Everton v Chelsea (GW7) is still a different favourite from the odds.
+
 ## 2026-10-17 — Team goals model (no-odds fixtures): team-strength experiment reverted; improving the old formula instead
 
 - **Where:** `calculateFixtureGoalsDynamic` in `server/team-goals-service.ts`.

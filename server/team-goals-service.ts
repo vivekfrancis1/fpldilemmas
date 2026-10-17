@@ -7,6 +7,7 @@ import { CURRENT_SEASON } from "@shared/schema";
 import { solveExpectedGoalsFromOdds } from "@shared/odds-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import type { StoredFixtureOdds } from "./odds-service";
+import { squadValue, dynamicBaseGoals } from "./team-goals-squad-value";
 
 // REAL final 2025/26 Championship goals scored, across the true 46-game season — used only by
 // the explicit ?season=2025/26 real-history viewer (buildRealGoalShareForSeason/
@@ -475,22 +476,30 @@ export class TeamGoalsService {
       const opponentAvgGCSeason = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
       const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
 
-      // Attack half: GF+xGF normally split 0.25/0.25; if xGF is unavailable, GF takes the full 0.5.
-      const attackHalf = teamAvgXGSeason !== null
-        ? teamAvgGoalsSeason * 0.25 + teamAvgXGSeason * 0.25
-        : teamAvgGoalsSeason * 0.5;
-      // Defence half: same reweighting between GC and xGC.
-      const defenceHalf = opponentAvgXGCSeason !== null
-        ? opponentAvgGCSeason * 0.25 + opponentAvgXGCSeason * 0.25
-        : opponentAvgGCSeason * 0.5;
+      // The original 25/25/25/25 average (falling back to 50/50 goals when xG is missing) plus a
+      // squad-value prior that fades with games played — see server/team-goals-squad-value.ts.
+      // Squad value = the 14 most expensive players' FPL prices (£m) from bootstrap-static.
+      const standings = await TeamGoalsService.fetchCurrentStandings();
+      const teamRow = standings.find((t: any) => t.id === team.id);
+      const oppRow = standings.find((t: any) => t.id === opponent.id);
+      const squadValueOf = (teamId: number) =>
+        squadValue((bootstrapData?.elements || []).filter((e: any) => e.team === teamId).map((e: any) => e.now_cost));
 
-      let baseExpectedGoals = attackHalf + defenceHalf;
+      let baseExpectedGoals = dynamicBaseGoals({
+        goalsFor: teamAvgGoalsSeason,
+        xgFor: teamAvgXGSeason,
+        oppGoalsAgainst: opponentAvgGCSeason,
+        oppXgAgainst: opponentAvgXGCSeason,
+        squadValueTeam: squadValueOf(team.id),
+        squadValueOpp: squadValueOf(opponent.id),
+        games: Math.min(teamRow?.played ?? 0, oppRow?.played ?? 0),
+      });
       
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
-      // Falls back to global 1.07/0.93 when fewer than 5 games in either venue.
-      const globalHome = TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.07);
-      const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.93);
+      // Falls back to global 1.10/0.90 when fewer than 5 games in either venue.
+      const globalHome = TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.10);
+      const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.90);
       const venueMultiplier = TeamGoalsService.getTeamVenueMultiplier(team.id, isHome, fixturesData, globalHome, globalAway);
       
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);

@@ -16,21 +16,28 @@ async function fetchJSON(path: string) {
 // completed-fixture count) — the 2025/26 last-season blend was deliberately removed per
 // explicit product decision, even though that means early-season projections are more
 // volatile (a single fluke result carries full weight, undamped, until more games accumulate).
-// This test independently reproduces the dynamic-mode formula from current-standings alone
+// This test independently reproduces the dynamic-mode formula from current-standings plus the squad-value
+// prior (server/team-goals-squad-value.ts)
 // and checks it matches the live projection for a fixture far enough out that 'odds' mode
 // has no market to use (falls through to dynamic) — if a last-season blend were reintroduced,
 // this would no longer match.
 describe('Dynamic-mode team goal projections use only this season\'s data', () => {
-  it('reproduces a far-future fixture projection purely from current-standings, with no last-season contribution', async () => {
-    const [standings, projections] = await Promise.all([
+  it('reproduces every far-future single-fixture projection from current-standings and squad value, with no last-season contribution', async () => {
+    const [standings, projections, bootstrap] = await Promise.all([
       fetchJSON('/api/current-standings'),
       fetchJSON('/api/team-goal-projections'),
+      fetchJSON('/api/bootstrap-static'),
     ]);
 
-    // Pick a team+far-future-gameweek combo with exactly one fixture (no DGW/BGW) so the
+    // Check every team with exactly one fixture (no DGW/BGW) in a far-future gameweek, so each
     // projection is directly comparable to a single hand-computed value.
     const FAR_FUTURE_GW = '10';
-    let target: { team: any; opponent: any; isHome: boolean; projected: number } | undefined;
+    const squadValue = (teamId: number) =>
+      bootstrap.elements.filter((e: any) => e.team === teamId).map((e: any) => e.now_cost)
+        .sort((a: number, b: number) => b - a).slice(0, 14).reduce((x: number, y: number) => x + y, 0) / 10;
+    let checked = 0;
+    let sawPositiveAdjustment = false;
+    let sawNegativeAdjustment = false;
 
     for (const teamProjection of projections) {
       const fixtures = teamProjection.fixtureDetails?.[FAR_FUTURE_GW];
@@ -38,21 +45,29 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
       const team = standings.find((t: any) => t.shortName === teamProjection.teamShort);
       const opponent = standings.find((t: any) => t.shortName === fixtures[0].opponent);
       if (!team || !opponent || team.played === 0 || opponent.played === 0) continue;
-      target = { team, opponent, isHome: fixtures[0].isHome, projected: fixtures[0].goals };
-      break;
+      const isHome = fixtures[0].isHome;
+      const projected = fixtures[0].goals;
+
+      const attackHalf = (team.goalsFor / team.played) * 0.25 + (team.expectedGoalsFor / team.played) * 0.25;
+      const defenceHalf = (opponent.goalsAgainst / opponent.played) * 0.25 + (opponent.expectedGoalsAgainst / opponent.played) * 0.25;
+      // Squad value is a prior from outside this season's results (prices of the 14 most expensive
+      // players, £m); its weight fades with games played: 0.06 / max(games, 3).
+      const games = Math.min(team.played, opponent.played);
+      const squadAdjustment = (0.06 / Math.max(games, 3)) * (squadValue(team.id) - squadValue(opponent.id));
+      if (squadAdjustment > 0.05) sawPositiveAdjustment = true;
+      if (squadAdjustment < -0.05) sawNegativeAdjustment = true;
+      // Neither team has 5+ games at either venue this early in the season, so the venue
+      // multiplier falls back to the global default (1.10 home / 0.90 away).
+      const venueMultiplier = isHome ? 1.10 : 0.90;
+      const expected = Math.max(0, Math.min(7, (attackHalf + defenceHalf + squadAdjustment) * venueMultiplier));
+
+      // Projections are served rounded to 2 decimals.
+      expect(Math.abs(projected - expected), `${teamProjection.teamShort} GW${FAR_FUTURE_GW}`).toBeLessThan(0.011);
+      checked++;
     }
 
-    expect(target).toBeDefined();
-    const { team, opponent, isHome, projected } = target!;
-
-    const attackHalf = (team.goalsFor / team.played) * 0.25 + (team.expectedGoalsFor / team.played) * 0.25;
-    const defenceHalf = (opponent.goalsAgainst / opponent.played) * 0.25 + (opponent.expectedGoalsAgainst / opponent.played) * 0.25;
-    // Neither team has 5+ games at either venue this early in the season, so the venue
-    // multiplier falls back to the global default (1.07 home / 0.93 away).
-    const venueMultiplier = isHome ? 1.07 : 0.93;
-    const expected = Math.max(0, Math.min(7, (attackHalf + defenceHalf) * venueMultiplier));
-
-    expect(projected).toBeCloseTo(expected, 1);
+    expect(checked).toBeGreaterThanOrEqual(10);
+    expect(sawPositiveAdjustment && sawNegativeAdjustment).toBe(true);
   });
 
   it('does not move a team\'s projection toward a fixed constant regardless of their actual results (i.e. no last-season/league-average dilution)', async () => {
