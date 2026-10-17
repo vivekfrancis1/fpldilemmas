@@ -16,8 +16,8 @@ export const MASTER_TEAM_DEFAULTS = {
   defaultTeamVariance: 0.45,
   defaultExpectedGoalsPerGame: 1.3,
   globalTierMultiplier: 1.25,
-  homeAdvantageGoalsMultiplier: 1.15,
-  awayFactorGoalsMultiplier: 0.87,
+  homeAdvantageGoalsMultiplier: 1.07,
+  awayFactorGoalsMultiplier: 0.93,
 
   // Attacking Tier Multipliers
   eliteAttackMultiplier: 1.35,

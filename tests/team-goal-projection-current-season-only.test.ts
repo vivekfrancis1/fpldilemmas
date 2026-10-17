@@ -53,8 +53,8 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
     const games = Math.min(team.played, opponent.played);
     const weight = (0.5 * games) / (games + 2.5);
     // Neither team has 5+ games at either venue this early in the season, so the venue
-    // multiplier falls back to the global default (1.15 home / 0.87 away).
-    const venueMultiplier = isHome ? 1.15 : 0.87;
+    // multiplier falls back to the global default (1.07 home / 0.93 away).
+    const venueMultiplier = isHome ? 1.07 : 0.93;
     const expected = Math.max(0, Math.min(7, (leagueAvg + weight * (rating(team) - rating(opponent))) * venueMultiplier));
 
     expect(projected).toBeCloseTo(expected, 1);

@@ -483,9 +483,9 @@ export class TeamGoalsService {
 
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
-      // Falls back to global 1.15/0.87 when fewer than 5 games in either venue.
-      const globalHome = TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.15);
-      const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.87);
+      // Falls back to global 1.07/0.93 when fewer than 5 games in either venue.
+      const globalHome = TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.07);
+      const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.93);
       const venueMultiplier = TeamGoalsService.getTeamVenueMultiplier(team.id, isHome, fixturesData, globalHome, globalAway);
       
       const baseExpectedGoals = expectedGoalsFromStrength({
