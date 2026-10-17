@@ -14361,16 +14361,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       };
 
-      // Check cache first for fast response — bypass cache for raw (unadjusted) requests
-      // so the in-memory cache always stores raw projections and is never polluted with scaled data
-      if (availabilityAdjusted && totalPointsCache.has(cacheKey)) {
+      // Check cache first for fast response. Adjusted AND raw requests both read the same stored snapshot,
+      // so the two responses are always derived from identical base data (raw used to recompute from the
+      // component caches while adjusted read the snapshot, so a component refresh in between made a
+      // fully-available player's adjusted and raw totals disagree). The snapshot itself is stored
+      // untransformed, so reading it for either mode never pollutes it with scaled data.
+      if (totalPointsCache.has(cacheKey)) {
         const cached = totalPointsCache.get(cacheKey);
         if (Date.now() - cached.timestamp < TOTAL_POINTS_CACHE_DURATION) {
           console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end} (${cached.data.length} players)`);
+          res.set('X-Total-Points-Source', 'cache');
           // Deep-clone before any transformation so the stored cache entry is never mutated.
           // Shallow spreading ({ ...player }) shares nested object references (e.g. fixtureDetails),
           // which would corrupt the cache on every hit if those refs are modified downstream.
-          return res.json(applyAvailabilityAdjustments(structuredClone(cached.data)));
+          const snapshot = structuredClone(cached.data);
+          return res.json(availabilityAdjusted ? applyAvailabilityAdjustments(snapshot) : inverseAvailabilityScale(snapshot));
         }
       }
 
@@ -14888,16 +14893,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Added ${bootstrapOnlyPlayers.length} bootstrap-only players (0-minute/no-projection) to the response`);
       const result = [...projections, ...bootstrapOnlyPlayers];
       
-      // Cache the result for 15 minutes only if data is valid (always cache RAW projections)
-      // Only cache when availabilityAdjusted=true so the cache always stores raw (unscaled) data.
-      // Raw requests bypass the cache entirely (set earlier) so this path is safe.
-      // Store a deep clone so that any post-store mutation of `result` cannot corrupt the cache.
-      if (availabilityAdjusted) {
-        totalPointsCache.set(cacheKey, {
-          data: structuredClone(result),
-          timestamp: Date.now()
-        });
-      }
+      // Cache the untransformed result for 15 minutes, whichever mode asked for it, so the next request in
+      // either mode is derived from this same snapshot. Store a deep clone so that any post-store mutation
+      // of `result` cannot corrupt the cache.
+      totalPointsCache.set(cacheKey, {
+        data: structuredClone(result),
+        timestamp: Date.now()
+      });
+      res.set('X-Total-Points-Source', 'live');
 
       // For raw requests, undo per-GW availability discounting so 0%-chance players show baseline projections
       if (!availabilityAdjusted) {
@@ -18400,6 +18403,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const liveRawUrl = `api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`;
         const liveRawResponse = await internalFetch(liveRawUrl);
         if (!liveRawResponse.ok) throw new Error(`Live aggregator raw request failed: ${liveRawResponse.status}`);
+        const rawSource = liveRawResponse.headers.get('x-total-points-source');
+        if (rawSource) res.set('X-Total-Points-Source', rawSource);
         return res.json(await liveRawResponse.json());
       }
       
@@ -18441,6 +18446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${enrichedData.length} players)`);
+            res.set('X-Total-Points-Source', 'cache');
             return res.json(enrichedData);
           }
         }
@@ -18461,6 +18467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const liveData = await liveResponse.json();
       console.log(`✅ LIVE: Serving ${liveData.length} players from live aggregation (GW${startGameweek}-${endGameweek})`);
+      const liveSource = liveResponse.headers.get('x-total-points-source');
+      if (liveSource) res.set('X-Total-Points-Source', liveSource);
       return res.json(liveData);
       
     } catch (error) {
