@@ -13368,28 +13368,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endGameweek = reqEnd ?? Math.min(startGameweek + projectionWindowSettings.totalWeeks - 1, teamCSMaxGW);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
-      // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets
-      const defensiveAbsenceMap = new Map<number, number>();
-      for (const t of bootstrapData.teams) {
-        const teamEls = bootstrapData.elements.filter((el: any) => el.team === t.id);
-        const unavailGKP = teamEls.filter((el: any) =>
-          el.element_type === 1 &&
-          el.now_cost >= 45 &&
-          el.chance_of_playing_next_round !== null &&
-          el.chance_of_playing_next_round < 75
-        ).length;
-        const unavailDEF = teamEls.filter((el: any) =>
-          el.element_type === 2 &&
-          el.now_cost >= 50 &&
-          el.chance_of_playing_next_round !== null &&
-          el.chance_of_playing_next_round < 75
-        ).length;
-        let factor = 1.0;
-        if (unavailGKP >= 1) factor *= 0.87;
-        if (unavailDEF >= 2) factor *= 0.88;
-        defensiveAbsenceMap.set(t.id, Math.max(0.70, factor));
-      }
-
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
 
@@ -13448,15 +13426,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let cleanSheetPointsForGW = 0;
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
           if (teamCleanSheetPercent !== undefined) {
-            const absenceFactor = defensiveAbsenceMap.get(player.team) ?? 1.0;
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                const fixtureCSPoints = minutesFactor * (fd.cleanSheetOdds / 100) * absenceFactor * cleanSheetPoints;
+                const fixtureCSPoints = minutesFactor * (fd.cleanSheetOdds / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({ opponent: fd.opponent, isHome: fd.isHome, cleanSheetPoints: Math.round(fixtureCSPoints * 100) / 100 });
               });
             } else {
-              cleanSheetPointsForGW = minutesFactor * (teamCleanSheetPercent / 100) * absenceFactor * cleanSheetPoints;
+              cleanSheetPointsForGW = minutesFactor * (teamCleanSheetPercent / 100) * cleanSheetPoints;
               gwFixtureDetails.push({ opponent: 'OPP', isHome: true, cleanSheetPoints: Math.round(cleanSheetPointsForGW * 100) / 100 });
             }
           }
