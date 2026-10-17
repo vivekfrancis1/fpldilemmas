@@ -16,9 +16,6 @@ async function fetchJSON(path: string) {
 // completed-fixture count) — the 2025/26 last-season blend was deliberately removed per
 // explicit product decision, even though that means early-season projections are more
 // volatile (a single fluke result carries full weight, undamped, until more games accumulate).
-// The dynamic-mode formula is the team-strength model in server/team-goals-strength.ts (blended goal/xG-difference
-// rating gap, scaled by games played, around the league-average goals). Fitted values below must
-// match STRENGTH_MAX_WEIGHT / STRENGTH_HALF_GAMES there.
 // This test independently reproduces the dynamic-mode formula from current-standings alone
 // and checks it matches the live projection for a fixture far enough out that 'odds' mode
 // has no market to use (falls through to dynamic) — if a last-season blend were reintroduced,
@@ -48,30 +45,26 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
     expect(target).toBeDefined();
     const { team, opponent, isHome, projected } = target!;
 
-    const rating = (t: any) => 0.5 * ((t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played) + 0.5 * ((t.goalsFor - t.goalsAgainst) / t.played);
-    const leagueAvg = standings.reduce((a: number, t: any) => a + t.goalsFor, 0) / standings.reduce((a: number, t: any) => a + t.played, 0);
-    const games = Math.min(team.played, opponent.played);
-    const weight = (0.4 * games) / (games + 3.0);
+    const attackHalf = (team.goalsFor / team.played) * 0.25 + (team.expectedGoalsFor / team.played) * 0.25;
+    const defenceHalf = (opponent.goalsAgainst / opponent.played) * 0.25 + (opponent.expectedGoalsAgainst / opponent.played) * 0.25;
     // Neither team has 5+ games at either venue this early in the season, so the venue
     // multiplier falls back to the global default (1.07 home / 0.93 away).
     const venueMultiplier = isHome ? 1.07 : 0.93;
-    const expected = Math.max(0, Math.min(7, (leagueAvg + weight * (rating(team) - rating(opponent))) * venueMultiplier));
+    const expected = Math.max(0, Math.min(7, (attackHalf + defenceHalf) * venueMultiplier));
 
     expect(projected).toBeCloseTo(expected, 1);
   });
 
-  it('keeps a genuinely strong team clearly above a genuinely weak one (real results are not diluted away)', async () => {
-    // The team with the best blended rating and the one with the worst should stay clearly
-    // separated in their projections — if a last-season or league-average blend were reintroduced,
-    // both would be pulled toward a shared, more moderate number. The exact formula is checked by
-    // the test above.
+  it('does not move a team\'s projection toward a fixed constant regardless of their actual results (i.e. no last-season/league-average dilution)', async () => {
+    // A team with a genuine attacking outburst (goals-for per game well above the league's
+    // typical ~1.3-1.5) and a team with a genuine blank (0 goals-for) should stay clearly
+    // separated in their projections — if a last-season or league-average blend were still
+    // active, both would be pulled substantially toward a shared, more moderate number.
     const standings = await fetchJSON('/api/current-standings');
     const projections = await fetchJSON('/api/team-goal-projections');
 
-    const net = (t: any) => 0.5 * ((t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played) + 0.5 * ((t.goalsFor - t.goalsAgainst) / t.played);
-    const sorted = [...standings].sort((a: any, b: any) => net(b) - net(a));
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
+    const bestAttack = [...standings].sort((a: any, b: any) => (b.goalsFor / b.played) - (a.goalsFor / a.played))[0];
+    const worstAttack = [...standings].sort((a: any, b: any) => (a.goalsFor / a.played) - (b.goalsFor / b.played))[0];
 
     const avgProjected = (teamShort: string) => {
       const t = projections.find((p: any) => p.teamShort === teamShort);
@@ -79,6 +72,12 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
       return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
     };
 
-    expect(avgProjected(best.shortName) - avgProjected(worst.shortName)).toBeGreaterThan(0.1);
+    // Scale the bar to how far apart the two teams' real attacks actually are (the attack half of
+    // the dynamic formula is 0.25 x goals/game + 0.25 x xG/game), not a fixed number that only
+    // holds when results happen to be extreme. The exact formula is checked by the test above.
+    const attackSpread =
+      0.25 * (bestAttack.goalsFor / bestAttack.played - worstAttack.goalsFor / worstAttack.played) +
+      0.25 * (bestAttack.expectedGoalsFor / bestAttack.played - worstAttack.expectedGoalsFor / worstAttack.played);
+    expect(avgProjected(bestAttack.shortName) - avgProjected(worstAttack.shortName)).toBeGreaterThan(0.4 * attackSpread);
   });
 });

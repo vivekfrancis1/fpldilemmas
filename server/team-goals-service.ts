@@ -7,7 +7,6 @@ import { CURRENT_SEASON } from "@shared/schema";
 import { solveExpectedGoalsFromOdds } from "@shared/odds-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import type { StoredFixtureOdds } from "./odds-service";
-import { teamStrengthRating, expectedGoalsFromStrength } from "./team-goals-strength";
 
 // REAL final 2025/26 Championship goals scored, across the true 46-game season — used only by
 // the explicit ?season=2025/26 real-history viewer (buildRealGoalShareForSeason/
@@ -462,25 +461,31 @@ export class TeamGoalsService {
     MASTER_TEAM_DEFAULTS: any
   ): Promise<{ expectedGoals: number; source: GoalsSource }> {
     try {
-      // SEASON DATA ONLY, from the current standings API. Team-strength model (see
-      // server/team-goals-strength.ts): each team's rating is its xG-for minus xG-against per game,
-      // and the fixture's expected goals are league-average goals plus a games-played-scaled share
-      // of the rating gap to the opponent. Replaces the old 25/25/25/25 average of own goals, own
-      // xG, opponent goals conceded and opponent xG conceded, which ignored the opponent's attack
-      // and the team's own defence (and was measurably further from the betting odds).
-      // A team with 0 games played still throws (true pre-season) — no fabricated number.
-      const standings = await TeamGoalsService.fetchCurrentStandings();
-      const teamRow = standings.find((t: any) => t.id === team.id);
-      const oppRow = standings.find((t: any) => t.id === opponent.id);
-      const teamRating = teamRow ? teamStrengthRating(teamRow) : null;
-      const oppRating = oppRow ? teamStrengthRating(oppRow) : null;
-      if (teamRating === null || oppRating === null) {
-        throw new Error(`No current-season data found for ${teamRating === null ? team.name : opponent.name} (0 games played)`);
-      }
-      const totalGames = standings.reduce((sum: number, t: any) => sum + (t.played || 0), 0);
-      const totalGoals = standings.reduce((sum: number, t: any) => sum + (t.goalsFor || 0), 0);
-      const leagueAvg = totalGames > 0 ? totalGoals / totalGames : 0;
+      // SEASON DATA ONLY: Uses verified data from current standings API
+      // Formula: GF×0.25 + xGF×0.25 + GC×0.25 + xGC×0.25
+      // 50% attack (50% GF + 50% xGF) + 50% defence (50% GC + 50% xGC). Weights sum to 1.0.
+      // Before the current season has any games, xG/xGC have no data to blend from (unlike
+      // GF/GC, which fall back to real last-season archives) — their weight is redistributed
+      // onto GF/GC instead of being spent on a flat, team-agnostic guess that would only
+      // dilute the real signal without differentiating any team from any other.
 
+      // SEASON AVERAGES (from current standings - full season data)
+      const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
+      const teamAvgXGSeason = await TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      const opponentAvgGCSeason = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
+      const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+
+      // Attack half: GF+xGF normally split 0.25/0.25; if xGF is unavailable, GF takes the full 0.5.
+      const attackHalf = teamAvgXGSeason !== null
+        ? teamAvgGoalsSeason * 0.25 + teamAvgXGSeason * 0.25
+        : teamAvgGoalsSeason * 0.5;
+      // Defence half: same reweighting between GC and xGC.
+      const defenceHalf = opponentAvgXGCSeason !== null
+        ? opponentAvgGCSeason * 0.25 + opponentAvgXGCSeason * 0.25
+        : opponentAvgGCSeason * 0.5;
+
+      let baseExpectedGoals = attackHalf + defenceHalf;
+      
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
       // Falls back to global 1.07/0.93 when fewer than 5 games in either venue.
@@ -488,9 +493,7 @@ export class TeamGoalsService {
       const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.93);
       const venueMultiplier = TeamGoalsService.getTeamVenueMultiplier(team.id, isHome, fixturesData, globalHome, globalAway);
       
-      const baseExpectedGoals = expectedGoalsFromStrength({
-        rating: teamRating, oppRating, games: Math.min(teamRow.played, oppRow.played), leagueAvg, venueMultiplier,
-      });
+      baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
       // Final Bounds and Validation (min 0.0, max 7.0)
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);

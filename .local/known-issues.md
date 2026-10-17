@@ -9,22 +9,20 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ---
 
-## 2026-10-17 — Team goals model (no-odds fixtures) rebuilt as a team-strength model; REVISIT after ~GW10-12
+## 2026-10-17 — Team goals model (no-odds fixtures): team-strength experiment reverted; improving the old formula instead
 
-- **Where:** `server/team-goals-strength.ts` + `calculateFixtureGoalsDynamic` in `server/team-goals-service.ts`.
-- **Status:** Built (local commit); needs a refit/recheck after a few more gameweeks of stored odds.
-- **Notes:** The old formula (25/25/25/25 of own goals, own xG, opponent goals conceded, opponent xG
-  conceded, x venue) ignored the opponent's attack and the team's own defence and sat further from the
-  match odds. New: rating = 50/50 blend of xG difference and goal difference per game (was pure xG; changed at the owner's request after Forest v Arsenal GW7); expected goals = (league avg goals + w x
-  rating gap) x venue, w = 0.4 x games/(games + 3.0) with games = min of the two teams'. Fitted on 88
-  team-fixtures from `fixture_odds` (GW2-8 of 2026/27): error vs odds' implied goals 0.341 (old 0.416),
-  leave-one-out 0.350. xG-only rating beat every goals/xG blend (goals-only was worst). TO REVISIT:
-  (1) refit STRENGTH_MAX_WEIGHT / STRENGTH_HALF_GAMES on more odds history; (2) check the clean-sheet %
-  also improved; (3) home/away multiplier changed
-  1.15/0.87 -> 1.07/0.93 (odds imply ~1.05/0.95, actual results ~1.10/0.90, best fit in the new model
-  ~1.05-1.07) — recheck on more data; unrelated copies of 1.15/0.87 remain in `routes.ts` (~1368 fast
-  projection helper, ~7700 Match Projections admin settings) and the DB schema default;
-  (4) per-team venue multiplier (kicks in at >=5 home and away games) is noisy and uncapped-ish.
+- **Where:** `calculateFixtureGoalsDynamic` in `server/team-goals-service.ts`.
+- **Status:** Reverted to the owner's original formula (25/25/25/25 of own goals, own xG, opponent goals
+  conceded, opponent xG conceded, x venue). The venue multiplier stays at 1.07/0.93 (was 1.15/0.87).
+  The reverted experiment lives in git history: commits `7c2e8e8d` (xG-only team-strength model) and
+  `978c3658` (50/50 goals/xG rating). Findings from the experiment, to use when improving the old formula:
+  against the odds' implied goals (88 team-fixtures, GW2-8 of 2026/27) the old formula's average error was
+  0.416; the strength model reached 0.319 (xG-only) / 0.330 (50/50 blend); the weight on the rating gap had
+  to be scaled with games played (a gap of 1.0 with no scaling gave error 0.767 and zero-goal predictions);
+  goals-only ratings were the worst of every blend tested; odds home/away ratio ~1.10 (venue 1.07/0.93 fits
+  best); the model gives roughly 2/3 of the odds' margins. Deployed to production at `64973f1e` (xG-only
+  version) before this revert — redeploy needed to take the revert live.
+- **Revisit:** after ~GW10-12 refit anything tunable on more odds history and recheck clean sheet %.
 
 ## 2026-10-17 — Clean sheet points: team-level "defensive absence factor" double-counted odds and hit backups
 
