@@ -96,8 +96,8 @@ export default function FiltersPanel({
       {/* Search stays outside the collapsible section below — it's the control people reach for
           most, so it shouldn't be hidden behind a click just because the rest of the filters are
           collapsed. */}
-      <div className="fpl-card-content pb-0">
-        <div className="relative">
+      <div className="fpl-card-content pb-0 flex items-center gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search by player name..."
@@ -107,18 +107,17 @@ export default function FiltersPanel({
             data-testid="input-search"
           />
         </div>
-      </div>
-      <div
-        className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="fpl-card-title flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-blue-600" />
-            More Filters
-          </div>
-          {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
-        </div>
+        {/* "More Filters" toggle sits on the search row so the table starts higher on the page */}
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+          data-testid="button-more-filters"
+        >
+          <Search className="h-4 w-4 text-blue-600" />
+          More Filters
+          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+        </button>
       </div>
       {isExpanded && (
       <div className="fpl-card-content">

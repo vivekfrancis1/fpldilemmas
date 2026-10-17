@@ -751,28 +751,23 @@ export default function PlayerSaves() {
               <div className="flex items-center gap-2 text-xs text-gray-600 justify-center sm:justify-end col-span-2 sm:col-span-1">
                 <Users className="h-4 w-4" />
                 <span>{filteredAndSortedData.length} goalkeepers</span>
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((open) => !open)}
+                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  data-testid="button-toggle-filters"
+                >
+                  <Filter className="h-4 w-4 text-blue-600" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-3 md:mb-4">
-          <CollapsibleTrigger asChild>
-            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-blue-600" />
-                <h2 className="fpl-card-title">Filters</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-            </div>
-          </CollapsibleTrigger>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
           <CollapsibleContent>
           <div className="p-2 sm:p-3">
             {viewMode === "past" && (

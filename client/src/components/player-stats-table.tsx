@@ -1154,7 +1154,7 @@ export default function PlayerStatsTable({
       )}
 
       {/* Zoom Control */}
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+      <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-3 max-w-lg">
           <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Zoom:</span>
           <Button

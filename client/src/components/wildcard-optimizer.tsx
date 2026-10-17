@@ -1290,7 +1290,7 @@ export function WildcardOptimizer({
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className={variant === 'page' ? "space-y-2 compact-rows" : "space-y-3 sm:space-y-4"}>
       {/* Optimization Loading Screen */}
       {isOptimizing && (
         <div 
@@ -1800,7 +1800,7 @@ export function WildcardOptimizer({
         // differs between variants.
         const squadNoun = variant === 'embedded' ? 'squad' : 'wildcard squad';
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className={`grid grid-cols-1 lg:grid-cols-3 ${variant === 'page' ? 'gap-3' : 'gap-6'} items-start`}>
             <div className="lg:col-span-1">
               {controlsCard}
             </div>

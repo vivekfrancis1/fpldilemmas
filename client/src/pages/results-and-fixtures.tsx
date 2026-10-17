@@ -319,15 +319,17 @@ export default function ResultsAndFixtures() {
 
   if (isLoadingBootstrap || isLoadingFixtures || (isHistorical && isLoadingHistorical)) {
     return (
-      <div className="fpl-page-container">
+      <div className="fpl-page-container compact-rows">
         <div className="fpl-page-header">
-          <div className="fpl-page-title">
-            <Calendar className="h-8 w-8" />
-            <h1>Match Stats</h1>
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Calendar className="h-8 w-8" />
+              <h1>Match Stats</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              Complete Premier League schedule with results and upcoming fixtures
+            </p>
           </div>
-          <p className="fpl-page-subtitle">
-            Complete Premier League schedule with results and upcoming fixtures
-          </p>
         </div>
         <div className="fpl-section-spacing">
           <div className="flex justify-center py-12">
@@ -339,17 +341,19 @@ export default function ResultsAndFixtures() {
   }
 
   return (
-    <div className="fpl-page-container">
+    <div className="fpl-page-container compact-rows">
       {/* Unified Page Header */}
       <div className="fpl-page-header">
-        <div className="fpl-page-title">
-          <Calendar className="h-8 w-8" />
-          <h1>Match Stats</h1>
-          <SeasonBadge season={selectedSeason} />
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Calendar className="h-8 w-8" />
+            <h1>Match Stats</h1>
+            <SeasonBadge season={selectedSeason} />
+          </div>
+          <p className="fpl-page-subtitle">
+            Complete Premier League schedule with results and upcoming fixtures
+          </p>
         </div>
-        <p className="fpl-page-subtitle">
-          Complete Premier League schedule with results and upcoming fixtures
-        </p>
       </div>
 
       <div className="fpl-section-spacing">
@@ -696,19 +700,19 @@ export default function ResultsAndFixtures() {
                         </div>
 
                         {/* Score or Time */}
-                        <div className="flex items-center justify-center min-w-[100px]">
+                        <div className="flex items-center justify-center min-w-[160px]">
                           {fixture.isResult ? (
                             <span className="text-xl font-bold text-gray-900">
                               {fixture.team_h_score} - {fixture.team_a_score}
                             </span>
                           ) : (
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500">
+                            <div className="text-center flex items-center gap-2 whitespace-nowrap">
+                              <span className="text-xs text-gray-500">
                                 {formatDateTime(fixture.kickoff_time).date}
-                              </div>
-                              <div className="text-sm text-gray-600">
+                              </span>
+                              <span className="text-sm text-gray-600">
                                 {formatDateTime(fixture.kickoff_time).time}
-                              </div>
+                              </span>
                             </div>
                           )}
                         </div>

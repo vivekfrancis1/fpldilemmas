@@ -179,8 +179,9 @@ export default function PredictedScores() {
           <p className="fpl-page-subtitle">
             Match predictions with rounded scores and determined outcomes based on expected goals
           </p>
-          <div className="mt-3 sm:mt-4">
+          <div className="ml-auto">
             <Button 
+              size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -347,17 +348,19 @@ export default function PredictedScores() {
                         </td>
                         
                         <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-lg font-bold text-gray-900">
-                              {match.homeTeam.predictedScore}
-                            </span>
-                            <span className="text-gray-500">-</span>
-                            <span className="text-lg font-bold text-gray-900">
-                              {match.awayTeam.predictedScore}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            ({match.homeTeam.expectedGoals.toFixed(2)} - {match.awayTeam.expectedGoals.toFixed(2)})
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="text-lg font-bold text-gray-900">
+                                {match.homeTeam.predictedScore}
+                              </span>
+                              <span className="text-gray-500">-</span>
+                              <span className="text-lg font-bold text-gray-900">
+                                {match.awayTeam.predictedScore}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ({match.homeTeam.expectedGoals.toFixed(2)} - {match.awayTeam.expectedGoals.toFixed(2)})
+                            </div>
                           </div>
                         </td>
                         

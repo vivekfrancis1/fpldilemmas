@@ -679,7 +679,7 @@ export default function BestFreehitTeam() {
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="w-full py-4 sm:py-8 space-y-6">
+      <div className="w-full py-1 space-y-2 compact-rows">
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
@@ -697,7 +697,7 @@ export default function BestFreehitTeam() {
   }
 
   return (
-    <div className="w-full py-4 sm:py-8 space-y-6">
+    <div className="w-full py-1 space-y-2 compact-rows">
       {/* Optimization Loading Screen */}
       {isOptimizing && (
         <div 
@@ -731,7 +731,7 @@ export default function BestFreehitTeam() {
       </div>
 
       {/* Config on the left third, results on the right two-thirds */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
       <div className="lg:col-span-1">
       {/* Controls */}
       <Card>
