@@ -4,6 +4,7 @@ import {
   expectedGoalsFromStrength,
   teamStrengthRating,
   STRENGTH_MAX_WEIGHT,
+  STRENGTH_XG_SHARE,
 } from "../server/team-goals-strength";
 
 const L = 1.5; // league-average goals per team per game
@@ -15,8 +16,9 @@ describe("strengthWeight", () => {
     expect(strengthWeight(6)).toBeLessThan(strengthWeight(30));
     expect(strengthWeight(1000)).toBeLessThanOrEqual(STRENGTH_MAX_WEIGHT);
   });
-  it("the max weight is 0.5: each side takes half of the goal-difference gap", () => {
-    expect(STRENGTH_MAX_WEIGHT).toBe(0.5);
+  it("uses the refitted constants", () => {
+    expect(STRENGTH_MAX_WEIGHT).toBe(0.4);
+    expect(STRENGTH_XG_SHARE).toBe(0.5);
   });
 });
 
@@ -58,8 +60,16 @@ describe("expectedGoalsFromStrength", () => {
 });
 
 describe("teamStrengthRating", () => {
-  it("uses xG for minus xG against per game when available", () => {
-    expect(teamStrengthRating({ played: 4, goalsFor: 10, goalsAgainst: 2, expectedGoalsFor: 6, expectedGoalsAgainst: 4 })).toBeCloseTo(0.5, 9);
+  const t = { played: 4, goalsFor: 10, goalsAgainst: 2, expectedGoalsFor: 6, expectedGoalsAgainst: 4 };
+  it("blends goal difference and xG difference per game, equally weighted", () => {
+    // goal diff / game = 2, xG diff / game = 0.5 -> 50/50 = 1.25
+    expect(teamStrengthRating(t)).toBeCloseTo(1.25, 9);
+  });
+  it("a team scoring far below its xG is rated between its xG and its results", () => {
+    const unlucky = { played: 6, goalsFor: 5, goalsAgainst: 8, expectedGoalsFor: 11, expectedGoalsAgainst: 7 };
+    const r = teamStrengthRating(unlucky)!;
+    expect(r).toBeLessThan((11 - 7) / 6); // pulled down from its pure-xG rating
+    expect(r).toBeGreaterThan((5 - 8) / 6); // but not all the way to its raw goal difference
   });
   it("falls back to goal difference per game when xG is missing", () => {
     expect(teamStrengthRating({ played: 4, goalsFor: 10, goalsAgainst: 2 })).toBeCloseTo(2, 9);

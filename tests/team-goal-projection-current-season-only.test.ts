@@ -16,7 +16,7 @@ async function fetchJSON(path: string) {
 // completed-fixture count) — the 2025/26 last-season blend was deliberately removed per
 // explicit product decision, even though that means early-season projections are more
 // volatile (a single fluke result carries full weight, undamped, until more games accumulate).
-// The dynamic-mode formula is the team-strength model in server/team-goals-strength.ts (xG-difference
+// The dynamic-mode formula is the team-strength model in server/team-goals-strength.ts (blended goal/xG-difference
 // rating gap, scaled by games played, around the league-average goals). Fitted values below must
 // match STRENGTH_MAX_WEIGHT / STRENGTH_HALF_GAMES there.
 // This test independently reproduces the dynamic-mode formula from current-standings alone
@@ -48,10 +48,10 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
     expect(target).toBeDefined();
     const { team, opponent, isHome, projected } = target!;
 
-    const rating = (t: any) => (t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played;
+    const rating = (t: any) => 0.5 * ((t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played) + 0.5 * ((t.goalsFor - t.goalsAgainst) / t.played);
     const leagueAvg = standings.reduce((a: number, t: any) => a + t.goalsFor, 0) / standings.reduce((a: number, t: any) => a + t.played, 0);
     const games = Math.min(team.played, opponent.played);
-    const weight = (0.5 * games) / (games + 2.5);
+    const weight = (0.4 * games) / (games + 3.0);
     // Neither team has 5+ games at either venue this early in the season, so the venue
     // multiplier falls back to the global default (1.07 home / 0.93 away).
     const venueMultiplier = isHome ? 1.07 : 0.93;
@@ -61,14 +61,14 @@ describe('Dynamic-mode team goal projections use only this season\'s data', () =
   });
 
   it('keeps a genuinely strong team clearly above a genuinely weak one (real results are not diluted away)', async () => {
-    // The team with the best xG difference per game and the one with the worst should stay clearly
+    // The team with the best blended rating and the one with the worst should stay clearly
     // separated in their projections — if a last-season or league-average blend were reintroduced,
     // both would be pulled toward a shared, more moderate number. The exact formula is checked by
     // the test above.
     const standings = await fetchJSON('/api/current-standings');
     const projections = await fetchJSON('/api/team-goal-projections');
 
-    const net = (t: any) => (t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played;
+    const net = (t: any) => 0.5 * ((t.expectedGoalsFor - t.expectedGoalsAgainst) / t.played) + 0.5 * ((t.goalsFor - t.goalsAgainst) / t.played);
     const sorted = [...standings].sort((a: any, b: any) => net(b) - net(a));
     const best = sorted[0];
     const worst = sorted[sorted.length - 1];

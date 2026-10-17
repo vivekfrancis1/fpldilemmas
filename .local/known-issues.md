@@ -15,8 +15,8 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Status:** Built (local commit); needs a refit/recheck after a few more gameweeks of stored odds.
 - **Notes:** The old formula (25/25/25/25 of own goals, own xG, opponent goals conceded, opponent xG
   conceded, x venue) ignored the opponent's attack and the team's own defence and sat further from the
-  match odds. New: rating = xG-for minus xG-against per game; expected goals = (league avg goals + w x
-  rating gap) x venue, w = 0.5 x games/(games + 2.5) with games = min of the two teams'. Fitted on 88
+  match odds. New: rating = 50/50 blend of xG difference and goal difference per game (was pure xG; changed at the owner's request after Forest v Arsenal GW7); expected goals = (league avg goals + w x
+  rating gap) x venue, w = 0.4 x games/(games + 3.0) with games = min of the two teams'. Fitted on 88
   team-fixtures from `fixture_odds` (GW2-8 of 2026/27): error vs odds' implied goals 0.341 (old 0.416),
   leave-one-out 0.350. xG-only rating beat every goals/xG blend (goals-only was worst). TO REVISIT:
   (1) refit STRENGTH_MAX_WEIGHT / STRENGTH_HALF_GAMES on more odds history; (2) check the clean-sheet %
