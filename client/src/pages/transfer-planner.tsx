@@ -6393,7 +6393,7 @@ export default function TransferPlanner() {
       {/* Chip Selection */}
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
+          <Card className="border-gray-200 bg-white">
             <CollapsibleTrigger asChild>
               <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4 cursor-pointer hover:bg-muted/50 transition-colors" data-testid="button-toggle-chips-planning">
                 <div className="flex items-center justify-between gap-2">
@@ -6595,7 +6595,7 @@ export default function TransferPlanner() {
       {/* Team Summary Stats */}
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isTeamSummaryOpen} onOpenChange={setIsTeamSummaryOpen}>
-          <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
+          <Card className="border-gray-200 bg-white">
             <CollapsibleTrigger asChild>
               <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
@@ -6902,7 +6902,7 @@ export default function TransferPlanner() {
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
           <div className="w-full lg:w-[60%] flex-shrink-0">
-        <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+        <Card ref={teamLineupRef} className="border-gray-200 bg-white">
           <CardHeader className="py-3 px-3 sm:px-6">
             <div className="flex items-center justify-between gap-2">
               {/* Left: title */}
@@ -7812,7 +7812,7 @@ export default function TransferPlanner() {
         return uniqueDraftsCount >= 2;
       })() && (
         <Collapsible open={isDraftComparisonOpen} onOpenChange={setIsDraftComparisonOpen}>
-          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+          <Card className="border-gray-200 bg-white">
             <CardHeader>
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
