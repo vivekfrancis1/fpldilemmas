@@ -75,6 +75,20 @@ describe("buildCaptaincyMatrix", () => {
     expect(chelsea.candidates).toEqual([]);
   });
 
+  it("a team with no fixture this gameweek but an unscheduled (TBC) fixture is TBC, not blank: candidates stay", () => {
+    const tbcFixtures = [fx(1, 8, 1, 2), { ...fx(9, 8, 3, 3), event: null as number | null }]; // Chelsea (3) has an unscheduled fixture
+    const out = run({ fixtures: tbcFixtures });
+    const chelsea = out.teams.find((t) => t.teamId === 3)!;
+    expect(chelsea.fixtureTbc).toBe(true);
+    expect(chelsea.fixtures).toEqual([]);
+    expect(chelsea.candidates.length).toBeGreaterThan(0);
+  });
+
+  it("a genuinely blank team is not marked TBC", () => {
+    const out = run({ fixtures: [fx(1, 8, 1, 2)] });
+    expect(out.teams.find((t) => t.teamId === 3)!.fixtureTbc).toBe(false);
+  });
+
   it("skips players with no projection for the gameweek (never shown as 0)", () => {
     const out = run({ projections: [proj(10, { 9: 4 }), proj(11, 4.2)] });
     expect(out.teams.find((t) => t.teamId === 1)!.candidates.map((c) => c.playerId)).toEqual([11]);

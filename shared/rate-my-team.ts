@@ -2,7 +2,7 @@
 // Deliberately no invented grade and no "best possible squad" benchmark (the squad builder is a heuristic,
 // not an exact optimiser). Everything here is either exact arithmetic on the projections or a fact from FPL.
 import { bestLineup, type LineupPlayer } from "./lineup";
-import { fixturesForGameweeks, type CompareFixtureInput } from "./compare-utils";
+import { fixturesForGameweeks, teamsWithUnscheduledFixtures, type CompareFixtureInput } from "./compare-utils";
 
 export interface RmtPlayer {
   id: number;
@@ -119,7 +119,7 @@ export function findUpgrades(input: {
     const sell = sellingPrices?.get(out.id) ?? out.price;
     const budget = sell + bank;
     const outSum = horizonSum(xPtsByPlayer, out.id, gameweeks);
-    let best: Upgrade | null = null;
+    let best: { row: Upgrade; cand: RmtPlayer } | null = null;
 
     for (const cand of pool) {
       if (cand.elementType !== out.elementType || owned.has(cand.id) || UNAVAILABLE.has(cand.status)) continue;
@@ -143,11 +143,14 @@ export function findUpgrades(input: {
         outHorizonXPts: outSum,
         inHorizonXPts: horizonSum(xPtsByPlayer, cand.id, gameweeks),
       };
-      if (!best || row.gain > best.gain || (row.gain === best.gain && (cand.price < (pool.find((p) => p.id === best!.inId)?.price ?? Infinity) || (cand.price === pool.find((p) => p.id === best!.inId)?.price && cand.id < best.inId)))) {
-        best = row;
-      }
+      // best gain wins; on a tie the cheaper player, then the lower id
+      const better =
+        !best ||
+        row.gain > best.row.gain ||
+        (row.gain === best.row.gain && (cand.price < best.cand.price || (cand.price === best.cand.price && cand.id < best.cand.id)));
+      if (better) best = { row, cand };
     }
-    if (best) results.push(best);
+    if (best) results.push(best.row);
   }
 
   return results.sort((a, b) => b.gain - a.gain || a.outId - b.outId).slice(0, topN);
@@ -157,6 +160,8 @@ export interface SquadFlags {
   availability: Array<{ playerId: number; name: string; status: string; chanceOfPlayingNextRound: number | null; news: string }>;
   blanks: Array<{ playerId: number; name: string; gameweeks: number[] }>;
   doubles: Array<{ playerId: number; name: string; gameweeks: number[] }>;
+  /** No fixture that gameweek but the club has an unscheduled one: not a confirmed blank. */
+  tbc: Array<{ playerId: number; name: string; gameweeks: number[] }>;
 }
 
 /** Plain facts from FPL: availability status/chance, and blank/double gameweeks from the official fixtures. */
@@ -174,12 +179,14 @@ export function squadFlags(input: { squad: RmtPlayer[]; fixtures: CompareFixture
 
   const blanks: SquadFlags["blanks"] = [];
   const doubles: SquadFlags["doubles"] = [];
+  const tbc: SquadFlags["tbc"] = [];
+  const tbcTeams = teamsWithUnscheduledFixtures(fixtures);
   for (const p of squad) {
     const perGw = fixturesForGameweeks(p.team, fixtures, gameweeks);
     const blank = perGw.filter((g) => g.fixtures.length === 0).map((g) => g.gameweek);
     const dbl = perGw.filter((g) => g.fixtures.length > 1).map((g) => g.gameweek);
-    if (blank.length) blanks.push({ playerId: p.id, name: p.name ?? "", gameweeks: blank });
+    if (blank.length) (tbcTeams.has(p.team) ? tbc : blanks).push({ playerId: p.id, name: p.name ?? "", gameweeks: blank });
     if (dbl.length) doubles.push({ playerId: p.id, name: p.name ?? "", gameweeks: dbl });
   }
-  return { availability, blanks, doubles };
+  return { availability, blanks, doubles, tbc };
 }

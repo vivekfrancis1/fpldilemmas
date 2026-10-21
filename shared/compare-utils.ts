@@ -125,6 +125,21 @@ export interface TeamFixture {
   difficulty: number;
 }
 
+/**
+ * Teams that have an unfinished fixture with no gameweek assigned yet (event null: postponed or awaiting a date). Such a
+ * team having no fixture in a gameweek is "TBC", not a confirmed blank.
+ */
+export function teamsWithUnscheduledFixtures(fixtures: CompareFixtureInput[]): Set<number> {
+  const teams = new Set<number>();
+  for (const f of fixtures) {
+    if (f.event === null && !f.finished) {
+      teams.add(f.team_h);
+      teams.add(f.team_a);
+    }
+  }
+  return teams;
+}
+
 /** A team's unfinished, scheduled fixtures for each requested gameweek (empty = blank, 2+ = double). */
 export function fixturesForGameweeks(
   teamId: number,

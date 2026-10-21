@@ -19,6 +19,7 @@ export interface MatrixTeam {
 
 export interface MatrixFixture {
   event: number | null;
+  finished?: boolean;
   team_h: number;
   team_a: number;
   team_h_difficulty: number;
@@ -48,12 +49,16 @@ export interface CaptainCandidate {
 }
 
 export interface MatrixTeamRow {
+  /** true when the team has no fixture this gameweek but has an unscheduled (TBC) one, so it is not a confirmed blank. */
+  fixtureTbc: boolean;
   teamId: number;
   teamName: string;
   shortName: string;
   fixtures: Array<{ opponentId: number; opponentShort: string; isHome: boolean; difficulty: number }>;
   candidates: CaptainCandidate[];
 }
+
+import { teamsWithUnscheduledFixtures } from "./compare-utils";
 
 export const MATRIX_POSITIONS = ["GKP", "DEF", "MID", "FWD"] as const;
 
@@ -74,6 +79,7 @@ export function buildCaptaincyMatrix(input: {
   const { gameweek, elements, teams, fixtures, projections, topN = 3, positions = [] } = input;
   const projectionById = new Map(projections.map((p) => [p.playerId, p]));
   const teamById = new Map(teams.map((t) => [t.id, t]));
+  const tbcTeams = teamsWithUnscheduledFixtures(fixtures as any);
 
   const rows: MatrixTeamRow[] = teams.map((team) => {
     const teamFixtures = fixtures
@@ -89,9 +95,11 @@ export function buildCaptaincyMatrix(input: {
         };
       });
 
-    // A team with no fixture has no captain options: blank, never "0 xPts" candidates.
+    // A confirmed blank (no fixture and nothing unscheduled) has no captain options, never "0 xPts" candidates. A team whose
+    // fixture is still TBC keeps its candidates: the projections decide, we don't claim a blank we can't confirm.
+    const fixtureTbc = teamFixtures.length === 0 && tbcTeams.has(team.id);
     const candidates: CaptainCandidate[] =
-      teamFixtures.length === 0
+      teamFixtures.length === 0 && !fixtureTbc
         ? []
         : elements
             .filter((e) => e.team === team.id && (positions.length === 0 || positions.includes(POSITION_SHORT[e.element_type])))
@@ -117,7 +125,7 @@ export function buildCaptaincyMatrix(input: {
             .sort((a, b) => b.xPts - a.xPts || a.playerId - b.playerId)
             .slice(0, topN);
 
-    return { teamId: team.id, teamName: team.name, shortName: team.short_name, fixtures: teamFixtures, candidates };
+    return { fixtureTbc, teamId: team.id, teamName: team.name, shortName: team.short_name, fixtures: teamFixtures, candidates };
   });
 
   rows.sort((a, b) => {

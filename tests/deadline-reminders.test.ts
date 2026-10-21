@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dueEvent, reminderMessage, isAllowedPushEndpoint, parseSubscription, REMINDER_LEAD_MS, base64UrlToBytes } from "../shared/deadline-reminders";
+import { dueEvent, reminderMessage, isAllowedPushEndpoint, parseSubscription, REMINDER_LEAD_MS, base64UrlToBytes, classifySendError } from "../shared/deadline-reminders";
 
 const H = 60 * 60 * 1000;
 const at = (iso: string) => new Date(iso).getTime();
@@ -110,6 +110,21 @@ describe("base64UrlToBytes", () => {
     expect(Array.from(base64UrlToBytes("SGVsbG8"))).toEqual([72, 101, 108, 108, 111]);
     expect(Array.from(base64UrlToBytes("-_-_"))).toEqual([251, 255, 191]);
     expect(Array.from(base64UrlToBytes("SGk="))).toEqual([72, 105]);
+  });
+});
+
+describe("classifySendError (what to do when a push send fails)", () => {
+  it("404 and 410 mean the subscription is gone: delete it", () => {
+    expect(classifySendError(404)).toBe("gone");
+    expect(classifySendError(410)).toBe("gone");
+  });
+
+  it("other client errors will never succeed on retry: stop retrying this gameweek", () => {
+    for (const status of [400, 401, 403, 413]) expect(classifySendError(status)).toBe("permanent");
+  });
+
+  it("rate limits, server errors and network failures are retried on the next check", () => {
+    for (const status of [429, 500, 502, 503, undefined]) expect(classifySendError(status)).toBe("retry");
   });
 });
 

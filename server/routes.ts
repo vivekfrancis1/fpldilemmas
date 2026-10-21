@@ -41,7 +41,9 @@ import { bestPossible } from "@shared/hindsight";
 import { buildLeagueOwnership } from "@shared/league-ownership";
 import { parseSubscription } from "@shared/deadline-reminders";
 import { pushConfigured, saveSubscription, removeSubscription, countSubscriptions, MAX_SUBSCRIPTIONS } from "./push-reminders";
-import { createRateLimiter, clientIpFromHeaders } from "@shared/rate-limiter";
+import { createRateLimiter, clientIpFromHeaders, isLoopback } from "@shared/rate-limiter";
+import { createTtlCache } from "@shared/ttl-cache";
+import { fetchWithTimeout } from "./http-utils";
 import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
@@ -1468,9 +1470,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Per-IP throttle for the heavy public endpoints below (each can fan out to FPL or run an optimiser). Loopback (local dev
+  // and tests) is exempt. The IP is the last X-Forwarded-For entry (Railway's proxy appends the real address).
+  const makeIpGuard = (limit: number) => {
+    const limiter = createRateLimiter({ limit, windowMs: 60 * 60 * 1000 });
+    return (req: any, res: any): boolean => {
+      const ip = clientIpFromHeaders(req.headers["x-forwarded-for"], req.socket?.remoteAddress);
+      if (isLoopback(ip)) return false;
+      const verdict = limiter.check(ip);
+      if (verdict.allowed) return false;
+      res.set("Retry-After", String(verdict.retryAfterSec));
+      res.status(429).json({ error: "Too many requests. Please try again later." });
+      return true;
+    };
+  };
+  const hindsightGuard = makeIpGuard(60);
+  const leagueGuard = makeIpGuard(20);
+  const rateMyTeamGuard = makeIpGuard(40);
+  const FPL_HEADERS = { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" };
+
   // Hindsight: a manager's official points for a finished gameweek versus the best XI (and captain) available from the
   // same 15 players, using the official final player points. Chip rules in shared/hindsight.ts.
   app.get("/api/hindsight/:managerId", async (req, res) => {
+    if (hindsightGuard(req, res)) return;
     try {
       const { managerId } = req.params;
       if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
@@ -1492,8 +1514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Plain fetch (not fetchWithRetry): that helper throws and retries on a 404, but an unknown manager is a normal answer here.
-      const picksResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${gameweek}/picks/`, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
+      const picksResponse = await fetchWithTimeout(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${gameweek}/picks/`, 10_000, {
+        headers: FPL_HEADERS,
       });
       if (picksResponse.status === 404) return res.status(404).json({ error: "No squad found for this manager and gameweek" });
       if (!picksResponse.ok) return res.status(502).json({ error: "Could not load this squad from FPL" });
@@ -1562,8 +1584,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const hit = leaguePicksCache.get(key);
     if (hit) return hit;
     try {
-      const r = await fetch(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${gw}/picks/`, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
+      const r = await fetchWithTimeout(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${gw}/picks/`, 10_000, {
+        headers: FPL_HEADERS,
       });
       if (!r.ok) return null;
       const picks = (await r.json()).picks;
@@ -1576,7 +1598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  const leagueStandingsCache = createTtlCache<{ name: string; hasMore: boolean; rows: any[] }>(5 * 60 * 1000, 200);
   app.get("/api/league-ownership/:leagueId", async (req, res) => {
+    if (leagueGuard(req, res)) return;
     try {
       const { leagueId } = req.params;
       if (!/^\d+$/.test(leagueId)) return res.status(400).json({ error: "Invalid league ID" });
@@ -1606,13 +1630,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Page 1 only (50 managers) and no DB writes, unlike /api/leagues-classic/:id/standings which also seeds profiles.
-      const standingsResponse = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=1`, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
-      });
-      if (standingsResponse.status === 404) return res.status(404).json({ error: "League not found" });
-      if (!standingsResponse.ok) return res.status(502).json({ error: "Could not load this league from FPL" });
-      const standings = await standingsResponse.json();
-      const rows: any[] = standings.standings?.results ?? [];
+      let league = leagueStandingsCache.get(leagueId);
+      if (!league) {
+        const standingsResponse = await fetchWithTimeout(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=1`, 10_000, {
+          headers: FPL_HEADERS,
+        });
+        if (standingsResponse.status === 404) return res.status(404).json({ error: "League not found" });
+        if (!standingsResponse.ok) return res.status(502).json({ error: "Could not load this league from FPL" });
+        const standings = await standingsResponse.json();
+        league = { name: standings.league?.name ?? "", hasMore: !!standings.standings?.has_next, rows: standings.standings?.results ?? [] };
+        leagueStandingsCache.set(leagueId, league);
+      }
+      const rows: any[] = league.rows;
 
       const managers: Array<{ managerId: number; picks: any[] | null }> = [];
       for (let i = 0; i < rows.length; i += 10) {
@@ -1629,10 +1658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = buildLeagueOwnership({ managers, elements: bootstrap.elements, teams: bootstrap.teams, you });
       res.json({
-        league: { id: Number(leagueId), name: standings.league?.name ?? "" },
+        league: { id: Number(leagueId), name: league.name },
         gameweek,
         finishedGameweeks: finished,
-        hasMore: !!standings.standings?.has_next,
+        hasMore: league.hasMore,
         ...result,
       });
     } catch (error) {
@@ -1693,7 +1722,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rate My Team: measurable facts about a manager's squad from the same cached xPts the Points page shows
   // (projected points over a horizon, rank among the Top 100 squads, single-swap upgrades, availability and
   // blank/double flags). Logic lives in shared/rate-my-team.ts + shared/lineup.ts. No invented score.
+  // Top 100 horizon totals are the same for every visitor, so cache them briefly (keyed by the gameweeks scored).
+  const fieldTotalsCache = createTtlCache<Array<{ managerId: number; total: number }>>(5 * 60 * 1000, 20);
   app.get("/api/rate-my-team/:managerId", async (req, res) => {
+    if (rateMyTeamGuard(req, res)) return;
     try {
       const { managerId } = req.params;
       if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
@@ -1763,13 +1795,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const horizonResult = horizonProjection(squad, xPtsByPlayer, gameweeks);
 
       // Same measure for each Top 100 squad that returned 15 picks
-      const fieldTotals: number[] = [];
-      for (const t of top.teams ?? []) {
-        if (!t.success || t.teamData?.picks?.length !== 15) continue;
-        const theirs = (t.teamData.picks as any[]).map((p) => poolById.get(p.element)).filter((p): p is RmtPlayer => !!p);
-        if (theirs.length !== 15) continue;
-        fieldTotals.push(horizonProjection(theirs, xPtsByPlayer, gameweeks).total);
+      const fieldKey = gameweeks.join(",");
+      let field = fieldTotalsCache.get(fieldKey);
+      if (!field) {
+        field = [];
+        for (const t of top.teams ?? []) {
+          if (!t.success || t.teamData?.picks?.length !== 15) continue;
+          const theirs = (t.teamData.picks as any[]).map((p) => poolById.get(p.element)).filter((p): p is RmtPlayer => !!p);
+          if (theirs.length !== 15) continue;
+          field.push({ managerId: t.managerId, total: horizonProjection(theirs, xPtsByPlayer, gameweeks).total });
+        }
+        if (field.length > 0) fieldTotalsCache.set(fieldKey, field);
       }
+      // A Top 100 manager is not compared with their own squad
+      const fieldTotals = field.filter((f) => f.managerId !== Number(managerId)).map((f) => f.total);
 
       const upgrades = findUpgrades({ squad, pool, xPtsByPlayer, gameweeks, bank, topN: 5 }).map((u) => ({
         ...u,

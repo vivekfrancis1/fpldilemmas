@@ -175,6 +175,20 @@ describe("squadFlags", () => {
   });
 });
 
+describe("squadFlags with unscheduled fixtures", () => {
+  it("a player whose club has an unscheduled fixture and none in the gameweek is TBC, not blank", () => {
+    const fixtures = [
+      { event: 8, team_h: 1, team_a: 2, team_h_difficulty: 3, team_a_difficulty: 3, finished: false },
+      { event: null, team_h: 4, team_a: 5, team_h_difficulty: 3, team_a_difficulty: 3, finished: false },
+    ];
+    const squad = [mk(3, 2, 4, 50), mk(7, 3, 9, 50)]; // club 4 has a TBC fixture; club 9 has nothing at all
+    const f = squadFlags({ squad, fixtures, gameweeks: [8] });
+    expect(f.blanks.map((b) => b.playerId)).toEqual([7]);
+    expect(f.tbc.map((b) => b.playerId)).toEqual([3]);
+    expect(f.tbc[0].gameweeks).toEqual([8]);
+  });
+});
+
 const BASE_URL = `http://localhost:5050`;
 async function getJson(path: string) {
   const res = await fetch(`${BASE_URL}${path}`);
@@ -210,7 +224,10 @@ describe("GET /api/rate-my-team/:managerId (consistency with the data it is buil
   });
 
   it("the Top 100 comparison counts the same squads as /api/top-managers/teams", () => {
-    const complete = top.teams.filter((t: any) => t.success && t.teamData?.picks?.length === 15).length;
+    const completeTeams = top.teams.filter((t: any) => t.success && t.teamData?.picks?.length === 15);
+    // MANAGER is itself a Top 100 manager, and a manager is not compared with their own squad
+    const complete = completeTeams.filter((t: any) => t.managerId !== MANAGER).length;
+    expect(completeTeams.some((t: any) => t.managerId === MANAGER)).toBe(true);
     expect(rmt.rank.fieldSize).toBe(complete);
     expect(rmt.rank.rank).toBeGreaterThanOrEqual(1);
     expect(rmt.rank.rank).toBeLessThanOrEqual(complete + 1);

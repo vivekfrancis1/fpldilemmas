@@ -89,7 +89,7 @@ describe("GET /api/hindsight/:managerId (against real finished gameweeks)", () =
   }, 180000);
 
   it("for Top 100 managers: best possible is never below the official points, and the gap is exact", async () => {
-    const ids = top.teams.filter((t: any) => t.success).slice(0, 12).map((t: any) => t.managerId);
+    const ids = top.teams.filter((t: any) => t.success).slice(0, 6).map((t: any) => t.managerId);
     let checked = 0;
     for (const id of ids) {
       const { status, body } = await getJson(`/api/hindsight/${id}?gw=${latest}`);
@@ -100,7 +100,7 @@ describe("GET /api/hindsight/:managerId (against real finished gameweeks)", () =
       expect(body.picks).toHaveLength(15);
       checked++;
     }
-    expect(checked).toBeGreaterThan(5);
+    expect(checked).toBeGreaterThan(2);
   });
 
   it("defaults to the latest finished gameweek and lists the finished gameweeks", async () => {

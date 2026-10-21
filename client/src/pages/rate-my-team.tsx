@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { compareUrl } from "@shared/compare-utils";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,22 +27,13 @@ interface RmtResponse {
     availability: Array<{ playerId: number; name: string; status: string; chanceOfPlayingNextRound: number | null; news: string }>;
     blanks: Array<{ playerId: number; name: string; gameweeks: number[] }>;
     doubles: Array<{ playerId: number; name: string; gameweeks: number[] }>;
+    tbc: Array<{ playerId: number; name: string; gameweeks: number[] }>;
   };
   bank: number;
   sellingPricesApproximate: boolean;
 }
 
 const HORIZONS = [1, 3, 5, 8];
-const STORAGE_KEY = "fpl-manager-id";
-
-const readSaved = (): string => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
-
 const money = (tenths: number) => `£${(tenths / 10).toFixed(1)}m`;
 const signedMoney = (tenths: number) => `${tenths > 0 ? "+" : tenths < 0 ? "-" : ""}£${Math.abs(tenths / 10).toFixed(1)}m`;
 
@@ -51,7 +43,7 @@ export default function RateMyTeam() {
   const [horizon, setHorizon] = useState(5);
 
   useEffect(() => {
-    const saved = readSaved();
+    const saved = readToolManagerId();
     if (saved) {
       setInput(saved);
       setManagerId(saved);
@@ -62,11 +54,7 @@ export default function RateMyTeam() {
     const id = extractManagerId(input).trim();
     if (!id) return;
     setManagerId(id);
-    try {
-      localStorage.setItem(STORAGE_KEY, id);
-    } catch {
-      /* storage unavailable: still works for this visit */
-    }
+    saveToolManagerId(id);
   };
 
   const { data, isFetching, error } = useQuery<RmtResponse>({
@@ -235,7 +223,7 @@ export default function RateMyTeam() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Things to check</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm" data-testid="flags">
-                {data.flags.availability.length === 0 && data.flags.blanks.length === 0 && data.flags.doubles.length === 0 && (
+                {data.flags.availability.length === 0 && data.flags.blanks.length === 0 && data.flags.doubles.length === 0 && data.flags.tbc.length === 0 && (
                   <p className="text-muted-foreground">No injury flags, blank or double gameweeks in your squad over {gwLabel}.</p>
                 )}
                 {data.flags.availability.map((a) => (
@@ -248,6 +236,11 @@ export default function RateMyTeam() {
                 {data.flags.blanks.map((b) => (
                   <div key={`b${b.playerId}`}>
                     <span className="font-medium">{b.name}</span>: no fixture in {b.gameweeks.map((g) => `GW${g}`).join(", ")}
+                  </div>
+                ))}
+                {data.flags.tbc.map((b) => (
+                  <div key={`t${b.playerId}`}>
+                    <span className="font-medium">{b.name}</span>: fixture TBC in {b.gameweeks.map((g) => `GW${g}`).join(", ")} (not yet scheduled)
                   </div>
                 ))}
                 {data.flags.doubles.map((d) => (

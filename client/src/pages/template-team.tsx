@@ -70,7 +70,7 @@ export default function TemplateTeamPage() {
                     {data.managersCounted} of {data.managersRequested} squads · squad value £{data.totalValue.toFixed(1)}m
                   </span>
                   <ShareImageButton
-                    card={templateCard({ ...data, captain: data.captain ? { name: data.captain.name, percent: data.captain.percent } : null })}
+                    getCard={() => templateCard({ ...data, captain: data.captain ? { name: data.captain.name, percent: data.captain.percent } : null })}
                     fileName={shareFileName(["template-team", `gw${data.gameweek ?? ""}`])}
                     className="ml-auto"
                   />

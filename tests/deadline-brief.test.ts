@@ -78,6 +78,12 @@ describe("buildDeadlineBrief", () => {
     expect(b.blanks.map((t) => t.shortName)).toEqual(["TOT"]);
   });
 
+  it("a team with an unscheduled fixture is listed as TBC, not as blank", () => {
+    const b = run({ fixtures: [...fixtures, { event: null, team_h: 4, team_a: 3, team_h_difficulty: 3, team_a_difficulty: 3, finished: false }] });
+    expect(b.blanks.map((t) => t.shortName)).toEqual([]);
+    expect(b.tbc.map((t) => t.shortName)).toEqual(["TOT"]);
+  });
+
   it("without projections for the gameweek, the projection sections are empty and flagged, never invented", () => {
     const b = run({ projections: projections.map((p) => ({ ...p, gameweekProjections: { "9": 1 } })) });
     expect(b.projectionsAvailable).toBe(false);
@@ -92,6 +98,7 @@ describe("buildDeadlineBrief", () => {
     expect(b.priceWatch.fallers).toEqual([]);
     expect(b.doubles).toEqual([]);
     expect(b.blanks.map((t) => t.shortName).sort()).toEqual(["ARS", "AVL", "CHE", "TOT"]);
+    expect(b.tbc).toEqual([]);
   });
 });
 

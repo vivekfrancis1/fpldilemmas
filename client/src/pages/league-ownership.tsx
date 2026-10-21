@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import type { LeagueOwnership, OwnedPlayer } from "@shared/league-ownership";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,6 @@ type Response = LeagueOwnership & {
 };
 
 const LEAGUE_KEY = "fpl-league-id";
-const MANAGER_KEY = "fpl-manager-id";
 const read = (k: string) => {
   try {
     return localStorage.getItem(k) ?? "";
@@ -51,7 +51,7 @@ export default function LeagueOwnershipPage() {
 
   useEffect(() => {
     const league = read(LEAGUE_KEY);
-    const manager = read(MANAGER_KEY);
+    const manager = readToolManagerId();
     setLeagueInput(league);
     setManagerInput(manager);
     if (league) setQuery({ league, manager });
@@ -62,7 +62,7 @@ export default function LeagueOwnershipPage() {
     if (!/^\d+$/.test(league)) return;
     const manager = extractManagerId(managerInput).trim();
     write(LEAGUE_KEY, league);
-    if (manager) write(MANAGER_KEY, manager);
+    if (manager) saveToolManagerId(manager);
     setGameweek(null);
     setQuery({ league, manager });
   };

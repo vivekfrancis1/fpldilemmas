@@ -43,3 +43,9 @@ export function clientIpFromHeaders(forwardedFor: string | string[] | undefined,
   const last = raw.split(",").map((s) => s.trim()).filter(Boolean).pop();
   return last || remoteAddress || "unknown";
 }
+
+/** Loopback addresses (local dev server, tests) are never throttled; real clients always arrive from a public address. */
+export function isLoopback(ip: string): boolean {
+  const addr = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  return addr === "::1" || /^127\./.test(addr);
+}

@@ -44,21 +44,29 @@ function CardFace({ card }: { card: ShareCard }) {
   );
 }
 
-export function ShareImageButton({ card, fileName, className }: { card: ShareCard; fileName: string; className?: string }) {
+export function ShareImageButton({ getCard, fileName, className }: { getCard: () => ShareCard; fileName: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  // The card exists in the DOM only while an image is being made, and its content is built on click, so pages that
+  // never use Share pay nothing for it.
+  const [card, setCard] = useState<ShareCard | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const share = async () => {
-    if (!ref.current || busy) return;
+    if (busy) return;
     setBusy(true);
     setMessage(null);
     try {
+      const built = getCard();
+      setCard(built);
+      // wait for the offscreen card to be laid out
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      if (!ref.current) throw new Error("card not rendered");
       const dataUrl = await toPng(ref.current, { width: SIZE, height: SIZE, pixelRatio: 1, cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], fileName, { type: "image/png" });
       if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: card.title });
+        await navigator.share({ files: [file], title: built.title });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -71,6 +79,7 @@ export function ShareImageButton({ card, fileName, className }: { card: ShareCar
       // The person closing the share sheet is not an error
       if (!(error instanceof DOMException && error.name === "AbortError")) setMessage("Couldn't create the image. Please try again.");
     } finally {
+      setCard(null);
       setBusy(false);
     }
   };
@@ -79,14 +88,21 @@ export function ShareImageButton({ card, fileName, className }: { card: ShareCar
     <>
       <Button variant="outline" size="sm" onClick={share} disabled={busy} className={`gap-2 ${className ?? ""}`} data-testid="button-share-image">
         <Share2 className="h-4 w-4" />
-        {busy ? "Preparing…" : "Share image"}
+        {busy ? "Preparing…" : (
+          <>
+            <span className="sm:hidden">Share</span>
+            <span className="hidden sm:inline">Share image</span>
+          </>
+        )}
       </Button>
       {message && <span className="text-xs text-red-600" role="alert">{message}</span>}
-      <div aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }}>
-        <div ref={ref}>
-          <CardFace card={card} />
+      {card && (
+        <div aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }}>
+          <div ref={ref}>
+            <CardFace card={card} />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

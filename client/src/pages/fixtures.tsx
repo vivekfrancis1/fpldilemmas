@@ -580,6 +580,9 @@ export default function Fixtures() {
 
   // Calculate best rotation pairs - teams that complement each other's fixtures
   const rotationPairs = useMemo(() => {
+    // Rotation pairs are scored on 1-5 difficulty ratings. In Projected mode a fixture's "difficulty" is only a colour
+    // tier ranking the fixtures on screen (attack-only or defence-only), so pairs would be scored on something else.
+    if (fdrMode === 'projected') return [];
     if (!bootstrapData?.teams || !fixtureMatrix || gameweeks.length === 0) return [];
     
     const teams = bootstrapData.teams.filter(t => selectedTeams.size === 0 || selectedTeams.has(t.id));
@@ -670,7 +673,7 @@ export default function Fixtures() {
       }
       return a.combinedAvgDifficulty - b.combinedAvgDifficulty;
     }).slice(0, 10); // Top 10 pairs
-  }, [bootstrapData, fixtureMatrix, gameweeks, selectedTeams]);
+  }, [bootstrapData, fixtureMatrix, gameweeks, selectedTeams, fdrMode]);
 
   // Handle column header click for sorting
   const handleSort = (column: string) => {
@@ -1400,6 +1403,14 @@ export default function Fixtures() {
           )}
 
           {/* Best Rotation Pairs Section */}
+          {fdrMode === 'projected' && (
+            <Card className="mt-4" data-testid="note-rotation-projected">
+              <div className="p-3 text-xs md:text-sm text-gray-600">
+                Best Rotation Pairs are scored on difficulty ratings. Switch the FDR mode to Official, Season Form, Last Season or Custom to see them.
+              </div>
+            </Card>
+          )}
+
           {rotationPairs.length > 0 && (
             <Card className="mt-4">
               <div className="p-2 md:p-4 border-b">

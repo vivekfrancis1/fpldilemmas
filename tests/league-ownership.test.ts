@@ -140,13 +140,20 @@ describe("GET /api/league-ownership/:leagueId (against FPL's own data, league 31
     const standings: any = await (await fetch(`${FPL}/leagues-classic/314/standings/?page_standings=1`)).json();
     const counts = new Map<number, number>();
     let counted = 0;
-    for (const row of standings.standings.results) {
-      const res = await fetch(`${FPL}/entry/${row.entry}/event/${latest}/picks/`);
-      if (!res.ok) continue;
-      const picks = (await res.json()).picks;
-      if (picks?.length !== 15) continue;
-      counted++;
-      for (const p of picks) counts.set(p.element, (counts.get(p.element) ?? 0) + 1);
+    // One real FPL call per manager, but in parallel batches of 10 so the test is quick and polite
+    const rows = standings.standings.results as any[];
+    for (let i = 0; i < rows.length; i += 10) {
+      const batch = await Promise.all(
+        rows.slice(i, i + 10).map(async (row) => {
+          const res = await fetch(`${FPL}/entry/${row.entry}/event/${latest}/picks/`);
+          return res.ok ? (await res.json()).picks : null;
+        }),
+      );
+      for (const picks of batch) {
+        if (picks?.length !== 15) continue;
+        counted++;
+        for (const p of picks) counts.set(p.element, (counts.get(p.element) ?? 0) + 1);
+      }
     }
     expect(out.managersCounted).toBe(counted);
     for (const p of out.ownership.slice(0, 10)) {

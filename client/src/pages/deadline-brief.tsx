@@ -104,7 +104,7 @@ export default function DeadlineBriefPage() {
                   <span>Top captain options</span>
                   {data.projectionsAvailable && (
                     <ShareImageButton
-                      card={captainsCard({ gameweek: data.gameweek, players: data.captains })}
+                      getCard={() => captainsCard({ gameweek: data.gameweek, players: data.captains })}
                       fileName={shareFileName(["captains", `gw${data.gameweek}`])}
                     />
                   )}
@@ -188,6 +188,13 @@ export default function DeadlineBriefPage() {
                   <span className="font-medium">Blank: </span>
                   {data.blanks.length ? data.blanks.map((t) => t.name).join(", ") : <span className="text-muted-foreground">none</span>}
                 </div>
+                {data.tbc.length > 0 && (
+                  <div data-testid="tbc">
+                    <span className="font-medium">Fixture TBC: </span>
+                    {data.tbc.map((t) => t.name).join(", ")}
+                    <span className="text-xs text-muted-foreground"> (no fixture this gameweek, but one is still unscheduled)</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

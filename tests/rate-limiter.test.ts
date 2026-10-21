@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createRateLimiter, clientIpFromHeaders } from "../shared/rate-limiter";
+import { createRateLimiter, clientIpFromHeaders, isLoopback } from "../shared/rate-limiter";
+import { createTtlCache } from "../shared/ttl-cache";
 
 describe("createRateLimiter (sliding window per key)", () => {
   it("allows up to the limit, then blocks with a retry time", () => {
@@ -62,5 +63,42 @@ describe("clientIpFromHeaders (one trusted proxy: the LAST X-Forwarded-For entry
   it("handles an array header and whitespace; unknown when nothing is available", () => {
     expect(clientIpFromHeaders(["1.1.1.1, 2.2.2.2 "], undefined)).toBe("2.2.2.2");
     expect(clientIpFromHeaders(undefined, undefined)).toBe("unknown");
+  });
+});
+
+describe("isLoopback (local dev and tests are exempt from throttling)", () => {
+  it("recognises loopback addresses, including IPv4-mapped IPv6", () => {
+    for (const ip of ["127.0.0.1", "::1", "::ffff:127.0.0.1", "127.5.5.5"]) expect(isLoopback(ip)).toBe(true);
+  });
+
+  it("does not exempt real or unknown addresses", () => {
+    for (const ip of ["203.0.113.9", "10.0.0.1", "unknown", "", "::ffff:203.0.113.9"]) expect(isLoopback(ip)).toBe(false);
+  });
+});
+
+describe("createTtlCache", () => {
+  it("returns a stored value until it expires", () => {
+    const c = createTtlCache<number>(1000);
+    c.set("a", 1, 0);
+    expect(c.get("a", 999)).toBe(1);
+    expect(c.get("a", 1000)).toBeUndefined();
+  });
+
+  it("returns undefined for unknown keys and overwrites on set", () => {
+    const c = createTtlCache<string>(1000);
+    expect(c.get("x", 0)).toBeUndefined();
+    c.set("x", "one", 0);
+    c.set("x", "two", 500);
+    expect(c.get("x", 1400)).toBe("two");
+  });
+
+  it("is bounded: the oldest entries are dropped past maxEntries", () => {
+    const c = createTtlCache<number>(10_000, 2);
+    c.set("a", 1, 0);
+    c.set("b", 2, 1);
+    c.set("c", 3, 2);
+    expect(c.get("a", 3)).toBeUndefined();
+    expect(c.get("c", 3)).toBe(3);
+    expect(c.size()).toBeLessThanOrEqual(2);
   });
 });

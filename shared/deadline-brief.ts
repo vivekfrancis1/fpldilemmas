@@ -2,7 +2,7 @@
 // Official FPL data (deadline, availability, fixtures), our cached xPts (captains, picks) and the Price Changes
 // page's own predictions, labelled as predictions. No new model and nothing is invented.
 import { POSITION_SHORT } from "./captaincy-matrix";
-import { fixturesForGameweeks, type CompareFixtureInput } from "./compare-utils";
+import { fixturesForGameweeks, teamsWithUnscheduledFixtures, type CompareFixtureInput } from "./compare-utils";
 
 export interface BriefElement {
   id: number;
@@ -66,6 +66,8 @@ export interface DeadlineBrief {
   priceWatch: { risers: PriceRow[]; fallers: PriceRow[] };
   doubles: Array<{ teamId: number; name: string; shortName: string }>;
   blanks: Array<{ teamId: number; name: string; shortName: string }>;
+  /** No fixture this gameweek, but an unscheduled one exists: not a confirmed blank. */
+  tbc: Array<{ teamId: number; name: string; shortName: string }>;
 }
 
 export interface PriceRow {
@@ -156,10 +158,12 @@ export function buildDeadlineBrief(input: {
 
   const doubles: DeadlineBrief["doubles"] = [];
   const blanks: DeadlineBrief["blanks"] = [];
+  const tbc: DeadlineBrief["tbc"] = [];
+  const tbcTeams = teamsWithUnscheduledFixtures(fixtures);
   for (const t of teams) {
     const n = fixturesForGameweeks(t.id, fixtures.map((f) => ({ ...f, finished: false })), [gw])[0].fixtures.length;
     if (n > 1) doubles.push({ teamId: t.id, name: t.name, shortName: t.short_name });
-    if (n === 0) blanks.push({ teamId: t.id, name: t.name, shortName: t.short_name });
+    if (n === 0) (tbcTeams.has(t.id) ? tbc : blanks).push({ teamId: t.id, name: t.name, shortName: t.short_name });
   }
 
   return {
@@ -172,5 +176,6 @@ export function buildDeadlineBrief(input: {
     priceWatch: { risers, fallers },
     doubles,
     blanks,
+    tbc,
   };
 }

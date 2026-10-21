@@ -85,18 +85,18 @@ export default function CaptaincyMatrix() {
             </button>
           ))}
         </div>
-        {data && (() => {
-          const top = data.teams
-            .flatMap((t) => t.candidates.map((c) => ({ name: c.name, teamShort: t.shortName, xPts: c.xPts, captainPoints: c.captainPoints, id: c.playerId })))
-            .sort((a, b) => b.xPts - a.xPts || a.id - b.id);
-          const card = captainsCard({ gameweek: data.gameweek, players: top });
-          return (
-            <ShareImageButton
-              card={position === "ALL" ? card : { ...card, subtitle: `${card.subtitle} · ${position}` }}
-              fileName={shareFileName(["captains", `gw${data.gameweek}`, position === "ALL" ? "" : position])}
-            />
-          );
-        })()}
+        {data && (
+          <ShareImageButton
+            getCard={() => {
+              const top = data.teams
+                .flatMap((t) => t.candidates.map((c) => ({ name: c.name, teamShort: t.shortName, xPts: c.xPts, captainPoints: c.captainPoints, id: c.playerId })))
+                .sort((a, b) => b.xPts - a.xPts || a.id - b.id);
+              const card = captainsCard({ gameweek: data.gameweek, players: top });
+              return position === "ALL" ? card : { ...card, subtitle: `${card.subtitle} · ${position}` };
+            }}
+            fileName={shareFileName(["captains", `gw${data.gameweek}`, position === "ALL" ? "" : position])}
+          />
+        )}
         </div>
 
         {error && (
@@ -113,7 +113,7 @@ export default function CaptaincyMatrix() {
                     <span>{team.teamName}</span>
                     {team.fixtures.length === 0 ? (
                       <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        No fixture
+                        {team.fixtureTbc ? "Fixture TBC" : "No fixture"}
                       </span>
                     ) : (
                       team.fixtures.map((f, i) => (

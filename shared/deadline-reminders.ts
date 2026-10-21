@@ -75,3 +75,10 @@ export function base64UrlToBytes(input: string): Uint8Array<ArrayBuffer> {
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
   return bytes;
 }
+
+/** What to do with a subscription after a failed send: delete it (gone), stop retrying this gameweek (permanent), or try again next check (retry). */
+export function classifySendError(statusCode: number | undefined): "gone" | "permanent" | "retry" {
+  if (statusCode === 404 || statusCode === 410) return "gone";
+  if (statusCode !== undefined && statusCode >= 400 && statusCode < 500 && statusCode !== 429) return "permanent";
+  return "retry";
+}

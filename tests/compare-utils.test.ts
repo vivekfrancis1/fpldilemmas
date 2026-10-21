@@ -8,6 +8,7 @@ import {
   fixturesForGameweeks,
   MAX_COMPARE_PLAYERS,
   compareUrl,
+  teamsWithUnscheduledFixtures,
 } from "../shared/compare-utils";
 
 describe("parseCompareIds (shareable /compare?p=1,2,3 URLs)", () => {
@@ -179,5 +180,19 @@ describe("compareUrl (links into the Compare page)", () => {
   it("with nothing valid it links to the bare page", () => {
     expect(compareUrl([])).toBe("/compare");
     expect(compareUrl([0, -3, NaN])).toBe("/compare");
+  });
+});
+
+describe("teamsWithUnscheduledFixtures (a team with a fixture that has no gameweek yet is TBC, not blank)", () => {
+  const f = (event: number | null, h: number, a: number, finished = false) => ({
+    event, team_h: h, team_a: a, team_h_difficulty: 3, team_a_difficulty: 3, finished,
+  });
+
+  it("collects both teams of every unfinished fixture with no gameweek", () => {
+    expect([...teamsWithUnscheduledFixtures([f(8, 1, 2), f(null, 3, 4)])].sort()).toEqual([3, 4]);
+  });
+
+  it("ignores finished fixtures and scheduled ones", () => {
+    expect(teamsWithUnscheduledFixtures([f(null, 3, 4, true), f(9, 5, 6)]).size).toBe(0);
   });
 });

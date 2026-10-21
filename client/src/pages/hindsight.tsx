@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,16 +28,7 @@ interface HindsightResponse {
   picks: Pick[];
 }
 
-const STORAGE_KEY = "fpl-manager-id";
 const CHIP_LABEL: Record<string, string> = { bboost: "Bench Boost", "3xc": "Triple Captain", freehit: "Free Hit", wildcard: "Wildcard", manager: "Assistant Manager" };
-
-const readSaved = (): string => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
 
 export default function Hindsight() {
   const [input, setInput] = useState("");
@@ -44,7 +36,7 @@ export default function Hindsight() {
   const [gameweek, setGameweek] = useState<number | null>(null);
 
   useEffect(() => {
-    const saved = readSaved();
+    const saved = readToolManagerId();
     if (saved) {
       setInput(saved);
       setManagerId(saved);
@@ -56,11 +48,7 @@ export default function Hindsight() {
     if (!id) return;
     setManagerId(id);
     setGameweek(null);
-    try {
-      localStorage.setItem(STORAGE_KEY, id);
-    } catch {
-      /* storage unavailable: still works for this visit */
-    }
+    saveToolManagerId(id);
   };
 
   const { data, isFetching, error } = useQuery<HindsightResponse>({
@@ -156,7 +144,7 @@ export default function Hindsight() {
                   <span>Captain</span>
                   {chosen && best && (
                     <ShareImageButton
-                      card={hindsightCard({
+                      getCard={() => hindsightCard({
                         gameweek: data.gameweek,
                         officialPoints: data.officialPoints,
                         bestPossible: data.bestPossible,
