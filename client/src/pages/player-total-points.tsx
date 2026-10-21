@@ -2260,8 +2260,8 @@ export default function PlayerTotalPoints() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
-                  <Label className="text-xs font-medium text-gray-600 block flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-1 min-w-[200px] order-last basis-full sm:order-none sm:basis-auto">
+                  <Label className="text-xs font-medium text-gray-600 hidden sm:flex items-center gap-1.5">
                     <Search className="h-3.5 w-3.5 text-gray-500" />
                     Search
                   </Label>

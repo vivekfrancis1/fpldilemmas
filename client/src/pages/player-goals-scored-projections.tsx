@@ -838,7 +838,7 @@ export default function PlayerGoalsScoredProjections() {
 
   if (viewMode === "future" && error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50/30">
+      <div className="min-h-screen">
         <div className="w-full py-4 sm:py-8">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">

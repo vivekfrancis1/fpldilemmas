@@ -571,7 +571,7 @@ export default function ProjectedPoints() {
 
   if (!searchedId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="w-full space-y-4 sm:space-y-6">
           {/* Header - Compact */}
           <div className="text-center py-2">
@@ -616,7 +616,7 @@ export default function ProjectedPoints() {
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="w-full space-y-4 sm:space-y-6">
           <div className="text-center py-2">
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">My Team Projected Points</h1>
@@ -630,7 +630,7 @@ export default function ProjectedPoints() {
 
   if (isLoadingTeam || isLoadingProjections) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4 flex items-center justify-center">
         <Card className="max-w-md w-full">
           <CardContent className="pt-3 sm:pt-4">
             <div className="flex flex-col items-center text-center space-y-4">
@@ -661,7 +661,7 @@ export default function ProjectedPoints() {
   // Only show error if both endpoints failed (not just waiting for fallback)
   if (!teamData && !isLoadingTeam && teamDataError && useFallbackEndpoint) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto pt-12">
           <Alert variant="destructive">
             <AlertDescription>
@@ -682,7 +682,7 @@ export default function ProjectedPoints() {
   const total6GWPoints = calculateTotal6GWProjectedPoints();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-950 dark:to-gray-900 p-2 sm:p-4">
+    <div className="min-h-screen dark:from-gray-950 dark:to-gray-900 p-2 sm:p-4">
       <div className="w-full space-y-3 sm:space-y-6">
         {/* Header */}
         <div className="text-center py-2 sm:py-0">

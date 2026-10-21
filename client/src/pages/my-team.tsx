@@ -272,7 +272,7 @@ export default function MyTeam() {
   if (!bootstrapData) {
     return (
       
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading FPL data...</p>
@@ -349,7 +349,7 @@ export default function MyTeam() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50/30 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <div className="w-full py-1">
         <div className="space-y-2">
           {/* Header */}

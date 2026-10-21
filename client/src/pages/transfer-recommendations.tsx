@@ -788,7 +788,7 @@ export default function TransferRecommendations() {
   }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, playerProjections, bootstrapData, optimizedTeam]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+    <div className="min-h-screen p-4">
       <div className="w-full space-y-4 sm:space-y-6">
         {/* Header - Compact */}
         <div className="text-center py-2">

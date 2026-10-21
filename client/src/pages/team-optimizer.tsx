@@ -949,7 +949,7 @@ export default function TeamOptimizer() {
 
   if (!searchedId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto pt-12">
           <Card>
             <CardHeader className="text-center">
@@ -1017,7 +1017,7 @@ export default function TeamOptimizer() {
 
   if (isLoadingTeam) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4 flex items-center justify-center">
         <Card className="p-8">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -1033,7 +1033,7 @@ export default function TeamOptimizer() {
     const isSessionExpired = errorMessage.includes('session expired') || errorMessage.includes('401');
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto pt-12 space-y-4">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -1056,7 +1056,7 @@ export default function TeamOptimizer() {
 
   if (!teamData || !teamData.picks || teamData.picks.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto pt-12">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -1070,7 +1070,7 @@ export default function TeamOptimizer() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 md:p-6">
+    <div className="min-h-screen dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 md:p-6">
       <div className="w-full space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header - Compact */}
         <div className="text-center py-2 relative">

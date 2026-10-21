@@ -88,7 +88,7 @@ export default function GoalShare() {
   if (error) {
     return (
       
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
+        <div className="min-h-screen">
           <div className="w-full py-4 sm:py-8">
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-6">
@@ -109,21 +109,17 @@ export default function GoalShare() {
 
   return (
     
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50/30">
+      <div className="min-h-screen">
         <div className="w-full py-4 sm:py-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <Target className="h-8 w-8 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Goal Share - {selectedSeason}
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Each player's real share of their team's goals for the {selectedSeason} season
-            </p>
-            <div className="mt-3 sm:mt-4">
-              <Button
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Target />
+                <h1 data-testid="text-page-title">Goal Share - {selectedSeason}</h1>
+              </div>
+              <div className="fpl-page-actions">
+                <Button
                 onClick={handleRefreshData}
                 disabled={isRefreshing}
                 variant="outline"
@@ -134,6 +130,8 @@ export default function GoalShare() {
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
               </Button>
+              </div>
+              <p className="fpl-page-subtitle" data-testid="text-page-description">Each player's real share of their team's goals for the {selectedSeason} season</p>
             </div>
           </div>
 
