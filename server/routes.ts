@@ -34,6 +34,7 @@ import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { buildCaptaincyMatrix } from "@shared/captaincy-matrix";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
@@ -1417,6 +1418,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fixturesInFlight = null;
       console.error("Error fetching fixtures:", error);
       res.status(500).json({ error: "Failed to fetch fixtures" });
+    }
+  });
+
+  // Captaincy Matrix: each team's top captain options for one gameweek, ranked by the SAME cached xPts the
+  // Points page shows (no recomputation here). gw defaults to the first projected gameweek.
+  app.get("/api/captaincy-matrix", async (req, res) => {
+    try {
+      const gwParam = req.query.gw;
+      const [projResponse, bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/cached/player-total-points"),
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures"),
+      ]);
+      if (!projResponse.ok || !bootstrapResponse.ok || !fixturesResponse.ok) {
+        return res.status(503).json({ error: "Projection data is not available yet" });
+      }
+      const projections = await projResponse.json();
+      const bootstrap = await bootstrapResponse.json();
+      const fixtures = await fixturesResponse.json();
+
+      const availableGameweeks = Array.from(
+        new Set<number>(
+          (projections as any[]).flatMap((p) => Object.keys(p.gameweekProjections ?? {}).map(Number)),
+        ),
+      )
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 38)
+        .sort((a, b) => a - b);
+
+      let gameweek: number;
+      if (gwParam === undefined || gwParam === "") {
+        if (availableGameweeks.length === 0) return res.status(503).json({ error: "No projections available yet" });
+        gameweek = availableGameweeks[0];
+      } else {
+        const text = String(gwParam);
+        gameweek = /^\d+$/.test(text) ? Number(text) : NaN;
+        if (!Number.isInteger(gameweek) || gameweek < 1 || gameweek > 38 || !availableGameweeks.includes(gameweek)) {
+          return res.status(400).json({ error: "Invalid or unprojected gameweek", availableGameweeks });
+        }
+      }
+
+      const matrix = buildCaptaincyMatrix({
+        gameweek,
+        elements: bootstrap.elements,
+        teams: bootstrap.teams,
+        fixtures,
+        projections,
+      });
+      res.json({ ...matrix, availableGameweeks });
+    } catch (error) {
+      console.error("Error building captaincy matrix:", error);
+      res.status(500).json({ error: "Failed to build captaincy matrix" });
     }
   });
 
