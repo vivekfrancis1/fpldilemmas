@@ -1711,8 +1711,8 @@ export default function MyDashboard() {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-3 mt-2 sm:mt-2">
-                <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-3 lg:items-start space-y-2 lg:space-y-0">
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
                   {/* Total Points */}
                   <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm" data-testid="card-total-points">
                     <CardContent className="p-2 sm:p-3">
@@ -1951,7 +1951,7 @@ export default function MyDashboard() {
                     })();
 
                     return (
-                      <div>
+                      <div className="max-w-4xl mx-auto">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-gray-600">GW Squad</span>
                           <Button
@@ -1978,7 +1978,6 @@ export default function MyDashboard() {
                           </div>
                         )}
                         <PitchView 
-                          compact
                           players={showGwLivePoints ? gwEffectivePitch : gwPointsPitchPlayers}
                           benchPlayers={showGwLivePoints ? gwEffectiveBench : gwPointsBenchPlayers}
                           activeChip={teamData.active_chip}

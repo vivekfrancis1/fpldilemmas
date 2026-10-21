@@ -1,4 +1,3 @@
-import { teamStripe } from '@/lib/team-colors';
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -1214,7 +1213,7 @@ export default function Fixtures() {
                       const avgFDR = teamAverageFDR[team.id];
                       return (
                         <tr key={team.id} className="border-b hover:bg-gray-50">
-                          <td style={teamStripe(team.short_name)} className="sticky left-0 bg-white pl-2 pr-1 sm:pl-3 sm:pr-2 py-0.5 sm:py-1 font-medium text-gray-900 border-r z-10">
+                          <td className="sticky left-0 bg-white px-1 sm:px-2 py-0.5 sm:py-1 font-medium text-gray-900 border-r z-10">
                             <div className="flex items-center gap-0.5 sm:gap-1">
                               <img 
                                 src={team.code === 14 
@@ -1248,7 +1247,6 @@ export default function Fixtures() {
                                     {fixtures.map((fixture, idx) => (
                                       <div 
                                         key={idx}
-                                        style={teamStripe(fixture.opponent, 3)}
                                         className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                           fixture.finished ? 'opacity-50' : ''
                                         } ${fixture.fixtureId ? 'cursor-pointer select-none border-2 border-dashed border-amber-500 hover:border-amber-700 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-100' : ''}`}

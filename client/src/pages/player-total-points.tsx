@@ -1024,7 +1024,7 @@ export default function PlayerTotalPoints() {
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 15");
+  const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 50");
   const [selectedAvailability, setSelectedAvailability] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');

@@ -365,11 +365,6 @@ html {
 .compact-rows table td [class*="rounded-full"][class*="md:w-6"],
 .compact-rows table td [class*="rounded-full"][class~="w-7"] { width: 1.5rem !important; height: 1.5rem !important; font-size: 0.75rem !important; }
 /* fpl-card pages (player tables): card headers and titles */
-.compact-rows .fpl-card-header { padding: 0.625rem 1rem !important; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 0.75rem; }
-.compact-rows .fpl-card-title { font-size: 1rem !important; line-height: 1.5rem !important; }
-.compact-rows .fpl-filters .fpl-card-content { padding: 0.5rem 0.75rem !important; }
-.compact-rows .fpl-filters { margin-bottom: 0 !important; }
-.compact-rows .fpl-filters input { height: 2.25rem; }
 /* Control grids (From / To / Search ...): label beside its input instead of above it */
 .compact-rows .grid > .space-y-1 { display: flex; align-items: center; gap: 0.5rem; }
 .compact-rows .grid > .space-y-1 > * { margin-top: 0 !important; }
@@ -378,24 +373,6 @@ html {
 .compact-rows table td div[class*="text-[10px]"][class*="text-gray-500"][class*="md:block"] { display: none !important; }
 /* Name + small grey "TEAM · POS" line on one line */
 .compact-rows table td div.flex.flex-col.overflow-hidden { flex-direction: row !important; align-items: baseline; column-gap: 0.5rem; }
-/* Vertical rhythm */
-.compact-rows .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
-.compact-rows .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
-.compact-rows [class~="mb-6"] { margin-bottom: 0.75rem !important; }
-.compact-rows .fpl-section-spacing > [class~="mb-4"],
-.compact-rows .fpl-section-spacing > [class~="mb-3"],
-.compact-rows .fpl-section-spacing > [class*="md:mb-4"] { margin-bottom: 0 !important; }
-.compact-rows [class~="sm:p-4"] { padding: 0.5rem 0.75rem !important; }
-.compact-rows [role="tablist"] { height: 2.5rem !important; }
-.compact-rows > [class*="mb-3"], .compact-rows > [class*="mb-4"] { margin-bottom: 0.75rem !important; }
-.compact-rows [class~="p-6"],
-.compact-rows [class~="sm:p-6"],
-.compact-rows [class~="lg:p-6"] { padding: 0.75rem 1rem !important; }
-.compact-rows [class~="sm:p-3"] { padding: 0.5rem 0.75rem !important; }
-.compact-rows button[role="combobox"] { height: 2rem !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-.compact-rows [class*="text-2xl"],
-.compact-rows [class*="sm:text-xl"] { font-size: 1.25rem !important; line-height: 1.75rem !important; }
-
 /* ---------------------------------------------------------------------------------------------
    Page header: light. Title, a one-line muted subtitle, hairline underneath. Controls can sit on the
    right of the title row (see .fpl-page-actions). No gradient banner.
