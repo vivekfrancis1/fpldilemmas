@@ -19,9 +19,11 @@ function PlayerTile({ p, captainId }: { p: TemplatePlayer; captainId?: number })
       data-testid={`tile-player-${p.playerId}`}
     >
       <JerseyIcon team={p.teamName} position={POSITION_NAME[p.position]} className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
-      <span className="mt-0.5 w-full truncate text-xs font-semibold text-gray-900">
-        {p.name}
-        {captainId === p.playerId && <span className="ml-0.5 rounded bg-gray-900 px-1 text-[9px] text-white">C</span>}
+      <span className="mt-0.5 flex w-full items-center justify-center gap-0.5 text-xs font-semibold text-gray-900">
+        <span className="truncate" title={p.name}>{p.name}</span>
+        {captainId === p.playerId && (
+          <span className="shrink-0 rounded bg-gray-900 px-1 text-[9px] leading-4 text-white" aria-label="Captain">C</span>
+        )}
       </span>
       <span className="text-[11px] font-medium text-gray-600">{p.ownershipPercent}%</span>
     </div>

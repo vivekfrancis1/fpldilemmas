@@ -10,7 +10,7 @@ import { PlayerAvailabilityBadge } from "@/components/player-availability-badge"
 import { ShareImageButton } from "@/components/share-image-button";
 import { captainsCard, shareFileName } from "@shared/share-cards";
 import JerseyIcon from "@/components/jersey-icon";
-import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
+import { getFdrCellClass } from "@/lib/heatmap-colors";
 
 interface MatrixResponse {
   gameweek: number;
@@ -51,7 +51,7 @@ export default function CaptaincyMatrix() {
             <div className="fpl-page-actions">
               {data && (
                 <Select value={String(data.gameweek)} onValueChange={(v) => setGameweek(Number(v))}>
-                  <SelectTrigger className="w-[130px]" data-testid="select-gameweek">
+                  <SelectTrigger className="w-[160px]" data-testid="select-gameweek">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -119,7 +119,7 @@ export default function CaptaincyMatrix() {
                       team.fixtures.map((f, i) => (
                         <span
                           key={i}
-                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${getFixtureDifficultyColor(f.difficulty)}`}
+                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${getFdrCellClass(f.difficulty)}`}
                         >
                           {f.opponentShort} ({f.isHome ? "H" : "A"})
                         </span>

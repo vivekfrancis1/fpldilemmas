@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
 import JerseyIcon from "@/components/jersey-icon";
-import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
+import { getFdrCellClass } from "@/lib/heatmap-colors";
 
 type Element = BootstrapData["elements"][number];
 
@@ -213,7 +213,7 @@ export default function Compare() {
         <Card className="mb-4">
           <CardContent className="p-4 space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -329,7 +329,7 @@ export default function Compare() {
                                       {gwFixtures.map((f, k) => (
                                         <span
                                           key={k}
-                                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${getFixtureDifficultyColor(f.difficulty)}`}
+                                          className={`rounded px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ${getFdrCellClass(f.difficulty)}`}
                                         >
                                           {teamById.get(f.opponentId)?.short_name ?? "?"} ({f.isHome ? "H" : "A"})
                                         </span>
