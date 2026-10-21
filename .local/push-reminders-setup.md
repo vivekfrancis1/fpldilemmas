@@ -34,6 +34,10 @@ Set these environment variables on the Railway service (never commit them):
 - A reminder is sent once per gameweek per subscriber, from 2 hours before the deadline. Delivery cannot be tested
   locally (the dev server never sends: production + keys required), so do one real check after the first deploy.
 
+## Abuse protection
+Subscribe is limited to 5 requests per hour per client IP, unsubscribe to 20, and the table is capped at 50,000 rows. The
+IP is the last X-Forwarded-For entry (set by Railway's proxy); limits are per server process and reset on restart.
+
 ## What is stored
 Only the browser's push endpoint and keys, and the last gameweek reminded. No name, email or team ID. A subscription
 is deleted when the push service reports it gone, or when the person turns reminders off.

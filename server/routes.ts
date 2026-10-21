@@ -40,7 +40,8 @@ import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
 import { buildLeagueOwnership } from "@shared/league-ownership";
 import { parseSubscription } from "@shared/deadline-reminders";
-import { pushConfigured, saveSubscription, removeSubscription } from "./push-reminders";
+import { pushConfigured, saveSubscription, removeSubscription, countSubscriptions, MAX_SUBSCRIPTIONS } from "./push-reminders";
+import { createRateLimiter, clientIpFromHeaders } from "@shared/rate-limiter";
 import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
@@ -1647,11 +1648,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ enabled, publicKey: enabled ? process.env.VAPID_PUBLIC_KEY : null });
   });
 
+  // Abuse protection: requests that would write to (or delete from) the table are limited per client IP, and the table
+  // has a hard size cap. Invalid requests never reach the database, so they are rejected before any limit applies.
+  const subscribeLimiter = createRateLimiter({ limit: 5, windowMs: 60 * 60 * 1000 });
+  const unsubscribeLimiter = createRateLimiter({ limit: 20, windowMs: 60 * 60 * 1000 });
+  const tooManyRequests = (res: any, retryAfterSec: number) => {
+    res.set("Retry-After", String(retryAfterSec));
+    return res.status(429).json({ error: "Too many requests. Please try again later." });
+  };
+
   app.post("/api/push/subscribe", async (req, res) => {
     const sub = parseSubscription(req.body);
     if (!sub) return res.status(400).json({ error: "Invalid push subscription" });
     if (!pushConfigured()) return res.status(503).json({ error: "Reminders are not set up yet" });
+    const verdict = subscribeLimiter.check(clientIpFromHeaders(req.headers["x-forwarded-for"], req.socket.remoteAddress));
+    if (!verdict.allowed) return tooManyRequests(res, verdict.retryAfterSec);
     try {
+      if ((await countSubscriptions()) >= MAX_SUBSCRIPTIONS) return res.status(503).json({ error: "Reminders are full right now" });
       await saveSubscription(sub);
       res.status(201).json({ ok: true });
     } catch (error) {
@@ -1666,6 +1679,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "Invalid endpoint" });
     }
     if (!pushConfigured()) return res.json({ ok: true });
+    const verdict = unsubscribeLimiter.check(clientIpFromHeaders(req.headers["x-forwarded-for"], req.socket.remoteAddress));
+    if (!verdict.allowed) return tooManyRequests(res, verdict.retryAfterSec);
     try {
       await removeSubscription(endpoint);
       res.json({ ok: true });

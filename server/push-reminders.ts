@@ -18,6 +18,14 @@ export async function saveSubscription(sub: { endpoint: string; p256dh: string; 
   );
 }
 
+/** Hard cap on stored subscriptions so the table cannot be filled by abuse. */
+export const MAX_SUBSCRIPTIONS = 50_000;
+
+export async function countSubscriptions(): Promise<number> {
+  const { rows } = await pool.query(`SELECT count(*)::int AS n FROM push_subscriptions`);
+  return rows[0]?.n ?? 0;
+}
+
 export async function removeSubscription(endpoint: string): Promise<void> {
   await pool.query(`DELETE FROM push_subscriptions WHERE endpoint = $1`, [endpoint]);
 }
