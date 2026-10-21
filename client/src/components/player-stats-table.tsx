@@ -1132,8 +1132,8 @@ export default function PlayerStatsTable({
                 </div>
               </PopoverContent>
             </Popover>
-            {/* Zoom control: sits in the toolbar so it does not take a row of its own */}
-        <div className="flex items-center gap-1.5">
+            {/* Zoom control: sits in the toolbar so it does not take a row of its own; not useful on phones */}
+        <div className="hidden sm:flex items-center gap-1.5">
           <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Zoom:</span>
           <Button
             variant="outline"

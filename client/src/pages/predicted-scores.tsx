@@ -358,7 +358,7 @@ export default function PredictedScores() {
                                 {match.awayTeam.predictedScore}
                               </span>
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 whitespace-nowrap">
                               ({match.homeTeam.expectedGoals.toFixed(2)} - {match.awayTeam.expectedGoals.toFixed(2)})
                             </div>
                           </div>
@@ -429,7 +429,7 @@ export default function PredictedScores() {
                                   <span className="text-amber-500">-</span>
                                   <span className="text-lg font-bold text-amber-800">{awayScore}</span>
                                 </div>
-                                <div className="text-xs text-amber-500 mt-1">
+                                <div className="text-xs text-amber-500 mt-1 whitespace-nowrap">
                                   ({f.homeGoals.toFixed(2)} - {f.awayGoals.toFixed(2)})
                                 </div>
                               </td>

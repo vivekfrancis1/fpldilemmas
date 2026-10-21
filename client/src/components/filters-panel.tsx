@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, RotateCcw, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { FilterState } from "@/lib/types";
 import { Team, ElementType } from "@shared/schema";
 import { Input } from "@/components/ui/input";
@@ -114,7 +114,7 @@ export default function FiltersPanel({
           className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
           data-testid="button-more-filters"
         >
-          <Search className="h-4 w-4 text-blue-600" />
+          <SlidersHorizontal className="h-4 w-4 text-blue-600" />
           More Filters
           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
         </button>

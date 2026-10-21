@@ -53,11 +53,12 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-fpl-light flex flex-col pb-16 md:pb-0">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-indigo-700 focus:shadow-lg">Skip to content</a>
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
 
       <Header onSidebarToggle={toggleSidebar} />
 
-      <main className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-1.5 sm:pt-3 lg:pt-4 min-w-0 pb-3 sm:pb-4 lg:pb-6 mobile-no-overflow">
+      <main id="main-content" className="flex-1 px-2 sm:px-3 md:px-4 lg:px-8 xl:px-12 pt-1.5 sm:pt-3 lg:pt-4 min-w-0 pb-3 sm:pb-4 lg:pb-6 mobile-no-overflow">
         <div className="w-full max-w-full">
           {children}
         </div>
