@@ -1476,3 +1476,13 @@ header.sticky.top-0 {
 .dark [class*="to-yellow-100"], .dark [class*="to-amber-100"], .dark [class*="to-orange-100"] { --tw-gradient-to: rgba(245, 158, 11, 0.2) var(--tw-gradient-to-position) !important; }
 .dark [class*="from-blue-100"], .dark [class*="from-indigo-100"], .dark [class*="from-purple-100"] { --tw-gradient-from: rgba(99, 102, 241, 0.28) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(99, 102, 241, 0.2) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
 .dark [class*="to-blue-100"], .dark [class*="to-indigo-100"], .dark [class*="to-purple-100"] { --tw-gradient-to: rgba(99, 102, 241, 0.2) var(--tw-gradient-to-position) !important; }
+
+/* Mobile: the Filters toggle collapses to an icon-only button so it shares a row with the primary controls */
+@media (max-width: 639px) {
+  [data-testid="button-toggle-filters"] { padding: 0 !important; width: 2.25rem; min-width: 2.25rem; height: 2.25rem; justify-content: center; flex-shrink: 0; }
+  [data-testid="button-toggle-filters"] > span,
+  [data-testid="button-toggle-filters"] > svg:not(:first-child) { display: none; }
+}
+@media (max-width: 639px) {
+  .fpl-page-title h1 { font-size: 1.5rem; line-height: 1.75rem; }
+}
