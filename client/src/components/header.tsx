@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import { Menu, LogOut, User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,6 +62,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
           </div>
 
           <div className="flex items-center space-x-2">
+            <ThemeToggle className="text-fpl-purple hover:bg-black/5" />
             <RefreshButton />
             <InstallAppButton />
             {!isLoading && !isAuthenticated && (

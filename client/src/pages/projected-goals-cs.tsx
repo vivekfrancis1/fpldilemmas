@@ -1,3 +1,4 @@
+import { teamStripe } from '@/lib/team-colors';
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -787,7 +788,7 @@ export default function ProjectedGoalsCS() {
                                 >
 
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-3 py-1.5 bg-white">
+                                  <div style={teamStripe(match1.homeTeam.shortName)} className="flex items-center justify-between pl-4 pr-3 py-1.5 bg-white">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.homeTeam.id);
@@ -841,7 +842,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+                                  <div style={teamStripe(match1.awayTeam.shortName)} className="flex items-center justify-between pl-4 pr-3 py-1.5 bg-gray-50 border-t border-gray-100">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.awayTeam.id);
@@ -909,7 +910,7 @@ export default function ProjectedGoalsCS() {
 
                                   
                                   {/* Home Team - Compact */}
-                                  <div className="flex items-center justify-between px-3 py-1.5 bg-white">
+                                  <div style={teamStripe(match2.homeTeam.shortName)} className="flex items-center justify-between pl-4 pr-3 py-1.5 bg-white">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.homeTeam.id);
@@ -963,7 +964,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+                                  <div style={teamStripe(match2.awayTeam.shortName)} className="flex items-center justify-between pl-4 pr-3 py-1.5 bg-gray-50 border-t border-gray-100">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.awayTeam.id);

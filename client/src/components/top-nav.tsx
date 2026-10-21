@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -282,6 +283,7 @@ export default function TopNav() {
 
       {/* Right side: refresh + auth */}
       <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-purple-500/30 h-full">
+        <ThemeToggle className="text-purple-200 hover:text-white" />
         <RefreshButton className="text-purple-200 hover:text-white" />
         <InstallAppButton className="text-purple-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (

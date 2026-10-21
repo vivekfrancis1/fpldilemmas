@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { applyStoredTheme } from "@/components/theme-toggle";
+
+applyStoredTheme();
 
 // Add error boundary for production debugging
 const rootElement = document.getElementById("root");
