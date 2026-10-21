@@ -2180,3 +2180,8 @@ table thead th, table thead th * { font-family: var(--font-sans) !important; }
 .dark .fdr-2 { background-color: #4ade80; color: #052e16; }
 .dark .fdr-3 { background-color: #475569; color: #f1f5f9; }
 .dark .fdr-4 { background-color: #f87171; color: #450a0a; }
+
+/* Fixtures grid: double gameweeks get an amber outline, blank gameweeks a hatched cell. */
+.fdr-double { outline: 2px solid #f59e0b; outline-offset: 1px; border-radius: 6px; }
+.fdr-blank { background: repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0 4px, transparent 4px 8px); color: #64748b; border-radius: 4px; text-align: center; font-weight: 600; }
+.dark .fdr-blank { background: repeating-linear-gradient(45deg, rgba(148,163,184,0.25) 0 4px, transparent 4px 8px); color: #94a3b8; }

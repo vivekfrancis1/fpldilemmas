@@ -708,6 +708,10 @@ export default function Fixtures() {
     );
   }
 
+  // Per-gameweek flags for the grid header: does any team play twice (DGW) or not at all (BGW)?
+  const gwHasDouble = (gw: number) => Object.values(fixtureMatrix).some((m: any) => (m?.[gw]?.length ?? 0) > 1);
+  const gwHasBlank = (gw: number) => Object.values(fixtureMatrix).some((m: any) => (m?.[gw]?.length ?? 0) === 0);
+
   return (
     <div className="fpl-page-container compact-rows">
       {/* Page Header */}
@@ -755,30 +759,13 @@ export default function Fixtures() {
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Controls */}
+        {/* Controls: compact always-visible bar (FDR mode + gameweek range), with the rarer filters behind "More filters" */}
         <div className="fpl-filters">
-          <div
-            className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
-            onClick={() => setFiltersExpanded(!filtersExpanded)}
-          >
-            <div className="fpl-card-title flex items-center justify-between w-full gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Calendar className="h-5 w-5 text-blue-600 shrink-0" />
-                <span className="truncate">Fixture Controls</span>
-                <span className="shrink-0 text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
-                  {FDR_MODE_META[fdrMode].shortLabel}
-                </span>
-              </div>
-              {filtersExpanded ? <ChevronUp className="h-5 w-5 text-gray-500 shrink-0" /> : <ChevronDown className="h-5 w-5 text-gray-500 shrink-0" />}
-            </div>
-          </div>
-          {filtersExpanded && (
           <div className="fpl-card-content">
-            <div className="flex flex-col gap-3">
-              {/* Section 1: FDR Mode */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <Label className="text-xs font-semibold text-gray-700 block mb-2">FDR Mode — what the colors below are rated by</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="fixture-control-bar">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">FDR mode</span>
+                <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="FDR mode">
                   {(Object.keys(FDR_MODE_META) as Array<'official' | 'form' | 'lastSeason' | 'custom'>).map((mode) => {
                     const isActive = fdrMode === mode;
                     return (
@@ -786,27 +773,20 @@ export default function Fixtures() {
                         key={mode}
                         type="button"
                         onClick={() => setFdrMode(mode)}
+                        aria-pressed={isActive}
+                        title={FDR_MODE_META[mode].description}
                         data-testid={`radio-fdr-${mode === 'lastSeason' ? 'last-season' : mode}`}
-                        className={`text-left rounded-lg border px-3 py-2 transition-colors ${
-                          isActive
-                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-300'
-                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        className={`rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                          isActive ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                         }`}
                       >
-                        <div className="flex items-center gap-1.5">
-                          <span className={`h-2 w-2 rounded-full shrink-0 ${isActive ? 'bg-blue-500' : 'bg-gray-300'}`} />
-                          <span className={`text-xs font-semibold ${isActive ? 'text-blue-800' : 'text-gray-700'}`}>
-                            {FDR_MODE_META[mode].label}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
-                          {FDR_MODE_META[mode].description}
-                        </p>
+                        {FDR_MODE_META[mode].shortLabel}
                       </button>
                     );
                   })}
                 </div>
-                {fdrMode === 'custom' && (
+              </div>
+              {fdrMode === 'custom' && (
                   <div className="flex items-center gap-2 justify-center mt-2">
                     <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
                       <DialogTrigger asChild>
@@ -952,13 +932,10 @@ export default function Fixtures() {
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Section 2: Gameweek Selection */}
-              <div className="bg-blue-50 rounded-lg p-3">
-                <Label className="text-xs font-semibold text-gray-700 block mb-2">Gameweek Selection</Label>
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center gap-1.5 justify-center">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Gameweeks</span>
+                  <div className="flex items-center gap-1.5 ">
                     <label className="text-xs font-medium text-gray-700">Range:</label>
                     <select
                       value={gameweekRange?.start || ''}
@@ -982,6 +959,32 @@ export default function Fixtures() {
                       ))}
                     </select>
                   </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersExpanded(!filtersExpanded)}
+                aria-expanded={filtersExpanded}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                data-testid="button-more-filters"
+              >
+                More filters
+                {(selectedGameweeks.size > 0 || selectedTeams.size > 0) && (
+                  <span className="rounded-full bg-blue-100 px-1.5 text-[10px] font-semibold text-blue-700">
+                    {selectedGameweeks.size + selectedTeams.size}
+                  </span>
+                )}
+                {filtersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500" data-testid="text-fdr-description">{FDR_MODE_META[fdrMode].description}</p>
+          </div>
+          {filtersExpanded && (
+          <div className="fpl-card-content border-t">
+            <div className="flex flex-col gap-3">
+              {/* Section 2: Gameweek Selection */}
+              <div className="bg-blue-50 rounded-lg p-3">
+                <Label className="text-xs font-semibold text-gray-700 block mb-2">Gameweek Selection</Label>
+                <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <label className="text-xs font-medium text-gray-700">Toggle:</label>
                     <div className="flex gap-1.5">
@@ -1065,19 +1068,6 @@ export default function Fixtures() {
 
         {/* Fixture Difficulty Analysis */}
         <div className="space-y-3 sm:space-y-4">
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setFiltersExpanded(true)}
-              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-100 transition-colors"
-              title={FDR_MODE_META[fdrMode].description}
-            >
-              <span className="text-gray-500 font-normal">FDR Mode:</span> {FDR_MODE_META[fdrMode].label}
-            </button>
-            <p className="text-[10px] sm:text-[11px] text-gray-500 text-center max-w-md px-4">
-              {FDR_MODE_META[fdrMode].description}
-            </p>
-          </div>
           <div className="flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs justify-center">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="fdr-cell fdr-1 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">1</div>
@@ -1098,6 +1088,14 @@ export default function Fixtures() {
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="fdr-cell fdr-5 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">5</div>
               <span className="hidden sm:inline text-gray-600">Very hard</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-double w-5 h-4 sm:w-7 sm:h-5 rounded bg-gray-100"></div>
+              <span className="text-gray-600">Double GW</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-blank w-5 h-4 sm:w-7 sm:h-5 rounded"></div>
+              <span className="text-gray-600">Blank</span>
             </div>
           </div>
 
@@ -1147,11 +1145,11 @@ export default function Fixtures() {
             </div>
           ) : (
             <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-auto max-h-[75vh]" data-testid="fixture-grid-scroll">
                 <table className="w-full text-[9px] sm:text-[10px] md:text-xs lg:text-sm border-collapse">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-1 sm:px-2 py-1 text-left font-semibold min-w-[50px] sm:min-w-[65px] md:min-w-[80px] lg:min-w-[100px] z-20">
+                      <th className="sticky top-0 left-0 bg-gray-50 px-1 sm:px-2 py-1 text-left font-semibold min-w-[50px] sm:min-w-[65px] md:min-w-[80px] lg:min-w-[100px] z-30">
                         <button
                           onClick={() => handleSort('team')}
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors"
@@ -1163,7 +1161,7 @@ export default function Fixtures() {
                           )}
                         </button>
                       </th>
-                      <th className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-20">
+                      <th className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] top-0 bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-30">
                         <button
                           onClick={() => handleSort('fdr-avg')}
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
@@ -1176,7 +1174,7 @@ export default function Fixtures() {
                           )}
                         </button>
                       </th>
-                      <th className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-20">
+                      <th className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] top-0 bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-30">
                         <button
                           onClick={() => handleSort('games')}
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
@@ -1189,20 +1187,24 @@ export default function Fixtures() {
                         </button>
                       </th>
                       {gameweeks.map(gw => (
-                        <th key={gw} className={`px-0.5 py-1 text-center font-semibold min-w-[32px] sm:min-w-[40px] md:min-w-[50px] lg:min-w-[60px] ${
-                          gw === nextGameweek ? 'bg-blue-100 text-blue-900' : ''
+                        <th key={gw} className={`sticky top-0 z-20 px-0.5 py-1 text-center font-semibold min-w-[32px] sm:min-w-[40px] md:min-w-[50px] lg:min-w-[60px] ${
+                          gw === nextGameweek ? 'bg-blue-100 text-blue-900' : 'bg-gray-50'
                         }`}>
                           <button
                             onClick={() => handleSort(`gw-${gw}`)}
                             className="flex items-center justify-center hover:text-blue-600 transition-colors mx-auto"
                             data-testid={`sort-gw-${gw}`}
                           >
-                            GW{gw}
+                            <span className="flex flex-col items-center leading-tight">
+                              GW{gw}
+                              {gwHasDouble(gw) && <span className="text-[8px] sm:text-[9px] font-bold text-amber-600" title="At least one team plays twice">DGW</span>}
+                              {gwHasBlank(gw) && <span className="text-[8px] sm:text-[9px] font-bold text-slate-500" title="At least one team has no fixture">BGW</span>}
+                            </span>
                           </button>
                         </th>
                       ))}
                       {hasTBCFixtures && (
-                        <th className="px-0.5 py-1 text-center font-semibold min-w-[40px] sm:min-w-[50px] md:min-w-[60px] bg-amber-50 border-l-2 border-amber-300">
+                        <th className="sticky top-0 z-20 px-0.5 py-1 text-center font-semibold min-w-[40px] sm:min-w-[50px] md:min-w-[60px] bg-amber-50 border-l-2 border-amber-300">
                           <span className="text-amber-700 text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap">GW39 (TBC)</span>
                         </th>
                       )}
@@ -1243,7 +1245,7 @@ export default function Fixtures() {
                                 gw === nextGameweek ? 'bg-blue-50' : ''
                               }`}>
                                 {fixtures && fixtures.length > 0 ? (
-                                  <div className="flex flex-col gap-0.5">
+                                  <div className={`flex flex-col gap-0.5 ${fixtures.length > 1 ? 'fdr-double' : ''}`} title={fixtures.length > 1 ? 'Double gameweek' : undefined}>
                                     {fixtures.map((fixture, idx) => (
                                       <div 
                                         key={idx}
@@ -1268,7 +1270,7 @@ export default function Fixtures() {
                                     ))}
                                   </div>
                                 ) : (
-                                  <div className="px-0.5 py-0.5 text-gray-300">-</div>
+                                  <div className="fdr-blank px-0.5 py-0.5" title="Blank gameweek: no fixture" data-testid={`blank-${team.id}-${gw}`}>-</div>
                                 )}
                               </td>
                             );
