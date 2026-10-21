@@ -7,6 +7,7 @@ import type { DeadlineBrief, BriefPlayer, PriceRow } from "@shared/deadline-brie
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
 import { ShareImageButton } from "@/components/share-image-button";
+import { DeadlineReminderToggle } from "@/components/deadline-reminder-toggle";
 import { captainsCard, shareFileName } from "@shared/share-cards";
 
 function countdown(deadlineIso: string, now: number): string {
@@ -93,6 +94,7 @@ export default function DeadlineBriefPage() {
                   <div className="font-semibold">{new Date(data.deadlineTime).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
                 </div>
                 <div className="text-2xl font-bold" data-testid="text-countdown">{countdown(data.deadlineTime, now)}</div>
+                <div className="w-full"><DeadlineReminderToggle /></div>
               </CardContent>
             </Card>
 

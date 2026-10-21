@@ -11,6 +11,7 @@ import { copilotXminsScheduler } from "./copilot-xmins-scheduler";
 // import { twitterScheduler } from "./twitter-scheduler";
 // import { deadlineTweetScheduler } from "./deadline-tweet-scheduler";
 import { projectionAccuracyScheduler } from "./projection-accuracy-scheduler";
+import { deadlineReminderScheduler, pushConfigured } from "./push-reminders";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 import { seedAdminUser } from "./seed-admin-user";
@@ -187,6 +188,15 @@ app.use((req, res, next) => {
         console.log("✓ Projection accuracy scheduler started");
       } else {
         console.log("⏭️ Projection accuracy scheduler skipped (production only)");
+      }
+
+      // Deadline reminders (web push). Production only AND only when VAPID keys are set: it sends notifications to real
+      // subscribers, which a local dev server (sharing the production database) must never do.
+      if (process.env.NODE_ENV === "production" && pushConfigured()) {
+        deadlineReminderScheduler.start();
+        console.log("✓ Deadline reminder scheduler started");
+      } else {
+        console.log("⏭️ Deadline reminder scheduler skipped (needs production + VAPID keys)");
       }
 
       // Start odds refresh scheduler (every 4 hours; no-ops if ODDS_API_KEY isn't set)

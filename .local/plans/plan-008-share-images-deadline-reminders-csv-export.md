@@ -1,6 +1,7 @@
 # Plan 008 — Shareable images, Deadline reminders, CSV export
 
-Status: PROPOSED — awaiting user decisions. Nothing implemented.
+Status: IMPLEMENTED locally (not pushed). Decisions (2026-10-21): html-to-image approved; web-push + push_subscriptions table approved with the migration HELD (not applied anywhere; see .local/push-reminders-setup.md); CSV export plus the existing column picker.
+Built: shared/csv.ts + Export CSV on Player Stats; shared/share-cards.ts + Share image button (Template Team, captains on Matrix/Brief, Hindsight); shared/deadline-reminders.ts, server/push-reminders.ts, /api/push/*, client/public/push-sw.js, Brief toggle (hidden until VAPID keys are set). Reminders are inert until you create the table and set the keys.
 Created: 2026-10-21
 
 The three "worth considering" items from the competitor research. What exists today (checked): no image-export library, no web-push library or push handler in the service worker, no CSV export on Player Stats. So each needs something new, and two of them need your approval first.

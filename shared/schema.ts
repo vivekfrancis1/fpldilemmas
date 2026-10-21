@@ -1692,3 +1692,16 @@ export const fixtureOddsSnapshots = pgTable("fixture_odds_snapshots", {
 
 export type FixtureOddsSnapshot = typeof fixtureOddsSnapshots.$inferSelect;
 export type InsertFixtureOddsSnapshot = typeof fixtureOddsSnapshots.$inferInsert;
+
+// Web-push subscriptions for deadline reminders. NOT applied to any database by the code: create it with the SQL in
+// .local/push-reminders-setup.md (or `npm run db:push`) when reminders are switched on.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  lastSentGameweek: integer("last_sent_gameweek"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

@@ -39,6 +39,8 @@ import { buildTemplateTeam } from "@shared/template-team";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
 import { buildLeagueOwnership } from "@shared/league-ownership";
+import { parseSubscription } from "@shared/deadline-reminders";
+import { pushConfigured, saveSubscription, removeSubscription } from "./push-reminders";
 import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
@@ -1635,6 +1637,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error building league ownership:", error);
       res.status(500).json({ error: "Failed to build league ownership" });
+    }
+  });
+
+  // Deadline reminders (web push). All three routes are inert until VAPID keys are configured; see
+  // .local/push-reminders-setup.md. Only the push endpoint and keys are stored: no name, email or team ID.
+  app.get("/api/push/config", (_req, res) => {
+    const enabled = pushConfigured();
+    res.json({ enabled, publicKey: enabled ? process.env.VAPID_PUBLIC_KEY : null });
+  });
+
+  app.post("/api/push/subscribe", async (req, res) => {
+    const sub = parseSubscription(req.body);
+    if (!sub) return res.status(400).json({ error: "Invalid push subscription" });
+    if (!pushConfigured()) return res.status(503).json({ error: "Reminders are not set up yet" });
+    try {
+      await saveSubscription(sub);
+      res.status(201).json({ ok: true });
+    } catch (error) {
+      console.error("Failed to save push subscription:", error);
+      res.status(500).json({ error: "Could not save the subscription" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", async (req, res) => {
+    const endpoint = req.body?.endpoint;
+    if (typeof endpoint !== "string" || endpoint.length === 0 || endpoint.length > 2048) {
+      return res.status(400).json({ error: "Invalid endpoint" });
+    }
+    if (!pushConfigured()) return res.json({ ok: true });
+    try {
+      await removeSubscription(endpoint);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Failed to remove push subscription:", error);
+      res.status(500).json({ error: "Could not remove the subscription" });
     }
   });
 
