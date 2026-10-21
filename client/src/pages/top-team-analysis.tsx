@@ -400,19 +400,26 @@ export default function TopTeamAnalysis() {
   return (
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area">
-        {/* Controls and Status */}
-        <div className="fpl-controls">
-          <div className="fpl-controls-right">
-            <Button
-              onClick={refreshAllData}
-              disabled={isRefreshing}
-              variant="outline"
-              className="hover:bg-blue-50"
-              data-testid="button-refresh-analysis"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh Analysis'}
-            </Button>
+        {/* Page header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <BarChart3 />
+              <h1>Top Managers Team Analysis</h1>
+            </div>
+            <div className="fpl-page-actions">
+              <Button
+                onClick={refreshAllData}
+                disabled={isRefreshing}
+                variant="outline"
+                size="sm"
+                data-testid="button-refresh-analysis"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Analysis'}
+              </Button>
+            </div>
+            <p className="fpl-page-subtitle">What the top FPL managers are playing: popular players, captains, formations, form and budget.</p>
           </div>
         </div>
 
