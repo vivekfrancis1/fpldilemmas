@@ -12,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlayerNameCell } from "@/components/enhanced-table";
+import { buildCsv, csvFileName, numericFromDisplay, textOfNode } from "@shared/csv";
+import { Download } from "lucide-react";
 
 interface ColumnDefinition {
   id: string;
@@ -470,6 +472,29 @@ export default function PlayerStatsTable({
   };
 
   // Helper function to render cell content for a given column
+  // Export exactly what the table shows: every row after filters and sort (not just this page), the visible columns in
+  // their on-screen order, values read from the same render function so formatting can never drift from the screen.
+  const exportCsv = () => {
+    const cols = orderedColumns.filter(col => visibleColumns.has(col.id));
+    const headers = ['Player', 'Team', 'Position', ...cols.map(c => c.tooltip)];
+    const rows = filteredAndSortedPlayers.map((player: any) => {
+      const position = getPositionName(player);
+      const cells = cols.map(col => {
+        const text = textOfNode(renderCellContent(col.id, player, position)).trim();
+        const n = numericFromDisplay(text);
+        return n !== null ? n : (text === '-' || text === '—' || text === 'N/A' || text === '...' ? '' : text);
+      });
+      return [player.web_name, getTeamName(player), position, ...cells];
+    });
+    const blob = new Blob(['\uFEFF' + buildCsv(headers, rows)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = csvFileName(['fpl-dilemmas', 'player-stats', season ?? 'current', displayMode], new Date().toISOString().slice(0, 10));
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const renderCellContent = (columnId: string, player: any, position: string) => {
     const formatValue = (value: any, type: string) => {
       if (type === 'decimal') {
@@ -990,6 +1015,17 @@ export default function PlayerStatsTable({
                 <SelectItem value="away">Away Matches only</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1"
+              onClick={exportCsv}
+              disabled={isCbitPointsLoading || isSavePointsLoading || isMinutesPointsLoading || filteredAndSortedPlayers.length === 0}
+              data-testid="button-export-csv"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-1" data-testid="button-column-selector">
