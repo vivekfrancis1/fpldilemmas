@@ -80,7 +80,7 @@ Effort: medium (3a), medium–large (3b).
 1. Compare page (lowest risk, immediate use).
 2. Captaincy Matrix (reuses projections).
 3. Verify Feature 3 against the live FPL site, then decide whether to build 3a/3b.
-Deferred: Template Team (Top 100 only, labelled), Rate My Team, chip-timing view — plan separately.
+Template Team and Rate My Team were built (see plan-005). Chip-timing view: SKIPPED by the user on 2026-10-21 (too hard to make accurate).
 
 ## Decisions needed from the user
 1. Compare page: full version (fixtures + xPts) or the smaller one (search + share link only)?
