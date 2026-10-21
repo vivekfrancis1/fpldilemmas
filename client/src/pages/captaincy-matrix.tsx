@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { compareUrl } from "@shared/compare-utils";
 import { Crown } from "lucide-react";
 import type { MatrixTeamRow } from "@shared/captaincy-matrix";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +136,7 @@ export default function CaptaincyMatrix() {
                             <td className="py-1.5">
                               <span className="flex items-center gap-1.5">
                                 <JerseyIcon team={team.teamName} position={POSITION_NAME[c.position]} />
-                                <span className="font-medium">{c.name}</span>
+                                <Link href={compareUrl([c.playerId])} className="font-medium hover:underline" title="Compare this player">{c.name}</Link>
                                 <span className="text-xs text-muted-foreground">{c.position}</span>
                                 <PlayerAvailabilityBadge
                                   player={{ status: c.status, chanceOfPlayingNextRound: c.chanceOfPlayingNextRound, news: c.news }}

@@ -1,6 +1,7 @@
 # Plan 007 — Projected view on Fixtures, Mini-league ownership, Compare links (accuracy page deferred)
 
-Status: PROPOSED — awaiting user decisions. Nothing implemented.
+Status: IMPLEMENTED locally (not pushed). Decisions (2026-10-21): Projected view shows our numbers with relative colours (no 1-5); league ownership capped at the top 50 with a visible sample label; accuracy page stays deferred.
+Built: shared/projected-fdr.ts + Projected mode on Fixtures; shared/league-ownership.ts + GET /api/league-ownership/:leagueId + /league-ownership page; compareUrl() links from Matrix, Brief and Rate My Team. Tests: projected-fdr (13), league-ownership (16), compare-utils (+3).
 Created: 2026-10-21
 
 Source: the "best fits" from the competitor research follow-up. Principle unchanged: official data, exact arithmetic, or our own tested projections; every sample size and approximation is shown.

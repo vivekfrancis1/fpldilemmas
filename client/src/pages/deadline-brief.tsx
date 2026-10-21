@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { compareUrl } from "@shared/compare-utils";
 import { AlarmClock } from "lucide-react";
 import type { DeadlineBrief, BriefPlayer, PriceRow } from "@shared/deadline-brief";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ function PlayerRow({ p }: { p: BriefPlayer }) {
   return (
     <tr className="border-t" data-testid={`row-player-${p.playerId}`}>
       <td className="py-1.5">
-        <span className="font-medium">{p.name}</span>{" "}
+        <Link href={compareUrl([p.playerId])} className="font-medium hover:underline" title="Compare this player">{p.name}</Link>{" "}
         <span className="text-xs text-muted-foreground">{p.teamShort} · {p.position}</span>
         <PlayerAvailabilityBadge
           player={{ status: p.status, chanceOfPlayingNextRound: p.chanceOfPlayingNextRound, news: p.news }}

@@ -117,6 +117,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
         { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck, description: "Projected points, Top 100 rank and best upgrades for your squad", popular: false },
         { path: "/hindsight", label: "Hindsight", icon: History, description: "Your points versus the best XI from your 15", popular: false },
+        { path: "/league-ownership", label: "League Ownership", icon: Users, description: "What your mini-league owns and captains, plus your differentials", popular: false },
         { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
         { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false, adminOnly: true },

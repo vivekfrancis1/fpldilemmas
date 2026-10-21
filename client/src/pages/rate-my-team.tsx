@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { compareUrl } from "@shared/compare-utils";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,6 +216,7 @@ export default function RateMyTeam() {
                         <span className="font-medium">{u.inName}</span>
                         <span className="text-xs text-muted-foreground">{u.inTeam} · {money(u.inPrice)}</span>
                         <span className="ml-auto font-semibold text-primary">+{u.gain.toFixed(1)} pts</span>
+                        <Link href={compareUrl([u.outId, u.inId])} className="text-xs underline" data-testid={`compare-${u.outId}-${u.inId}`}>Compare</Link>
                         <span className="w-full text-xs text-muted-foreground">
                           Player xPts {u.outHorizonXPts.toFixed(1)} → {u.inHorizonXPts.toFixed(1)} · cost {signedMoney(u.priceDelta)}
                         </span>

@@ -7,6 +7,7 @@ import {
   projectionWindow,
   fixturesForGameweeks,
   MAX_COMPARE_PLAYERS,
+  compareUrl,
 } from "../shared/compare-utils";
 
 describe("parseCompareIds (shareable /compare?p=1,2,3 URLs)", () => {
@@ -161,5 +162,22 @@ describe("fixturesForGameweeks (upcoming fixtures for a team)", () => {
 
   it("ignores finished and unscheduled fixtures", () => {
     expect(fixturesForGameweeks(1, fixtures, [7])[0].fixtures).toEqual([]);
+  });
+});
+
+describe("compareUrl (links into the Compare page)", () => {
+  it("builds /compare?p=<ids> in the given order", () => {
+    expect(compareUrl([411, 12])).toBe("/compare?p=411,12");
+    expect(compareUrl([5])).toBe("/compare?p=5");
+  });
+
+  it("round-trips through parseCompareIds, which also removes duplicates and caps at the maximum", () => {
+    const url = compareUrl([1, 2, 2, 3, 4, 5, 6, 7]);
+    expect(parseCompareIds(new URLSearchParams(url.split("?")[1]).get("p"))).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("with nothing valid it links to the bare page", () => {
+    expect(compareUrl([])).toBe("/compare");
+    expect(compareUrl([0, -3, NaN])).toBe("/compare");
   });
 });

@@ -38,6 +38,7 @@ import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix
 import { buildTemplateTeam } from "@shared/template-team";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
+import { buildLeagueOwnership } from "@shared/league-ownership";
 import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
@@ -1546,6 +1547,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error building hindsight:", error);
       res.status(500).json({ error: "Failed to build the hindsight view" });
+    }
+  });
+
+  // Mini-league ownership: exact counts over the first standings page (up to 50 managers) of a classic league for a
+  // finished gameweek, plus captains, the league's template XI and (optionally) your differentials and gaps.
+  // Logic: shared/league-ownership.ts. Picks for a finished gameweek never change, so they are cached in memory.
+  const leaguePicksCache = new Map<string, Array<{ element: number; is_captain?: boolean }>>();
+  const fetchFinishedPicks = async (entryId: number, gw: number) => {
+    const key = `${entryId}:${gw}`;
+    const hit = leaguePicksCache.get(key);
+    if (hit) return hit;
+    try {
+      const r = await fetch(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${gw}/picks/`, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
+      });
+      if (!r.ok) return null;
+      const picks = (await r.json()).picks;
+      if (!Array.isArray(picks)) return null;
+      if (leaguePicksCache.size > 20000) leaguePicksCache.delete(leaguePicksCache.keys().next().value as string);
+      leaguePicksCache.set(key, picks);
+      return picks;
+    } catch {
+      return null;
+    }
+  };
+
+  app.get("/api/league-ownership/:leagueId", async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      if (!/^\d+$/.test(leagueId)) return res.status(400).json({ error: "Invalid league ID" });
+
+      const youParam = req.query.managerId;
+      let youId: number | null = null;
+      if (youParam !== undefined && youParam !== "") {
+        const text = String(youParam);
+        if (!/^\d+$/.test(text)) return res.status(400).json({ error: "Invalid manager ID" });
+        youId = Number(text);
+      }
+
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
+      if (!bootstrapResponse.ok) return res.status(503).json({ error: "FPL data is not available yet" });
+      const bootstrap = await bootstrapResponse.json();
+      const finished: number[] = (bootstrap.events as any[]).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b);
+      if (finished.length === 0) return res.status(400).json({ error: "No gameweek has finished yet", finishedGameweeks: [] });
+
+      let gameweek = finished[finished.length - 1];
+      const gwParam = req.query.gw;
+      if (gwParam !== undefined && gwParam !== "") {
+        const text = String(gwParam);
+        gameweek = /^\d+$/.test(text) ? Number(text) : NaN;
+        if (!Number.isInteger(gameweek) || !finished.includes(gameweek)) {
+          return res.status(400).json({ error: "Choose a finished gameweek", finishedGameweeks: finished });
+        }
+      }
+
+      // Page 1 only (50 managers) and no DB writes, unlike /api/leagues-classic/:id/standings which also seeds profiles.
+      const standingsResponse = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=1`, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
+      });
+      if (standingsResponse.status === 404) return res.status(404).json({ error: "League not found" });
+      if (!standingsResponse.ok) return res.status(502).json({ error: "Could not load this league from FPL" });
+      const standings = await standingsResponse.json();
+      const rows: any[] = standings.standings?.results ?? [];
+
+      const managers: Array<{ managerId: number; picks: any[] | null }> = [];
+      for (let i = 0; i < rows.length; i += 10) {
+        const batch = rows.slice(i, i + 10);
+        const got = await Promise.all(batch.map((r) => fetchFinishedPicks(r.entry, gameweek)));
+        batch.forEach((r, k) => managers.push({ managerId: r.entry, picks: got[k] }));
+      }
+
+      let you: { managerId: number; picks: any[] | null } | undefined;
+      if (youId !== null) {
+        const inLeague = managers.find((m) => m.managerId === youId);
+        you = { managerId: youId, picks: inLeague ? inLeague.picks : await fetchFinishedPicks(youId, gameweek) };
+      }
+
+      const result = buildLeagueOwnership({ managers, elements: bootstrap.elements, teams: bootstrap.teams, you });
+      res.json({
+        league: { id: Number(leagueId), name: standings.league?.name ?? "" },
+        gameweek,
+        finishedGameweeks: finished,
+        hasMore: !!standings.standings?.has_next,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Error building league ownership:", error);
+      res.status(500).json({ error: "Failed to build league ownership" });
     }
   });
 

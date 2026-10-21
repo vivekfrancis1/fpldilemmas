@@ -142,3 +142,9 @@ export function fixturesForGameweeks(
       ),
   }));
 }
+
+/** Link into the Compare page for these players: /compare?p=id,id. Invalid ids are dropped; duplicates removed; capped at MAX_COMPARE_PLAYERS. */
+export function compareUrl(ids: number[]): string {
+  const clean = parseCompareIds(ids.filter((n) => Number.isInteger(n) && n > 0).join(","));
+  return clean.length ? `/compare?p=${clean.join(",")}` : "/compare";
+}
