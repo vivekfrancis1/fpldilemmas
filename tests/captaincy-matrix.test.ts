@@ -91,6 +91,25 @@ describe("buildCaptaincyMatrix", () => {
     expect(out.teams.map((t) => t.teamId)).toEqual([2, 1, 3]); // Villa 7.0, Arsenal 6.1, Chelsea blank
   });
 
+  it("filters to the requested positions before taking the top N", () => {
+    const out = run({ positions: ["FWD"] });
+    expect(out.teams.find((t) => t.teamId === 1)!.candidates.map((c) => c.name)).toEqual(["Havertz"]);
+    const mids = run({ positions: ["MID"] }).teams.find((t) => t.teamId === 1)!.candidates;
+    expect(mids.map((c) => c.name)).toEqual(["Saka", "Odegaard", "Rice"]); // top 3 midfielders, not top 3 overall
+  });
+
+  it("accepts several positions at once and treats an empty list as all positions", () => {
+    const two = run({ positions: ["MID", "FWD"] }).teams.find((t) => t.teamId === 1)!.candidates;
+    expect(two.map((c) => c.name)).toEqual(["Saka", "Havertz", "Odegaard"]);
+    expect(run({ positions: [] }).teams.find((t) => t.teamId === 1)!.candidates).toHaveLength(3);
+  });
+
+  it("keeps a team's fixtures even when no player of the chosen position has a projection", () => {
+    const t = run({ positions: ["GKP"] }).teams.find((t) => t.teamId === 1)!;
+    expect(t.candidates).toEqual([]);
+    expect(t.fixtures).toHaveLength(2);
+  });
+
   it("honours topN", () => {
     expect(run({ topN: 1 }).teams.find((t) => t.teamId === 1)!.candidates).toHaveLength(1);
   });
@@ -153,6 +172,29 @@ describe("GET /api/captaincy-matrix (consistency with the Points page projection
     expect(body.gameweek).toBe(gw);
     expect(body.availableGameweeks).toContain(gw);
     expect(body.availableGameweeks).toEqual([...body.availableGameweeks].sort((a: number, b: number) => a - b));
+  });
+
+  it("position filter: only that position, and the top 3 of that position by xPts", async () => {
+    const { status, body } = await getJson(`/api/captaincy-matrix?gw=${gw}&position=MID`);
+    expect(status).toBe(200);
+    const teamOf = new Map<number, number>(bootstrap.elements.map((e: any) => [e.id, e.team]));
+    const typeOf = new Map<number, number>(bootstrap.elements.map((e: any) => [e.id, e.element_type]));
+    for (const team of body.teams) {
+      for (const c of team.candidates) expect(c.position).toBe("MID");
+      if (team.candidates.length === 0) continue;
+      const expected = cached
+        .filter((p) => teamOf.get(p.playerId) === team.teamId && typeOf.get(p.playerId) === 3 && typeof p.gameweekProjections?.[String(gw)] === "number")
+        .sort((a, b) => b.gameweekProjections[String(gw)] - a.gameweekProjections[String(gw)] || a.playerId - b.playerId)
+        .slice(0, 3)
+        .map((p) => p.playerId);
+      expect(team.candidates.map((c: any) => c.playerId)).toEqual(expected);
+    }
+  });
+
+  it("accepts a comma list of positions and rejects unknown ones with 400", async () => {
+    const { body } = await getJson(`/api/captaincy-matrix?gw=${gw}&position=MID,FWD`);
+    for (const team of body.teams) for (const c of team.candidates) expect(["MID", "FWD"]).toContain(c.position);
+    expect((await getJson(`/api/captaincy-matrix?gw=${gw}&position=XYZ`)).status).toBe(400);
   });
 
   it("rejects a bad or unprojected gameweek with 400", async () => {

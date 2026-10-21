@@ -34,7 +34,8 @@ import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
-import { buildCaptaincyMatrix } from "@shared/captaincy-matrix";
+import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
+import { buildTemplateTeam } from "@shared/template-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
@@ -1421,6 +1422,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Template Team: the most-owned squad among the Top 100 managers we already load for /top-managers
+  // (same cached picks, same gameweek). Counting and selection live in shared/template-team.ts.
+  app.get("/api/template-team", async (_req, res) => {
+    try {
+      const [topResponse, bootstrapResponse] = await Promise.all([
+        internalFetch("api/top-managers/teams"),
+        internalFetch("api/bootstrap-static"),
+      ]);
+      if (!topResponse.ok || !bootstrapResponse.ok) {
+        return res.status(503).json({ error: "Top manager data is not available yet" });
+      }
+      const top = await topResponse.json();
+      const bootstrap = await bootstrapResponse.json();
+      const managers = (top.teams as any[]).map((t) => ({
+        managerId: t.managerId,
+        picks: t.success ? t.teamData?.picks ?? null : null,
+      }));
+      const template = buildTemplateTeam({ managers, elements: bootstrap.elements, teams: bootstrap.teams });
+      res.json({ gameweek: top.metadata?.gameweek ?? null, fetchedAt: top.metadata?.fetchedAt ?? null, ...template });
+    } catch (error) {
+      console.error("Error building template team:", error);
+      res.status(500).json({ error: "Failed to build template team" });
+    }
+  });
+
   // Captaincy Matrix: each team's top captain options for one gameweek, ranked by the SAME cached xPts the
   // Points page shows (no recomputation here). gw defaults to the first projected gameweek.
   app.get("/api/captaincy-matrix", async (req, res) => {
@@ -1458,12 +1484,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const positionParam = req.query.position;
+      const positions =
+        positionParam === undefined || positionParam === ""
+          ? []
+          : String(positionParam).split(",").map((x) => x.trim().toUpperCase());
+      if (positions.some((x) => !(MATRIX_POSITIONS as readonly string[]).includes(x))) {
+        return res.status(400).json({ error: "Invalid position. Use GKP, DEF, MID and/or FWD (comma separated)" });
+      }
+
       const matrix = buildCaptaincyMatrix({
         gameweek,
         elements: bootstrap.elements,
         teams: bootstrap.teams,
         fixtures,
         projections,
+        positions,
       });
       res.json({ ...matrix, availableGameweeks });
     } catch (error) {

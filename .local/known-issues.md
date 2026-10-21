@@ -211,6 +211,12 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Duplicated availability logic** between the live aggregator and the cache-hit path — one shared `adjustPlayerForAvailability` (`server/availability-player-adjustment.ts`); totals, averages and value now follow the adjusted gameweeks in both.
 - **Projection accuracy scheduler** hardcoded 2025/26 and GW29-38 (idle and mislabelled for 28 gameweeks) — now current season, GW1-38, per-gameweek expected minutes, production-only capture; `/api/projection-accuracy/*` default to the current season (summary/player no longer mix seasons).
 
+## 2026-10-21 — Noticed while building Compare / Matrix / Template Team (open)
+
+- **Top 100 analysis page shows "/25" denominators** (`client/src/pages/top-team-analysis.tsx` lines ~479 and ~656: `{player.ownership}/25`) although 100 managers are tracked; the percentage next to it is computed correctly from the real count. Display bug only; not fixed (existing feature — needs your OK).
+- **Fixtures grid: double/blank gameweek styling untested with real data** — no double or blank gameweek exists in the current fixture list, so the amber outline, hatched blank cell and DGW/BGW header tags were only checked via the legend swatches and the logic, not on live cells. Re-check when the first DGW/BGW appears.
+- **Cached projections can be incomplete for about a minute after a cold start** (e.g. defenders/goalkeepers topping every team in the Captaincy Matrix right after a restart). The matrix mirrors whatever `/api/cached/player-total-points` serves.
+
 ## Still open (need a decision or can't be verified yet)
 
 - **Low-scoring-team defender distortion** (e.g. Van Hecke ~0.64 goals/GW from 1 goal in 540 min): remaining cause is dividing by a tiny team goal total then applying it to a larger odds-based team projection. Position-average priors and last-season blending are ruled out by decision; needs a new approach.

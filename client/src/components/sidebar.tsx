@@ -103,6 +103,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Top Managers",
       items: [
         { path: "/top-managers", label: "All Time Top 100", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
+        { path: "/template-team", label: "Template Team", icon: Users, description: "The most-owned squad among the Top 100 managers", popular: false },
         { path: "/content-creators", label: "Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
       ]
     },

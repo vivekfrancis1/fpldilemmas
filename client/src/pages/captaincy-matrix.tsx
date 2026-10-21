@@ -18,11 +18,17 @@ const POSITION_NAME: Record<string, string> = { GKP: "Goalkeeper", DEF: "Defende
 
 export default function CaptaincyMatrix() {
   const [gameweek, setGameweek] = useState<number | null>(null);
+  const [position, setPosition] = useState<string>("ALL");
 
   const { data, isLoading, error } = useQuery<MatrixResponse>({
-    queryKey: ["/api/captaincy-matrix", gameweek],
+    queryKey: ["/api/captaincy-matrix", gameweek, position],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const res = await fetch(gameweek ? `/api/captaincy-matrix?gw=${gameweek}` : "/api/captaincy-matrix");
+      const params = new URLSearchParams();
+      if (gameweek) params.set("gw", String(gameweek));
+      if (position !== "ALL") params.set("position", position);
+      const qs = params.toString();
+      const res = await fetch(qs ? `/api/captaincy-matrix?${qs}` : "/api/captaincy-matrix");
       if (!res.ok) throw new Error("Failed to load captaincy matrix");
       return res.json();
     },
@@ -58,6 +64,23 @@ export default function CaptaincyMatrix() {
           </div>
         </div>
 
+        <div className="mb-3 inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="Position filter">
+          {["ALL", "GKP", "DEF", "MID", "FWD"].map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              onClick={() => setPosition(pos)}
+              aria-pressed={position === pos}
+              data-testid={`filter-position-${pos}`}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                position === pos ? "bg-white text-blue-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {pos === "ALL" ? "All" : pos}
+            </button>
+          ))}
+        </div>
+
         {error && (
           <Card><CardContent className="p-6">Couldn't load the matrix. Please try again shortly.</CardContent></Card>
         )}
@@ -89,7 +112,11 @@ export default function CaptaincyMatrix() {
                 <CardContent className="pt-0">
                   {team.candidates.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      {team.fixtures.length === 0 ? "Blank gameweek: no captain options." : "No projections available."}
+                      {team.fixtures.length === 0
+                        ? "Blank gameweek: no captain options."
+                        : position === "ALL"
+                          ? "No projections available."
+                          : "No projected players in this position."}
                     </p>
                   ) : (
                     <table className="w-full text-sm">

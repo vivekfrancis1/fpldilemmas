@@ -55,6 +55,8 @@ export interface MatrixTeamRow {
   candidates: CaptainCandidate[];
 }
 
+export const MATRIX_POSITIONS = ["GKP", "DEF", "MID", "FWD"] as const;
+
 export const POSITION_SHORT: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -66,8 +68,10 @@ export function buildCaptaincyMatrix(input: {
   fixtures: MatrixFixture[];
   projections: MatrixProjection[];
   topN?: number;
+  /** Only these positions are eligible (GKP/DEF/MID/FWD). Empty or omitted = all. Applied before topN. */
+  positions?: string[];
 }): { gameweek: number; teams: MatrixTeamRow[] } {
-  const { gameweek, elements, teams, fixtures, projections, topN = 3 } = input;
+  const { gameweek, elements, teams, fixtures, projections, topN = 3, positions = [] } = input;
   const projectionById = new Map(projections.map((p) => [p.playerId, p]));
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
@@ -90,7 +94,7 @@ export function buildCaptaincyMatrix(input: {
       teamFixtures.length === 0
         ? []
         : elements
-            .filter((e) => e.team === team.id)
+            .filter((e) => e.team === team.id && (positions.length === 0 || positions.includes(POSITION_SHORT[e.element_type])))
             .flatMap((e) => {
               const p = projectionById.get(e.id);
               const xPts = p?.gameweekProjections?.[String(gameweek)];

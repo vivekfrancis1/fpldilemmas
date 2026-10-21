@@ -1,7 +1,7 @@
 # Plan 004 — Competitor-informed features (Compare, Captaincy Matrix, Bonus/Def Con tracker)
 
 Status: IN PROGRESS. User decisions (2026-10-21): full Compare page, then Captaincy Matrix as a separate public page; fix name matching; Feature 3 (bonus/Def Con tracker), Live FPL and effective ownership SKIPPED.
-Progress: Feature 1 (Compare page) implemented locally with tests; Feature 2 (Captaincy Matrix) implemented locally with tests (endpoint /api/captaincy-matrix, page /captaincy-matrix). Open: no position filter (a GK/DEF can top a team's list when our xPts say so); right after a cold start the cached projections can be briefly incomplete, which the matrix mirrors.
+Progress: Feature 1 (Compare page) implemented locally with tests; Feature 2 (Captaincy Matrix) implemented locally with tests (endpoint /api/captaincy-matrix, page /captaincy-matrix). Position filter added (All/GKP/DEF/MID/FWD, `?position=`). Template Team (Top 100) added (`/template-team`, `/api/template-team`, `shared/template-team.ts`). Fixtures page restyled (stronger FDR colours, compact controls bar, sticky header, DGW/BGW markers). Open: right after a cold start the cached projections can be briefly incomplete, which the matrix mirrors.
 Created: 2026-10-21
 
 ## Why these features
