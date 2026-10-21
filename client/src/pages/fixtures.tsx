@@ -14,15 +14,17 @@ import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 import { getFdrCellClass, getAvgFdrCellClass } from "@/lib/heatmap-colors";
+import { quintileTier, lookupProjected, formatProjected, type ProjectedKind, type ProjectionRow } from "@shared/projected-fdr";
 
 // Shown wherever the current FDR mode needs explaining — the mode selector cards, the
 // always-visible badge next to the table legend, and the collapsed Fixture Controls header —
 // so a viewer never has to guess what the colors on the table are actually rating fixtures by.
-const FDR_MODE_META: Record<'official' | 'form' | 'lastSeason' | 'custom', { label: string; shortLabel: string; description: string }> = {
+const FDR_MODE_META: Record<'official' | 'form' | 'lastSeason' | 'custom' | 'projected', { label: string; shortLabel: string; description: string }> = {
   official: { label: 'Official FPL Ratings', shortLabel: 'Official', description: "FPL's own published 1-5 difficulty rating for each fixture" },
   form: { label: 'Season Form', shortLabel: 'Season Form', description: 'Recalculated from how each team has actually performed this season' },
   lastSeason: { label: 'Last Season Form', shortLabel: 'Last Season', description: "Recalculated from each team's final 2025/26 results" },
   custom: { label: 'Custom Ratings', shortLabel: 'Custom', description: 'Your own difficulty rating (1-5) for each opponent' },
+  projected: { label: 'Projected', shortLabel: 'Projected', description: "Our own projected goals (attack) or clean-sheet chance (defence) for each fixture; colour ranks the fixtures shown" },
 };
 
 interface Fixture {
@@ -43,7 +45,7 @@ interface CustomFDR {
   };
 }
 
-type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number };
+type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number; value?: number; valueLabel?: string; source?: string };
 
 function getDifficultyColor(difficulty: number) {
   return getFdrCellClass(difficulty);
@@ -94,7 +96,8 @@ export default function Fixtures() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [customFDROpen, setCustomFDROpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'lastSeason' | 'custom'>('official');
+  const [projectedKind, setProjectedKind] = useState<ProjectedKind>('attack');
+  const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'lastSeason' | 'custom' | 'projected'>('official');
   const [selectedGameweeks, setSelectedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<number>>(new Set());
   const [teamFilterId, setTeamFilterId] = useState<number | null>(() => {
@@ -197,6 +200,25 @@ export default function Fixtures() {
     gcTime: 30 * 60 * 1000,
     enabled: fdrMode === 'lastSeason',
   });
+
+  // Our per-fixture projections - only when Projected mode is selected
+  const { data: goalProjections } = useQuery<any[]>({
+    queryKey: ["/api/team-goal-projections"],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: fdrMode === 'projected',
+  });
+  const { data: csProjections } = useQuery<any[]>({
+    queryKey: ["/api/team-cs-projections"],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: fdrMode === 'projected',
+  });
+  const projectionRowsById = useMemo(() => {
+    const source = projectedKind === 'attack' ? goalProjections : csProjections;
+    if (!source) return null;
+    return new Map<number, ProjectionRow>(source.map((r: any) => [r.teamId ?? r.id, { teamId: r.teamId ?? r.id, fixtureDetails: r.fixtureDetails ?? {} }]));
+  }, [goalProjections, csProjections, projectedKind]);
 
   // Whether any fixture has event=null (used to show the view mode toggle)
   const hasTBCFixturesInData = useMemo(() => {
@@ -325,14 +347,15 @@ export default function Fixtures() {
   const clearTeamSelections = () => setSelectedTeams(new Set());
 
   // Build fixture matrix with average FDR calculation
-  const { fixtureMatrix, teamAverageFDR, teamGameCount } = useMemo(() => {
+  const { fixtureMatrix, teamAverageFDR, teamGameCount, projectedAvgTier } = useMemo(() => {
     if (!fixturesData || !bootstrapData?.events || !gameweekRange) return { 
       fixtureMatrix: {}, 
       teamAverageFDR: {},
-      teamGameCount: {}
+      teamGameCount: {},
+      projectedAvgTier: {} as Record<number, number>
     };
 
-    const matrix: Record<number, Record<number, Array<{ opponent: string, difficulty: number, isHome: boolean, finished: boolean, fixtureId?: number }>>> = {};
+    const matrix: Record<number, Record<number, FixtureEntry[]>> = {};
     const avgFDR: Record<number, number> = {};
     const gameCount: Record<number, number> = {};
     
@@ -454,22 +477,62 @@ export default function Fixtures() {
       }
     });
 
-    // Calculate average FDR for each team (only for non-excluded gameweeks)
+    // Projected mode: attach OUR per-fixture number to each fixture, then colour by quintile among the fixtures
+    // shown (selected gameweeks, regular fixtures). Anything without a number stays neutral; nothing is invented.
+    const projectedActive = fdrMode === 'projected';
+    if (projectedActive) {
+      const shownGW = (gw: number) => selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
+      const shownValues: number[] = [];
+      bootstrapData.teams.forEach(team => {
+        Object.entries(matrix[team.id] || {}).forEach(([gwKey, entries]) => {
+          const gw = parseInt(gwKey);
+          entries.forEach(entry => {
+            entry.value = undefined;
+            entry.valueLabel = undefined;
+            entry.source = undefined;
+            entry.difficulty = 3;
+            if (!projectionRowsById || gw <= 0 || entry.fixtureId) return;
+            const found = lookupProjected(projectionRowsById, team.id, gw, entry.opponent, entry.isHome, projectedKind);
+            if (!found) return;
+            entry.value = found.value;
+            entry.valueLabel = formatProjected(projectedKind, found.value);
+            entry.source = found.source;
+            if (shownGW(gw)) shownValues.push(found.value);
+          });
+        });
+      });
+      bootstrapData.teams.forEach(team => {
+        Object.entries(matrix[team.id] || {}).forEach(([gwKey, entries]) => {
+          if (!shownGW(parseInt(gwKey))) return;
+          entries.forEach(entry => {
+            if (entry.value !== undefined) entry.difficulty = quintileTier(shownValues, entry.value);
+          });
+        });
+      });
+    }
+
+    // Calculate average FDR for each team (only for non-excluded gameweeks). In Projected mode the average is the
+    // mean of the shown projected values (goals or clean-sheet %), not of tiers.
     bootstrapData.teams.forEach(team => {
       const teamFixturesEntries = Object.entries(matrix[team.id] || {});
       const filteredFixtures = teamFixturesEntries.filter(([gw]) => selectedGameweeks.size === 0 || selectedGameweeks.has(parseInt(gw)));
       if (filteredFixtures.length > 0) {
-        let totalDifficulty = 0;
+        let total = 0;
+        let counted = 0;
         let fixtureCount = 0;
         filteredFixtures.forEach(([, fixtures]) => {
           fixtures.forEach(fixture => {
             if (!fixture.finished) {
-              totalDifficulty += fixture.difficulty;
               fixtureCount++;
+              const v = projectedActive ? fixture.value : fixture.difficulty;
+              if (v !== undefined) {
+                total += v;
+                counted++;
+              }
             }
           });
         });
-        avgFDR[team.id] = fixtureCount > 0 ? parseFloat((totalDifficulty / fixtureCount).toFixed(2)) : 0;
+        avgFDR[team.id] = counted > 0 ? parseFloat((total / counted).toFixed(2)) : 0;
         gameCount[team.id] = fixtureCount;
       } else {
         avgFDR[team.id] = 0;
@@ -477,12 +540,21 @@ export default function Fixtures() {
       }
     });
 
+    const projectedAvgTier: Record<number, number> = {};
+    if (projectedActive) {
+      const means = Object.values(avgFDR).filter(v => v > 0);
+      bootstrapData.teams.forEach(team => {
+        projectedAvgTier[team.id] = avgFDR[team.id] > 0 ? quintileTier(means, avgFDR[team.id]) : 3;
+      });
+    }
+
     return { 
       fixtureMatrix: matrix, 
       teamAverageFDR: avgFDR,
-      teamGameCount: gameCount
+      teamGameCount: gameCount,
+      projectedAvgTier
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, lastSeasonFormFDR, selectedGameweeks, viewMode, tbcAssignments]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, lastSeasonFormFDR, selectedGameweeks, viewMode, tbcAssignments, projectedKind, projectionRowsById]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
@@ -629,7 +701,9 @@ export default function Fixtures() {
           if (gamesA !== gamesB) return gamesB - gamesA;
           const fdrA = teamAverageFDR[a.id] || 0;
           const fdrB = teamAverageFDR[b.id] || 0;
-          return sortDirection === 'asc' ? fdrA - fdrB : fdrB - fdrA;
+          // Projected: a higher goals / clean-sheet number is an easier run, so the order flips
+          const dir = fdrMode === 'projected' ? -1 : 1;
+          return sortDirection === 'asc' ? dir * (fdrA - fdrB) : dir * (fdrB - fdrA);
         });
       case 'games':
         return teams.sort((a, b) => 
@@ -656,7 +730,7 @@ export default function Fixtures() {
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData, fixtureMatrix, teamAverageFDR, teamGameCount, sortBy, sortDirection, selectedTeams]);
+  }, [bootstrapData, fixtureMatrix, teamAverageFDR, teamGameCount, sortBy, sortDirection, selectedTeams, fdrMode]);
 
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
@@ -766,7 +840,7 @@ export default function Fixtures() {
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">FDR mode</span>
                 <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="FDR mode">
-                  {(Object.keys(FDR_MODE_META) as Array<'official' | 'form' | 'lastSeason' | 'custom'>).map((mode) => {
+                  {(Object.keys(FDR_MODE_META) as Array<'official' | 'form' | 'lastSeason' | 'custom' | 'projected'>).map((mode) => {
                     const isActive = fdrMode === mode;
                     return (
                       <button
@@ -786,6 +860,25 @@ export default function Fixtures() {
                   })}
                 </div>
               </div>
+              {fdrMode === 'projected' && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Show</span>
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="Projected view">
+                    {([['attack', 'Attack (goals)'], ['defence', 'Defence (clean sheet)']] as const).map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setProjectedKind(k)}
+                        aria-pressed={projectedKind === k}
+                        data-testid={`projected-kind-${k}`}
+                        className={`rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${projectedKind === k ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {fdrMode === 'custom' && (
                   <div className="flex items-center gap-2 justify-center mt-2">
                     <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
@@ -1099,6 +1192,14 @@ export default function Fixtures() {
             </div>
           </div>
 
+          {fdrMode === 'projected' && (
+            <p className="text-center text-[10px] sm:text-[11px] text-gray-500 max-w-xl mx-auto" data-testid="text-projected-note">
+              {projectedKind === 'attack' ? 'Numbers are our projected goals for the team in that fixture.' : 'Numbers are our projected clean-sheet chance for the team in that fixture.'}{' '}
+              Colour ranks the fixtures shown (top fifth = darkest green, bottom fifth = darkest red), so it changes with your gameweek and team filters.{' '}
+              * = our model estimate where bookmaker odds weren't available. {!projectionRowsById && 'Loading projections…'}
+            </p>
+          )}
+
           {hasTBCFixturesInData && (
             <div className="flex justify-center">
               <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs">
@@ -1229,8 +1330,8 @@ export default function Fixtures() {
                             </div>
                           </td>
                           <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l z-10">
-                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${getAvgFdrCellClass(avgFDR)}`}>
-                              {avgFDR > 0 ? avgFDR : '-'}
+                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${fdrMode === 'projected' ? `fdr-cell fdr-${projectedAvgTier[team.id] ?? 3}` : getAvgFdrCellClass(avgFDR)}`}>
+                              {avgFDR > 0 ? (fdrMode === 'projected' ? formatProjected(projectedKind, avgFDR) : avgFDR) : '-'}
                             </div>
                           </td>
                           <td className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l border-r z-10">
@@ -1266,6 +1367,11 @@ export default function Fixtures() {
                                         <span className="truncate font-medium whitespace-nowrap">
                                           {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
                                         </span>
+                                        {fdrMode === 'projected' && (
+                                          <span className="block text-[8px] sm:text-[9px] font-semibold leading-tight opacity-90" data-testid={`value-${team.id}-${gw}-${idx}`}>
+                                            {fixture.valueLabel ?? '–'}{fixture.source === 'model' && fixture.valueLabel ? '*' : ''}
+                                          </span>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
