@@ -213,7 +213,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ## 2026-10-21 — Noticed while building Compare / Matrix / Template Team (open)
 
-- **Top 100 analysis page shows "/25" denominators** (`client/src/pages/top-team-analysis.tsx` lines ~479 and ~656: `{player.ownership}/25`) although 100 managers are tracked; the percentage next to it is computed correctly from the real count. Display bug only; not fixed (existing feature — needs your OK).
+- **Top 100 analysis page showed "/25" denominators** — FIXED 2026-10-21: counts now use the real number of squads loaded (and the loading text/counter use `TOP_MANAGERS.length` instead of a hard-coded 25). Display only; the percentages were always right.
 - **Fixtures grid: double/blank gameweek styling untested with real data** — no double or blank gameweek exists in the current fixture list, so the amber outline, hatched blank cell and DGW/BGW header tags were only checked via the legend swatches and the logic, not on live cells. Re-check when the first DGW/BGW appears.
 - **Cached projections can be incomplete for about a minute after a cold start** (e.g. defenders/goalkeepers topping every team in the Captaincy Matrix right after a restart). The matrix mirrors whatever `/api/cached/player-total-points` serves.
 

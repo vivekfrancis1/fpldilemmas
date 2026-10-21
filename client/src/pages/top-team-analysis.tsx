@@ -382,7 +382,7 @@ export default function TopTeamAnalysis() {
 
   const validTeamsCount = validTeams.length;
   const errorTeamsCount = managersData.filter((m: ManagerTeamData) => !m.success).length;
-  const loadingTeamsCount = teamsLoading ? 25 - validTeamsCount - errorTeamsCount : 0;
+  const loadingTeamsCount = teamsLoading ? TOP_MANAGERS.length - validTeamsCount - errorTeamsCount : 0;
 
   if (bootstrapLoading) {
     return (
@@ -423,7 +423,7 @@ export default function TopTeamAnalysis() {
               <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold mb-2">Loading Team Data...</h3>
               <p className="text-gray-600 mb-4">
-                Fetching team information for all 25 managers. This may take a moment.
+                Fetching team information for all {TOP_MANAGERS.length} managers. This may take a moment.
               </p>
               <Button onClick={refreshAllData} variant="outline" disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -476,7 +476,7 @@ export default function TopTeamAnalysis() {
                           </div>
                           <div className="text-right">
                             <div className="font-semibold">{player.ownershipPercent}%</div>
-                            <div className="text-xs text-gray-600">{player.ownership}/25</div>
+                            <div className="text-xs text-gray-600">{player.ownership}/{validTeams.length}</div>
                           </div>
                         </div>
                       ))}
@@ -653,7 +653,7 @@ export default function TopTeamAnalysis() {
                             {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}
                           </TableCell>
                           <TableCell className="font-mono">{formatPrice(player.now_cost)}</TableCell>
-                          <TableCell className="font-semibold">{player.ownership}/25</TableCell>
+                          <TableCell className="font-semibold">{player.ownership}/{validTeams.length}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Progress value={player.ownershipPercent} className="h-2 flex-1" />
