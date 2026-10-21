@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { 
+  GitCompareArrows,
   TrendingUp, 
   RefreshCw, 
   Users, 
@@ -90,6 +91,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Popular Tools",
       items: [
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
+        { path: "/compare", label: "Compare Players", icon: GitCompareArrows, description: "Side-by-side fixtures, expected points and stats", popular: false },
         { path: "/price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
         { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
         { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },

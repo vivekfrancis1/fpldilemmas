@@ -27,6 +27,7 @@ import {
   User,
   UserPlus,
   Coffee,
+  GitCompareArrows,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,6 +84,7 @@ const navSections: NavSection[] = [
     section: "Popular Tools",
     items: [
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
+      { path: "/compare", label: "Compare Players", icon: GitCompareArrows },
       { path: "/price-changes", label: "Price Changes", icon: RefreshCw },
       { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3 },
       { path: "/best-freehit-team", label: "Freehit Team", icon: Users },

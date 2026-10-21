@@ -46,6 +46,7 @@ export const playerSchema = z.object({
   first_name: z.string(),
   second_name: z.string(),
   web_name: z.string(),
+  code: z.number().optional(), // FPL's permanent player code; stable across seasons (unlike the element id)
   element_type: z.number(),
   team: z.number(),
   now_cost: z.number(),

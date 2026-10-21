@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { findHistoricalByCode } from "@shared/compare-utils";
 
 interface PlayerComparisonModalProps {
   players: any[];
@@ -72,14 +73,12 @@ export default function PlayerComparisonModal({
     const seasonData = historicalData[season];
     if (!seasonData) return null;
     
-    // Find player by matching first_name and second_name since IDs might change
+    // Match on FPL's permanent player code, never on name: two players can share a name, and a
+    // renamed player keeps the same code. No match means no data for that season.
     const currentPlayer = players.find(p => p.id === playerId);
     if (!currentPlayer) return null;
     
-    return seasonData.find(p => 
-      p.first_name === currentPlayer.first_name && 
-      p.second_name === currentPlayer.second_name
-    );
+    return findHistoricalByCode(seasonData, currentPlayer.code);
   };
 
   const statLabels = {
