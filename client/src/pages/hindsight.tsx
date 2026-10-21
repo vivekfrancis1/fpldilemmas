@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShareImageButton } from "@/components/share-image-button";
+import { hindsightCard, shareFileName } from "@shared/share-cards";
 
 interface Pick { id: number; name: string; position: string; points: number; multiplier: number; started: boolean; isCaptain: boolean; inBestXI: boolean }
 interface HindsightResponse {
@@ -149,7 +151,24 @@ export default function Hindsight() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Captain</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
+                  <span>Captain</span>
+                  {chosen && best && (
+                    <ShareImageButton
+                      card={hindsightCard({
+                        gameweek: data.gameweek,
+                        officialPoints: data.officialPoints,
+                        bestPossible: data.bestPossible,
+                        gap: data.gap,
+                        chip: data.chip,
+                        captain: { chosen: chosen.name, chosenPoints: chosen.points, best: best.name, bestPoints: best.points },
+                      })}
+                      fileName={shareFileName(["hindsight", `gw${data.gameweek}`])}
+                    />
+                  )}
+                </CardTitle>
+              </CardHeader>
               <CardContent className="text-sm" data-testid="captain">
                 You chose <span className="font-semibold">{chosen?.name ?? "—"}</span> ({chosen?.points ?? 0} pts). The highest scorer in your squad was{" "}
                 <span className="font-semibold">{best?.name ?? "—"}</span> ({best?.points ?? 0} pts)

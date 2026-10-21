@@ -4,6 +4,8 @@ import { Crown } from "lucide-react";
 import type { TemplateTeam, TemplatePlayer } from "@shared/template-team";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JerseyIcon from "@/components/jersey-icon";
+import { ShareImageButton } from "@/components/share-image-button";
+import { templateCard, shareFileName } from "@shared/share-cards";
 
 type TemplateResponse = TemplateTeam & { gameweek: number | null; fetchedAt: string | null };
 
@@ -67,6 +69,11 @@ export default function TemplateTeamPage() {
                   <span className="text-sm font-normal text-muted-foreground" data-testid="text-sample">
                     {data.managersCounted} of {data.managersRequested} squads · squad value £{data.totalValue.toFixed(1)}m
                   </span>
+                  <ShareImageButton
+                    card={templateCard({ ...data, captain: data.captain ? { name: data.captain.name, percent: data.captain.percent } : null })}
+                    fileName={shareFileName(["template-team", `gw${data.gameweek ?? ""}`])}
+                    className="ml-auto"
+                  />
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">

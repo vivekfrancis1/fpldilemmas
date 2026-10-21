@@ -7,6 +7,8 @@ import type { MatrixTeamRow } from "@shared/captaincy-matrix";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
+import { ShareImageButton } from "@/components/share-image-button";
+import { captainsCard, shareFileName } from "@shared/share-cards";
 import JerseyIcon from "@/components/jersey-icon";
 import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 
@@ -66,7 +68,8 @@ export default function CaptaincyMatrix() {
           </div>
         </div>
 
-        <div className="mb-3 inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="Position filter">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="Position filter">
           {["ALL", "GKP", "DEF", "MID", "FWD"].map((pos) => (
             <button
               key={pos}
@@ -81,6 +84,19 @@ export default function CaptaincyMatrix() {
               {pos === "ALL" ? "All" : pos}
             </button>
           ))}
+        </div>
+        {data && (() => {
+          const top = data.teams
+            .flatMap((t) => t.candidates.map((c) => ({ name: c.name, teamShort: t.shortName, xPts: c.xPts, captainPoints: c.captainPoints, id: c.playerId })))
+            .sort((a, b) => b.xPts - a.xPts || a.id - b.id);
+          const card = captainsCard({ gameweek: data.gameweek, players: top });
+          return (
+            <ShareImageButton
+              card={position === "ALL" ? card : { ...card, subtitle: `${card.subtitle} · ${position}` }}
+              fileName={shareFileName(["captains", `gw${data.gameweek}`, position === "ALL" ? "" : position])}
+            />
+          );
+        })()}
         </div>
 
         {error && (

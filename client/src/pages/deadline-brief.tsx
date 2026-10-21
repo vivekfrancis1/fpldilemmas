@@ -6,6 +6,8 @@ import { AlarmClock } from "lucide-react";
 import type { DeadlineBrief, BriefPlayer, PriceRow } from "@shared/deadline-brief";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
+import { ShareImageButton } from "@/components/share-image-button";
+import { captainsCard, shareFileName } from "@shared/share-cards";
 
 function countdown(deadlineIso: string, now: number): string {
   const ms = new Date(deadlineIso).getTime() - now;
@@ -95,7 +97,17 @@ export default function DeadlineBriefPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Top captain options</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
+                  <span>Top captain options</span>
+                  {data.projectionsAvailable && (
+                    <ShareImageButton
+                      card={captainsCard({ gameweek: data.gameweek, players: data.captains })}
+                      fileName={shareFileName(["captains", `gw${data.gameweek}`])}
+                    />
+                  )}
+                </CardTitle>
+              </CardHeader>
               <CardContent>
                 {!data.projectionsAvailable ? (
                   <p className="text-sm text-muted-foreground">Projections for this gameweek aren't available yet.</p>
