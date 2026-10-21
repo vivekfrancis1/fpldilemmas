@@ -18,6 +18,7 @@ const Fixtures = lazy(() => import("./pages/fixtures"));
 const Compare = lazy(() => import("./pages/compare"));
 const CaptaincyMatrix = lazy(() => import("./pages/captaincy-matrix"));
 const TemplateTeamPage = lazy(() => import("./pages/template-team"));
+const RateMyTeam = lazy(() => import("./pages/rate-my-team"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
 const AssistShare = lazy(() => import("./pages/assist-share"));
 const PlayerGoalsScoredProjections = lazy(() => import("./pages/player-goals-scored-projections"));
@@ -123,6 +124,7 @@ function Router() {
         <Route path="/compare" component={Compare} />
         <Route path="/captaincy-matrix" component={CaptaincyMatrix} />
         <Route path="/template-team" component={TemplateTeamPage} />
+        <Route path="/rate-my-team" component={RateMyTeam} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/transfer-planner" component={TransferPlanner} />
         <Route path="/pick-team">

@@ -28,6 +28,7 @@ import {
   UserPlus,
   Coffee,
   GitCompareArrows,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +105,7 @@ const navSections: NavSection[] = [
     section: "My FPL",
     items: [
       { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
+      { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck },
       { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
       { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, adminOnly: true },

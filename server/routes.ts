@@ -36,6 +36,7 @@ import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/d
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
 import { buildTemplateTeam } from "@shared/template-team";
+import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
@@ -1419,6 +1420,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fixturesInFlight = null;
       console.error("Error fetching fixtures:", error);
       res.status(500).json({ error: "Failed to fetch fixtures" });
+    }
+  });
+
+  // Rate My Team: measurable facts about a manager's squad from the same cached xPts the Points page shows
+  // (projected points over a horizon, rank among the Top 100 squads, single-swap upgrades, availability and
+  // blank/double flags). Logic lives in shared/rate-my-team.ts + shared/lineup.ts. No invented score.
+  app.get("/api/rate-my-team/:managerId", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
+
+      const horizonParam = req.query.horizon;
+      let horizon = 5;
+      if (horizonParam !== undefined && horizonParam !== "") {
+        const text = String(horizonParam);
+        horizon = /^\d+$/.test(text) ? Number(text) : NaN;
+        if (!Number.isInteger(horizon) || horizon < 1 || horizon > 8) {
+          return res.status(400).json({ error: "Invalid horizon. Use a whole number from 1 to 8" });
+        }
+      }
+
+      const teamResponse = await internalFetch(`api/manager/${managerId}/team`);
+      if (teamResponse.status === 404) return res.status(404).json({ error: "Manager not found" });
+      if (teamResponse.status === 400) return res.status(400).json({ error: "Invalid manager ID" });
+      if (!teamResponse.ok) return res.status(502).json({ error: "Could not load this manager's squad from FPL" });
+      const teamData = await teamResponse.json();
+      if (!Array.isArray(teamData.picks) || teamData.picks.length !== 15) {
+        return res.status(422).json({ error: "This manager has no full 15-player squad to rate yet" });
+      }
+
+      const [projResponse, bootstrapResponse, fixturesResponse, topResponse] = await Promise.all([
+        internalFetch("api/cached/player-total-points"),
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures"),
+        internalFetch("api/top-managers/teams"),
+      ]);
+      if (!projResponse.ok || !bootstrapResponse.ok || !fixturesResponse.ok) {
+        return res.status(503).json({ error: "Projection data is not available yet" });
+      }
+      const projections: any[] = await projResponse.json();
+      const bootstrap = await bootstrapResponse.json();
+      const fixtures = await fixturesResponse.json();
+      const top = topResponse.ok ? await topResponse.json() : { teams: [] };
+
+      const availableGameweeks = Array.from(
+        new Set<number>(projections.flatMap((p) => Object.keys(p.gameweekProjections ?? {}).map(Number))),
+      )
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 38)
+        .sort((a, b) => a - b);
+      if (availableGameweeks.length === 0) return res.status(503).json({ error: "No projections available yet" });
+      const gameweeks = availableGameweeks.slice(0, horizon);
+
+      const xPtsByPlayer = new Map<number, Record<string, number>>(
+        projections.map((p) => [p.playerId, p.gameweekProjections ?? {}]),
+      );
+      const teamById = new Map<number, any>(bootstrap.teams.map((t: any) => [t.id, t]));
+      const toPlayer = (e: any): RmtPlayer => ({
+        id: e.id,
+        name: e.web_name,
+        elementType: e.element_type,
+        team: e.team,
+        price: e.now_cost,
+        status: e.status ?? "a",
+        chanceOfPlayingNextRound: e.chance_of_playing_next_round ?? null,
+        news: e.news ?? "",
+      });
+      const pool: RmtPlayer[] = bootstrap.elements.map(toPlayer);
+      const poolById = new Map(pool.map((p) => [p.id, p]));
+
+      const squad = (teamData.picks as any[]).map((p) => poolById.get(p.element)).filter((p): p is RmtPlayer => !!p);
+      if (squad.length !== 15) return res.status(422).json({ error: "This squad contains players we don't recognise" });
+
+      const bank: number = teamData.entry_history?.bank ?? 0;
+      const horizonResult = horizonProjection(squad, xPtsByPlayer, gameweeks);
+
+      // Same measure for each Top 100 squad that returned 15 picks
+      const fieldTotals: number[] = [];
+      for (const t of top.teams ?? []) {
+        if (!t.success || t.teamData?.picks?.length !== 15) continue;
+        const theirs = (t.teamData.picks as any[]).map((p) => poolById.get(p.element)).filter((p): p is RmtPlayer => !!p);
+        if (theirs.length !== 15) continue;
+        fieldTotals.push(horizonProjection(theirs, xPtsByPlayer, gameweeks).total);
+      }
+
+      const upgrades = findUpgrades({ squad, pool, xPtsByPlayer, gameweeks, bank, topN: 5 }).map((u) => ({
+        ...u,
+        outName: poolById.get(u.outId)?.name,
+        inName: poolById.get(u.inId)?.name,
+        outTeam: teamById.get(poolById.get(u.outId)!.team)?.short_name,
+        inTeam: teamById.get(poolById.get(u.inId)!.team)?.short_name,
+        inPrice: poolById.get(u.inId)!.price,
+      }));
+
+      const nameOf = (id: number | null) => (id === null ? null : poolById.get(id)?.name ?? null);
+      res.json({
+        managerId: Number(managerId),
+        resolvedGameweek: teamData.resolvedGameweek ?? teamData.entry_history?.event ?? null,
+        activeChip: teamData.active_chip ?? null,
+        gameweeks,
+        availableGameweeks,
+        projectedTotal: horizonResult.total,
+        benchTotal: horizonResult.benchTotal,
+        perGameweek: horizonResult.perGameweek.map((g) => ({ ...g, captainName: nameOf(g.captainId) })),
+        rank: rankAmongField(horizonResult.total, fieldTotals),
+        upgrades,
+        flags: squadFlags({ squad, fixtures, gameweeks }),
+        bank,
+        sellingPricesApproximate: true,
+        squad: squad.map((p) => ({
+          id: p.id,
+          name: p.name,
+          position: ["GKP", "DEF", "MID", "FWD"][p.elementType - 1],
+          teamShort: teamById.get(p.team)?.short_name,
+          price: p.price,
+          horizonXPts: gameweeks.reduce((s, gw) => s + (xPtsByPlayer.get(p.id)?.[String(gw)] ?? 0), 0),
+        })),
+      });
+    } catch (error) {
+      console.error("Error building rate-my-team:", error);
+      res.status(500).json({ error: "Failed to rate this team" });
     }
   });
 

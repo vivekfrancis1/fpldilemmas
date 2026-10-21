@@ -1,6 +1,7 @@
 # Plan 005 — Rate My Team
 
-Status: PROPOSED — awaiting user decisions. Nothing implemented.
+Status: IMPLEMENTED locally (not pushed). Decisions (2026-10-21): lead with rank among the Top 100; current price as selling price with a visible caveat; public page under My FPL; default horizon 5 GWs (1/3/5/8 selectable).
+Built: shared/lineup.ts, shared/rate-my-team.ts, GET /api/rate-my-team/:managerId, /rate-my-team page; tests/lineup.test.ts + tests/rate-my-team.test.ts (28 tests).
 Created: 2026-10-21
 
 ## Goal
