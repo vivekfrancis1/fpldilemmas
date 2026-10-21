@@ -2185,3 +2185,6 @@ table thead th, table thead th * { font-family: var(--font-sans) !important; }
 .fdr-double { outline: 2px solid #f59e0b; outline-offset: 1px; border-radius: 6px; }
 .fdr-blank { background: repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0 4px, transparent 4px 8px); color: #64748b; border-radius: 4px; text-align: center; font-weight: 600; }
 .dark .fdr-blank { background: repeating-linear-gradient(45deg, rgba(148,163,184,0.25) 0 4px, transparent 4px 8px); color: #94a3b8; }
+
+/* Card headers: title on the left, actions / chevron on the right, wrapping when narrow */
+.fpl-card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 0.75rem; row-gap: 0.25rem; }

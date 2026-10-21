@@ -305,7 +305,7 @@ export default function ProjectedStandings() {
                       onValueChange={handleEndGameweekChange}
                       disabled={!bootstrapData || selectedEndGameweek === null}
                     >
-                      <SelectTrigger className="w-20 h-7 text-xs" data-testid="select-end-gameweek">
+                      <SelectTrigger className="w-24 h-7 text-xs" data-testid="select-end-gameweek">
                         <SelectValue placeholder="..." />
                       </SelectTrigger>
                       <SelectContent>
