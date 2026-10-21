@@ -69,8 +69,6 @@ export interface PitchViewProps {
   activeChip?: string | null;
   onPlayerClick?: (player: PitchPlayer) => void;
   renderEmptySlot?: (player: PitchPlayer) => JSX.Element | null;
-  // Smaller jerseys and tighter spacing so a whole squad (and bench) fits one screen height
-  compact?: boolean;
 }
 
 function getChipDisplayInfo(chip: string): { label: string; bg: string; text: string } | null {
@@ -176,7 +174,6 @@ function PlayerCard({
   showTeamName = false,
   showOpponent = false,
   onClick,
-  compact = false,
 }: { 
   player: PitchPlayer;
   isGoalkeeper?: boolean;
@@ -184,7 +181,6 @@ function PlayerCard({
   showTeamName?: boolean;
   showOpponent?: boolean;
   onClick?: () => void;
-  compact?: boolean;
 }) {
   const [imgError, setImgError] = useState(0);
   const teamCode = player.team_code || 0;
@@ -206,7 +202,7 @@ function PlayerCard({
   const StatusIcon = availability?.icon;
   
   return (
-    <div className={`flex flex-col items-center ${compact && isBench ? 'w-full' : isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
+    <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
       <div className="relative flex flex-col items-center">
         {player.is_captain && (player.multiplier || 2) >= 3 ? (
           <div className="absolute top-1 left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
@@ -243,14 +239,14 @@ function PlayerCard({
           </div>
         )}
         <div 
-          className={`${compact ? 'w-16 sm:w-[4.5rem] md:w-20' : 'w-18 sm:w-22 md:w-28'} bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''} ${player.is_selected ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
+          className={`w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''} ${player.is_selected ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
           onClick={onClick}
         >
-          <div className={compact ? "p-0.5" : "p-1"}>
+          <div className="p-1">
             <img 
               src={getImageSrc()}
               alt={`${player.team_short_name || 'Team'} jersey`}
-              className={`w-full object-contain drop-shadow-lg ${compact ? "h-8 sm:h-8 md:h-8" : "h-16 sm:h-20 md:h-24"}`}
+              className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
               onError={() => {
                 if (imgError < 2) setImgError(imgError + 1);
               }}
@@ -259,7 +255,7 @@ function PlayerCard({
           
           <div className="flex flex-col">
             <div className="w-full px-1 py-0.5 bg-white/95 text-center">
-              <div className={`${compact ? "text-[9px] sm:text-[10px] md:text-xs" : "text-[9px] sm:text-[11px] md:text-sm"} font-bold text-gray-900 truncate`}>
+              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                 {player.web_name || player.player_name || 'Unknown'}
               </div>
             </div>
@@ -274,13 +270,13 @@ function PlayerCard({
 
             {getPointsDisplay(player) !== '' && (
               <div className={`w-full px-2 py-0.5 ${getBadgeBg(getPointsDisplay(player), isBench)} text-center`}>
-                <div className={`${compact ? "text-[9px] sm:text-[10px] md:text-xs" : "text-[9px] sm:text-[11px] md:text-sm"} font-bold text-white truncate`}>
+                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                   {getPointsDisplay(player)}
                 </div>
               </div>
             )}
 
-            {hasFixture && !(compact && getPointsDisplay(player) === fixtureText) && (
+            {hasFixture && (
               <div className={`w-full px-1 py-0.5 ${isBench ? 'bg-gray-600' : 'bg-gray-700'} text-center`}>
                 <div className={`${dgw ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
                   {fixtureText}
@@ -332,7 +328,6 @@ export function PitchView({
   activeChip,
   onPlayerClick,
   renderEmptySlot,
-  compact = false,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
   const sortedBench = benchPlayers;
@@ -351,14 +346,13 @@ export function PitchView({
         showTeamName={showTeamName}
         showOpponent={showOpponent}
         onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-        compact={compact}
       />
     );
   };
   
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
-      <div className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg ${compact ? "p-1.5" : "p-3 sm:p-4 md:p-6"} overflow-hidden h-full flex flex-col justify-center`}>
+      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden h-full flex flex-col justify-center">
         {chipInfo && (
           <div className={`absolute top-2 right-2 z-20 ${chipInfo.bg} ${chipInfo.text} px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold shadow-lg border border-white/30`}>
             {chipInfo.label}
@@ -391,9 +385,7 @@ export function PitchView({
           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
         </div>
 
-        {(() => {
-          const rowsJsx = (
-            <>
+        <div className="relative space-y-4 sm:space-y-6 md:space-y-8">
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
             return gks.length > 0 && (
@@ -439,15 +431,9 @@ export function PitchView({
             );
           })()}
 
-            </>
-          );
-          if (!compact) {
-            return (
-              <div className="relative space-y-4 sm:space-y-6 md:space-y-8">
-                {rowsJsx}
           {sortedBench.length > 0 && (
-            <div className={`relative ${compact ? "mt-2 pt-1.5" : "mt-4 sm:mt-6 md:mt-8 pt-4"} border-t-2 border-white/30`}>
-              <div className={`text-center ${compact ? "mb-1" : "mb-2"}`}>
+            <div className="relative mt-4 sm:mt-6 md:mt-8 pt-4 border-t-2 border-white/30">
+              <div className="text-center mb-2">
                 <span className="text-white font-bold text-xs sm:text-sm">BENCH</span>
               </div>
               <div className="flex justify-center gap-0.5">
@@ -455,22 +441,7 @@ export function PitchView({
               </div>
             </div>
           )}
-              </div>
-            );
-          }
-          // Compact: the bench is a vertical strip beside the pitch instead of a row underneath it
-          return (
-            <div className="relative flex gap-2">
-              <div className="flex-1 min-w-0 space-y-1">{rowsJsx}</div>
-              {sortedBench.length > 0 && (
-                <div className="w-[5.25rem] sm:w-[5.5rem] shrink-0 border-l-2 border-white/30 pl-1.5 flex flex-col items-center gap-1.5">
-                  <span className="text-white font-bold text-[10px]">BENCH</span>
-                  {sortedBench.map(player => renderPlayer(player, player.element_type === 1, true))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        </div>
       </div>
     </div>
   );

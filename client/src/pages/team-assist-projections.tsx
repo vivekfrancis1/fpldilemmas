@@ -505,7 +505,7 @@ export default function TeamAssistProjections() {
                       return (
                       <th
                         key={gwNumber}
-                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'min-w-[52px]' : ''}`}
                         style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         onClick={() => setSortBy(`gw${gwNumber}`)}
                       >
@@ -524,12 +524,12 @@ export default function TeamAssistProjections() {
                       );
                     })}
                     {viewMode === "future" && fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (
-                      <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
+                      <th className="px-0.5 md:px-2 py-2 md:py-3 text-center text-xs font-medium text-amber-700 uppercase tracking-wider bg-amber-50/60 border-l border-amber-300 min-w-[52px]">
                         GW39 (TBC)
                       </th>
                     )}
                     <th
-                      className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 font-semibold cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'w-[100px] min-w-[100px]' : ''}`}
+                      className={`px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 font-semibold cursor-pointer hover:bg-gray-100 transition-colors ${!columnWidth ? 'min-w-[100px]' : ''}`}
                       style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                       onClick={() => setSortBy('total')}
                     >
@@ -576,7 +576,7 @@ export default function TeamAssistProjections() {
                           return (
                             <td
                               key={gwNumber}
-                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${value !== null ? getBellCurveColor(value, gwValuesMap.get(gwNumber) || []) : ''} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${value !== null ? getBellCurveColor(value, gwValuesMap.get(gwNumber) || []) : ''} ${!columnWidth ? 'min-w-[52px]' : ''}`}
                               style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                             >
                               <span className="flex items-center justify-center gap-1">
@@ -598,7 +598,7 @@ export default function TeamAssistProjections() {
                           return (
                             <td
                               key={gwNumber}
-                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${!columnWidth ? 'min-w-[52px]' : ''}`}
                               style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                             >
                               <span className="text-gray-400">-</span>
@@ -608,7 +608,7 @@ export default function TeamAssistProjections() {
                         return (
                           <td
                             key={gwNumber}
-                            className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${(assists) ? getBellCurveColor(assists, gwValuesMap.get(gwNumber) || []) : 'text-gray-300'} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                            className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium ${(assists) ? getBellCurveColor(assists, gwValuesMap.get(gwNumber) || []) : 'text-gray-300'} ${!columnWidth ? 'min-w-[52px]' : ''}`}
                             style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                           >
                             {isDGW ? (
@@ -645,13 +645,13 @@ export default function TeamAssistProjections() {
                         const tbcEntry = tbcAssistMap.get(team.teamShort);
                         if (!tbcEntry) {
                           return (
-                            <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 w-[52px] min-w-[52px]">
+                            <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/40 border-l border-amber-200 min-w-[52px]">
                               <span className="text-gray-300">-</span>
                             </td>
                           );
                         }
                         return (
-                          <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 w-[52px] min-w-[52px]">
+                          <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm bg-amber-50/60 border-l border-amber-300 min-w-[52px]">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
@@ -698,7 +698,7 @@ export default function TeamAssistProjections() {
                         return (
                           <>
                             <td
-                              className={`px-1 md:px-3 py-2 md:py-4 text-center ${avgColorClasses} ${!columnWidth ? 'w-[100px] min-w-[100px]' : ''}`}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center ${avgColorClasses} ${!columnWidth ? 'min-w-[100px]' : ''}`}
                               style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                             >
                               <span className="text-sm font-semibold">
@@ -732,7 +732,7 @@ export default function TeamAssistProjections() {
                       return (
                         <td
                           key={gwNumber}
-                          className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
+                          className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 ${!columnWidth ? 'min-w-[52px]' : ''}`}
                           style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         >
                           {gwTotal > 0 ? (viewMode === "past" ? gwTotal : gwTotal.toFixed(2)) : "-"}
@@ -743,14 +743,14 @@ export default function TeamAssistProjections() {
                     {viewMode === "future" && fixtureMode !== 'expert' && tbcAssistMap.size > 0 && parseInt(endGameweek) >= 39 && !(parseInt(startGameweek) <= 39 && parseInt(endGameweek) >= 39) && !(fixtureMode === 'custom' && tbcGoalData?.every(f => { const a = tbcAssignments[f.fixtureId]; return a !== undefined && a !== null && a >= parseInt(startGameweek) && a <= parseInt(endGameweek); })) && (() => {
                       const tbcTotal = filteredProjections.reduce((sum, team) => sum + getUnabsorbedTBC(team.teamShort), 0);
                       return (
-                        <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 w-[52px] min-w-[52px]">
+                        <td className="px-0.5 md:px-2 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-amber-900 bg-amber-50 border-l border-amber-300 min-w-[52px]">
                           {tbcTotal.toFixed(2)}
                         </td>
                       );
                     })()}
 
                     <td
-                      className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 ${!columnWidth ? 'w-[100px] min-w-[100px]' : ''}`}
+                      className={`px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 ${!columnWidth ? 'min-w-[100px]' : ''}`}
                       style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                     >
                       <span className="text-sm font-semibold text-blue-900">
@@ -780,7 +780,8 @@ export default function TeamAssistProjections() {
     </div>
   );
 
-  const splitPanels = filteredProjections.length > 10 && activeGameweeks.length <= 6;
+  // One full-width table: ranks 1-20 read as a single list (a two-panel split broke scanning).
+  const splitPanels = false;
   const panelRows = splitPanels
     ? [filteredProjections.slice(0, Math.ceil(filteredProjections.length / 2)), filteredProjections.slice(Math.ceil(filteredProjections.length / 2))]
     : [filteredProjections];

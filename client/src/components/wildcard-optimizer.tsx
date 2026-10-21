@@ -1,3 +1,4 @@
+import OptimizerEmptyState from "@/components/optimizer-empty-state";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1804,7 +1805,7 @@ export function WildcardOptimizer({
             <div className="lg:col-span-1">
               {controlsCard}
             </div>
-            {optimalTeam && (
+            {optimalTeam ? (
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
@@ -1838,7 +1839,9 @@ export function WildcardOptimizer({
                   </CardContent>
                 </Card>
               </div>
-            )}
+            ) : (
+          <OptimizerEmptyState label="wildcard squad" />
+        )}
           </div>
         );
       })()}

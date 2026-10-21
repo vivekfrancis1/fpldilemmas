@@ -1058,7 +1058,8 @@ export default function TeamGoalProjections() {
     </div>
   );
 
-  const splitPanels = filteredProjections.length > 10 && activeGameweeks.length <= 6 && !showOpponent;
+  // One full-width table: ranks 1-20 read as a single list (a two-panel split broke scanning).
+  const splitPanels = false;
   const panelRows = splitPanels
     ? [filteredProjections.slice(0, Math.ceil(filteredProjections.length / 2)), filteredProjections.slice(Math.ceil(filteredProjections.length / 2))]
     : [filteredProjections];

@@ -85,6 +85,7 @@ const navSections: NavSection[] = [
     items: [
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
       { path: "/compare", label: "Compare Players", icon: GitCompareArrows },
+      { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown },
       { path: "/price-changes", label: "Price Changes", icon: RefreshCw },
       { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3 },
       { path: "/best-freehit-team", label: "Freehit Team", icon: Users },

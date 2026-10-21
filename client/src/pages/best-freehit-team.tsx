@@ -1,3 +1,4 @@
+import OptimizerEmptyState from "@/components/optimizer-empty-state";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1016,7 +1017,7 @@ export default function BestFreehitTeam() {
       </div>
 
       {/* Optimal Team Results */}
-      {optimalTeam && (
+      {optimalTeam ? (
         <div className="lg:col-span-2 space-y-6">
           {/* Team Summary */}
           <Card>
@@ -1172,7 +1173,9 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
         </div>
-      )}
+      ) : (
+          <OptimizerEmptyState label="freehit squad" />
+        )}
       </div>
     </div>
   );

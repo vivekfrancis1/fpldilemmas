@@ -353,26 +353,13 @@ html {
   padding-top: 0.5rem !important;
   padding-bottom: 0.5rem !important;
 }
-.compact-rows table td img { max-height: 1.5rem; max-width: 1.5rem; }
 .compact-rows table tbody tr { border-color: var(--fpl-border); }
 /* Player name cells with a fixed 110px width: a little wider, and the "in my team" icon stays on the name line */
 .compact-rows table td [class*="md:w-[110px]"] { width: 9.5rem !important; }
-.compact-rows table td .flex.flex-wrap.items-center { flex-wrap: nowrap; }
 /* Team/player name column: never wrap onto two lines */
 .compact-rows table td.sticky,
 .compact-rows table th.sticky { white-space: nowrap; }
-/* Rank bubbles */
-.compact-rows table td [class*="rounded-full"][class*="md:w-6"],
-.compact-rows table td [class*="rounded-full"][class~="w-7"] { width: 1.5rem !important; height: 1.5rem !important; font-size: 0.75rem !important; }
 /* fpl-card pages (player tables): card headers and titles */
-/* Control grids (From / To / Search ...): label beside its input instead of above it */
-.compact-rows .grid > .space-y-1 { display: flex; align-items: center; gap: 0.5rem; }
-.compact-rows .grid > .space-y-1 > * { margin-top: 0 !important; }
-.compact-rows .grid > .space-y-1 > label { white-space: nowrap; }
-/* Redundant small grey short-code under a full team name (e.g. "Man City / MCI"): hide it, rows stay one line */
-.compact-rows table td div[class*="text-[10px]"][class*="text-gray-500"][class*="md:block"] { display: none !important; }
-/* Name + small grey "TEAM · POS" line on one line */
-.compact-rows table td div.flex.flex-col.overflow-hidden { flex-direction: row !important; align-items: baseline; column-gap: 0.5rem; }
 /* ---------------------------------------------------------------------------------------------
    Page header: light. Title, a one-line muted subtitle, hairline underneath. Controls can sit on the
    right of the title row (see .fpl-page-actions). No gradient banner.

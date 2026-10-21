@@ -176,10 +176,7 @@ export default function PredictedScores() {
             <Target className="h-8 w-8" />
             <h1>Predicted Scores</h1><SeasonBadge />
           </div>
-          <p className="fpl-page-subtitle">
-            Match predictions with rounded scores and determined outcomes based on expected goals
-          </p>
-          <div className="ml-auto">
+          <div className="fpl-page-actions">
             <Button 
               size="sm"
               onClick={handleRefresh}
@@ -191,6 +188,9 @@ export default function PredictedScores() {
               {isRefreshing ? 'Refreshing...' : 'Refresh Predictions'}
             </Button>
           </div>
+          <p className="fpl-page-subtitle">
+            Match predictions with rounded scores and determined outcomes based on expected goals
+          </p>
         </div>
       </div>
 

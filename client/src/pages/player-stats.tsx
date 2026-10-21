@@ -219,10 +219,8 @@ export default function PlayerStats() {
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Season selector and Quick Stats share one row */}
-        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
         {/* Season Selector - Compact */}
-        <div className="flex items-center gap-3 mb-4 h-10">
+        <div className="flex items-center gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-purple-600" />
             <Label className="text-xs sm:text-sm font-semibold text-gray-700">Season:</Label>
@@ -253,7 +251,7 @@ export default function PlayerStats() {
         </div>
 
         {/* Quick Stats Overview */}
-        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen} className="flex-1 min-w-[260px]">
+        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
           <Card className="mb-6 shadow-md border-0">
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2.5 sm:py-3">
@@ -270,8 +268,6 @@ export default function PlayerStats() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
-
-        </div>
 
         {/* Filters */}
         <Card className="mb-6 shadow-md border-0 bg-white">
