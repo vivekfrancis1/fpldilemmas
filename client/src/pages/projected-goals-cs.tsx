@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { useFitToViewport } from "@/hooks/use-fit-to-viewport";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
@@ -159,8 +158,7 @@ export default function ProjectedGoalsCS() {
   // Filter section collapse state - expanded on desktop, collapsed on mobile
   // Collapsed by default on every screen size so a whole gameweek fits on screen without scrolling.
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  // Each gameweek block fills the rest of the window height (see use-fit-to-viewport).
-  const fitRef = useFitToViewport();
+
 
   // Detect TBC fixtures (event=null) — shares the /api/fixtures cache, no extra HTTP call
   const { data: tbcFixtures } = useQuery<any[]>({
@@ -627,9 +625,8 @@ export default function ProjectedGoalsCS() {
       <div className="fpl-section-spacing !space-y-2">
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
-          <Card className="mb-2 shadow-sm border-0">
-            <CardContent className="py-1">
-              <div className="flex flex-wrap gap-x-2 gap-y-1 items-center">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-1 flex-wrap gap-x-3 gap-y-1 items-center">
 
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-blue-600" />
@@ -668,16 +665,15 @@ export default function ProjectedGoalsCS() {
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen((open) => !open)}
-                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-600 px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
                   data-testid="button-toggle-filters"
                 >
-                  <Filter className="h-4 w-4" />
-                  <span className="hidden sm:inline">Filters</span>
-                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <Filter className="h-3.5 w-3.5" />
+                  <span>Filters</span>
+                  {isFiltersOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
               </div>
-            </CardContent>
-          </Card>
+          </div>
 
           {/* Controls - Compact */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
@@ -732,14 +728,14 @@ export default function ProjectedGoalsCS() {
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">
             <CardContent className="p-0">
-              <div ref={fitRef} className={Object.keys(groupedProjections).length > 1
+              <div className={Object.keys(groupedProjections).length > 1
                 ? "space-y-0 lg:space-y-0 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-200"
                 : "space-y-0 lg:max-w-3xl lg:mx-auto"}>
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
                   const gwInfo = groupKey; // Just the gameweek info like "GW2"
                   
                   return (
-                    <div key={groupKey} className="flex flex-col" style={{ minHeight: 'var(--fit, 0px)' }}>
+                    <div key={groupKey} className="flex flex-col">
                       {/* Day Header - Compact. On mobile this line also carries the GOALS/CS%/RESULT
                           column labels (the match count is dropped there to make room); desktop
                           keeps the match count here and gets its own separate column-header row
@@ -773,7 +769,7 @@ export default function ProjectedGoalsCS() {
                       </div>
 
                       {/* Matches listed one below the other (the pair wrapper just keeps each pair's markup together) */}
-                      <div className="flex-1 flex flex-col gap-px p-2 pt-1">
+                      <div className="flex flex-col gap-2 p-3 pt-2">
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
@@ -785,13 +781,13 @@ export default function ProjectedGoalsCS() {
                                 const oddsEventId1 = oddsHistoryEventIdByTeams.get(`${match1.homeTeam.id}-${match1.awayTeam.id}`);
                                 return (
                                 <div
-                                  className={`relative flex-1 min-h-[34px] flex flex-col bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId1 ? 'cursor-pointer' : ''}`}
+                                  className={`relative flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${oddsEventId1 ? 'cursor-pointer' : ''}`}
                                   data-testid={`match-row-${match1.homeTeam.shortName}-${match1.awayTeam.shortName}`}
                                   onClick={oddsEventId1 ? () => setLocation(`/match-odds-history/${oddsEventId1}`) : undefined}
                                 >
 
                                   {/* Home Team - Compact */}
-                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-white">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.homeTeam.id);
@@ -845,7 +841,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-t border-gray-100">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.awayTeam.id);
@@ -906,14 +902,14 @@ export default function ProjectedGoalsCS() {
                                 const oddsEventId2 = oddsHistoryEventIdByTeams.get(`${match2.homeTeam.id}-${match2.awayTeam.id}`);
                                 return (
                                 <div
-                                  className={`relative flex-1 min-h-[34px] flex flex-col bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden ${oddsEventId2 ? 'cursor-pointer' : ''}`}
+                                  className={`relative flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${oddsEventId2 ? 'cursor-pointer' : ''}`}
                                   data-testid={`match-row-${match2.homeTeam.shortName}-${match2.awayTeam.shortName}`}
                                   onClick={oddsEventId2 ? () => setLocation(`/match-odds-history/${oddsEventId2}`) : undefined}
                                 >
 
                                   
                                   {/* Home Team - Compact */}
-                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-emerald-50 to-green-50">
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-white">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.homeTeam.id);
@@ -967,7 +963,7 @@ export default function ProjectedGoalsCS() {
                                   </div>
 
                                   {/* Away Team - Compact */}
-                                  <div className="flex-1 flex items-center justify-between px-2 py-0 bg-gradient-to-r from-blue-50 to-sky-50">
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-t border-gray-100">
                                     <div className="flex items-center gap-2">
                                       {(() => {
                                         const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.awayTeam.id);
