@@ -2157,3 +2157,13 @@ table thead th, table th { font-family: var(--font-sans); }
 table thead th, table thead th * { font-family: var(--font-sans) !important; }
 
 .text-gray-400, .text-slate-400 { color: #5f6877; }
+
+@media (max-width: 639px) {
+  /* Links inside tables are not 44px tap targets; the row is. Stops text floating to the top of tall cells. */
+  table a, table button:not([role="switch"]):not([role="checkbox"]) { min-height: 0; min-width: 0; }
+  /* Header action rows (range selects, toggles) use the full width */
+  .fpl-page-actions { width: 100%; margin-left: 0; justify-content: space-between; }
+}
+
+/* A tab list with a single tab offers no choice: hide it (content stays visible) */
+.compact-rows [role="tablist"]:not(:has(> [role="tab"]:nth-child(2))) { display: none; }

@@ -327,9 +327,9 @@ export default function CurrentStandings() {
       <div className="fpl-section-spacing">
         {/* Current Status Info */}
         <Card className="mb-6 shadow-md border-0">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap gap-6 items-center justify-between">
-              <div className="flex flex-wrap gap-6 items-center">
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 items-center justify-between">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 items-center">
                 <div className="flex items-center gap-3">
                   <Target className="h-5 w-5 text-purple-600" />
                   <span className="text-sm font-semibold text-gray-700">

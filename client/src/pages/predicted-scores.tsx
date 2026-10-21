@@ -246,7 +246,7 @@ export default function PredictedScores() {
                 <div className="flex items-center gap-2">
                   <label className="text-xs sm:text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-28 sm:w-32">
+                    <SelectTrigger className="w-36">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -263,7 +263,7 @@ export default function PredictedScores() {
                 <div className="flex items-center gap-2">
                   <label className="text-xs sm:text-sm font-medium text-gray-700">Status:</label>
                   <Select value={showFinished} onValueChange={setShowFinished}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

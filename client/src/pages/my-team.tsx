@@ -351,7 +351,7 @@ export default function MyTeam() {
 
             {/* Team Overview Cards */}
             {teamData && (
-              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
                 <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between gap-2">
