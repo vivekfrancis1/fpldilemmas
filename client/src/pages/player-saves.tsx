@@ -1,3 +1,4 @@
+import { ResponsiveFilters, FilterCountBadge } from "@/components/responsive-filters";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Search, ArrowUpDown, Users, X, Filter, ChevronDown, ChevronUp, ChevronRight, History, Calendar } from "lucide-react";
@@ -760,6 +761,7 @@ export default function PlayerSaves() {
                   <Filter className="h-4 w-4 text-blue-600" />
                   <span className="hidden sm:inline">Filters</span>
                   {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <FilterCountBadge count={(selectedTeams.size>0?1:0)+(selectedGameweeks.size>0?1:0)} />
                 </button>
               </div>
             </div>
@@ -767,7 +769,7 @@ export default function PlayerSaves() {
         </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
+        <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedTeams(new Set()); setSelectedGameweeks(new Set()); }} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
           <CollapsibleContent>
           <div className="p-2 sm:p-3">
             {viewMode === "past" && (
@@ -852,7 +854,7 @@ export default function PlayerSaves() {
             </div>
           </div>
           </CollapsibleContent>
-        </Collapsible>
+        </ResponsiveFilters>
 
         {/* Fixture Mode Toggle — only when TBC fixtures exist and in future mode */}
         {viewMode === "future" && tbcTeamInfoMap.size > 0 && (

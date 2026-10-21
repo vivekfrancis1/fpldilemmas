@@ -1,3 +1,4 @@
+import { ResponsiveFilters, FilterCountBadge } from "@/components/responsive-filters";
 import { teamStripe } from '@/lib/team-colors';
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -672,12 +673,13 @@ export default function ProjectedGoalsCS() {
                   <Filter className="h-3.5 w-3.5" />
                   <span>Filters</span>
                   {isFiltersOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  <FilterCountBadge count={(selectedTeam!=='all'?1:0)} />
                 </button>
               </div>
           </div>
 
           {/* Controls - Compact */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedTeam('all'); }}>
             <Card className={`${isFiltersOpen ? 'mb-2' : 'hidden'} shadow-sm border-0`}>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-2">
@@ -724,7 +726,7 @@ export default function ProjectedGoalsCS() {
                 </CardContent>
               </CollapsibleContent>
             </Card>
-          </Collapsible>
+          </ResponsiveFilters>
 
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">

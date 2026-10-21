@@ -1,3 +1,4 @@
+import { ResponsiveFilters, FilterCountBadge } from "@/components/responsive-filters";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2, ChevronDown, ChevronUp, ChevronRight, X } from "lucide-react";
@@ -863,11 +864,12 @@ export default function TeamAssistProjections() {
                   <Filter className="h-4 w-4" />
                   <span className="hidden sm:inline">Filters</span>
                   {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <FilterCountBadge count={(selectedTeams.size>0?1:0)+(selectedGameweeks.size>0?1:0)} />
                 </button>
             </div>
 
         {/* Controls */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+        <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedTeams(new Set()); setSelectedGameweeks(new Set()); }}>
           <Card className={`${isFiltersOpen ? 'mb-2 sm:mb-3' : 'hidden'}`}>
             <CollapsibleContent>
               <CardContent className="pt-0 pb-3 sm:pb-4">
@@ -924,7 +926,7 @@ export default function TeamAssistProjections() {
               </CardContent>
             </CollapsibleContent>
           </Card>
-        </Collapsible>
+        </ResponsiveFilters>
 
         {/* Meta row: what is shown, plus the data-source legend */}
 

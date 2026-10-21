@@ -1486,3 +1486,6 @@ header.sticky.top-0 {
 @media (max-width: 639px) {
   .fpl-page-title h1 { font-size: 1.5rem; line-height: 1.75rem; }
 }
+[data-testid="button-toggle-filters"] { position: relative; }
+.dark [data-testid="sheet-filters"] { background: hsl(226 32% 12%); }
+.dark [data-testid="sheet-filters"] > :last-child { background: hsl(226 32% 12%) !important; }

@@ -1,3 +1,4 @@
+import { ResponsiveFilters, FilterCountBadge } from "@/components/responsive-filters";
 import { useState, useMemo, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -2281,13 +2282,14 @@ export default function PlayerTotalPoints() {
                   <Filter className="h-4 w-4 text-indigo-600" />
                   <span className="hidden sm:inline">Filters</span>
                   {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <FilterCountBadge count={(selectedPositions.size>0?1:0)+(selectedTeams.size>0?1:0)+(selectedGameweeks.size>0?1:0)+(selectedAvailability!=='all'?1:0)} />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Filters */}
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
+          <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedPositions(new Set()); setSelectedTeams(new Set()); setSelectedGameweeks(new Set()); setSelectedAvailability('all'); }} className={`fpl-card mb-3 md:mb-4 ${isFiltersOpen ? '' : 'hidden'}`}>
             <CollapsibleContent>
             <div className="p-2 sm:p-3">
               {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
@@ -2463,7 +2465,7 @@ export default function PlayerTotalPoints() {
               </div>
             </div>
             </CollapsibleContent>
-          </Collapsible>
+          </ResponsiveFilters>
 
           {/* Fixture Mode Toggle — only when TBC fixtures exist and in future mode */}
           {viewMode === "future" && tbcTeamShortNames.size > 0 && (
