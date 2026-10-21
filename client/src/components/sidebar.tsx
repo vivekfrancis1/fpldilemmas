@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { 
+  AlarmClock,
+  History,
   ClipboardCheck,
   GitCompareArrows,
   TrendingUp, 
@@ -91,6 +93,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Popular Tools",
       items: [
+        { path: "/deadline-brief", label: "Pre-deadline Brief", icon: AlarmClock, description: "Deadline, captains, availability and price watch for the next gameweek", popular: false },
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
         { path: "/compare", label: "Compare Players", icon: GitCompareArrows, description: "Side-by-side fixtures, expected points and stats", popular: false },
         { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown, description: "Best captain options per team, ranked by expected points", popular: false },
@@ -113,6 +116,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
         { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck, description: "Projected points, Top 100 rank and best upgrades for your squad", popular: false },
+        { path: "/hindsight", label: "Hindsight", icon: History, description: "Your points versus the best XI from your 15", popular: false },
         { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
         { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false, adminOnly: true },

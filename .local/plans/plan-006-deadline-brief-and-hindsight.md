@@ -1,6 +1,7 @@
 # Plan 006 — Pre-deadline Brief and Hindsight view
 
-Status: PROPOSED — awaiting user decisions. Nothing implemented.
+Status: IMPLEMENTED locally (not pushed). Decisions (2026-10-21): page only (no email/push); price-change watch included, labelled as predictions; Brief in Popular Tools, Hindsight in My FPL.
+Built: shared/deadline-brief.ts, shared/hindsight.ts, GET /api/deadline-brief, GET /api/hindsight/:managerId, pages /deadline-brief and /hindsight; tests/deadline-brief.test.ts + tests/hindsight.test.ts (23 tests).
 Created: 2026-10-21
 
 Origin: public guides name a pre-deadline summary (free newsletter, called best overall tool) and Hindsight Dream Team (how well you picked your XI) as things managers value. Reddit/X could not be read, so this is blog opinion, not usage data.

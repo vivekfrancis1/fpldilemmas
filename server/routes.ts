@@ -36,6 +36,8 @@ import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/d
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
 import { buildTemplateTeam } from "@shared/template-team";
+import { buildDeadlineBrief } from "@shared/deadline-brief";
+import { bestPossible } from "@shared/hindsight";
 import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
@@ -1420,6 +1422,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fixturesInFlight = null;
       console.error("Error fetching fixtures:", error);
       res.status(500).json({ error: "Failed to fetch fixtures" });
+    }
+  });
+
+  // Pre-deadline Brief: facts for FPL's next gameweek from data we already serve (official deadline, availability and
+  // fixtures; our cached xPts; the Price Changes page's predictions, labelled as such). Logic: shared/deadline-brief.ts.
+  app.get("/api/deadline-brief", async (_req, res) => {
+    try {
+      const [bootstrapResponse, projResponse, fixturesResponse, priceResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/cached/player-total-points"),
+        internalFetch("api/fixtures"),
+        internalFetch("api/price-predictions"),
+      ]);
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        return res.status(503).json({ error: "FPL data is not available yet" });
+      }
+      const bootstrap = await bootstrapResponse.json();
+      const fixtures = await fixturesResponse.json();
+      const projections = projResponse.ok ? await projResponse.json() : [];
+      const pricePredictions = priceResponse.ok ? await priceResponse.json() : [];
+
+      const nextEvent =
+        (bootstrap.events as any[]).find((e) => e.is_next) ??
+        (bootstrap.events as any[]).find((e) => new Date(e.deadline_time).getTime() > Date.now());
+      if (!nextEvent) return res.status(404).json({ error: "No upcoming gameweek" });
+
+      res.json(
+        buildDeadlineBrief({
+          event: nextEvent,
+          elements: bootstrap.elements,
+          teams: bootstrap.teams,
+          fixtures,
+          projections: Array.isArray(projections) ? projections : [],
+          pricePredictions: Array.isArray(pricePredictions) ? pricePredictions : [],
+        }),
+      );
+    } catch (error) {
+      console.error("Error building deadline brief:", error);
+      res.status(500).json({ error: "Failed to build the deadline brief" });
+    }
+  });
+
+  // Hindsight: a manager's official points for a finished gameweek versus the best XI (and captain) available from the
+  // same 15 players, using the official final player points. Chip rules in shared/hindsight.ts.
+  app.get("/api/hindsight/:managerId", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
+
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
+      if (!bootstrapResponse.ok) return res.status(503).json({ error: "FPL data is not available yet" });
+      const bootstrap = await bootstrapResponse.json();
+      const finished: number[] = (bootstrap.events as any[]).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b);
+      if (finished.length === 0) return res.status(400).json({ error: "No gameweek has finished yet", finishedGameweeks: [] });
+
+      let gameweek = finished[finished.length - 1];
+      const gwParam = req.query.gw;
+      if (gwParam !== undefined && gwParam !== "") {
+        const text = String(gwParam);
+        gameweek = /^\d+$/.test(text) ? Number(text) : NaN;
+        if (!Number.isInteger(gameweek) || !finished.includes(gameweek)) {
+          return res.status(400).json({ error: "Choose a finished gameweek", finishedGameweeks: finished });
+        }
+      }
+
+      // Plain fetch (not fetchWithRetry): that helper throws and retries on a 404, but an unknown manager is a normal answer here.
+      const picksResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${gameweek}/picks/`, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; FPL-Analytics/1.0)", Accept: "application/json" },
+      });
+      if (picksResponse.status === 404) return res.status(404).json({ error: "No squad found for this manager and gameweek" });
+      if (!picksResponse.ok) return res.status(502).json({ error: "Could not load this squad from FPL" });
+      const picksData = await picksResponse.json();
+      if (!Array.isArray(picksData.picks) || picksData.picks.length !== 15) {
+        return res.status(422).json({ error: "This manager has no full 15-player squad for that gameweek" });
+      }
+
+      const liveResponse = await internalFetch(`api/event/${gameweek}/live`);
+      if (!liveResponse.ok) return res.status(503).json({ error: "Live points are not available" });
+      const live = await liveResponse.json();
+      const pointsById = new Map<number, number>((live.elements as any[]).map((e) => [e.id, e.stats?.total_points ?? 0]));
+      const elementById = new Map<number, any>(bootstrap.elements.map((e: any) => [e.id, e]));
+      const POS = ["GKP", "DEF", "MID", "FWD"];
+
+      const players = (picksData.picks as any[]).map((p) => ({
+        id: p.element as number,
+        elementType: (elementById.get(p.element)?.element_type ?? 3) as 1 | 2 | 3 | 4,
+        points: pointsById.get(p.element) ?? 0,
+        name: elementById.get(p.element)?.web_name as string,
+        multiplier: p.multiplier as number,
+        started: p.position <= 11,
+        isCaptain: !!p.is_captain,
+      }));
+
+      const chip: string | null = picksData.active_chip ?? null;
+      const best = bestPossible(players, chip);
+      const officialPoints: number = picksData.entry_history?.points ?? 0;
+      const chosenCaptain = players.find((p) => p.isCaptain) ?? null;
+      const bestCaptain = players.find((p) => p.id === best.captainId) ?? null;
+      const bestIds = new Set(best.starting.map((p) => p.id));
+      const view = (p: (typeof players)[number]) => ({ id: p.id, name: p.name, position: POS[p.elementType - 1], points: p.points });
+
+      res.json({
+        managerId: Number(managerId),
+        gameweek,
+        finishedGameweeks: finished,
+        chip,
+        officialPoints,
+        transferCost: picksData.entry_history?.event_transfers_cost ?? 0,
+        pointsOnBench: picksData.entry_history?.points_on_bench ?? 0,
+        bestPossible: best.total,
+        gap: best.total - officialPoints,
+        formation: best.formation,
+        captainMultiplier: best.captainMultiplier,
+        captain: {
+          chosen: chosenCaptain && view(chosenCaptain),
+          best: bestCaptain && view(bestCaptain),
+        },
+        bestXI: best.starting.map(view),
+        bestBench: best.bench.map(view),
+        picks: players.map((p) => ({ ...view(p), multiplier: p.multiplier, started: p.started, isCaptain: p.isCaptain, inBestXI: bestIds.has(p.id) })),
+      });
+    } catch (error) {
+      console.error("Error building hindsight:", error);
+      res.status(500).json({ error: "Failed to build the hindsight view" });
     }
   });
 

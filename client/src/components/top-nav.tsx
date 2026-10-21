@@ -29,6 +29,8 @@ import {
   Coffee,
   GitCompareArrows,
   ClipboardCheck,
+  AlarmClock,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,6 +86,7 @@ const navSections: NavSection[] = [
   {
     section: "Popular Tools",
     items: [
+      { path: "/deadline-brief", label: "Pre-deadline Brief", icon: AlarmClock },
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
       { path: "/compare", label: "Compare Players", icon: GitCompareArrows },
       { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown },
@@ -106,6 +109,7 @@ const navSections: NavSection[] = [
     items: [
       { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
       { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck },
+      { path: "/hindsight", label: "Hindsight", icon: History },
       { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },
       { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, adminOnly: true },
