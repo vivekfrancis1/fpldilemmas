@@ -2167,3 +2167,16 @@ table thead th, table thead th * { font-family: var(--font-sans) !important; }
 
 /* A tab list with a single tab offers no choice: hide it (content stays visible) */
 .compact-rows [role="tablist"]:not(:has(> [role="tab"]:nth-child(2))) { display: none; }
+
+
+/* Fixtures page FDR cells: solid, high-contrast colours with explicit light and dark values.
+   Deliberately plain classes (not Tailwind colour tokens) so the dark-mode token remaps don't touch them. */
+.fdr-cell { font-weight: 600; }
+.fdr-1 { background-color: #15803d; color: #ffffff; }
+.fdr-2 { background-color: #86efac; color: #14532d; }
+.fdr-3 { background-color: #e2e8f0; color: #334155; }
+.fdr-4 { background-color: #f87171; color: #450a0a; }
+.fdr-5 { background-color: #b91c1c; color: #ffffff; }
+.dark .fdr-2 { background-color: #4ade80; color: #052e16; }
+.dark .fdr-3 { background-color: #475569; color: #f1f5f9; }
+.dark .fdr-4 { background-color: #f87171; color: #450a0a; }

@@ -13,7 +13,7 @@ import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown,
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
-import { getFixtureDifficultyColor, getHeatmapColor } from "@/lib/heatmap-colors";
+import { getFdrCellClass, getAvgFdrCellClass } from "@/lib/heatmap-colors";
 
 // Shown wherever the current FDR mode needs explaining — the mode selector cards, the
 // always-visible badge next to the table legend, and the collapsed Fixture Controls header —
@@ -46,7 +46,7 @@ interface CustomFDR {
 type FixtureEntry = { opponent: string; difficulty: number; isHome: boolean; finished: boolean; fixtureId?: number };
 
 function getDifficultyColor(difficulty: number) {
-  return getFixtureDifficultyColor(difficulty);
+  return getFdrCellClass(difficulty);
 }
 
 function TBCCell({ fixtures, onFixtureClick }: {
@@ -830,23 +830,23 @@ export default function Fixtures() {
                         <div className="space-y-4 mt-4">
                           <div className="flex flex-wrap gap-3 text-xs justify-center bg-gray-50 p-3 rounded-lg border">
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                              <div className="w-4 h-4 fdr-cell fdr-1 rounded"></div>
                               <span className="font-medium">1 - Very Easy</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-green-50 border border-green-100 rounded"></div>
+                              <div className="w-4 h-4 fdr-cell fdr-2 rounded"></div>
                               <span className="font-medium">2 - Easy</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-slate-50 border border-slate-200 rounded"></div>
+                              <div className="w-4 h-4 fdr-cell fdr-3 rounded"></div>
                               <span className="font-medium">3 - Medium</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-red-50 border border-red-100 rounded"></div>
+                              <div className="w-4 h-4 fdr-cell fdr-4 rounded"></div>
                               <span className="font-medium">4 - Hard</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                              <div className="w-4 h-4 fdr-cell fdr-5 rounded"></div>
                               <span className="font-medium">5 - Very Hard</span>
                             </div>
                           </div>
@@ -1078,26 +1078,26 @@ export default function Fixtures() {
               {FDR_MODE_META[fdrMode].description}
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5 sm:gap-3 text-[9px] sm:text-xs justify-center">
-            <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-100 border border-green-200 rounded"></div>
-              <span>1</span>
+          <div className="flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs justify-center">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-cell fdr-1 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">1</div>
+              <span className="hidden sm:inline text-gray-600">Very easy</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-50 border border-green-100 rounded"></div>
-              <span>2</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-cell fdr-2 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">2</div>
+              <span className="hidden sm:inline text-gray-600">Easy</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-slate-50 border border-slate-200 rounded"></div>
-              <span>3</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-cell fdr-3 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">3</div>
+              <span className="hidden sm:inline text-gray-600">Medium</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-50 border border-red-100 rounded"></div>
-              <span>4</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-cell fdr-4 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">4</div>
+              <span className="hidden sm:inline text-gray-600">Hard</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-100 border border-red-200 rounded"></div>
-              <span>5</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="fdr-cell fdr-5 w-5 h-4 sm:w-7 sm:h-5 rounded flex items-center justify-center text-[9px] sm:text-[11px] font-semibold">5</div>
+              <span className="hidden sm:inline text-gray-600">Very hard</span>
             </div>
           </div>
 
@@ -1227,7 +1227,7 @@ export default function Fixtures() {
                             </div>
                           </td>
                           <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l z-10">
-                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${getHeatmapColor(avgFDR, [2, 3, 4, 4.5], true)}`}>
+                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${getAvgFdrCellClass(avgFDR)}`}>
                               {avgFDR > 0 ? avgFDR : '-'}
                             </div>
                           </td>

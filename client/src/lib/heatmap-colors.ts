@@ -84,3 +84,18 @@ export function getBellCurveColor(
   else tier = 4;
   return HEATMAP_TIERS[invert ? 4 - tier : tier];
 }
+
+/**
+ * Stronger, higher-contrast classes for the Fixtures page FDR grid (defined in index.css as .fdr-1 ..
+ * .fdr-5 with explicit light and dark values). 1 = easiest ... 5 = hardest.
+ */
+export function getFdrCellClass(difficulty: number): string {
+  const n = Math.min(5, Math.max(1, Math.round(difficulty)));
+  return `fdr-cell fdr-${n}`;
+}
+
+/** Same tiers as getHeatmapColor(avg, [2, 3, 4, 4.5], true), but as FDR cell classes. */
+export function getAvgFdrCellClass(avg: number): string {
+  const n = avg <= 2 ? 1 : avg <= 3 ? 2 : avg <= 4 ? 3 : avg <= 4.5 ? 4 : 5;
+  return `fdr-cell fdr-${n}`;
+}
