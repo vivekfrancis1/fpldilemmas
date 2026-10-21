@@ -67,10 +67,11 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
             <InstallAppButton />
             {!isLoading && !isAuthenticated && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => (window.location.href = "/api/auth/google")}
-                className="text-fpl-purple border-fpl-purple hover:bg-fpl-purple/10 min-h-[44px] min-w-[44px] touch-manipulation"
+                aria-label="Log in"
+                className="text-fpl-purple hover:bg-fpl-purple/10 min-h-[44px] min-w-[44px] touch-manipulation"
                 data-testid="button-login-google"
               >
                 <LogIn className="h-4 w-4" />

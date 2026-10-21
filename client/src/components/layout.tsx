@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import Sidebar from "./sidebar";
 import Header from "./header";
 import Footer from "./footer";
+import MobileBottomNav from "./mobile-bottom-nav";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LayoutProps {
@@ -51,7 +52,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [isMobile, isSidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-fpl-light flex flex-col">
+    <div className="min-h-screen bg-fpl-light flex flex-col pb-16 md:pb-0">
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
 
       <Header onSidebarToggle={toggleSidebar} />
@@ -63,6 +64,8 @@ export default function Layout({ children }: LayoutProps) {
       </main>
 
       <Footer />
+
+      <MobileBottomNav onMore={toggleSidebar} />
     </div>
   );
 }
