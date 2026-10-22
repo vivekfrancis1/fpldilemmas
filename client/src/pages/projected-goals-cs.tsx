@@ -1,6 +1,6 @@
 import { ResponsiveFilters, FilterCountBadge } from "@/components/responsive-filters";
 import { teamStripe } from '@/lib/team-colors';
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
@@ -116,16 +116,58 @@ export default function ProjectedGoalsCS() {
   // even though it isn't "lastFinishedGW" yet (that requires every fixture finished).
   const resultsEndGW = (currentGWHasFinishedOrLive && currentGameweek > lastFinishedGW) ? currentGameweek : lastFinishedGW;
 
-  // The last gameweek with real Odds API coverage — same source team-goal-projections.tsx and
-  // siblings already use to cap their default end gameweek. Match Predictions previously ignored
-  // this entirely, so its fixed MATCH_PREDICTIONS_DEFAULT_WEEKS-wide default window could reach a
-  // gameweek with no odds yet — those fixtures silently fall back to the internal model, which
-  // shouldn't be what a user sees by default without asking for a wider range explicitly.
-  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
-    queryKey: ["/api/fixture-odds-max-gameweek"],
-    staleTime: 15 * 60 * 1000,
+  // Latest consensus win/draw/away-win probabilities per fixture (see /api/fixture-odds-current)
+  // — only populated for fixtures the Odds API currently has lines open on, so this map is
+  // sparse by design and the match card below only renders the bar when a match has an entry.
+  const { data: currentFixtureOdds } = useQuery<{ odds: { homeTeam: string; awayTeam: string; homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }[] }>({
+    queryKey: [`/api/fixture-odds-current`],
+    staleTime: 5 * 60 * 1000,
   });
-  const maxGameweekWithOdds = maxOddsGameweekData?.maxGameweek ?? null;
+
+  const winDrawLossByTeams = useMemo(() => {
+    const map = new Map<string, { homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }>();
+    (currentFixtureOdds?.odds || []).forEach((o) => {
+      const homeId = oddsApiTeamNameToFplId(o.homeTeam);
+      const awayId = oddsApiTeamNameToFplId(o.awayTeam);
+      if (homeId && awayId) {
+        map.set(`${homeId}-${awayId}`, { homeWinProb: o.homeWinProb, drawProb: o.drawProb, awayWinProb: o.awayWinProb });
+      }
+    });
+    return map;
+  }, [currentFixtureOdds]);
+
+  // Every scheduled fixture that still needs odds (not started), grouped by gameweek (shares the
+  // /api/fixtures cache). Fixtures already under way or finished don't need a price.
+  const { data: unstartedFixturesByGW } = useQuery<any[], Error, Map<number, string[]>>({
+    queryKey: [`/api/fixtures`],
+    select: (data) => {
+      const byGW = new Map<number, string[]>();
+      data.forEach((f: any) => {
+        if (f.event === null || f.event === undefined) return;
+        const list = byGW.get(f.event) ?? [];
+        if (!f.started && !f.finished && !f.finished_provisional) list.push(`${f.team_h}-${f.team_a}`);
+        byGW.set(f.event, list);
+      });
+      return byGW;
+    },
+    enabled: !!bootstrapData?.events,
+  });
+
+  // The default view only covers gameweeks where odds are actually available: starting at the
+  // first gameweek shown, keep going while EVERY fixture that hasn't started has odds, and stop
+  // at the first gameweek that doesn't (a single stray priced fixture further out, or a gap,
+  // doesn't count). Null when odds aren't loaded yet or don't cover even the first gameweek.
+  const lastFullyOddsCoveredGW = useCallback((startGW: number): number | null => {
+    if (!unstartedFixturesByGW || winDrawLossByTeams.size === 0) return null;
+    let last: number | null = null;
+    for (let gw = startGW; gw <= 38; gw++) {
+      const needing = unstartedFixturesByGW.get(gw);
+      if (!needing) break;
+      if (!needing.every((key) => winDrawLossByTeams.has(key))) break;
+      last = gw;
+    }
+    return last;
+  }, [unstartedFixturesByGW, winDrawLossByTeams]);
 
   // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
@@ -148,11 +190,10 @@ export default function ProjectedGoalsCS() {
     // that. If odds don't cover even the immediate gameweek (no coverage yet at all, or an API
     // outage), fall back to showing just that single gameweek via internal calculations rather
     // than the full MATCH_PREDICTIONS_DEFAULT_WEEKS-wide model-only default.
-    const effectiveEnd = (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart))
-      ? String(maxGameweekWithOdds)
-      : effectiveStart;
+    const coveredEnd = lastFullyOddsCoveredGW(parseInt(effectiveStart));
+    const effectiveEnd = coveredEnd !== null ? String(coveredEnd) : effectiveStart;
     return { startGameweek: effectiveStart, endGameweek: effectiveEnd };
-  }, [bootstrapData?.events, viewMode, resultsEndGW, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, currentGameweek, currentGWHasUnstarted, lastFullyOddsCoveredGW]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -219,13 +260,12 @@ export default function ProjectedGoalsCS() {
       // single immediate gameweek if odds don't cover even that yet.
       if (hasTBCFixture && tbcEffectiveGW !== null) {
         setEndGameweek(String(tbcEffectiveGW));
-      } else if (maxGameweekWithOdds !== null && maxGameweekWithOdds >= parseInt(effectiveStart)) {
-        setEndGameweek(String(maxGameweekWithOdds));
       } else {
-        setEndGameweek(effectiveStart);
+        const coveredEnd = lastFullyOddsCoveredGW(parseInt(effectiveStart));
+        setEndGameweek(coveredEnd !== null ? String(coveredEnd) : effectiveStart);
       }
     }
-  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, currentGameweek, currentGWHasUnstarted, maxGameweekWithOdds]);
+  }, [bootstrapData?.events, viewMode, resultsEndGW, hasTBCFixture, tbcEffectiveGW, currentGameweek, currentGWHasUnstarted, lastFullyOddsCoveredGW]);
 
   // Pre-season: nothing has finished yet, so "Match Results" has no real data to fetch or
   // show (see the early-return notice below) — skip these fetches entirely in that case.
@@ -300,26 +340,6 @@ export default function ProjectedGoalsCS() {
     });
     return map;
   }, [oddsHistoryFixtures]);
-
-  // Latest consensus win/draw/away-win probabilities per fixture (see /api/fixture-odds-current)
-  // — only populated for fixtures the Odds API currently has lines open on, so this map is
-  // sparse by design and the match card below only renders the bar when a match has an entry.
-  const { data: currentFixtureOdds } = useQuery<{ odds: { homeTeam: string; awayTeam: string; homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }[] }>({
-    queryKey: [`/api/fixture-odds-current`],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const winDrawLossByTeams = useMemo(() => {
-    const map = new Map<string, { homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }>();
-    (currentFixtureOdds?.odds || []).forEach((o) => {
-      const homeId = oddsApiTeamNameToFplId(o.homeTeam);
-      const awayId = oddsApiTeamNameToFplId(o.awayTeam);
-      if (homeId && awayId) {
-        map.set(`${homeId}-${awayId}`, { homeWinProb: o.homeWinProb, drawProb: o.drawProb, awayWinProb: o.awayWinProb });
-      }
-    });
-    return map;
-  }, [currentFixtureOdds]);
 
   // Process data from separate endpoints to create match projections
   const projectionsData = useMemo(() => {
