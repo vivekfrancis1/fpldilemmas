@@ -9,7 +9,7 @@ import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -19,6 +19,7 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "top-differentials", label: "Top Differentials", description: "Highest xPts among low-owned players", headline: "Top Differentials" },
   { id: "predicted-lineup", label: "Predicted Lineups", description: "Most likely XI for a club, from expected minutes", headline: "Predicted Lineup" },
   { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with captain, bench and chip", headline: "Team Reveal" },
+  { id: "cover", label: "Cover Generator", description: "A bold cover image with your headline and up to 3 featured players", headline: "Gameweek Preview" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -133,6 +134,8 @@ export function usesProjections(spec: GraphicSpec): boolean {
 }
 
 export function footerNote(spec: GraphicSpec, gwLabel: string | null): string {
+  // A cover is just a headline and the watermark: no data note
+  if (spec.template === "cover") return "";
   const parts = [gwLabel, usesProjections(spec) ? "Projections are estimates, not guarantees" : null].filter((p): p is string => !!p);
   return parts.length ? parts.join(" · ") : "Data from the official FPL API";
 }
@@ -217,6 +220,9 @@ export interface GraphicSpec {
   vice: number;
   chip: ChipId;
   manager: string;
+  /** Cover Generator: a line under the headline and a small tag (e.g. "GW9" or "Deadline tonight"). */
+  subtitle: string;
+  tag: string;
 }
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
@@ -225,6 +231,8 @@ export const CHIP_LABELS: Record<Exclude<ChipId, "">, string> = { wildcard: "Wil
 export const SQUAD_SIZE = 15;
 export const BENCH_PLAYERS = 4;
 export const MAX_MANAGER_NAME = 40;
+export const MAX_SUBTITLE = 80;
+export const MAX_TAG = 24;
 
 export const DEFAULT_SPEC: GraphicSpec = {
   template: "player-card",
@@ -246,9 +254,11 @@ export const DEFAULT_SPEC: GraphicSpec = {
   vice: 0,
   chip: "",
   manager: "",
+  subtitle: "",
+  tag: "",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -319,6 +329,8 @@ export function decodeSpec(search: string): GraphicSpec {
     vice,
     chip: (CHIP_IDS as string[]).includes(chipRaw) ? (chipRaw as ChipId) : "",
     manager: (q.get("mgr") ?? "").slice(0, MAX_MANAGER_NAME),
+    subtitle: (q.get("sub") ?? "").slice(0, MAX_SUBTITLE),
+    tag: (q.get("tag") ?? "").slice(0, MAX_TAG),
   };
 }
 
@@ -348,6 +360,8 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.vice) add("vc", String(spec.vice));
   if (spec.chip) add("chip", spec.chip);
   if (spec.manager) add("mgr", spec.manager.slice(0, MAX_MANAGER_NAME));
+  if (spec.subtitle) add("sub", spec.subtitle.slice(0, MAX_SUBTITLE));
+  if (spec.tag) add("tag", spec.tag.slice(0, MAX_TAG));
   return parts.join("&");
 }
 
@@ -964,4 +978,37 @@ export function suggestSquadSetup(input: {
   if (!best.complete) return { bench: [], captain: 0, vice: 0 };
   const ranked = [...best.starting].sort((a, b) => (b.xPts ?? 0) - (a.xPts ?? 0) || a.id - b.id);
   return { bench: best.bench.map((p) => p.id), captain: ranked[0]?.id ?? 0, vice: ranked[1]?.id ?? 0 };
+}
+
+
+// ---------- Cover Generator ----------
+
+export interface CoverContent {
+  headline: string;
+  subtitle: string;
+  tag: string;
+  /** Featured players in the order chosen (at most 3). */
+  players: Array<{ id: number; name: string; teamShort: string; position: GraphicPosition }>;
+}
+
+/** The cover as drawn: trimmed text, the default headline when none is typed, and the featured players that exist. */
+export function buildCover(input: { spec: GraphicSpec; elements: GraphicElement[]; teamShortById: Map<number, string> }): CoverContent {
+  const { spec, elements, teamShortById } = input;
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const players: CoverContent["players"] = [];
+  for (const id of spec.players) {
+    const e = byId.get(id);
+    if (!e || players.length === MAX_PLAYERS.cover) continue;
+    players.push({ id: e.id, name: e.web_name, teamShort: teamShortById.get(e.team) ?? "", position: POSITION_BY_TYPE[e.element_type] ?? "MID" });
+  }
+  return { headline: resolveHeadline(spec), subtitle: spec.subtitle.trim(), tag: spec.tag.trim(), players };
+}
+
+const COVER_TITLE_BASE: Record<SizeId, number> = { square: 140, portrait: 150, landscape: 96 };
+
+/** Headline font size in image pixels: full size for short headlines, shrinking (never below 40%) as the text gets longer. */
+export function coverTitleFont(text: string, size: SizeId): number {
+  const chars = Math.max(1, text.trim().length);
+  const factor = chars <= 8 ? 1 : Math.max(0.4, Math.pow(8 / chars, 0.65));
+  return Math.round(COVER_TITLE_BASE[size] * factor);
 }

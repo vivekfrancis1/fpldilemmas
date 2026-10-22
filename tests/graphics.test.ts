@@ -12,6 +12,8 @@ import {
   buildPlayerCard,
   buildPredictedLineup,
   buildTeamReveal,
+  buildCover,
+  coverTitleFont,
   canAddToSquad,
   squadCounts,
   squadFromPicks,
@@ -714,5 +716,62 @@ describe("team reveal: squad rules and builder", () => {
     expect(s.captain).toBe(22);
     expect(s.vice).toBe(31);
     expect(suggestSquadSetup({ elements, squad: squad.slice(0, 10), xptsById: xpts })).toEqual({ bench: [], captain: 0, vice: 0 });
+  });
+});
+
+describe("cover generator", () => {
+  const base = { ...DEFAULT_SPEC, template: "cover" as const };
+
+  it("is a template with a subtitle and a tag in the link; defaults are left out", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toContain("cover");
+    expect(encodeSpec(base)).toBe("t=cover");
+    expect(DEFAULT_SPEC).toMatchObject({ subtitle: "", tag: "" });
+    const spec = { ...base, headline: "GW9 Preview", subtitle: "Captains, differentials and the best budget picks", tag: "Deadline tonight", players: [411, 399, 13], theme: "midnight" as const, size: "landscape" as const };
+    expect(decodeSpec(encodeSpec(spec))).toMatchObject({ template: "cover", headline: "GW9 Preview", subtitle: spec.subtitle, tag: "Deadline tonight", players: [411, 399, 13], theme: "midnight", size: "landscape" });
+  });
+
+  it("limits the subtitle to 80 characters, the tag to 24, and the featured players to 3", () => {
+    expect(decodeSpec(`t=cover&sub=${"s".repeat(200)}`).subtitle.length).toBe(80);
+    expect(decodeSpec(`t=cover&tag=${"t".repeat(200)}`).tag.length).toBe(24);
+    expect(decodeSpec("t=cover&p=1,2,3,4,5").players).toEqual([1, 2, 3]);
+  });
+
+  it("has a default headline, no projections and no footer note (the watermark is the footer)", () => {
+    expect(resolveHeadline(base)).toBe("Gameweek Preview");
+    expect(resolveHeadline({ ...base, headline: "  Free Hit Draft  " })).toBe("Free Hit Draft");
+    expect(usesProjections(base)).toBe(false);
+    expect(footerNote(base, null)).toBe("");
+  });
+
+  it("builds the cover text trimmed, with the default headline, and the featured players in order", () => {
+    const teamShortById = new Map([[1, "ARS"], [2, "AVL"]]);
+    const els = [el({ id: 10, team: 1, web_name: "Saka", element_type: 3 }), el({ id: 20, team: 2, web_name: "Watkins", element_type: 4 })];
+    const c = buildCover({ spec: { ...base, headline: "", subtitle: "  Who to captain  ", tag: " GW9 ", players: [20, 999, 10] }, elements: els, teamShortById });
+    expect(c.headline).toBe("Gameweek Preview");
+    expect(c.subtitle).toBe("Who to captain");
+    expect(c.tag).toBe("GW9");
+    expect(c.players).toEqual([
+      { id: 20, name: "Watkins", teamShort: "AVL", position: "FWD" },
+      { id: 10, name: "Saka", teamShort: "ARS", position: "MID" },
+    ]);
+    const empty = buildCover({ spec: base, elements: els, teamShortById });
+    expect(empty.subtitle).toBe("");
+    expect(empty.tag).toBe("");
+    expect(empty.players).toEqual([]);
+  });
+
+  it("title font gets smaller as the headline gets longer, within sensible bounds, and is smaller on landscape", () => {
+    for (const size of ["square", "portrait", "landscape"] as const) {
+      let prev = Infinity;
+      for (let n = 1; n <= 60; n++) {
+        const f = coverTitleFont("x".repeat(n), size);
+        expect(f).toBeLessThanOrEqual(prev);
+        prev = f;
+      }
+      expect(coverTitleFont("GW9", size)).toBeGreaterThan(coverTitleFont("x".repeat(60), size) * 2);
+      expect(coverTitleFont("x".repeat(60), size)).toBeGreaterThanOrEqual(36);
+    }
+    expect(coverTitleFont("GW9 Preview", "landscape")).toBeLessThan(coverTitleFont("GW9 Preview", "square"));
+    expect(coverTitleFont("   ", "square")).toBe(coverTitleFont("x", "square"));
   });
 });
