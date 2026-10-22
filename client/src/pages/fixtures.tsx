@@ -1,3 +1,4 @@
+import { fillFixtureMatrix, gwHasBlank as gridHasBlank, gwHasDouble as gridHasDouble, type FixtureMatrix } from "@shared/fixture-grid";
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -355,15 +356,9 @@ export default function Fixtures() {
       projectedAvgTier: {} as Record<number, number>
     };
 
-    const matrix: Record<number, Record<number, FixtureEntry[]>> = {};
     const avgFDR: Record<number, number> = {};
     const gameCount: Record<number, number> = {};
     
-    // Initialize matrix
-    bootstrapData.teams.forEach(team => {
-      matrix[team.id] = {};
-    });
-
     // Helper function to get overall FDR based on selected mode
     const getOverallFDR = (originalDifficulty: number, opponentId: number, isHome: boolean) => {
       // Mode 1: Custom FDR (if custom values exist)
@@ -421,60 +416,13 @@ export default function Fixtures() {
       });
     }
 
-    // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
-    // Use key 0 as a sentinel for unassigned (TBC) fixtures
-    // Pass 1: regular (non-TBC) fixtures in range — these always appear first
-    fixturesData.forEach(fixture => {
-      if (fixture.event === null) return;
-      const inRange = fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end;
-      if (!inRange) return;
-
-      const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
-      const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
-      if (homeTeam && awayTeam) {
-        if (!matrix[fixture.team_h][fixture.event]) matrix[fixture.team_h][fixture.event] = [];
-        if (!matrix[fixture.team_a][fixture.event]) matrix[fixture.team_a][fixture.event] = [];
-        matrix[fixture.team_h][fixture.event].push({
-          opponent: awayTeam.short_name,
-          difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
-          isHome: true,
-          finished: fixture.finished,
-        });
-        matrix[fixture.team_a][fixture.event].push({
-          opponent: homeTeam.short_name,
-          difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
-          isHome: false,
-          finished: fixture.finished,
-        });
-      }
-    });
-
-    // Pass 2: TBC fixtures — appended after regular fixtures so they always show as the 2nd match
-    fixturesData.forEach(fixture => {
-      if (fixture.event !== null) return;
-      const assignedGW = computedAssignments[fixture.id];
-      const gwKey = assignedGW ?? 0; // 0 = unassigned → TBC column
-
-      const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
-      const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
-      if (homeTeam && awayTeam) {
-        if (!matrix[fixture.team_h][gwKey]) matrix[fixture.team_h][gwKey] = [];
-        if (!matrix[fixture.team_a][gwKey]) matrix[fixture.team_a][gwKey] = [];
-        matrix[fixture.team_h][gwKey].push({
-          opponent: awayTeam.short_name,
-          difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
-          isHome: true,
-          finished: fixture.finished,
-          fixtureId: fixture.id,
-        });
-        matrix[fixture.team_a][gwKey].push({
-          opponent: homeTeam.short_name,
-          difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
-          isHome: false,
-          finished: fixture.finished,
-          fixtureId: fixture.id,
-        });
-      }
+    // Fill the matrix: regular fixtures first, then TBC ones as the second match (logic in shared/fixture-grid.ts)
+    const matrix = fillFixtureMatrix({
+      teams: bootstrapData.teams,
+      fixtures: fixturesData as any,
+      range: gameweekRange,
+      assignments: computedAssignments,
+      difficultyOf: getOverallFDR,
     });
 
     // Projected mode: attach OUR per-fixture number to each fixture, then colour by quintile among the fixtures
@@ -786,8 +734,8 @@ export default function Fixtures() {
   }
 
   // Per-gameweek flags for the grid header: does any team play twice (DGW) or not at all (BGW)?
-  const gwHasDouble = (gw: number) => Object.values(fixtureMatrix).some((m: any) => (m?.[gw]?.length ?? 0) > 1);
-  const gwHasBlank = (gw: number) => Object.values(fixtureMatrix).some((m: any) => (m?.[gw]?.length ?? 0) === 0);
+  const gwHasDouble = (gw: number) => gridHasDouble(fixtureMatrix as FixtureMatrix, gw);
+  const gwHasBlank = (gw: number) => gridHasBlank(fixtureMatrix as FixtureMatrix, gw);
 
   return (
     <div className="fpl-page-container compact-rows">
