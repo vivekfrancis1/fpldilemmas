@@ -9,7 +9,7 @@ import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -18,6 +18,7 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "price-change", label: "Price Change", description: "Confirmed risers and fallers for a day", headline: "Price Changes" },
   { id: "top-differentials", label: "Top Differentials", description: "Highest xPts among low-owned players", headline: "Top Differentials" },
   { id: "predicted-lineup", label: "Predicted Lineups", description: "Most likely XI for a club, from expected minutes", headline: "Predicted Lineup" },
+  { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with captain, bench and chip", headline: "Team Reveal" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -209,7 +210,21 @@ export interface GraphicSpec {
   top: number;
   /** Price Change: YYYY-MM-DD; empty means "the latest day with changes". */
   date: string;
+  /** Team Reveal: the 15 squad ids (order kept), the bench ids among them, captain / vice (0 = none), chip, manager name. */
+  squad: number[];
+  bench: number[];
+  captain: number;
+  vice: number;
+  chip: ChipId;
+  manager: string;
 }
+
+export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
+export const CHIP_IDS: ChipId[] = ["", "wildcard", "freehit", "bboost", "3xc"];
+export const CHIP_LABELS: Record<Exclude<ChipId, "">, string> = { wildcard: "Wildcard", freehit: "Free Hit", bboost: "Bench Boost", "3xc": "Triple Captain" };
+export const SQUAD_SIZE = 15;
+export const BENCH_PLAYERS = 4;
+export const MAX_MANAGER_NAME = 40;
 
 export const DEFAULT_SPEC: GraphicSpec = {
   template: "player-card",
@@ -225,9 +240,15 @@ export const DEFAULT_SPEC: GraphicSpec = {
   maxOwn: 10,
   top: 5,
   date: "",
+  squad: [],
+  bench: [],
+  captain: 0,
+  vice: 0,
+  chip: "",
+  manager: "",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -270,6 +291,14 @@ export function decodeSpec(search: string): GraphicSpec {
   const top = intOrNull(q.get("top"));
   const date = q.get("d") ?? "";
 
+  const squad = idList(q.get("sq"), SQUAD_SIZE);
+  const bench = idList(q.get("bn"), BENCH_PLAYERS).filter((id) => squad.includes(id));
+  const captainRaw = intOrNull(q.get("cap")) ?? 0;
+  const captain = squad.includes(captainRaw) ? captainRaw : 0;
+  const viceRaw = intOrNull(q.get("vc")) ?? 0;
+  const vice = squad.includes(viceRaw) && viceRaw !== captain ? viceRaw : 0;
+  const chipRaw = q.get("chip") ?? "";
+
   return {
     template,
     size,
@@ -284,6 +313,12 @@ export function decodeSpec(search: string): GraphicSpec {
     maxOwn: own !== null && own >= 1 && own <= 100 ? own : d.maxOwn,
     top: top !== null && top >= 1 ? Math.min(10, Math.max(3, top)) : d.top,
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+    squad,
+    bench,
+    captain,
+    vice,
+    chip: (CHIP_IDS as string[]).includes(chipRaw) ? (chipRaw as ChipId) : "",
+    manager: (q.get("mgr") ?? "").slice(0, MAX_MANAGER_NAME),
   };
 }
 
@@ -307,6 +342,12 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.maxOwn !== d.maxOwn) add("own", String(spec.maxOwn));
   if (spec.top !== d.top) add("top", String(spec.top));
   if (spec.date) add("d", spec.date);
+  if (spec.squad.length) add("sq", spec.squad.join(","));
+  if (spec.bench.length) add("bn", spec.bench.join(","));
+  if (spec.captain) add("cap", String(spec.captain));
+  if (spec.vice) add("vc", String(spec.vice));
+  if (spec.chip) add("chip", spec.chip);
+  if (spec.manager) add("mgr", spec.manager.slice(0, MAX_MANAGER_NAME));
   return parts.join("&");
 }
 
@@ -723,4 +764,204 @@ export function buildPredictedLineup(input: {
     doubleGameweek: gw.length > 1,
     blank: gw.length === 0,
   };
+}
+
+
+// ---------- Team Reveal ----------
+
+export const SQUAD_QUOTA: Record<GraphicPosition, number> = { GKP: 2, DEF: 5, MID: 5, FWD: 3 };
+export const MAX_PER_CLUB = 3;
+const POSITION_WORD: Record<GraphicPosition, string> = { GKP: "goalkeepers", DEF: "defenders", MID: "midfielders", FWD: "forwards" };
+// Legal outfield counts in the starting XI (the goalkeeper is always 1).
+const XI_RANGE: Record<"DEF" | "MID" | "FWD", [number, number]> = { DEF: [3, 5], MID: [2, 5], FWD: [1, 3] };
+
+export interface RevealToken {
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  price: string;
+  fixtures: Array<{ opponent: string; isHome: boolean; difficulty: number }>;
+  isCaptain: boolean;
+  isVice: boolean;
+}
+
+export interface TeamRevealContent {
+  complete: boolean;
+  /** What still needs fixing before the squad can be drawn; empty when complete. */
+  problems: string[];
+  /** "4-4-2"; null until the squad is complete. */
+  formation: string | null;
+  gameweek: number;
+  /** The XI by position (GKP, DEF, MID, FWD); empty rows until the squad is complete. */
+  rows: Array<{ position: GraphicPosition; players: RevealToken[] }>;
+  /** Goalkeeper first, then the outfield bench in the order chosen. */
+  bench: RevealToken[];
+  /** Sum of the squad's current prices (not the manager's budget). */
+  squadValue: string;
+  chipLabel: string | null;
+}
+
+function resolveSquad(elements: GraphicElement[], squad: number[]): GraphicElement[] {
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const seen = new Set<number>();
+  const out: GraphicElement[] = [];
+  for (const id of squad) {
+    const e = byId.get(id);
+    if (e && !seen.has(id)) {
+      seen.add(id);
+      out.push(e);
+    }
+  }
+  return out;
+}
+
+export function squadCounts(elements: GraphicElement[], squad: number[]): Record<GraphicPosition, number> {
+  const counts: Record<GraphicPosition, number> = { GKP: 0, DEF: 0, MID: 0, FWD: 0 };
+  for (const e of resolveSquad(elements, squad)) {
+    const pos = POSITION_BY_TYPE[e.element_type];
+    if (pos) counts[pos] += 1;
+  }
+  return counts;
+}
+
+/** Whether a player can join the squad, and if not, a short reason to show the user. */
+export function canAddToSquad(input: {
+  elements: GraphicElement[];
+  squad: number[];
+  id: number;
+  teamShortById?: Map<number, string>;
+}): { ok: boolean; reason: string | null } {
+  const { elements, squad, id, teamShortById } = input;
+  const element = elements.find((e) => e.id === id);
+  if (!element) return { ok: false, reason: "Unknown player" };
+  if (squad.includes(id)) return { ok: false, reason: "Already in your squad" };
+  if (squad.length >= SQUAD_SIZE) return { ok: false, reason: `Your squad is full (${SQUAD_SIZE} players)` };
+  const pos = POSITION_BY_TYPE[element.element_type];
+  if (pos && squadCounts(elements, squad)[pos] >= SQUAD_QUOTA[pos]) return { ok: false, reason: `You already have ${SQUAD_QUOTA[pos]} ${POSITION_WORD[pos]}` };
+  const sameClub = resolveSquad(elements, squad).filter((e) => e.team === element.team).length;
+  if (sameClub >= MAX_PER_CLUB) return { ok: false, reason: `Max ${MAX_PER_CLUB} players from ${teamShortById?.get(element.team) ?? "one club"}` };
+  return { ok: true, reason: null };
+}
+
+/**
+ * The squad as the graphic will draw it. Nothing is guessed: a squad that breaks the FPL rules (2/5/5/3, at most 3
+ * per club, bench of 1 goalkeeper + 3 outfield, legal XI, a captain) comes back with plain-language problems and
+ * no pitch.
+ */
+export function buildTeamReveal(input: {
+  elements: GraphicElement[];
+  squad: number[];
+  bench: number[];
+  captain: number;
+  vice: number;
+  chip: ChipId;
+  gameweek: number;
+  fixtures: CompareFixtureInput[];
+  teamShortById: Map<number, string>;
+}): TeamRevealContent {
+  const { elements, bench, captain, vice, chip, gameweek, fixtures, teamShortById } = input;
+  const players = resolveSquad(elements, input.squad);
+  const inSquad = new Set(players.map((p) => p.id));
+  const counts = squadCounts(elements, input.squad);
+
+  const problems: string[] = [];
+  for (const pos of ROW_ORDER) {
+    const need = SQUAD_QUOTA[pos];
+    if (counts[pos] < need) problems.push(`Pick ${need} ${POSITION_WORD[pos]} (${counts[pos]}/${need})`);
+    else if (counts[pos] > need) problems.push(`Too many ${POSITION_WORD[pos]} (${counts[pos]}/${need})`);
+  }
+  const perClub = new Map<number, number>();
+  for (const p of players) perClub.set(p.team, (perClub.get(p.team) ?? 0) + 1);
+  for (const [team, n] of Array.from(perClub.entries())) {
+    if (n > MAX_PER_CLUB) problems.push(`Max ${MAX_PER_CLUB} players from one club (${teamShortById.get(team) ?? "a club"} has ${n})`);
+  }
+
+  const countsOk = ROW_ORDER.every((pos) => counts[pos] === SQUAD_QUOTA[pos]);
+  const benchIds = bench.filter((id, i) => inSquad.has(id) && bench.indexOf(id) === i);
+  const positionOf = (id: number) => POSITION_BY_TYPE[players.find((p) => p.id === id)!.element_type];
+  if (countsOk) {
+    const benchKeepers = benchIds.filter((id) => positionOf(id) === "GKP").length;
+    if (benchIds.length !== BENCH_PLAYERS || benchKeepers !== 1) {
+      problems.push("Bench needs exactly 1 goalkeeper and 3 outfield players");
+    } else {
+      const xi = players.filter((p) => !benchIds.includes(p.id));
+      const n = (pos: GraphicPosition) => xi.filter((p) => POSITION_BY_TYPE[p.element_type] === pos).length;
+      const legal = (["DEF", "MID", "FWD"] as const).every((pos) => n(pos) >= XI_RANGE[pos][0] && n(pos) <= XI_RANGE[pos][1]);
+      if (!legal) problems.push("Starting XI needs 3-5 defenders, 2-5 midfielders and 1-3 forwards");
+    }
+    if (!inSquad.has(captain)) problems.push("Choose a captain");
+  }
+
+  const token = (e: GraphicElement): RevealToken => ({
+    id: e.id,
+    name: e.web_name,
+    teamShort: teamShortById.get(e.team) ?? "",
+    position: POSITION_BY_TYPE[e.element_type] ?? "MID",
+    price: money(e.now_cost),
+    fixtures: fixturesForGameweeks(e.team, fixtures, [gameweek])[0].fixtures.map((f) => ({
+      opponent: teamShortById.get(f.opponentId) ?? "?",
+      isHome: f.isHome,
+      difficulty: f.difficulty,
+    })),
+    isCaptain: e.id === captain,
+    isVice: e.id === vice && e.id !== captain,
+  });
+
+  const complete = problems.length === 0;
+  const xiPlayers = complete ? players.filter((p) => !benchIds.includes(p.id)) : [];
+  const rows = ROW_ORDER.map((position) => ({
+    position,
+    players: xiPlayers.filter((p) => POSITION_BY_TYPE[p.element_type] === position).map(token),
+  }));
+  const benchPlayers = complete ? benchIds.map((id) => players.find((p) => p.id === id)!) : [];
+  const orderedBench = [
+    ...benchPlayers.filter((p) => POSITION_BY_TYPE[p.element_type] === "GKP"),
+    ...benchPlayers.filter((p) => POSITION_BY_TYPE[p.element_type] !== "GKP"),
+  ].map(token);
+  const count = (pos: GraphicPosition) => rows.find((r) => r.position === pos)!.players.length;
+  return {
+    complete,
+    problems,
+    formation: complete ? `${count("DEF")}-${count("MID")}-${count("FWD")}` : null,
+    gameweek,
+    rows,
+    bench: orderedBench,
+    squadValue: money(players.reduce((sum, p) => sum + p.now_cost, 0)),
+    chipLabel: chip ? CHIP_LABELS[chip] : null,
+  };
+}
+
+/** A squad loaded from FPL picks: players in pick order, bench = picks 12-15, captain and vice. */
+export function squadFromPicks(
+  picks: Array<{ element: number; position: number; is_captain?: boolean; is_vice_captain?: boolean }>,
+): { squad: number[]; bench: number[]; captain: number; vice: number } {
+  const sorted = [...picks].sort((a, b) => a.position - b.position);
+  return {
+    squad: sorted.map((p) => p.element),
+    bench: sorted.filter((p) => p.position >= 12).map((p) => p.element),
+    captain: sorted.find((p) => p.is_captain)?.element ?? 0,
+    vice: sorted.find((p) => p.is_vice_captain)?.element ?? 0,
+  };
+}
+
+/**
+ * A starting point for a full squad: the XI with the most expected points (same formation search as the FPL
+ * lineup helper), captain = its best player, vice = its second best. The user can change every choice.
+ */
+export function suggestSquadSetup(input: {
+  elements: GraphicElement[];
+  squad: number[];
+  xptsById: Map<number, number | null>;
+}): { bench: number[]; captain: number; vice: number } {
+  const { elements, xptsById } = input;
+  const players = resolveSquad(elements, input.squad);
+  const counts = squadCounts(elements, input.squad);
+  if (players.length !== SQUAD_SIZE || !ROW_ORDER.every((pos) => counts[pos] === SQUAD_QUOTA[pos])) return { bench: [], captain: 0, vice: 0 };
+  const best = bestLineup(
+    players.map((p) => ({ id: p.id, elementType: p.element_type as 1 | 2 | 3 | 4, xPts: xptsById.get(p.id) ?? null })),
+  );
+  if (!best.complete) return { bench: [], captain: 0, vice: 0 };
+  const ranked = [...best.starting].sort((a, b) => (b.xPts ?? 0) - (a.xPts ?? 0) || a.id - b.id);
+  return { bench: best.bench.map((p) => p.id), captain: ranked[0]?.id ?? 0, vice: ranked[1]?.id ?? 0 };
 }

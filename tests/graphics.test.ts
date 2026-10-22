@@ -11,6 +11,11 @@ import {
   buildFixturesGrid,
   buildPlayerCard,
   buildPredictedLineup,
+  buildTeamReveal,
+  canAddToSquad,
+  squadCounts,
+  squadFromPicks,
+  suggestSquadSetup,
   buildPriceChanges,
   contrastRatio,
   decodeSpec,
@@ -539,5 +544,175 @@ describe("predicted lineup spec", () => {
     const back = decodeSpec(encodeSpec(spec));
     expect(back).toMatchObject({ template: "predicted-lineup", teams: [5], from: 9, to: 9 });
     expect(resolveHeadline(spec)).toBe("Predicted Lineup");
+  });
+});
+
+describe("team reveal: spec", () => {
+  const base = { ...DEFAULT_SPEC, template: "team-reveal" as const };
+  it("is a template with squad, bench, captain, vice, chip and manager in the link", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toContain("team-reveal");
+    expect(resolveHeadline(base)).toBe("Team Reveal");
+    expect(usesProjections(base)).toBe(false);
+    const spec = { ...base, squad: [1, 2, 11, 12, 13], bench: [2, 13], captain: 11, vice: 12, chip: "3xc" as const, manager: "Steve's Team", from: 9, to: 9 };
+    const back = decodeSpec(encodeSpec(spec));
+    expect(back).toMatchObject({ template: "team-reveal", squad: [1, 2, 11, 12, 13], bench: [2, 13], captain: 11, vice: 12, chip: "3xc", manager: "Steve's Team", from: 9, to: 9 });
+  });
+
+  it("defaults are left out of the link", () => {
+    expect(encodeSpec(base)).toBe("t=team-reveal");
+    expect(DEFAULT_SPEC).toMatchObject({ squad: [], bench: [], captain: 0, vice: 0, chip: "", manager: "" });
+  });
+
+  it("drops bench, captain and vice ids that are not in the squad; captain and vice differ", () => {
+    const d = decodeSpec("t=team-reveal&sq=1,2,3&bn=2,99&cap=99&vc=3");
+    expect(d.bench).toEqual([2]);
+    expect(d.captain).toBe(0);
+    expect(d.vice).toBe(3);
+    const same = decodeSpec("t=team-reveal&sq=1,2,3&cap=2&vc=2");
+    expect(same.captain).toBe(2);
+    expect(same.vice).toBe(0);
+  });
+
+  it("keeps at most 15 unique squad ids, 4 bench ids, a known chip, and 40 characters of manager name", () => {
+    const ids = Array.from({ length: 20 }, (_, i) => i + 1).join(",");
+    expect(decodeSpec(`sq=${ids}&bn=1,2,3,4,5,6`).squad.length).toBe(15);
+    expect(decodeSpec(`sq=${ids}&bn=1,2,3,4,5,6`).bench).toEqual([1, 2, 3, 4]);
+    expect(decodeSpec("sq=1,1,2").squad).toEqual([1, 2]);
+    expect(decodeSpec("chip=bboost").chip).toBe("bboost");
+    expect(decodeSpec("chip=magic").chip).toBe("");
+    expect(decodeSpec(`mgr=${"y".repeat(100)}`).manager.length).toBe(40);
+  });
+});
+
+describe("team reveal: squad rules and builder", () => {
+  const spots: Array<[number, number, number]> = [
+    // id, element_type, team
+    [1, 1, 1], [2, 1, 2],
+    [11, 2, 3], [12, 2, 4], [13, 2, 5], [14, 2, 6], [15, 2, 7],
+    [21, 3, 8], [22, 3, 9], [23, 3, 10], [24, 3, 11], [25, 3, 12],
+    [31, 4, 13], [32, 4, 14], [33, 4, 15],
+  ];
+  const elements = [
+    ...spots.map(([id, type, team]) => el({ id, element_type: type, team, web_name: `N${id}`, now_cost: 50 })),
+    el({ id: 41, element_type: 2, team: 3, web_name: "N41", now_cost: 45 }),
+    el({ id: 42, element_type: 2, team: 3, web_name: "N42", now_cost: 45 }),
+    el({ id: 43, element_type: 3, team: 3, web_name: "N43", now_cost: 45 }),
+  ];
+  const teamShortById = new Map(Array.from({ length: 20 }, (_, i) => [i + 1, `T${i + 1}`] as [number, string]));
+  const squad = spots.map(([id]) => id);
+  const bench = [2, 15, 25, 33];
+  const fixtures = [
+    { event: 9, team_h: 3, team_a: 20, team_h_difficulty: 2, team_a_difficulty: 4, finished: false },
+    { event: 9, team_h: 19, team_a: 3, team_h_difficulty: 3, team_a_difficulty: 5, finished: false },
+    { event: 9, team_h: 1, team_a: 18, team_h_difficulty: 2, team_a_difficulty: 4, finished: false },
+  ];
+  const run = (over: Record<string, unknown> = {}) =>
+    buildTeamReveal({ elements, squad, bench, captain: 21, vice: 31, chip: "", gameweek: 9, fixtures, teamShortById, ...over } as any);
+
+  it("a valid squad is complete: XI in formation rows, bench goalkeeper first, value is the sum of prices", () => {
+    const r = run();
+    expect(r.complete).toBe(true);
+    expect(r.problems).toEqual([]);
+    expect(r.formation).toBe("4-4-2");
+    expect(r.rows.map((x) => x.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
+    expect(r.rows.map((x) => x.players.length)).toEqual([1, 4, 4, 2]);
+    expect(r.bench.map((p) => p.id)).toEqual([2, 15, 25, 33]);
+    expect(r.squadValue).toBe("£75.0m");
+    expect(r.gameweek).toBe(9);
+  });
+
+  it("marks captain and vice, shows price and the gameweek fixtures (double gameweek lists both)", () => {
+    const r = run();
+    const all = r.rows.flatMap((x) => x.players);
+    expect(all.find((p) => p.id === 21)).toMatchObject({ isCaptain: true, isVice: false });
+    expect(all.find((p) => p.id === 31)).toMatchObject({ isCaptain: false, isVice: true });
+    expect(all.find((p) => p.id === 11)).toMatchObject({ isCaptain: false, isVice: false, price: "£5.0m", teamShort: "T3" });
+    expect(all.find((p) => p.id === 11)!.fixtures).toEqual([
+      { opponent: "T20", isHome: true, difficulty: 2 },
+      { opponent: "T19", isHome: false, difficulty: 5 },
+    ]);
+    expect(all.find((p) => p.id === 12)!.fixtures).toEqual([]);
+  });
+
+  it("tells you what is missing, per position, and shows no pitch", () => {
+    const r = run({ squad: [1, 11, 12, 21], bench: [] });
+    expect(r.complete).toBe(false);
+    expect(r.problems).toContain("Pick 2 goalkeepers (1/2)");
+    expect(r.problems).toContain("Pick 5 defenders (2/5)");
+    expect(r.problems).toContain("Pick 5 midfielders (1/5)");
+    expect(r.problems).toContain("Pick 3 forwards (0/3)");
+    expect(r.rows.flatMap((x) => x.players)).toEqual([]);
+    expect(r.formation).toBeNull();
+  });
+
+  it("flags too many in a position and more than three from one club", () => {
+    const tooMany = run({ squad: [...squad, 41], bench });
+    expect(tooMany.problems).toContain("Too many defenders (6/5)");
+    const club = run({ squad: [1, 2, 11, 41, 42, 43, 21, 22, 23, 24, 25, 31, 32, 33, 15], bench: [2, 15, 25, 33] });
+    expect(club.problems.some((p) => p.startsWith("Max 3 players from one club"))).toBe(true);
+    expect(club.problems.join(" ")).toContain("T3");
+  });
+
+  it("the bench must be one goalkeeper and three outfield players, and leave a legal XI", () => {
+    expect(run({ bench: [15, 25, 33, 32] }).problems).toContain("Bench needs exactly 1 goalkeeper and 3 outfield players");
+    expect(run({ bench: [2, 13, 14, 15] }).problems.some((p) => p.startsWith("Starting XI needs"))).toBe(true);
+    expect(run({ bench: [2, 15] }).problems).toContain("Bench needs exactly 1 goalkeeper and 3 outfield players");
+  });
+
+  it("needs a captain who is in the squad; a vice is optional", () => {
+    expect(run({ captain: 0 }).problems).toContain("Choose a captain");
+    expect(run({ captain: 999 }).problems).toContain("Choose a captain");
+    expect(run({ vice: 0 }).complete).toBe(true);
+  });
+
+  it("ignores ids that are not real players", () => {
+    const r = run({ squad: [...squad, 9999] });
+    expect(r.complete).toBe(true);
+  });
+
+  it("names the chip", () => {
+    expect(run({ chip: "freehit" }).chipLabel).toBe("Free Hit");
+    expect(run({ chip: "bboost" }).chipLabel).toBe("Bench Boost");
+    expect(run({ chip: "3xc" }).chipLabel).toBe("Triple Captain");
+    expect(run({ chip: "wildcard" }).chipLabel).toBe("Wildcard");
+    expect(run({ chip: "" }).chipLabel).toBeNull();
+  });
+
+  it("counts positions and explains why a player cannot be added", () => {
+    expect(squadCounts(elements, squad)).toEqual({ GKP: 2, DEF: 5, MID: 5, FWD: 3 });
+    expect(canAddToSquad({ elements, squad: [1], id: 2 })).toEqual({ ok: true, reason: null });
+    expect(canAddToSquad({ elements, squad: [1, 2], id: 1 }).ok).toBe(false);
+    expect(canAddToSquad({ elements, squad: [1, 2], id: 1 }).reason).toMatch(/already/i);
+    expect(canAddToSquad({ elements, squad: [1, 2], id: 2 }).ok).toBe(false);
+    const gk = el({ id: 3, element_type: 1, team: 9 });
+    expect(canAddToSquad({ elements: [...elements, gk], squad: [1, 2], id: 3 })).toEqual({ ok: false, reason: "You already have 2 goalkeepers" });
+    expect(canAddToSquad({ elements, squad, id: 41 }).reason).toBe("Your squad is full (15 players)");
+    const three = [11, 41, 42];
+    expect(canAddToSquad({ elements: [...elements, el({ id: 44, element_type: 3, team: 3 })], squad: three, id: 44 })).toEqual({ ok: false, reason: "Max 3 players from one club" });
+    expect(canAddToSquad({ elements: [...elements, el({ id: 44, element_type: 3, team: 3 })], squad: three, id: 44, teamShortById }).reason).toBe("Max 3 players from T3");
+  });
+
+  it("loads a squad from FPL picks: order by position, bench is 12-15, captain and vice", () => {
+    const picks = [
+      { element: 33, position: 15, is_captain: false, is_vice_captain: false },
+      { element: 1, position: 1, is_captain: false, is_vice_captain: false },
+      { element: 21, position: 5, is_captain: true, is_vice_captain: false },
+      { element: 2, position: 12, is_captain: false, is_vice_captain: false },
+      { element: 31, position: 9, is_captain: false, is_vice_captain: true },
+    ];
+    expect(squadFromPicks(picks)).toEqual({ squad: [1, 21, 31, 2, 33], bench: [2, 33], captain: 21, vice: 31 });
+    expect(squadFromPicks([])).toEqual({ squad: [], bench: [], captain: 0, vice: 0 });
+  });
+
+  it("suggests a bench, captain and vice from xPts: best XI, captain best, vice second best in the XI", () => {
+    const xpts = new Map<number, number | null>(squad.map((id) => [id, 1]));
+    xpts.set(2, 0.5); xpts.set(15, 0.2); xpts.set(25, 0.3); xpts.set(33, 0.4); // clear bench
+    xpts.set(22, 9); xpts.set(31, 7);
+    const s = suggestSquadSetup({ elements, squad, xptsById: xpts });
+    expect([...s.bench].sort((a, b) => a - b)).toEqual([2, 15, 25, 33]);
+    expect(s.bench[0]).toBe(2);
+    expect(s.captain).toBe(22);
+    expect(s.vice).toBe(31);
+    expect(suggestSquadSetup({ elements, squad: squad.slice(0, 10), xptsById: xpts })).toEqual({ bench: [], captain: 0, vice: 0 });
   });
 });
