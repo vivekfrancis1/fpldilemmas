@@ -39,7 +39,7 @@ every template and size includes the watermark text and a reserved footer strip;
 
 ## Honest limits
 - A pasted link opens the page and re-draws the graphic, but X/WhatsApp link previews will show the generic site card, not the graphic (that needs server-side image rendering, a possible later step). The downloaded PNG is what people post.
-- Not in v1 (Predicted Lineups and Team Reveal were added later): Cover Generator, Player News Quote (need new data or user-typed content), accounts, saved gallery.
+- Not in v1 (Predicted Lineups, Team Reveal and Cover Generator were added later): Player News Quote (need new data or user-typed content), accounts, saved gallery.
 
 ## Order of work
 1. Tests + `shared/graphics.ts` (spec/URL + Player Card + Fixtures Comparison). 2. Page shell, preview scaling, share/copy link. 3. Player Comparison, Differentials, Price Change. 4. Check in Chrome (desktop + phone, light + dark, all three sizes), `npx tsc --noEmit -p .`, `npx vitest run`. Commit locally in logical chunks; no push.
@@ -56,4 +56,11 @@ Why it is built by hand: FPL hides a manager's picks until the deadline, so an F
 On the graphic: XI on a pitch (attack at top), each player with a white name pill and a second pill with the gameweek opponent coloured by official FDR (a double gameweek lists both), C / V badges, bench strip (goalkeeper first), chip badge, squad value, FPL Dilemmas watermark footer. An incomplete or illegal squad shows a plain-language list of what to fix instead of a pitch, and Share is hidden until it is complete.
 Limits: squad value is the sum of the players' CURRENT prices, not the manager's budget (no bank / selling prices); loaded picks are the last published gameweek, so this week's transfers still have to be made by hand; the captain is required, the vice is optional; no xPts are shown on this graphic.
 Verified in the browser (live data through a temporary Vite proxy, since removed): square, portrait, landscape, phone width, indigo / midnight / club themes, Free Hit / Triple Captain / Bench Boost badges, a partial squad (problem list, no Share), Load-from-ID with a real team link (squad, bench, captain, vice and manager name filled in), unknown and invalid IDs (clear errors), the quota message ("You already have 5 defenders"), the auto-suggestion on the 15th player, and the exported PNG (1080x1080, jerseys, FDR pills, C/V badges and the watermark in the exported pixels). Predicted Lineups re-checked after the shared-pitch refactor.
+
+## Update 2026-10-23 — Cover Generator (8th template)
+Built: `buildCover` and `coverTitleFont` in shared/graphics.ts (5 new tests, 68 in tests/graphics.test.ts), `subtitle` / `tag` in the spec and link (`sub`, `tag`; featured players reuse `p`, max 3), `CoverFace` in graphic-faces.tsx (the shared `Frame` got a `bare` option that skips the title block but keeps the watermark footer), cover controls on the page.
+What it is: a bold cover / thumbnail image for videos, podcasts and posts: a big uppercase headline (default "Gameweek Preview"; the font shrinks smoothly as the text gets longer, never below 40%), an optional subtitle, an optional tag pill (e.g. "Deadline tonight"; a one-click button fills in the next gameweek, "GW8"), and up to 3 featured players (jersey + name). No data is shown, so there is no data note or projections note in the footer; the FPL Dilemmas watermark stays. The club theme uses the first featured player's club colour. All three sizes (the 1200x675 landscape is 16:9, so it works as a video thumbnail).
+Layout: square/portrait stack the text over a row of players; landscape puts the text left and the players right; with no players the text block is centred.
+Limits: headline 60 characters, subtitle 80, tag 24; no custom images or fonts, and no club badges beyond the shirt images the site already has.
+Verified in the browser (live data through a temporary Vite proxy, since removed): square, portrait, landscape, indigo / midnight / light / club themes, 0 / 1 / 2 / 3 featured players, a very long headline, phone width, and the exported PNG (1080x1080, watermark in the footer pixels).
 

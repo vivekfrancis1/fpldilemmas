@@ -14,6 +14,9 @@ import {
   PRICE_LIST_LIMIT,
   THEME_LABEL,
   buildComparison,
+  buildCover,
+  MAX_SUBTITLE,
+  MAX_TAG,
   buildDifferentials,
   buildFixturesGrid,
   buildPlayerCard,
@@ -538,6 +541,8 @@ export default function GraphicsPage() {
         const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
         return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
       }
+      case "cover":
+        return { data: { kind: "cover", cover: buildCover({ spec, elements, teamShortById }) }, problem: null };
       case "team-reveal": {
         if (spec.squad.length === 0) return { data: null, problem: "Add your 15 players below, or load your squad from your FPL team ID." };
         if (!fixtures) return { data: null, problem: null };
@@ -594,6 +599,7 @@ export default function GraphicsPage() {
     spec.template === "price-change" ? [priceContent.date ?? ""]
     : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
     : spec.template === "team-reveal" ? [spec.manager || "squad", `gw${lineupGw}`]
+    : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
 
   return (
@@ -663,6 +669,26 @@ export default function GraphicsPage() {
                         );
                       })}
                     </div>
+                  </Field>
+                </>
+              )}
+
+              {spec.template === "cover" && (
+                <>
+                  <Field label="Headline">
+                    <Input value={spec.headline} maxLength={60} onChange={(e) => update({ headline: e.target.value })} placeholder="Gameweek Preview" data-testid="input-cover-headline" />
+                  </Field>
+                  <Field label="Subtitle (optional)">
+                    <Input value={spec.subtitle} maxLength={MAX_SUBTITLE} onChange={(e) => update({ subtitle: e.target.value })} placeholder="Captains, differentials and the best budget picks" data-testid="input-cover-subtitle" />
+                  </Field>
+                  <Field label="Tag (optional)">
+                    <div className="flex gap-2">
+                      <Input value={spec.tag} maxLength={MAX_TAG} onChange={(e) => update({ tag: e.target.value })} placeholder="e.g. Deadline tonight" data-testid="input-cover-tag" />
+                      <Button type="button" variant="outline" onClick={() => update({ tag: `GW${defaultRange.from}` })} data-testid="button-cover-gw">GW{defaultRange.from}</Button>
+                    </div>
+                  </Field>
+                  <Field label="Featured players (up to 3, optional)">
+                    <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={3} onChange={(players) => update({ players })} />
                   </Field>
                 </>
               )}
@@ -789,11 +815,11 @@ export default function GraphicsPage() {
                 <Field label="Colours">
                   <SimpleSelect value={spec.theme} onChange={(v) => update({ theme: v as ThemeId })} options={GRAPHIC_THEMES.map((t) => ({ value: t, label: THEME_LABEL[t] }))} testId="select-theme" />
                 </Field>
-                <div className="col-span-2">
+                {spec.template !== "cover" && <div className="col-span-2">
                   <Field label="Headline (optional)">
                     <Input value={spec.headline} maxLength={60} onChange={(e) => update({ headline: e.target.value })} placeholder="Use the default headline" data-testid="input-headline" />
                   </Field>
-                </div>
+                </div>}
               </div>
             </CardContent>
           </Card>

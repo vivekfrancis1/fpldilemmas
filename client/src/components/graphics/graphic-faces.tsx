@@ -7,6 +7,8 @@ import {
   resolveHeadline,
   watermarkText,
   type ComparisonContent,
+  type CoverContent,
+  coverTitleFont,
   type DifferentialRow,
   type FixtureGridContent,
   type GraphicSpec,
@@ -34,7 +36,8 @@ export type GraphicData =
   | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
   | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
   | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
-  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string };
+  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
+  | { kind: "cover"; cover: CoverContent };
 
 interface Metrics {
   pad: number;
@@ -70,12 +73,15 @@ function Frame({
   theme,
   subtitle,
   gwLabel,
+  bare,
   children,
 }: {
   spec: GraphicSpec;
   theme: GraphicTheme;
   subtitle: string;
   gwLabel: string | null;
+  /** No title/subtitle block: the face draws its own (the cover). The watermark footer stays. */
+  bare?: boolean;
   children: ReactNode;
 }) {
   const { width, height } = GRAPHIC_SIZES[spec.size];
@@ -91,11 +97,15 @@ function Frame({
     >
       <div style={{ height: 8, background: theme.accent, flexShrink: 0 }} />
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: `${m.pad - 14}px ${m.pad}px 0` }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 20, flexShrink: 0 }}>
-          <div style={{ fontSize: m.title, fontWeight: 900, lineHeight: 1.1, textTransform: "uppercase", letterSpacing: 0.5, ...ellipsis }}>{resolveHeadlineText(spec)}</div>
-        </div>
-        <div style={{ fontSize: m.sub, color: theme.muted, fontWeight: 600, marginTop: land ? 4 : 8, flexShrink: 0, ...ellipsis }}>{subtitle}</div>
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: m.gap }}>{children}</div>
+        {!bare && (
+          <>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 20, flexShrink: 0 }}>
+              <div style={{ fontSize: m.title, fontWeight: 900, lineHeight: 1.1, textTransform: "uppercase", letterSpacing: 0.5, ...ellipsis }}>{resolveHeadlineText(spec)}</div>
+            </div>
+            <div style={{ fontSize: m.sub, color: theme.muted, fontWeight: 600, marginTop: land ? 4 : 8, flexShrink: 0, ...ellipsis }}>{subtitle}</div>
+          </>
+        )}
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: bare ? 0 : m.gap }}>{children}</div>
       </div>
       <div
         style={{
@@ -649,6 +659,58 @@ function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme
   );
 }
 
+// ---------- Cover Generator ----------
+
+function CoverFace({ spec, theme, cover }: { spec: GraphicSpec; theme: GraphicTheme; cover: CoverContent }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const n = cover.players.length;
+  const jersey = land ? (n === 1 ? 250 : n === 2 ? 190 : 150) : tall ? (n === 1 ? 400 : n === 2 ? 320 : 270) : n === 1 ? 330 : n === 2 ? 270 : 220;
+  const font = coverTitleFont(cover.headline, spec.size);
+
+  const text = (
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: land ? 14 : 22 }}>
+      {cover.tag && (
+        <div style={{ alignSelf: "flex-start", background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "6px 20px" : "8px 28px", fontSize: land ? 22 : 32, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase" }}>
+          {cover.tag}
+        </div>
+      )}
+      <div style={{ fontSize: font, fontWeight: 900, lineHeight: 1.0, letterSpacing: -1, textTransform: "uppercase", overflowWrap: "anywhere", textShadow: "0 4px 24px rgba(0,0,0,0.25)" }}>
+        {cover.headline}
+      </div>
+      <div style={{ width: land ? 110 : 160, height: land ? 10 : 14, borderRadius: 8, background: theme.accent }} />
+      {cover.subtitle && (
+        <div style={{ fontSize: land ? 28 : tall ? 44 : 38, fontWeight: 700, lineHeight: 1.25, color: theme.muted }}>{cover.subtitle}</div>
+      )}
+    </div>
+  );
+
+  const players = n > 0 && (
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: land ? "center" : "space-evenly", gap: land ? 8 : 16, flexShrink: 0 }}>
+      {cover.players.map((p) => (
+        <div key={p.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}>
+          <Jersey team={p.teamShort} position={p.position} px={jersey} />
+          <div style={{ marginTop: -4, background: "#ffffff", color: "#111827", borderRadius: 10, padding: land ? "3px 14px" : "5px 20px", fontSize: land ? 20 : tall ? 34 : 28, fontWeight: 900, textTransform: "uppercase", maxWidth: jersey * 1.5, ...ellipsis }}>
+            {p.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <Frame spec={spec} theme={theme} subtitle="" gwLabel={null} bare>
+      {/* decorative stripes behind everything */}
+      <div style={{ position: "absolute", right: land ? 40 : -60, top: -120, width: land ? 300 : 460, height: 1900, background: theme.accent, opacity: 0.1, transform: "rotate(18deg)", zIndex: 0 }} />
+      <div style={{ position: "absolute", right: land ? 360 : 340, top: -120, width: land ? 80 : 120, height: 1900, background: theme.accent, opacity: 0.06, transform: "rotate(18deg)", zIndex: 0 }} />
+      <div style={{ position: "relative", zIndex: 1, flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column", alignItems: land ? "center" : "stretch", gap: land ? 24 : 18, paddingBottom: land ? 8 : 16 }}>
+        <div style={{ flex: land ? "1 1 58%" : 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>{text}</div>
+        {land ? (players ? <div style={{ flex: "1 1 42%", minWidth: 0 }}>{players}</div> : null) : players}
+      </div>
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -659,6 +721,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "price-change": return <PriceFace spec={spec} theme={theme} prices={data.prices} dateLabel={data.dateLabel} />;
     case "predicted-lineup": return <LineupFace spec={spec} theme={theme} lineup={data.lineup} gwLabel={data.gwLabel} />;
     case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} />;
+    case "cover": return <CoverFace spec={spec} theme={theme} cover={data.cover} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }
