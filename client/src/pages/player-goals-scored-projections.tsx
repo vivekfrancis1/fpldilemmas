@@ -737,7 +737,7 @@ export default function PlayerGoalsScoredProjections() {
   // Format goals based on view mode - integers for past, decimals for future
   const formatGoals = (goals: number) => {
     if (viewMode === "past") {
-      return goals.toString();
+      return Number.isInteger(goals) ? goals.toString() : goals.toFixed(2);
     }
     if (viewMode === "pastXg") {
       return goals.toFixed(2);
