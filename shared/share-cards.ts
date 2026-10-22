@@ -45,30 +45,6 @@ export function captainsCard(input: {
   };
 }
 
-export function templateCard(input: {
-  gameweek: number | null;
-  formation: string | null;
-  managersCounted: number;
-  managersRequested: number;
-  startingXI: Array<{ name: string; position: string; ownershipPercent: number }>;
-  captain: { name: string; percent: number } | null;
-}): ShareCard {
-  const { gameweek, formation, managersCounted, managersRequested, startingXI, captain } = input;
-  const sections: ShareCardSection[] = (["GKP", "DEF", "MID", "FWD"] as const).map((pos) => ({
-    heading: pos,
-    rows: startingXI
-      .filter((p) => p.position === pos)
-      .map((p) => ({ left: truncateName(p.name, 18), right: `${p.ownershipPercent}%` })),
-  }));
-  if (captain) sections.push({ rows: [{ left: `Captain: ${captain.name} (${captain.percent}%)`, right: "" }] });
-  return {
-    title: `Template Team${formation ? ` (${formation})` : ""}`,
-    subtitle: `Top ${managersRequested} managers · GW${gameweek ?? "?"} squads · ${managersCounted} of ${managersRequested} squads`,
-    sections,
-    footer: "fpldilemmas.com · From our fixed Top 100 list; percentages are share of squads counted",
-  };
-}
-
 const CHIP_LABEL: Record<string, string> = {
   bboost: "Bench Boost",
   "3xc": "Triple Captain",

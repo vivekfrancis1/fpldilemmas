@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { captainsCard, templateCard, hindsightCard, truncateName, shareFileName } from "../shared/share-cards";
+import { captainsCard, hindsightCard, truncateName, shareFileName } from "../shared/share-cards";
 
 describe("truncateName", () => {
   it("leaves short names, shortens long ones with an ellipsis", () => {
@@ -35,40 +35,6 @@ describe("captainsCard", () => {
     expect(captainsCard({ gameweek: 8, players, limit: 1 }).sections[0].rows).toHaveLength(1);
     const empty = captainsCard({ gameweek: 8, players: [] });
     expect(empty.sections[0].rows).toEqual([{ left: "No projections available yet", right: "" }]);
-  });
-});
-
-describe("templateCard", () => {
-  const team = {
-    gameweek: 7,
-    formation: "3-5-2",
-    managersCounted: 100,
-    managersRequested: 100,
-    startingXI: [
-      { name: "Kinsky", position: "GKP", ownershipPercent: 28 },
-      { name: "Calafiori", position: "DEF", ownershipPercent: 67 },
-      { name: "Saka", position: "MID", ownershipPercent: 70 },
-      { name: "Haaland", position: "FWD", ownershipPercent: 96 },
-    ],
-    captain: { name: "Haaland", percent: 96 },
-  };
-
-  it("groups the XI by position with ownership percentages and states the sample", () => {
-    const c = templateCard(team);
-    expect(c.title).toBe("Template Team (3-5-2)");
-    expect(c.subtitle).toBe("Top 100 managers · GW7 squads · 100 of 100 squads");
-    expect(c.sections.slice(0, 4).map((s) => s.heading)).toEqual(["GKP", "DEF", "MID", "FWD"]);
-    expect(c.sections[3].rows).toEqual([{ left: "Haaland", right: "96%" }]);
-  });
-
-  it("includes the most popular captain", () => {
-    expect(templateCard(team).sections.at(-1)!.rows.at(-1)).toBeDefined();
-    expect(JSON.stringify(templateCard(team))).toContain("Captain: Haaland (96%)");
-  });
-
-  it("an incomplete sample is stated honestly", () => {
-    const c = templateCard({ ...team, managersCounted: 97 });
-    expect(c.subtitle).toContain("97 of 100 squads");
   });
 });
 
