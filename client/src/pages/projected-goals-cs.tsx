@@ -756,6 +756,10 @@ export default function ProjectedGoalsCS() {
                 : "space-y-0 lg:max-w-3xl lg:mx-auto"}>
                 {Object.entries(groupedProjections).map(([groupKey, projections]) => {
                   const gwInfo = groupKey; // Just the gameweek info like "GW2"
+                  // Which stat columns this gameweek's header shows; every row below keeps a (possibly empty) slot
+                  // for each one so values always sit under their own header.
+                  const showUpcomingCols = projections.some(p => !p.finished && !p.isLive);
+                  const showResultCol = projections.some(p => p.finished || p.isLive);
                   
                   return (
                     <div key={groupKey} className="flex flex-col">
@@ -763,7 +767,7 @@ export default function ProjectedGoalsCS() {
                           column labels (the match count is dropped there to make room); desktop
                           keeps the match count here and gets its own separate column-header row
                           below, unchanged. */}
-                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 pl-3 pr-4 py-1 border-b border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-100 to-gray-50 pl-3 pr-6 py-1 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-gray-800">
                             GW{projections[0]?.gameweek}{projections[0]?.gameweek === 39 ? ' (TBC)' : ''}
@@ -845,6 +849,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && (match1.finished || match1.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.homeWinProb != null && (
                                         <div className="text-center w-[45px]">
@@ -853,6 +858,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && !(!match1.finished && !match1.isLive && match1.homeWinProb != null) && <div className="w-[45px]" aria-hidden="true" />}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.homeTeam.result)}`}>
@@ -860,6 +866,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showResultCol && !(match1.finished || match1.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                     </div>
                                   </div>
 
@@ -899,6 +906,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && (match1.finished || match1.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match1.finished && !match1.isLive && match1.awayWinProb != null && (
                                         <div className="text-center w-[45px]">
@@ -907,6 +915,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && !(!match1.finished && !match1.isLive && match1.awayWinProb != null) && <div className="w-[45px]" aria-hidden="true" />}
                                       {(match1.finished || match1.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match1.awayTeam.result)}`}>
@@ -914,6 +923,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showResultCol && !(match1.finished || match1.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                     </div>
                                   </div>
                                 </div>
@@ -967,6 +977,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && (match2.finished || match2.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.homeWinProb != null && (
                                         <div className="text-center w-[45px]">
@@ -975,6 +986,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && !(!match2.finished && !match2.isLive && match2.homeWinProb != null) && <div className="w-[45px]" aria-hidden="true" />}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.homeTeam.result)}`}>
@@ -982,6 +994,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showResultCol && !(match2.finished || match2.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                     </div>
                                   </div>
 
@@ -1021,6 +1034,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && (match2.finished || match2.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                       {/* Win% (draw ignored) — same third column on mobile and desktop */}
                                       {!match2.finished && !match2.isLive && match2.awayWinProb != null && (
                                         <div className="text-center w-[45px]">
@@ -1029,6 +1043,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showUpcomingCols && !(!match2.finished && !match2.isLive && match2.awayWinProb != null) && <div className="w-[45px]" aria-hidden="true" />}
                                       {(match2.finished || match2.isLive) && (
                                         <div className="text-center w-[45px]">
                                           <div className={`px-1.5 py-0 rounded-lg text-xs font-bold shadow-sm min-w-[38px] ${getResultColor(match2.awayTeam.result)}`}>
@@ -1036,6 +1051,7 @@ export default function ProjectedGoalsCS() {
                                           </div>
                                         </div>
                                       )}
+                                      {showResultCol && !(match2.finished || match2.isLive) && <div className="w-[45px]" aria-hidden="true" />}
                                     </div>
                                   </div>
                                 </div>
