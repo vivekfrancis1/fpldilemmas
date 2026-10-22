@@ -17,6 +17,7 @@ import PwaUpdateToast from "@/components/pwa-update-toast";
 const Fixtures = lazy(() => import("./pages/fixtures"));
 const Compare = lazy(() => import("./pages/compare"));
 const CaptaincyMatrix = lazy(() => import("./pages/captaincy-matrix"));
+const PlayerPlot = lazy(() => import("./pages/player-plot"));
 const TemplateTeamPage = lazy(() => import("./pages/template-team"));
 const RateMyTeam = lazy(() => import("./pages/rate-my-team"));
 const DeadlineBrief = lazy(() => import("./pages/deadline-brief"));
@@ -126,6 +127,7 @@ function Router() {
         <Route path="/fixtures" component={Fixtures} />
         <Route path="/compare" component={Compare} />
         <Route path="/captaincy-matrix" component={CaptaincyMatrix} />
+        <Route path="/player-plot" component={PlayerPlot} />
         <Route path="/template-team" component={TemplateTeamPage} />
         <Route path="/rate-my-team" component={RateMyTeam} />
         <Route path="/deadline-brief" component={DeadlineBrief} />

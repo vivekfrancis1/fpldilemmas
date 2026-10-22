@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toPng } from "html-to-image";
 import { Share2 } from "lucide-react";
 import type { ShareCard } from "@shared/share-cards";
@@ -44,12 +44,29 @@ function CardFace({ card }: { card: ShareCard }) {
   );
 }
 
-export function ShareImageButton({ getCard, fileName, className }: { getCard: () => ShareCard; fileName: string; className?: string }) {
+/** Either a text card (`getCard`, drawn by CardFace) or a fully custom face (`renderCard`, e.g. the player plot). */
+export function ShareImageButton({
+  getCard,
+  renderCard,
+  title,
+  width = SIZE,
+  height = SIZE,
+  fileName,
+  className,
+}: {
+  getCard?: () => ShareCard;
+  renderCard?: () => ReactNode;
+  title?: string;
+  width?: number;
+  height?: number;
+  fileName: string;
+  className?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   // The card exists in the DOM only while an image is being made, and its content is built on click, so pages that
   // never use Share pay nothing for it.
-  const [card, setCard] = useState<ShareCard | null>(null);
+  const [card, setCard] = useState<{ node: ReactNode; title: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const share = async () => {
@@ -57,12 +74,18 @@ export function ShareImageButton({ getCard, fileName, className }: { getCard: ()
     setBusy(true);
     setMessage(null);
     try {
-      const built = getCard();
+      let built: { node: ReactNode; title: string };
+      if (renderCard) {
+        built = { node: renderCard(), title: title ?? "FPL Dilemmas" };
+      } else {
+        const textCard = getCard!();
+        built = { node: <CardFace card={textCard} />, title: textCard.title };
+      }
       setCard(built);
       // wait for the offscreen card to be laid out
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!ref.current) throw new Error("card not rendered");
-      const dataUrl = await toPng(ref.current, { width: SIZE, height: SIZE, pixelRatio: 1, cacheBust: true });
+      const dataUrl = await toPng(ref.current, { width, height, pixelRatio: 1, cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], fileName, { type: "image/png" });
       if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
@@ -99,7 +122,7 @@ export function ShareImageButton({ getCard, fileName, className }: { getCard: ()
       {card && (
         <div aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }}>
           <div ref={ref}>
-            <CardFace card={card} />
+            {card.node}
           </div>
         </div>
       )}
