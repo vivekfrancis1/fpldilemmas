@@ -11,6 +11,12 @@ Plan Storage: Never overwrite or delete old plans. Each plan is saved as a separ
 Local-Only Workflow: Commit to local git as work progresses (logical chunks, clean history), but never `git push` or trigger a deploy until the user explicitly says to (e.g. "deploy", "push", "ship it"). Railway auto-deploys from the `main` branch on GitHub, so pushing to `origin` is itself the deploy trigger — treat it with the same caution as a manual deploy step.
 Before pushing/deploying: run `npx tsc --noEmit -p .` and `npx vitest run`, and confirm both are clean (aside from documented pre-existing flaky tests — see below) before asking the user to deploy.
 
+### Local development database (since 2026-10-23)
+Dev servers and tests use a **local Postgres 18** (Homebrew, port 5433, database `fpldilemmas_dev`), never the production database. `.env` has `DATABASE_URL=postgresql://localhost:5433/fpldilemmas_dev` and `PROD_DATABASE_URL=<Railway DATABASE_PUBLIC_URL>` (used only by `refresh`). `server/db.ts` refuses to start when `NODE_ENV` is `development` or `test` and `DATABASE_URL` is remote (override: `ALLOW_REMOTE_DB=1`); production and one-off scripts with no `NODE_ENV` are unaffected.
+- `scripts/dev-db.sh start|stop|status` — run `start` after a reboot, before `npm run dev` (or the preview server).
+- `scripts/dev-db.sh refresh` — replaces the local data with a read-only copy of production's structure and non-personal data (users, sessions, activity logs, drafts, alerts, watchlists, price overrides, league snapshots and manager profiles are not copied). The local admin user is created by the normal startup seed.
+- If Railway rotates the Postgres password, only `PROD_DATABASE_URL` changes (Railway dashboard → Postgres → Variables → `DATABASE_PUBLIC_URL`).
+
 ### Test flakiness — status as of 2026-10-16 (investigated, no known flaky tests)
 The earlier belief that some tests fail intermittently from "resource contention" did **not** hold up when investigated:
 - `tests/cache-integrity.test.ts` was a **real cold-start bug** (cache-hit and cache-miss paths of `/api/cached/player-total-points` disagreed for unavailable players), fixed 2026-10-15 with a regression test. If it fails now, treat it as a regression.

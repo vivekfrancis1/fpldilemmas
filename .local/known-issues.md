@@ -221,7 +221,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 - **Low-scoring-team defender distortion** (e.g. Van Hecke ~0.64 goals/GW from 1 goal in 540 min): remaining cause is dividing by a tiny team goal total then applying it to a larger odds-based team projection. Position-average priors and last-season blending are ruled out by decision; needs a new approach.
 - **Double-gameweek Copilot format is an assumption** (>90 = total, <=90 = per fixture): no DGW exists this season yet — verify against the first DGW export.
-- **Local dev servers and tests share the production database** (`.env` DATABASE_URL), so schedulers, snapshots and caches started locally can touch production; mitigated per-job (production-only gates) but a separate dev/test database is the real fix.
+- **Local dev servers and tests share the production database** — FIXED 2026-10-23: dev and tests now use a local Postgres 18 (port 5433, `fpldilemmas_dev`, loaded from a read-only dump of production's structure and non-personal data). `server/db.ts` refuses a remote `DATABASE_URL` when `NODE_ENV` is development/test (`server/db-config.ts`, `tests/db-config.test.ts`; override `ALLOW_REMOTE_DB=1`). Helper: `scripts/dev-db.sh start|stop|status|refresh`; see CLAUDE.md. Dev servers started before this change (e.g. one already running on port 5050) still use the production URL until restarted.
 
 ## 2026-10-23 — Local `.env` database password rejected (FIXED 2026-10-23)
 
