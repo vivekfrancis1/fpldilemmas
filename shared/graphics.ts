@@ -5,10 +5,11 @@
 
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
+import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -16,6 +17,7 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "fixtures-comparison", label: "Fixtures Comparison", description: "2-4 teams over a gameweek range, coloured by official FDR", headline: "Fixture Comparison" },
   { id: "price-change", label: "Price Change", description: "Confirmed risers and fallers for a day", headline: "Price Changes" },
   { id: "top-differentials", label: "Top Differentials", description: "Highest xPts among low-owned players", headline: "Top Differentials" },
+  { id: "predicted-lineup", label: "Predicted Lineups", description: "Most likely XI for a club, from expected minutes", headline: "Predicted Lineup" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -124,7 +126,7 @@ export function footerHeight(size: SizeId): number {
 export const PRICE_LIST_LIMIT: Record<SizeId, number> = { square: 7, portrait: 10, landscape: 5 };
 
 export function usesProjections(spec: GraphicSpec): boolean {
-  if (spec.template === "player-card" || spec.template === "top-differentials") return true;
+  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup") return true;
   if (spec.template === "player-comparison") return (spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS).includes("xpts");
   return false;
 }
@@ -225,7 +227,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   date: "",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -604,4 +606,121 @@ export function buildDifferentials(input: {
   }
   rows.sort((a, b) => b.xpts - a.xpts || a.own - b.own || a.name.localeCompare(b.name));
   return rows.slice(0, top).map(({ own: _own, ...r }, i) => ({ rank: i + 1, ...r }));
+}
+
+// ---------- Predicted Lineup ----------
+
+export interface LineupProjection {
+  playerId: number;
+  /** Expected minutes per gameweek, keyed by gameweek number ("8"). */
+  xMinsPerGW?: Record<string, number>;
+  chanceOfPlayingNextRound?: number | null;
+}
+
+export interface LineupToken {
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  /** Whole expected minutes, capped at 90. */
+  xMins: number;
+  flag: "injured" | "doubtful" | null;
+  /** Chance of playing (0-99) when FPL gives one below 100, otherwise null. */
+  chance: number | null;
+}
+
+export interface PredictedLineupContent {
+  teamId: number;
+  teamShort: string;
+  teamName: string;
+  gameweek: number;
+  /** "4-4-2"; null when no legal XI can be formed from the players with expected minutes. */
+  formation: string | null;
+  complete: boolean;
+  rows: Array<{ position: GraphicPosition; players: LineupToken[] }>;
+  /** Next players by expected minutes after the XI (at most BENCH_SIZE). */
+  bench: LineupToken[];
+  fixtures: Array<{ opponent: string; isHome: boolean }>;
+  doubleGameweek: boolean;
+  blank: boolean;
+}
+
+export const BENCH_SIZE = 5;
+const ROW_ORDER: GraphicPosition[] = ["GKP", "DEF", "MID", "FWD"];
+const TYPE_BY_POSITION: Record<GraphicPosition, 1 | 2 | 3 | 4> = { GKP: 1, DEF: 2, MID: 3, FWD: 4 };
+
+/**
+ * The likeliest XI for one club in one gameweek: the legal XI (1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD) with the most
+ * total expected minutes, using the same formation search as the FPL lineup helper. Expected minutes are our
+ * own projections (they already include injury news); this is not official team news. Players with no expected
+ * minutes that gameweek, or who are unavailable or suspended, are never listed.
+ */
+export function buildPredictedLineup(input: {
+  teamId: number;
+  gameweek: number;
+  elements: GraphicElement[];
+  projections: LineupProjection[];
+  teamShortById: Map<number, string>;
+  teamNameById: Map<number, string>;
+  fixtures: CompareFixtureInput[];
+}): PredictedLineupContent {
+  const { teamId, gameweek, elements, projections, teamShortById, teamNameById, fixtures } = input;
+  const teamShort = teamShortById.get(teamId) ?? "";
+  const projectionById = new Map(projections.map((p) => [p.playerId, p]));
+
+  const tokens = new Map<number, LineupToken>();
+  const candidates: LineupPlayer[] = [];
+  for (const e of elements) {
+    if (e.team !== teamId || e.status === "u" || e.status === "s") continue;
+    const position = POSITION_BY_TYPE[e.element_type];
+    const proj = projectionById.get(e.id);
+    const raw = proj?.xMinsPerGW?.[String(gameweek)];
+    if (!position || typeof raw !== "number" || !(raw > 0)) continue;
+    const xMins = Math.min(90, Math.round(raw));
+    const chance = typeof proj?.chanceOfPlayingNextRound === "number" && proj.chanceOfPlayingNextRound < 100 ? proj.chanceOfPlayingNextRound : null;
+    tokens.set(e.id, {
+      id: e.id,
+      name: e.web_name,
+      teamShort,
+      position,
+      xMins,
+      flag: e.status === "i" ? "injured" : e.status === "d" ? "doubtful" : null,
+      chance,
+    });
+    // rank on the unrounded minutes so near-ties are decided by the real forecast
+    candidates.push({ id: e.id, elementType: TYPE_BY_POSITION[position], xPts: raw });
+  }
+
+  const best = bestLineup(candidates);
+  const byMinutes = (a: LineupToken, b: LineupToken) => b.xMins - a.xMins || a.id - b.id;
+  let starting: LineupToken[];
+  let complete = best.complete && best.starting.length === 11;
+  if (complete) {
+    starting = best.starting.map((p) => tokens.get(p.id)!);
+  } else {
+    // No legal XI: show the most likely players that do exist, never invent the rest.
+    starting = Array.from(tokens.values()).sort(byMinutes).slice(0, 11);
+    complete = false;
+  }
+  const startingIds = new Set(starting.map((p) => p.id));
+  const rows = ROW_ORDER.map((position) => ({
+    position,
+    players: starting.filter((p) => p.position === position).sort(byMinutes),
+  }));
+  const bench = Array.from(tokens.values()).filter((p) => !startingIds.has(p.id)).sort(byMinutes).slice(0, BENCH_SIZE);
+  const count = (pos: GraphicPosition) => rows.find((r) => r.position === pos)!.players.length;
+  const gw = fixturesForGameweeks(teamId, fixtures, [gameweek])[0].fixtures;
+  return {
+    teamId,
+    teamShort,
+    teamName: teamNameById.get(teamId) ?? teamShort,
+    gameweek,
+    formation: complete ? `${count("DEF")}-${count("MID")}-${count("FWD")}` : null,
+    complete,
+    rows,
+    bench,
+    fixtures: gw.map((f) => ({ opponent: teamShortById.get(f.opponentId) ?? "?", isHome: f.isHome })),
+    doubleGameweek: gw.length > 1,
+    blank: gw.length === 0,
+  };
 }

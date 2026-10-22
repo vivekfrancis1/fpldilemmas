@@ -10,6 +10,7 @@ import {
   buildDifferentials,
   buildFixturesGrid,
   buildPlayerCard,
+  buildPredictedLineup,
   buildPriceChanges,
   contrastRatio,
   decodeSpec,
@@ -447,5 +448,96 @@ describe("buildDifferentials", () => {
     expect(low.ownership).toBe("3.0%");
     expect(low.teamShort).toBe("ARS");
     expect(low.position).toBe("MID");
+  });
+});
+
+describe("buildPredictedLineup", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"]]);
+  const teamNameById = new Map([[1, "Arsenal"], [2, "Aston Villa"]]);
+  // team 1: 2 GKP (one never plays), 5 DEF, 5 MID, 3 FWD. Opponent player must never appear.
+  const mk = (id: number, type: number, team = 1, extra: Partial<GraphicElement> = {}) => el({ id, element_type: type, team, web_name: `N${id}`, ...extra });
+  const elements = [
+    mk(1, 1), mk(2, 1),
+    ...[11, 12, 13, 14, 15].map((i) => mk(i, 2)),
+    ...[21, 22, 23, 24, 25].map((i) => mk(i, 3)),
+    ...[31, 32, 33].map((i) => mk(i, 4)),
+    mk(99, 3, 2),
+  ];
+  const mins: Record<number, number> = { 1: 90, 2: 0, 11: 90, 12: 90, 13: 88, 14: 85, 15: 50, 21: 90, 22: 89, 23: 80, 24: 70, 25: 10, 31: 90, 32: 60, 33: 30, 99: 90 };
+  const projections = Object.entries(mins).map(([id, m]) => ({ playerId: Number(id), xMinsPerGW: { "8": m, "9": 0 } as Record<string, number> }));
+  const fixtures = [{ event: 8, team_h: 1, team_a: 2, team_h_difficulty: 2, team_a_difficulty: 4, finished: false }];
+  const run = (over: Record<string, unknown> = {}) =>
+    buildPredictedLineup({ teamId: 1, gameweek: 8, elements, projections, teamShortById, teamNameById, fixtures, ...over } as any);
+
+  it("picks the legal XI with the most expected minutes, in formation order", () => {
+    const l = run();
+    expect(l.complete).toBe(true);
+    expect(l.formation).toBe("4-4-2");
+    expect(l.rows.map((r) => r.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
+    expect(l.rows.map((r) => r.players.length)).toEqual([1, 4, 4, 2]);
+    expect(l.rows[1].players.map((p) => p.id)).toEqual([11, 12, 13, 14]);
+    expect(l.rows[3].players.map((p) => p.id)).toEqual([31, 32]);
+  });
+
+  it("only uses the chosen team and the chosen gameweek's expected minutes", () => {
+    const l = run();
+    expect(l.rows.flatMap((r) => r.players).map((p) => p.id)).not.toContain(99);
+    const other = run({ gameweek: 9 });
+    expect(other.complete).toBe(false);
+  });
+
+  it("shows whole expected minutes, capped at 90, and the bench is the next players with minutes", () => {
+    const l = run({ projections: projections.map((p) => (p.playerId === 11 ? { ...p, xMinsPerGW: { "8": 94.6 } } : p)) });
+    expect(l.rows[1].players[0].xMins).toBe(90);
+    expect(l.bench.map((p) => p.id)).toEqual([15, 33, 25]);
+    expect(l.bench.map((p) => p.xMins)).toEqual([50, 30, 10]);
+    expect(l.bench.every((p) => p.xMins > 0)).toBe(true);
+  });
+
+  it("flags injured and doubtful players and shows the chance of playing; unavailable players are left out", () => {
+    const els = elements.map((e) => (e.id === 12 ? { ...e, status: "d" } : e.id === 13 ? { ...e, status: "i" } : e.id === 14 ? { ...e, status: "u" } : e));
+    const prj = projections.map((p) => (p.playerId === 12 ? { ...p, chanceOfPlayingNextRound: 75 } : p));
+    const l = run({ elements: els, projections: prj });
+    const all = l.rows.flatMap((r) => r.players);
+    expect(all.find((p) => p.id === 12)).toMatchObject({ flag: "doubtful", chance: 75 });
+    expect(all.find((p) => p.id === 13)?.flag).toBe("injured");
+    expect(all.map((p) => p.id)).not.toContain(14);
+    expect(all.find((p) => p.id === 11)).toMatchObject({ flag: null, chance: null });
+  });
+
+  it("is incomplete, not invented, when fewer than 11 players have expected minutes", () => {
+    const few = projections.map((p) => (p.playerId > 20 ? { ...p, xMinsPerGW: { "8": 0 } } : p));
+    const l = run({ projections: few });
+    expect(l.complete).toBe(false);
+    expect(l.formation).toBeNull();
+    expect(l.rows.flatMap((r) => r.players).length).toBeLessThan(11);
+  });
+
+  it("lists the fixture(s): opponent and venue; blank and double gameweeks are flagged", () => {
+    expect(run().fixtures).toEqual([{ opponent: "AVL", isHome: true }]);
+    expect(run().doubleGameweek).toBe(false);
+    expect(run({ gameweek: 9 }).blank).toBe(true);
+    const dbl = run({ fixtures: [...fixtures, { event: 8, team_h: 2, team_a: 1, team_h_difficulty: 3, team_a_difficulty: 3, finished: false }] });
+    expect(dbl.doubleGameweek).toBe(true);
+    expect(dbl.fixtures.length).toBe(2);
+  });
+
+  it("names the team", () => {
+    const l = run();
+    expect(l.teamShort).toBe("ARS");
+    expect(l.teamName).toBe("Arsenal");
+    expect(l.gameweek).toBe(8);
+  });
+});
+
+describe("predicted lineup spec", () => {
+  it("is a template that uses projections and keeps one team and one gameweek in the link", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toContain("predicted-lineup");
+    const spec = { ...DEFAULT_SPEC, template: "predicted-lineup" as const, teams: [5], from: 9, to: 9 };
+    expect(usesProjections(spec)).toBe(true);
+    expect(footerNote(spec, "GW9")).toContain("estimates");
+    const back = decodeSpec(encodeSpec(spec));
+    expect(back).toMatchObject({ template: "predicted-lineup", teams: [5], from: 9, to: 9 });
+    expect(resolveHeadline(spec)).toBe("Predicted Lineup");
   });
 });
