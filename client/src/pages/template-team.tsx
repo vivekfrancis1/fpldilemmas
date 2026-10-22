@@ -5,7 +5,8 @@ import type { TemplateTeam, TemplatePlayer } from "@shared/template-team";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ShareImageButton } from "@/components/share-image-button";
-import { templateCard, shareFileName } from "@shared/share-cards";
+import { shareFileName } from "@shared/share-cards";
+import { TemplateTeamShareCard, TEMPLATE_CARD_WIDTH, TEMPLATE_CARD_HEIGHT } from "@/components/template-team-share-card";
 
 type TemplateResponse = TemplateTeam & { gameweek: number | null; fetchedAt: string | null };
 
@@ -71,7 +72,21 @@ export default function TemplateTeamPage() {
                     {data.managersCounted} of {data.managersRequested} squads · squad value £{data.totalValue.toFixed(1)}m
                   </span>
                   <ShareImageButton
-                    getCard={() => templateCard({ ...data, captain: data.captain ? { name: data.captain.name, percent: data.captain.percent } : null })}
+                    renderCard={() => (
+                      <TemplateTeamShareCard
+                        gameweek={data.gameweek}
+                        formation={data.formation}
+                        managersCounted={data.managersCounted}
+                        managersRequested={data.managersRequested}
+                        totalValue={data.totalValue}
+                        startingXI={data.startingXI}
+                        bench={data.bench}
+                        captain={data.captain}
+                      />
+                    )}
+                    title="Template Team"
+                    width={TEMPLATE_CARD_WIDTH}
+                    height={TEMPLATE_CARD_HEIGHT}
                     fileName={shareFileName(["template-team", `gw${data.gameweek ?? ""}`])}
                     className="ml-auto"
                   />
