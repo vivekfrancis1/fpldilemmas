@@ -12,11 +12,23 @@ import {
   parseCompareIds,
   projectionWindow,
 } from "@shared/compare-utils";
+import {
+  MAX_RADAR_AXES,
+  MIN_RADAR_AXES,
+  MIN_RADAR_MINUTES,
+  RADAR_AXES,
+  buildRadarSeries,
+  encodeRadarAxes,
+  parseRadarAxes,
+} from "@shared/compare-radar";
+import { shareFileName } from "@shared/share-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShareImageButton } from "@/components/share-image-button";
+import CompareRadarChart, { RADAR_CARD_THEME, RADAR_COLORS, RADAR_SCREEN_THEME } from "@/components/compare-radar-chart";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
 import JerseyIcon from "@/components/jersey-icon";
 import { getFdrCellClass } from "@/lib/heatmap-colors";
@@ -69,6 +81,7 @@ export default function Compare() {
   const [copied, setCopied] = useState(false);
 
   const ids = useMemo(() => parseCompareIds(new URLSearchParams(search).get("p")), [search]);
+  const axisKeys = useMemo(() => parseRadarAxes(new URLSearchParams(search).get("a")), [search]);
 
   const { data: bootstrap, isLoading: bootstrapLoading, error: bootstrapError } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -116,8 +129,17 @@ export default function Compare() {
     return ids.map((id) => byId.get(id)).filter((e): e is Element => !!e);
   }, [bootstrap, ids]);
 
-  const setIds = (next: number[]) => {
-    navigate(next.length ? `/compare?p=${next.join(",")}` : "/compare", { replace: true });
+  const goTo = (nextIds: number[], nextAxes: string[]) => {
+    if (!nextIds.length) return navigate("/compare", { replace: true });
+    const a = encodeRadarAxes(nextAxes);
+    navigate(`/compare?p=${nextIds.join(",")}${a ? `&a=${a}` : ""}`, { replace: true });
+  };
+  const setIds = (next: number[]) => goTo(next, axisKeys);
+  const toggleAxis = (key: string) => {
+    const on = axisKeys.includes(key);
+    if (on && axisKeys.length <= MIN_RADAR_AXES) return;
+    if (!on && axisKeys.length >= MAX_RADAR_AXES) return;
+    goTo(ids, on ? axisKeys.filter((k) => k !== key) : [...axisKeys, key]);
   };
 
   const suggestions = useMemo(() => {
@@ -161,6 +183,61 @@ export default function Compare() {
     }
     return Array.from(all).sort((a, b) => a - b).slice(0, WINDOW);
   }, [selected, projectionById]);
+
+  const radar = useMemo(
+    () =>
+      buildRadarSeries(
+        selected.map((e) => {
+          const w = projectionWindow(projectionById.get(e.id)?.gameweekProjections, windowGameweeks);
+          const count = w.perGameweek.filter((v) => v !== null).length;
+          return { id: e.id, element: e as any, xptsPerGw: w.total !== null && count ? w.total / count : null };
+        }),
+        axisKeys,
+      ),
+    [selected, projectionById, windowGameweeks, axisKeys],
+  );
+  const radarNames = selected.map((e) => e.web_name);
+  const radarValueText = (i: number, v: number | null) => (v === null ? "—" : v.toFixed(radar.axes[i].decimals));
+
+  const renderRadarShareCard = () => (
+    <div
+      style={{
+        width: 1080, height: 1350, boxSizing: "border-box", padding: "40px 36px 28px", display: "flex", flexDirection: "column",
+        background: "linear-gradient(170deg, #0b1020 0%, #121936 100%)", color: "#f8fafc", border: "6px solid #fbbf24",
+        fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", overflow: "hidden",
+      }}
+    >
+      <div style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.1, letterSpacing: 0.5, textTransform: "uppercase" }}>Player profile</div>
+      <div style={{ fontSize: 22, color: "#94a3b8", marginTop: 10 }}>
+        2026/27 season · outer ring = best of these players · per-90 stats need {MIN_RADAR_MINUTES}+ minutes
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 26px", marginTop: 20 }}>
+        {radarNames.map((name, k) => (
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 30, fontWeight: 800 }}>
+            <span style={{ width: 22, height: 22, borderRadius: 999, background: RADAR_COLORS[k] }} />
+            {name}
+          </span>
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+        <CompareRadarChart size={600} fontSize={24} axes={radar.axes} series={radar.series} colors={RADAR_COLORS} names={radarNames} theme={RADAR_CARD_THEME} />
+      </div>
+      <div style={{ marginTop: 6, background: "rgba(255,255,255,0.06)", borderRadius: 18, padding: "10px 20px" }}>
+        {radar.axes.map((a, i) => (
+          <div key={a.key} style={{ display: "flex", alignItems: "center", fontSize: 21, lineHeight: 1.5 }}>
+            <span style={{ flex: 1, color: "#cbd5e1", fontWeight: 600 }}>{a.label}</span>
+            {radar.series.map((sr, k) => (
+              <span key={sr.id} style={{ width: 110, textAlign: "right", fontWeight: 800, color: RADAR_COLORS[k] }}>{radarValueText(i, sr.raw[i])}</span>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: "auto", fontSize: 22, color: "#94a3b8", display: "flex", justifyContent: "space-between" }}>
+        <span>fpldilemmas.com/compare</span>
+        <span>FPL data + our projections</span>
+      </div>
+    </div>
+  );
 
   const isCurrent = season === "current";
   const stats = COMPARE_STATS.filter((s) => isCurrent || !CURRENT_ONLY_STATS.has(s.key));
@@ -350,6 +427,82 @@ export default function Compare() {
                     </tbody>
                   </table>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="mb-4" data-testid="card-radar">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Player profile</CardTitle>
+                  <ShareImageButton
+                    renderCard={renderRadarShareCard}
+                    title="Player profile"
+                    width={1080}
+                    height={1350}
+                    fileName={shareFileName(["compare", ...radarNames])}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The outer ring is the best of these players on each stat. This season only; per-90 stats need{" "}
+                  {MIN_RADAR_MINUTES}+ minutes.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-1.5" data-testid="radar-axis-chips">
+                  {RADAR_AXES.map((a) => {
+                    const on = axisKeys.includes(a.key);
+                    return (
+                      <button
+                        key={a.key}
+                        type="button"
+                        onClick={() => toggleAxis(a.key)}
+                        aria-pressed={on}
+                        title={a.label}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                          on ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"
+                        }`}
+                        data-testid={`chip-axis-${a.key}`}
+                      >
+                        {a.short}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {selected.map((e, k) => (
+                    <span key={e.id} className="inline-flex items-center gap-1.5 text-sm font-medium">
+                      <span className="inline-block h-3 w-3 rounded-full" style={{ background: RADAR_COLORS[k] }} />
+                      {e.web_name}
+                    </span>
+                  ))}
+                </div>
+                <div className="mx-auto w-full max-w-[760px]">
+                  <CompareRadarChart
+                    size={520}
+                    fontSize={13}
+                    axes={radar.axes}
+                    series={radar.series}
+                    colors={RADAR_COLORS}
+                    names={radarNames}
+                    theme={RADAR_SCREEN_THEME}
+                  />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[320px] text-sm" data-testid="table-radar-values">
+                    <tbody>
+                      {radar.axes.map((a, i) => (
+                        <tr key={a.key} className="border-t first:border-t-0">
+                          <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">{a.label}</td>
+                          {radar.series.map((sr, k) => (
+                            <td key={sr.id} className="py-1.5 px-2 text-right font-semibold" style={{ color: RADAR_COLORS[k] }}>
+                              {radarValueText(i, sr.raw[i])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
 
