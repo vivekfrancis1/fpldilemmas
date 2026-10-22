@@ -9,7 +9,7 @@ import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -20,6 +20,7 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "predicted-lineup", label: "Predicted Lineups", description: "Most likely XI for a club, from expected minutes", headline: "Predicted Lineup" },
   { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with captain, bench and chip", headline: "Team Reveal" },
   { id: "cover", label: "Cover Generator", description: "A bold cover image with your headline and up to 3 featured players", headline: "Gameweek Preview" },
+  { id: "player-news", label: "Player News Quote", description: "A player's official FPL news, or your own quote, as a shareable card", headline: "Player News" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -136,6 +137,8 @@ export function usesProjections(spec: GraphicSpec): boolean {
 export function footerNote(spec: GraphicSpec, gwLabel: string | null): string {
   // A cover is just a headline and the watermark: no data note
   if (spec.template === "cover") return "";
+  // Player News Quote: say whose words these are
+  if (spec.template === "player-news") return spec.quote.trim() ? "Quote entered by the creator" : "Source: official FPL player news";
   const parts = [gwLabel, usesProjections(spec) ? "Projections are estimates, not guarantees" : null].filter((p): p is string => !!p);
   return parts.length ? parts.join(" · ") : "Data from the official FPL API";
 }
@@ -223,6 +226,9 @@ export interface GraphicSpec {
   /** Cover Generator: a line under the headline and a small tag (e.g. "GW9" or "Deadline tonight"). */
   subtitle: string;
   tag: string;
+  /** Player News Quote: a typed quote (empty = use the official FPL news) and who it is attributed to. */
+  quote: string;
+  source: string;
 }
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
@@ -233,6 +239,8 @@ export const BENCH_PLAYERS = 4;
 export const MAX_MANAGER_NAME = 40;
 export const MAX_SUBTITLE = 80;
 export const MAX_TAG = 24;
+export const MAX_QUOTE = 280;
+export const MAX_SOURCE = 60;
 
 export const DEFAULT_SPEC: GraphicSpec = {
   template: "player-card",
@@ -256,9 +264,11 @@ export const DEFAULT_SPEC: GraphicSpec = {
   manager: "",
   subtitle: "",
   tag: "",
+  quote: "",
+  source: "",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -331,6 +341,8 @@ export function decodeSpec(search: string): GraphicSpec {
     manager: (q.get("mgr") ?? "").slice(0, MAX_MANAGER_NAME),
     subtitle: (q.get("sub") ?? "").slice(0, MAX_SUBTITLE),
     tag: (q.get("tag") ?? "").slice(0, MAX_TAG),
+    quote: (q.get("q") ?? "").slice(0, MAX_QUOTE),
+    source: (q.get("src") ?? "").slice(0, MAX_SOURCE),
   };
 }
 
@@ -362,6 +374,8 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.manager) add("mgr", spec.manager.slice(0, MAX_MANAGER_NAME));
   if (spec.subtitle) add("sub", spec.subtitle.slice(0, MAX_SUBTITLE));
   if (spec.tag) add("tag", spec.tag.slice(0, MAX_TAG));
+  if (spec.quote) add("q", spec.quote.slice(0, MAX_QUOTE));
+  if (spec.source) add("src", spec.source.slice(0, MAX_SOURCE));
   return parts.join("&");
 }
 
@@ -1011,4 +1025,89 @@ export function coverTitleFont(text: string, size: SizeId): number {
   const chars = Math.max(1, text.trim().length);
   const factor = chars <= 8 ? 1 : Math.max(0.4, Math.pow(8 / chars, 0.65));
   return Math.round(COVER_TITLE_BASE[size] * factor);
+}
+
+
+// ---------- Player News Quote ----------
+
+export interface NewsQuoteContent {
+  player: { id: number; name: string; fullName: string; teamShort: string; teamName: string; position: GraphicPosition };
+  /** "official" = FPL's own news text; "custom" = typed by the creator; "none" = nothing to show yet. */
+  kind: "official" | "custom" | "none";
+  quote: string;
+  /** Attribution line: for official news "Official FPL news · 21 Oct 2026"; for a typed quote only what the creator typed. */
+  source: string;
+  statusLabel: string;
+  tone: "ok" | "warn" | "bad";
+  /** Chance of playing next round (0-99) when FPL gives one below 100, otherwise null. */
+  chance: number | null;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-10-21T20:30:09Z" -> "21 Oct 2026" (UTC), or null when it is not a date. */
+export function formatNewsDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+const STATUS_LABEL: Record<string, { label: string; tone: NewsQuoteContent["tone"] }> = {
+  a: { label: "Available", tone: "ok" },
+  d: { label: "Doubtful", tone: "warn" },
+  i: { label: "Injured", tone: "bad" },
+  s: { label: "Suspended", tone: "bad" },
+  u: { label: "Unavailable", tone: "bad" },
+  n: { label: "Not in squad", tone: "bad" },
+};
+
+/**
+ * One player's news as a quote card. By default the words are FPL's own news text for that player; a quote typed
+ * by the creator replaces it and is attributed only to the source the creator typed (never to FPL). Null when no
+ * player is chosen.
+ */
+export function buildNewsQuote(input: {
+  spec: GraphicSpec;
+  elements: GraphicElement[];
+  teamShortById: Map<number, string>;
+  teamNameById: Map<number, string>;
+}): NewsQuoteContent | null {
+  const { spec, elements, teamShortById, teamNameById } = input;
+  const e = elements.find((x) => x.id === spec.players[0]);
+  if (!e) return null;
+  const teamShort = teamShortById.get(e.team) ?? "";
+  const first = typeof e.first_name === "string" ? e.first_name : "";
+  const second = typeof e.second_name === "string" ? e.second_name : "";
+  const official = typeof e.news === "string" ? e.news.trim() : "";
+  const typed = spec.quote.trim();
+  const status = STATUS_LABEL[e.status ?? "a"] ?? STATUS_LABEL.a;
+  const chanceRaw = toNumber(e.chance_of_playing_next_round);
+  const added = formatNewsDate(typeof e.news_added === "string" ? e.news_added : null);
+  const kind: NewsQuoteContent["kind"] = typed ? "custom" : official ? "official" : "none";
+  return {
+    player: {
+      id: e.id,
+      name: e.web_name,
+      fullName: `${first} ${second}`.trim() || e.web_name,
+      teamShort,
+      teamName: teamNameById.get(e.team) ?? teamShort,
+      position: POSITION_BY_TYPE[e.element_type] ?? "MID",
+    },
+    kind,
+    quote: kind === "custom" ? typed : kind === "official" ? official : "",
+    source: kind === "custom" ? spec.source.trim() : kind === "official" ? `Official FPL news${added ? ` · ${added}` : ""}` : "",
+    statusLabel: status.label,
+    tone: status.tone,
+    chance: chanceRaw !== null && chanceRaw < 100 ? chanceRaw : null,
+  };
+}
+
+const QUOTE_FONT_BASE: Record<SizeId, number> = { square: 64, portrait: 70, landscape: 46 };
+
+/** Quote font size in image pixels: full size up to 60 characters, then shrinking (never below 55%). */
+export function quoteFont(text: string, size: SizeId): number {
+  const chars = Math.max(1, text.trim().length);
+  const factor = chars <= 60 ? 1 : Math.max(0.55, Math.pow(60 / chars, 0.6));
+  return Math.round(QUOTE_FONT_BASE[size] * factor);
 }

@@ -13,6 +13,9 @@ import {
   buildPredictedLineup,
   buildTeamReveal,
   buildCover,
+  buildNewsQuote,
+  formatNewsDate,
+  quoteFont,
   coverTitleFont,
   canAddToSquad,
   squadCounts,
@@ -773,5 +776,107 @@ describe("cover generator", () => {
     }
     expect(coverTitleFont("GW9 Preview", "landscape")).toBeLessThan(coverTitleFont("GW9 Preview", "square"));
     expect(coverTitleFont("   ", "square")).toBe(coverTitleFont("x", "square"));
+  });
+});
+
+describe("player news quote", () => {
+  const base = { ...DEFAULT_SPEC, template: "player-news" as const };
+  const teamShortById = new Map([[1, "ARS"]]);
+  const teamNameById = new Map([[1, "Arsenal"]]);
+  const news = (over: Partial<GraphicElement> = {}) =>
+    el({ id: 7, web_name: "Saka", first_name: "Bukayo", second_name: "Saka", team: 1, element_type: 3, status: "d", news: "Thigh injury - 50% chance of playing", news_added: "2026-10-21T20:30:09.540957Z", chance_of_playing_next_round: 50, ...over });
+  const run = (specOver: Record<string, unknown> = {}, elOver: Partial<GraphicElement> = {}) =>
+    buildNewsQuote({ spec: { ...base, players: [7], ...specOver } as any, elements: [news(elOver)], teamShortById, teamNameById });
+
+  it("is a template with a quote and a source in the link; defaults are left out", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toContain("player-news");
+    expect(encodeSpec(base)).toBe("t=player-news");
+    expect(DEFAULT_SPEC).toMatchObject({ quote: "", source: "" });
+    const spec = { ...base, players: [7], quote: "He trained fully today", source: "Arteta press conference" };
+    expect(decodeSpec(encodeSpec(spec))).toMatchObject({ template: "player-news", players: [7], quote: "He trained fully today", source: "Arteta press conference" });
+  });
+
+  it("keeps one player, a quote of at most 280 characters and a source of at most 60", () => {
+    expect(decodeSpec("t=player-news&p=1,2,3").players).toEqual([1]);
+    expect(decodeSpec(`t=player-news&q=${"q".repeat(500)}`).quote.length).toBe(280);
+    expect(decodeSpec(`t=player-news&src=${"s".repeat(500)}`).source.length).toBe(60);
+  });
+
+  it("has a default headline, no projections, and a footer that says where the words come from", () => {
+    expect(resolveHeadline(base)).toBe("Player News");
+    expect(usesProjections(base)).toBe(false);
+    expect(footerNote(base, null)).toBe("Source: official FPL player news");
+    expect(footerNote({ ...base, quote: "Back next week" }, null)).toBe("Quote entered by the creator");
+    expect(footerNote({ ...base, quote: "   " }, null)).toBe("Source: official FPL player news");
+  });
+
+  it("uses the official FPL news by default, with its date and chance of playing", () => {
+    const n = run();
+    expect(n.kind).toBe("official");
+    expect(n.quote).toBe("Thigh injury - 50% chance of playing");
+    expect(n.source).toBe("Official FPL news · 21 Oct 2026");
+    expect(n.statusLabel).toBe("Doubtful");
+    expect(n.tone).toBe("warn");
+    expect(n.chance).toBe(50);
+    expect(n.player).toEqual({ id: 7, name: "Saka", fullName: "Bukayo Saka", teamShort: "ARS", teamName: "Arsenal", position: "MID" });
+  });
+
+  it("a typed quote replaces the news and is attributed only to what the creator typed", () => {
+    const n = run({ quote: "  Bukayo is back in training  ", source: "Arteta, pre-match press conference" });
+    expect(n.kind).toBe("custom");
+    expect(n.quote).toBe("Bukayo is back in training");
+    expect(n.source).toBe("Arteta, pre-match press conference");
+    expect(run({ quote: "Back soon" }).source).toBe("");
+  });
+
+  it("says plainly when there is no news and no typed quote", () => {
+    const n = run({}, { news: "", news_added: null, status: "a", chance_of_playing_next_round: null });
+    expect(n.kind).toBe("none");
+    expect(n.quote).toBe("");
+    expect(n.statusLabel).toBe("Available");
+    expect(n.tone).toBe("ok");
+    expect(n.chance).toBeNull();
+    expect(run({ quote: "Fit and firing" }, { news: "", news_added: null, status: "a" }).kind).toBe("custom");
+  });
+
+  it("maps FPL status to a label and a tone", () => {
+    const status = (st: string) => run({}, { status: st });
+    expect([status("a").statusLabel, status("a").tone]).toEqual(["Available", "ok"]);
+    expect([status("i").statusLabel, status("i").tone]).toEqual(["Injured", "bad"]);
+    expect([status("s").statusLabel, status("s").tone]).toEqual(["Suspended", "bad"]);
+    expect([status("u").statusLabel, status("u").tone]).toEqual(["Unavailable", "bad"]);
+    expect([status("n").statusLabel, status("n").tone]).toEqual(["Not in squad", "bad"]);
+  });
+
+  it("chance of playing only shows a real number below 100", () => {
+    expect(run({}, { chance_of_playing_next_round: 100 }).chance).toBeNull();
+    expect(run({}, { chance_of_playing_next_round: 0 }).chance).toBe(0);
+    expect(run({}, { chance_of_playing_next_round: null }).chance).toBeNull();
+  });
+
+  it("no player gives no card", () => {
+    expect(buildNewsQuote({ spec: base, elements: [news()], teamShortById, teamNameById })).toBeNull();
+    expect(buildNewsQuote({ spec: { ...base, players: [999] }, elements: [news()], teamShortById, teamNameById })).toBeNull();
+  });
+
+  it("formats the news date as day, month and year (UTC), or nothing if it is not a date", () => {
+    expect(formatNewsDate("2026-10-21T20:30:09.540957Z")).toBe("21 Oct 2026");
+    expect(formatNewsDate("2026-01-05T00:10:00Z")).toBe("5 Jan 2026");
+    expect(formatNewsDate("nonsense")).toBeNull();
+    expect(formatNewsDate(null)).toBeNull();
+  });
+
+  it("quote font shrinks with length, within bounds, and is smaller on landscape", () => {
+    for (const size of ["square", "portrait", "landscape"] as const) {
+      let prev = Infinity;
+      for (let n = 1; n <= 280; n += 3) {
+        const f = quoteFont("x".repeat(n), size);
+        expect(f).toBeLessThanOrEqual(prev);
+        prev = f;
+      }
+      expect(quoteFont("Out for the season", size)).toBeGreaterThan(quoteFont("x".repeat(280), size));
+      expect(quoteFont("x".repeat(280), size)).toBeGreaterThanOrEqual(24);
+    }
+    expect(quoteFont("Back next week", "landscape")).toBeLessThan(quoteFont("Back next week", "square"));
   });
 });
