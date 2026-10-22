@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { isNetworkLevelError, queryRetryDelay, shouldRetryQuery } from "./query-retry";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -90,12 +91,7 @@ export const getQueryFn: <T>(options: {
     }
   };
 
-// True for a raw network-level failure (fetch() itself throwing — dropped connection, DNS
-// hiccup, or a brief window where the server is mid-restart during a deploy) as opposed to an
-// HTTP error response (404, 500, etc.), which getQueryFn/apiRequest format as "<status>: <msg>".
-export function isNetworkLevelError(error: unknown): boolean {
-  return error instanceof Error && /failed to fetch|networkerror|load failed/i.test(error.message);
-}
+export { isNetworkLevelError };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -105,13 +101,9 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes - reduce from Infinity for fresher data
       gcTime: 10 * 60 * 1000, // 10 minutes garbage collection time
-      // Only retry genuine network-level failures (a real HTTP error response like "404:
-      // Manager not found" retrying pointlessly would just delay showing the correct message).
-      // Up to 2 retries gives a transient blip — e.g. a request that lands during the few-second
-      // window a deploy briefly restarts the server — a real chance to quietly succeed instead
-      // of surfacing an error at all.
-      retry: (failureCount, error) => isNetworkLevelError(error) && failureCount < 2,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+      // See query-retry.ts: network blips twice; the server's "still warming up" 503 for about a minute.
+      retry: shouldRetryQuery,
+      retryDelay: queryRetryDelay,
     },
     mutations: {
       retry: false,

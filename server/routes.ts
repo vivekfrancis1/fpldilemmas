@@ -1,3 +1,4 @@
+import { TOTAL_POINTS_REQUIRED_JOBS, requireWarmCaches } from "./readiness";
 import { shrinkCombinedByMinutes, shrinkTotalsByTeam } from "./share-shrinkage";
 import { cleanSheetMinutesFactor } from "./clean-sheet-minutes";
 import { copilotDataChange } from "./copilot-xmins-sync-utils";
@@ -18867,7 +18868,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // CACHED PLAYER TOTAL POINTS - PUBLIC ENDPOINT - serves pre-computed aggregated data
-  app.get("/api/cached/player-total-points", async (req, res) => {
+  // 503 "initializing" (client retries) until the startup warm-up jobs have run, instead of serving partial numbers.
+  app.get("/api/cached/player-total-points", requireWarmCaches(() => globalOrchestrator, TOTAL_POINTS_REQUIRED_JOBS, "cached-player-total-points"), async (req, res) => {
     // Add cache-busting headers to prevent 304 responses
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
