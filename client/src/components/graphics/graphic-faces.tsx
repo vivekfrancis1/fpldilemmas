@@ -8,7 +8,9 @@ import {
   watermarkText,
   type ComparisonContent,
   type CoverContent,
+  type NewsQuoteContent,
   coverTitleFont,
+  quoteFont,
   type DifferentialRow,
   type FixtureGridContent,
   type GraphicSpec,
@@ -37,7 +39,8 @@ export type GraphicData =
   | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
   | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
   | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
-  | { kind: "cover"; cover: CoverContent };
+  | { kind: "cover"; cover: CoverContent }
+  | { kind: "player-news"; news: NewsQuoteContent };
 
 interface Metrics {
   pad: number;
@@ -711,6 +714,62 @@ function CoverFace({ spec, theme, cover }: { spec: GraphicSpec; theme: GraphicTh
   );
 }
 
+// ---------- Player News Quote ----------
+
+function NewsFace({ spec, theme, news }: { spec: GraphicSpec; theme: GraphicTheme; news: NewsQuoteContent }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const font = quoteFont(news.quote, spec.size);
+  const toneBg = news.tone === "ok" ? theme.good : news.tone === "warn" ? "#fbbf24" : theme.bad;
+  const pill = (
+    <span style={{ background: toneBg, color: "#0b1020", borderRadius: 999, padding: land ? "6px 18px" : "8px 26px", fontSize: land ? 20 : 30, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+      {news.statusLabel}{news.chance !== null ? ` · ${news.chance}%` : ""}
+    </span>
+  );
+  const player = (
+    <div style={{ display: "flex", flexDirection: land ? "column" : "row", alignItems: "center", gap: land ? 8 : 24, textAlign: land ? "center" : "left", minWidth: 0 }}>
+      <Jersey team={news.player.teamShort} position={news.player.position} px={land ? 190 : tall ? 170 : 130} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: land ? 34 : tall ? 54 : 46, fontWeight: 900, lineHeight: 1.05, textTransform: "uppercase", overflowWrap: "anywhere" }}>{news.player.fullName}</div>
+        <div style={{ fontSize: land ? 20 : 28, fontWeight: 700, color: theme.muted, marginTop: 6 }}>{news.player.teamName} · {news.player.position}</div>
+      </div>
+    </div>
+  );
+  const quote = (
+    <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <div aria-hidden="true" style={{ position: "absolute", left: -10, top: land ? -40 : -70, fontSize: land ? 260 : 380, lineHeight: 1, fontWeight: 900, color: theme.accent, opacity: 0.28, fontFamily: "Georgia, 'Times New Roman', serif" }}>“</div>
+      <div style={{ position: "relative", fontSize: font, fontWeight: 800, lineHeight: 1.25, overflowWrap: "anywhere" }}>
+        {news.kind === "custom" ? `“${news.quote}”` : news.kind === "official" ? news.quote : "No news to show for this player yet."}
+      </div>
+      {news.source && (
+        <div style={{ position: "relative", marginTop: land ? 14 : 26, fontSize: land ? 20 : tall ? 32 : 28, fontWeight: 700, color: theme.muted }}>— {news.source}</div>
+      )}
+    </div>
+  );
+
+  return (
+    <Frame spec={spec} theme={theme} subtitle="" gwLabel={null} bare>
+      <div style={{ position: "relative", zIndex: 1, flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: land ? 10 : 22, paddingBottom: land ? 8 : 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexShrink: 0 }}>
+          <div style={{ fontSize: land ? 22 : 32, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: theme.accent, ...ellipsis }}>{resolveHeadlineText(spec)}</div>
+          {pill}
+        </div>
+        {land ? (
+          <div style={{ display: "flex", gap: 28, flex: 1, minHeight: 0, alignItems: "center" }}>
+            <div style={{ flex: "0 0 30%", minWidth: 0 }}>{player}</div>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>{quote}</div>
+          </div>
+        ) : (
+          <>
+            {quote}
+            <div style={{ ...panel(theme), padding: "18px 26px", flexShrink: 0 }}>{player}</div>
+          </>
+        )}
+      </div>
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -722,6 +781,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "predicted-lineup": return <LineupFace spec={spec} theme={theme} lineup={data.lineup} gwLabel={data.gwLabel} />;
     case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} />;
     case "cover": return <CoverFace spec={spec} theme={theme} cover={data.cover} />;
+    case "player-news": return <NewsFace spec={spec} theme={theme} news={data.news} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }

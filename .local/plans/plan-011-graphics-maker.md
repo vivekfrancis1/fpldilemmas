@@ -39,7 +39,7 @@ every template and size includes the watermark text and a reserved footer strip;
 
 ## Honest limits
 - A pasted link opens the page and re-draws the graphic, but X/WhatsApp link previews will show the generic site card, not the graphic (that needs server-side image rendering, a possible later step). The downloaded PNG is what people post.
-- Not in v1 (Predicted Lineups, Team Reveal and Cover Generator were added later): Player News Quote (need new data or user-typed content), accounts, saved gallery.
+- Not in v1 (Predicted Lineups, Team Reveal, Cover Generator and Player News Quote were added later): none of the FPL Edits templates are left out now (need new data or user-typed content), accounts, saved gallery.
 
 ## Order of work
 1. Tests + `shared/graphics.ts` (spec/URL + Player Card + Fixtures Comparison). 2. Page shell, preview scaling, share/copy link. 3. Player Comparison, Differentials, Price Change. 4. Check in Chrome (desktop + phone, light + dark, all three sizes), `npx tsc --noEmit -p .`, `npx vitest run`. Commit locally in logical chunks; no push.
@@ -63,4 +63,13 @@ What it is: a bold cover / thumbnail image for videos, podcasts and posts: a big
 Layout: square/portrait stack the text over a row of players; landscape puts the text left and the players right; with no players the text block is centred.
 Limits: headline 60 characters, subtitle 80, tag 24; no custom images or fonts, and no club badges beyond the shirt images the site already has.
 Verified in the browser (live data through a temporary Vite proxy, since removed): square, portrait, landscape, indigo / midnight / light / club themes, 0 / 1 / 2 / 3 featured players, a very long headline, phone width, and the exported PNG (1080x1080, watermark in the footer pixels).
+
+## Update 2026-10-23 — Player News Quote (9th template, the last one from the FPL Edits list)
+Built: `buildNewsQuote`, `formatNewsDate`, `quoteFont` in shared/graphics.ts (11 new tests, 79 in tests/graphics.test.ts), `quote` / `source` in the spec and link (`q`, `src`; the player reuses `p`, max 1), `NewsFace` in graphic-faces.tsx, page controls.
+What it is: one player's news as a quote card: a PLAYER NEWS label, a status pill (Available / Doubtful / Injured / Suspended / Unavailable / Not in squad, with the chance of playing when FPL gives one below 100), a big quote mark, the words, an attribution line, and the player (shirt, full name, club, position) in a panel. Two sources for the words:
+- Official FPL news (default): the player's `news` text from FPL, attributed "Official FPL news · <date it was added>"; the footer says "Source: official FPL player news".
+- A quote typed by the creator (replaces the news; shown in curly quotes): attributed only to whatever the creator types as the source (never to FPL), and the footer says "Quote entered by the creator". The page reminds the creator to only use words they can stand behind.
+No news and no typed quote: nothing is drawn, the page explains why and Share is hidden. First visit starts with the most-owned player who has FPL news.
+Limits: quote 280 characters, source 60; the quote font shrinks with length (never below 55%); FPL news is only what FPL publishes (no press-conference text is ever fetched or invented); no player photos beyond the shirt image.
+Verified in the browser (live data through a temporary Vite proxy, since removed): square, portrait, landscape, indigo / midnight / light themes, official news (Saka, Szoboszlai), a typed quote with attribution, a player with no news (message, no Share), the first-visit default, phone width, and the exported PNG (1080x1350, watermark in the footer pixels).
 

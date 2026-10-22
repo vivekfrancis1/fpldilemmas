@@ -15,6 +15,9 @@ import {
   THEME_LABEL,
   buildComparison,
   buildCover,
+  buildNewsQuote,
+  MAX_QUOTE,
+  MAX_SOURCE,
   MAX_SUBTITLE,
   MAX_TAG,
   buildDifferentials,
@@ -50,6 +53,7 @@ import { projectionWindow } from "@shared/compare-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShareImageButton } from "@/components/share-image-button";
 import { GraphicCanvas, type GraphicData } from "@/components/graphics/graphic-faces";
@@ -471,6 +475,12 @@ export default function GraphicsPage() {
         .map((x) => x.id);
       if (ranked.length === need) update({ players: ranked });
     }
+    if (spec.template === "player-news" && spec.players.length === 0) {
+      const top = elements
+        .filter((e) => typeof e.news === "string" && e.news.trim() !== "")
+        .sort((a, b) => (parseFloat(String(b.selected_by_percent)) || 0) - (parseFloat(String(a.selected_by_percent)) || 0))[0];
+      if (top) update({ players: [top.id] });
+    }
     if (spec.template === "predicted-lineup" && spec.teams.length === 0 && fixtures) {
       const next = (fixtures as any[]).find((f) => f.event === lineupGw && !f.finished) ?? (fixtures as any[]).find((f) => f.event !== null && !f.finished);
       if (next) update({ teams: [next.team_h] });
@@ -499,6 +509,12 @@ export default function GraphicsPage() {
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
   }, [spec.template, spec.teams, spec.captain, elements, selectedElements, teamShortById]);
   const theme = resolveTheme(spec.theme, clubColor);
+
+  const officialNews = useMemo(() => {
+    if (spec.template !== "player-news" || !selectedElements[0]) return null;
+    const n = selectedElements[0].news;
+    return typeof n === "string" ? n.trim() : "";
+  }, [spec.template, selectedElements]);
 
   const priceContent = useMemo(
     () => buildPriceChanges({ changes: priceChanges ?? [], date: spec.date || null, limit: PRICE_LIST_LIMIT[spec.size] }),
@@ -540,6 +556,12 @@ export default function GraphicsPage() {
         if (!fixtures || !projections) return { data: null, problem: null };
         const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
         return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+      }
+      case "player-news": {
+        const news = buildNewsQuote({ spec, elements, teamShortById, teamNameById });
+        if (!news) return { data: null, problem: "Search and pick a player to quote their news." };
+        if (news.kind === "none") return { data: null, problem: `There is no official FPL news for ${news.player.name} right now. Type a quote below to use your own words.` };
+        return { data: { kind: "player-news", news }, problem: null };
       }
       case "cover":
         return { data: { kind: "cover", cover: buildCover({ spec, elements, teamShortById }) }, problem: null };
@@ -599,6 +621,7 @@ export default function GraphicsPage() {
     spec.template === "price-change" ? [priceContent.date ?? ""]
     : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
     : spec.template === "team-reveal" ? [spec.manager || "squad", `gw${lineupGw}`]
+    : spec.template === "player-news" ? selectedElements.map((e) => e.web_name)
     : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
 
@@ -670,6 +693,28 @@ export default function GraphicsPage() {
                       })}
                     </div>
                   </Field>
+                </>
+              )}
+
+              {spec.template === "player-news" && (
+                <>
+                  <Field label="Player">
+                    <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={1} onChange={(players) => update({ players })} />
+                  </Field>
+                  {officialNews !== null && (
+                    <p className="text-xs text-gray-600" data-testid="official-news">
+                      Official FPL news: {officialNews ? `“${officialNews}”` : "none right now"}
+                    </p>
+                  )}
+                  <Field label="Your own quote (optional, replaces the FPL news)">
+                    <Textarea value={spec.quote} maxLength={MAX_QUOTE} rows={3} onChange={(e) => update({ quote: e.target.value })} placeholder="Leave empty to use the official FPL news" data-testid="input-quote" />
+                  </Field>
+                  {spec.quote.trim() && (
+                    <Field label="Who said it (optional)">
+                      <Input value={spec.source} maxLength={MAX_SOURCE} onChange={(e) => update({ source: e.target.value })} placeholder="e.g. Arteta, pre-match press conference" data-testid="input-source" />
+                    </Field>
+                  )}
+                  {spec.quote.trim() && <p className="text-xs text-gray-500">The graphic says this quote was entered by the creator, so only use words you can stand behind.</p>}
                 </>
               )}
 
