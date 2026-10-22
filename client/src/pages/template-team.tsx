@@ -3,31 +3,28 @@ import { Link } from "wouter";
 import { Crown } from "lucide-react";
 import type { TemplateTeam, TemplatePlayer } from "@shared/template-team";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import JerseyIcon from "@/components/jersey-icon";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ShareImageButton } from "@/components/share-image-button";
 import { templateCard, shareFileName } from "@shared/share-cards";
 
 type TemplateResponse = TemplateTeam & { gameweek: number | null; fetchedAt: string | null };
 
-const POSITION_NAME: Record<string, string> = { GKP: "Goalkeeper", DEF: "Defender", MID: "Midfielder", FWD: "Forward" };
-const ROWS: Array<TemplatePlayer["position"]> = ["GKP", "DEF", "MID", "FWD"];
+const ELEMENT_TYPE: Record<TemplatePlayer["position"], number> = { GKP: 1, DEF: 2, MID: 3, FWD: 4 };
 
-function PlayerTile({ p, captainId }: { p: TemplatePlayer; captainId?: number }) {
-  return (
-    <div
-      className="flex w-[72px] flex-col items-center rounded-lg bg-white/90 px-1 py-1.5 text-center shadow-sm sm:w-24"
-      data-testid={`tile-player-${p.playerId}`}
-    >
-      <JerseyIcon team={p.teamName} position={POSITION_NAME[p.position]} className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
-      <span className="mt-0.5 flex w-full items-center justify-center gap-0.5 text-xs font-semibold text-gray-900">
-        <span className="truncate" title={p.name}>{p.name}</span>
-        {captainId === p.playerId && (
-          <span className="shrink-0 rounded bg-gray-900 px-1 text-[9px] leading-4 text-white" aria-label="Captain">C</span>
-        )}
-      </span>
-      <span className="text-[11px] font-medium text-gray-600">{p.ownershipPercent}%</span>
-    </div>
-  );
+// Same shape the other pitch pages feed PitchView; the badge under each name is the squad-ownership share.
+function toPitchPlayer(p: TemplatePlayer, position: number, captainId?: number): PitchPlayer {
+  return {
+    element: p.playerId,
+    element_type: ELEMENT_TYPE[p.position],
+    position,
+    is_captain: captainId === p.playerId,
+    is_vice_captain: false,
+    web_name: p.name,
+    team_short_name: p.teamShort,
+    team_code: p.teamCode,
+    price: p.price,
+    points_display: `${p.ownershipPercent}%`,
+  };
 }
 
 export default function TemplateTeamPage() {
@@ -37,6 +34,8 @@ export default function TemplateTeamPage() {
   });
 
   const hasTeam = !!data && data.startingXI.length === 11;
+  const pitchPlayers = hasTeam ? data.startingXI.map((p, i) => toPitchPlayer(p, i + 1, data.captain?.playerId)) : [];
+  const benchPlayers = hasTeam ? data.bench.map((p, i) => toPitchPlayer(p, i + 12)) : [];
 
   return (
     <div className="min-h-screen">
@@ -78,24 +77,8 @@ export default function TemplateTeamPage() {
                   />
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-3 bg-gradient-to-b from-emerald-600 to-emerald-700 px-2 py-4 sm:py-6" data-testid="pitch">
-                  {ROWS.map((pos) => (
-                    <div key={pos} className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                      {data.startingXI.filter((p) => p.position === pos).map((p) => (
-                        <PlayerTile key={p.playerId} p={p} captainId={data.captain?.playerId} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t bg-muted/40 px-2 py-3">
-                  <p className="mb-2 text-center text-xs font-medium text-muted-foreground">Bench</p>
-                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                    {data.bench.map((p) => (
-                      <PlayerTile key={p.playerId} p={p} />
-                    ))}
-                  </div>
-                </div>
+              <CardContent className="p-2 sm:p-4" data-testid="pitch">
+                <PitchView players={pitchPlayers} benchPlayers={benchPlayers} />
               </CardContent>
             </Card>
 

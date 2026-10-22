@@ -26,6 +26,8 @@ export interface TemplateTeamInfo {
   id: number;
   name: string;
   short_name: string;
+  /** FPL club code, used for the shirt image. */
+  code?: number;
 }
 
 export interface TemplatePlayer {
@@ -35,6 +37,8 @@ export interface TemplatePlayer {
   teamId: number;
   teamName: string;
   teamShort: string;
+  /** FPL club code (shirt image); 0 when unknown. */
+  teamCode: number;
   /** Managers (of those counted) holding this player in their 15. */
   ownedBy: number;
   /** ownedBy / managersCounted, rounded to a whole percent. */
@@ -99,6 +103,7 @@ export function buildTemplateTeam(input: {
       teamId: e.team,
       teamName: team?.name ?? "",
       teamShort: team?.short_name ?? "",
+      teamCode: team?.code ?? 0,
       ownedBy,
       ownershipPercent: Math.round((ownedBy / counted) * 100),
       price: e.now_cost / 10,

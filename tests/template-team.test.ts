@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { buildTemplateTeam } from "../shared/template-team";
 
 // ---- synthetic world: 3 GKP, 6 DEF, 6 MID, 4 FWD across clubs ----
-const teams = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `Club ${i + 1}`, short_name: `C${i + 1}` }));
+const teams = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `Club ${i + 1}`, short_name: `C${i + 1}`, code: (i + 1) * 10 + 3 }));
 type El = { id: number; web_name: string; team: number; element_type: number; now_cost: number };
 const mk = (id: number, type: number, team: number, cost = 50): El => ({ id, web_name: `P${id}`, team, element_type: type, now_cost: cost });
 // clubs are spread so the 3-per-club cap does not bind here (it has its own test below)
@@ -26,6 +26,11 @@ const base = [
 const run = (over: any = {}) => buildTemplateTeam({ managers: base, elements, teams, ...over });
 
 describe("buildTemplateTeam", () => {
+  it("carries each player's club shirt code so the pitch can draw the right shirt", () => {
+    const out = run();
+    for (const p of [...out.startingXI, ...out.bench]) expect(p.teamCode).toBe(p.teamId * 10 + 3);
+  });
+
   it("counts ownership across all 15 picks and expresses it as a share of the squads counted", () => {
     const out = run();
     expect(out.managersCounted).toBe(3);
