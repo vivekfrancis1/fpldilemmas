@@ -13,6 +13,11 @@ import {
   niceTicks,
   declutterLabels,
   quadrantPicks,
+  presetsForPositions,
+  presetBaseline,
+  stateForPreset,
+  stateForPosition,
+  PLOT_POSITIONS,
   decodePlotState,
   encodePlotState,
   DEFAULT_PLOT_STATE,
@@ -49,6 +54,11 @@ const el = (over: Partial<PlotElement> = {}): PlotElement => ({
   expected_assists_per_90: 0.07,
   expected_goal_involvements_per_90: 0.82,
   defensive_contribution_per_90: 3.9,
+  defensive_contribution: 27,
+  saves_per_90: 0,
+  clean_sheets_per_90: 0.14,
+  expected_goals_conceded_per_90: 0.9,
+  goals_conceded_per_90: 1.1,
   transfers_in_event: 1000,
   transfers_out_event: 400,
   cost_change_start: 5,
@@ -300,6 +310,14 @@ describe("declutterLabels", () => {
     const second = res.get(2);
     if (second) expect(overlap(rect(pt(2, 100.5, 100), second), rect(pt(1, 100, 100), res.get(1)!))).toBe(false);
   });
+  it("keeps labels out of blocked areas (corner captions)", () => {
+    // right-hand label for a point at (100,100) would span x 108..168; block that area
+    const res = declutterLabels([pt(1, 100, 100)], bounds, [{ x: 100, y: 90, w: 80, h: 20 }]);
+    expect(res.get(1)).toBe("left");
+    // block every side -> no label
+    const none = declutterLabels([pt(1, 100, 100)], bounds, [{ x: 0, y: 0, w: 400, h: 300 }]);
+    expect(none.get(1)).toBeNull();
+  });
   it("hides labels that have no free space", () => {
     const crowded = Array.from({ length: 40 }, (_, i) => pt(i + 1, 200, 150));
     const res = declutterLabels(crowded, bounds);
@@ -320,13 +338,14 @@ describe("URL state", () => {
   });
   it("invalid or unknown values fall back to defaults", () => {
     const d = decodePlotState("x=nope&y=&pos=ZZZ,DEF&top=-5&from=abc&xs=weird&mins=-1&maxp=x&team=a,3");
-    expect(d.x).toBe(DEFAULT_PLOT_STATE.x);
-    expect(d.y).toBe(DEFAULT_PLOT_STATE.y);
+    const base = presetBaseline(["DEF"]);
+    expect(d.x).toBe(base.x);
+    expect(d.y).toBe(base.y);
     expect(d.positions).toEqual(["DEF"]);
     expect(d.top).toBe(DEFAULT_PLOT_STATE.top);
     expect(d.from).toBe(DEFAULT_PLOT_STATE.from);
-    expect(d.xScale).toBe(DEFAULT_PLOT_STATE.xScale);
-    expect(d.minMinutes).toBe(DEFAULT_PLOT_STATE.minMinutes);
+    expect(d.xScale).toBe(base.xScale);
+    expect(d.minMinutes).toBe(base.minMinutes);
     expect(d.maxPrice).toBeNull();
     expect(d.teamIds).toEqual([3]);
   });
@@ -379,5 +398,96 @@ describe("quadrantPicks", () => {
     const noProj = quadrantPicks(players, "ownership", "xpts_total", 25, 35, 3);
     expect(noProj.tl).toEqual([]);
     expect(noProj.br).toEqual([]);
+  });
+});
+
+describe("new stats", () => {
+  const [p] = build([el({ saves_per_90: 3.2, clean_sheets_per_90: 0.4, expected_goals_conceded_per_90: 1.05, goals_conceded_per_90: 0.8, defensive_contribution: 41 })], []);
+  it("come straight from the FPL fields", () => {
+    expect(p.values.saves_90).toBe(3.2);
+    expect(p.values.cs_90).toBe(0.4);
+    expect(p.values.xgc_90).toBe(1.05);
+    expect(p.values.gc_90).toBe(0.8);
+    expect(p.values.dc).toBe(41);
+  });
+});
+
+describe("position presets", () => {
+  it("no or several positions show the general presets, differentials first", () => {
+    expect(presetsForPositions([])[0].id).toBe("differentials");
+    expect(presetsForPositions(["DEF", "MID"])[0].id).toBe("differentials");
+    expect(presetsForPositions([]).every((p) => p.positions.length === 0)).toBe(true);
+  });
+  it("one position shows only that position's presets, default first", () => {
+    for (const pos of PLOT_POSITIONS) {
+      const list = presetsForPositions([pos]);
+      expect(list.length).toBeGreaterThanOrEqual(3);
+      expect(list.every((p) => p.positions.length === 1 && p.positions[0] === pos)).toBe(true);
+    }
+  });
+  it("each position opens on a different default graph", () => {
+    const defaults = PLOT_POSITIONS.map((pos) => {
+      const b = presetBaseline([pos]);
+      return `${b.x}|${b.y}`;
+    });
+    expect(new Set(defaults).size).toBe(PLOT_POSITIONS.length);
+  });
+  it("preset ids are unique and every preset uses real stats", () => {
+    const ids = PLOT_PRESETS.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const p of PLOT_PRESETS) {
+      expect(getStat(p.x), p.id).toBeDefined();
+      expect(getStat(p.y), p.id).toBeDefined();
+    }
+  });
+  it("per-90 presets set a minutes floor so tiny samples do not dominate", () => {
+    for (const p of PLOT_PRESETS) {
+      const per90 = [p.x, p.y].some((k) => /_90$/.test(k));
+      if (per90) expect(p.minMinutes ?? 0, p.id).toBeGreaterThan(0);
+    }
+  });
+  it("stateForPreset applies axes, scales and minutes floor but keeps other filters", () => {
+    const base = { ...DEFAULT_PLOT_STATE, teamIds: [3], maxPrice: 7, top: 40 };
+    const preset = PLOT_PRESETS.find((p) => p.id === "def-attack")!;
+    const next = stateForPreset(base, preset);
+    expect([next.x, next.y, next.xScale, next.yScale, next.minMinutes]).toEqual([preset.x, preset.y, preset.xScale, preset.yScale, preset.minMinutes ?? 0]);
+    expect([next.teamIds, next.maxPrice, next.top]).toEqual([[3], 7, 40]);
+    expect(next.positions).toEqual(["DEF"]);
+  });
+  it("a general preset leaves the chosen positions alone", () => {
+    const next = stateForPreset({ ...DEFAULT_PLOT_STATE, positions: ["DEF", "MID"] }, PLOT_PRESETS.find((p) => p.id === "value")!);
+    expect(next.positions).toEqual(["DEF", "MID"]);
+  });
+  it("stateForPosition selects the position and opens its default graph; null returns to All", () => {
+    const def = stateForPosition({ ...DEFAULT_PLOT_STATE, top: 40 }, "DEF");
+    const b = presetBaseline(["DEF"]);
+    expect(def.positions).toEqual(["DEF"]);
+    expect([def.x, def.y]).toEqual([b.x, b.y]);
+    expect(def.top).toBe(40);
+    const all = stateForPosition(def, null);
+    expect(all.positions).toEqual([]);
+    expect([all.x, all.y]).toEqual([DEFAULT_PLOT_STATE.x, DEFAULT_PLOT_STATE.y]);
+  });
+});
+
+describe("URL state with position defaults", () => {
+  it("a single position with no axes in the link opens that position's default graph", () => {
+    const d = decodePlotState("pos=GKP");
+    const b = presetBaseline(["GKP"]);
+    expect([d.x, d.y, d.xScale, d.yScale, d.minMinutes]).toEqual([b.x, b.y, b.xScale, b.yScale, b.minMinutes]);
+  });
+  it("a position at its default graph encodes as just the position and round-trips", () => {
+    const s = stateForPosition(DEFAULT_PLOT_STATE, "MID");
+    expect(encodePlotState(s)).toBe("pos=MID");
+    expect(decodePlotState("pos=MID")).toEqual(s);
+  });
+  it("an off-default graph for a position keeps its axes in the link", () => {
+    const s = { ...stateForPosition(DEFAULT_PLOT_STATE, "FWD"), x: "price", y: "form" };
+    const decoded = decodePlotState(encodePlotState(s));
+    expect(decoded).toEqual(s);
+  });
+  it("going back to the general graph while a position is selected also round-trips", () => {
+    const s = { ...DEFAULT_PLOT_STATE, positions: ["DEF"] as any };
+    expect(decodePlotState(encodePlotState(s))).toEqual(s);
   });
 });

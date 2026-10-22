@@ -40,3 +40,12 @@ Past seasons (current season only for now), saving custom presets, animating cha
 - Featured-player callout on the image (price, jersey, name, next fixture H/A) with an arrow, like the references.
 - Two panels side by side on the image (two stat pairs in one picture); "Y vs X" subtitle line.
 - Not possible from our data: Opta-style stats in the references (shots from central area, box touches, left/right channel shots, set-piece xG). Our sources are the FPL API and our own projections only.
+
+## Update 2026-10-22 — default graphs per position (user request)
+Position selector (All / GKP / DEF / MID / FWD) on top; picking one opens that position's default graph, and the quick-view buttons switch to that position's list (first = default). Every stat stays selectable.
+- All: Differentials (default), Value, Form vs price, Luck check, Minutes security.
+- GKP: Value (default), Saves vs chances (saves/90 vs xGC/90), Clean sheets vs chances, Differentials.
+- DEF: Attack vs clean sheets (xGI/90 vs CS/90, default), Value, Defensive contributions, Differentials.
+- MID: Creators vs scorers (xA/90 vs xG/90, default), Value, Luck check, Differentials.
+- FWD: Finishing (xG vs goals minus xG, default), Value, Differentials, Minutes security.
+Per-90 and luck graphs apply a 180-minute floor. A link with `pos=DEF` and no axes opens DEF's default graph; axes are only written to the link when they differ from the position's default. New stats: saves/90, xGC/90, goals conceded/90, clean sheets/90, defensive contributions total. Tests: 55 in tests/player-plot.test.ts.

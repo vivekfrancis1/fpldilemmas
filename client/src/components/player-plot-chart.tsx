@@ -63,6 +63,8 @@ interface Props {
   yScale: ScaleKind;
   showMedian: boolean;
   quadrants?: { tl: string; tr: string; bl: string; br: string };
+  /** Colour the top-left corner green and bottom-right red (only when those really are the good / bad corners). */
+  tint?: boolean;
   theme: PlotTheme;
   highlightIds?: Set<number>;
   selectedId?: number | null;
@@ -75,6 +77,12 @@ function tickText(def: StatDef | undefined, v: number): string {
   if (def?.format === "percent") return `${n}%`;
   if (def?.format === "price") return `£${n}m`;
   return n;
+}
+
+function medianText(def: StatDef | undefined, v: number): string {
+  const places = def?.format === "dec2" ? 2 : 1;
+  const r = Math.round(v * 10 ** places) / 10 ** places;
+  return tickText(def, r);
 }
 
 function axisTitle(def: StatDef | undefined, key: string): string {
@@ -92,6 +100,7 @@ export default function PlayerPlotChart({
   yScale,
   showMedian,
   quadrants,
+  tint = true,
   theme,
   highlightIds,
   selectedId,
@@ -138,8 +147,17 @@ export default function PlayerPlotChart({
       priority: p.id === selectedId ? -2 : highlightIds?.has(p.id) ? -1 : i,
       r,
     }));
-    return declutterLabels(points, { width: pw, height: ph });
-  }, [model, xKey, yKey, fontSize, pw, ph, ml, mt, highlightIds, selectedId]);
+    // corner captions are text too: keep player labels off them (coordinates here are inside the plot area)
+    const cap = Math.round(fontSize * 0.85);
+    const capRect = (text: string, right: boolean, bottom: boolean) => {
+      const w = Math.ceil(text.length * cap * 0.78) + 12;
+      return { x: right ? pw - w : 0, y: bottom ? ph - cap - 12 : 0, w, h: cap + 12 };
+    };
+    const blocked = quadrants
+      ? [capRect(quadrants.tl, false, false), capRect(quadrants.tr, true, false), capRect(quadrants.bl, false, true), capRect(quadrants.br, true, true)]
+      : [];
+    return declutterLabels(points, { width: pw, height: ph }, blocked);
+  }, [model, xKey, yKey, fontSize, pw, ph, ml, mt, highlightIds, selectedId, quadrants]);
 
   if (!model) {
     return (
@@ -171,7 +189,7 @@ export default function PlayerPlotChart({
       style={{ display: "block", fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", touchAction: "manipulation" }}
     >
       {/* quadrant tints */}
-      {quadrants && mx !== null && my !== null && (
+      {quadrants && tint && mx !== null && my !== null && (
         <>
           <rect x={left} y={top} width={Math.max(0, mx - left)} height={Math.max(0, my - top)} fill={theme.good} />
           <rect x={mx} y={my} width={Math.max(0, right - mx)} height={Math.max(0, bottom - my)} fill={theme.bad} />
@@ -219,7 +237,7 @@ export default function PlayerPlotChart({
         <>
           <line x1={mx} x2={mx} y1={top} y2={bottom} stroke={theme.median} strokeWidth={1.5} strokeDasharray="6 5" />
           <text x={mx + 4} y={bottom - 4} fill={theme.median} fontSize={capSize} fontWeight={700}>
-            {`${fontSize >= 12 ? "MEDIAN" : "MED"} ${tickText(xDef, Math.round((medX as number) * 10) / 10)}`}
+            {`${fontSize >= 12 ? "MEDIAN" : "MED"} ${medianText(xDef, medX as number)}`}
           </text>
         </>
       )}
@@ -227,7 +245,7 @@ export default function PlayerPlotChart({
         <>
           <line x1={left} x2={right} y1={my} y2={my} stroke={theme.median} strokeWidth={1.5} strokeDasharray="6 5" />
           <text x={right - 4} y={my - 5} textAnchor="end" fill={theme.median} fontSize={capSize} fontWeight={700}>
-            {`${fontSize >= 12 ? "MEDIAN" : "MED"} ${tickText(yDef, Math.round((medY as number) * 10) / 10)}`}
+            {`${fontSize >= 12 ? "MEDIAN" : "MED"} ${medianText(yDef, medY as number)}`}
           </text>
         </>
       )}
@@ -235,10 +253,10 @@ export default function PlayerPlotChart({
       {/* corner captions */}
       {quadrants && (
         <g fontSize={capSize} fontWeight={800} letterSpacing={0.8}>
-          <text x={left + 8} y={top + capSize + 6} fill={theme.goodText}>{quadrants.tl.toUpperCase()}</text>
+          <text x={left + 8} y={top + capSize + 6} fill={tint ? theme.goodText : theme.muted}>{quadrants.tl.toUpperCase()}</text>
           <text x={right - 8} y={top + capSize + 6} textAnchor="end" fill={theme.muted}>{quadrants.tr.toUpperCase()}</text>
           <text x={left + 8} y={bottom - 8} fill={theme.muted}>{quadrants.bl.toUpperCase()}</text>
-          <text x={right - 8} y={bottom - 8} textAnchor="end" fill={theme.badText}>{quadrants.br.toUpperCase()}</text>
+          <text x={right - 8} y={bottom - 8} textAnchor="end" fill={tint ? theme.badText : theme.muted}>{quadrants.br.toUpperCase()}</text>
         </g>
       )}
 

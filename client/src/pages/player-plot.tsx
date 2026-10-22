@@ -7,18 +7,21 @@ import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { compareUrl } from "@shared/compare-utils";
 import {
   PLOT_POSITIONS,
-  PLOT_PRESETS,
   PLOT_STATS,
   STAT_GROUPS,
   buildPlotPlayers,
   decodePlotState,
   encodePlotState,
   filterPlayers,
+  findPreset,
   formatStatValue,
   getStat,
   median,
   plotTitle,
+  presetsForPositions,
   quadrantPicks,
+  stateForPosition,
+  stateForPreset,
   topByStat,
   type PlotElement,
   type PlotPlayer,
@@ -201,7 +204,9 @@ export default function PlayerPlotPage() {
   const selected = selectedId !== null ? allPlayers.find((p) => p.id === selectedId) ?? null : null;
   const xDef = getStat(state.x);
   const yDef = getStat(state.y);
-  const preset = PLOT_PRESETS.find((p) => p.x === state.x && p.y === state.y);
+  const preset = findPreset(state);
+  const presets = presetsForPositions(state.positions);
+  const goodCorners = preset?.goodTopLeft !== false;
   const usesHorizon = !!xDef?.usesHorizon || !!yDef?.usesHorizon;
   const title = plotTitle(state);
 
@@ -219,11 +224,18 @@ export default function PlayerPlotPage() {
   }, [defaultRange.from, fromGW, toGW]);
 
   const applyPreset = (id: string) => {
-    const p = PLOT_PRESETS.find((x) => x.id === id);
+    const p = presets.find((x) => x.id === id);
     if (!p) return;
     setSelectedId(null);
-    update({ x: p.x, y: p.y, xScale: p.xScale, yScale: p.yScale });
+    setState((s) => stateForPreset(s, p));
   };
+
+  // One position opens on its own default graph; All (or several positions, from the filters) uses the general ones
+  const selectPosition = (pos: PlotPosition | null) => {
+    setSelectedId(null);
+    setState((s) => stateForPosition(s, pos));
+  };
+  const activePosition: PlotPosition | "ALL" | null = state.positions.length === 0 ? "ALL" : state.positions.length === 1 ? state.positions[0] : null;
 
   const togglePosition = (pos: PlotPosition) =>
     update({ positions: state.positions.includes(pos) ? state.positions.filter((p) => p !== pos) : PLOT_POSITIONS.filter((p) => p === pos || state.positions.includes(p)) });
@@ -248,7 +260,7 @@ export default function PlayerPlotPage() {
   const renderShareCard = () => {
     const medX = median(shown.map((p) => p.values[state.x]));
     const medY = median(shown.map((p) => p.values[state.y]));
-    const picks = preset?.quadrants && medX !== null && medY !== null ? quadrantPicks(shown, state.x, state.y, medX, medY, 3) : null;
+    const picks = preset?.quadrants && goodCorners && medX !== null && medY !== null ? quadrantPicks(shown, state.x, state.y, medX, medY, 3) : null;
     const chips = [
       "2026/27 season",
       usesHorizon ? horizonLabel : null,
@@ -299,6 +311,7 @@ export default function PlayerPlotPage() {
             yScale={state.yScale}
             showMedian={state.median}
             quadrants={preset?.quadrants}
+            tint={goodCorners}
             theme={CARD_THEME}
             interactive={false}
           />
@@ -332,10 +345,24 @@ export default function PlayerPlotPage() {
           </div>
         </div>
 
-        {/* presets */}
+        {/* position, then that position's quick views (the first is its default graph) */}
+        <div className="flex flex-wrap items-center gap-2 mb-2" role="group" aria-label="Position" data-testid="plot-positions">
+          {(["ALL", ...PLOT_POSITIONS] as Array<PlotPosition | "ALL">).map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              onClick={() => selectPosition(pos === "ALL" ? null : pos)}
+              aria-pressed={activePosition === pos}
+              className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${activePosition === pos ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}
+              data-testid={`tab-position-${pos}`}
+            >
+              {pos === "ALL" ? "All" : POSITION_LABEL[pos]}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-2 mb-3" data-testid="plot-presets">
           <span className="text-xs font-medium text-gray-600">Quick views:</span>
-          {PLOT_PRESETS.map((p) => (
+          {presets.map((p) => (
             <button
               key={p.id}
               type="button"
@@ -347,6 +374,7 @@ export default function PlayerPlotPage() {
               {p.label}
             </button>
           ))}
+          {!preset && <span className="text-xs text-gray-500">Custom axes</span>}
         </div>
 
         <Card className="mb-3">
@@ -513,6 +541,7 @@ export default function PlayerPlotPage() {
                   yScale={state.yScale}
                   showMedian={state.median}
                   quadrants={preset?.quadrants}
+                  tint={goodCorners}
                   theme={SCREEN_THEME}
                   highlightIds={highlightIds}
                   selectedId={selectedId}

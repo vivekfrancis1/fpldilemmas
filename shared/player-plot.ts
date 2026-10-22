@@ -60,6 +60,11 @@ export const PLOT_STATS: StatDef[] = [
   { key: "threat", label: "Threat", group: "Underlying", format: "dec1" },
   { key: "ict", label: "ICT index", group: "Underlying", format: "dec1" },
   { key: "dc_90", label: "Defensive contributions per 90", group: "Underlying", format: "dec2" },
+  { key: "dc", label: "Defensive contributions (total)", group: "Underlying", format: "int" },
+  { key: "saves_90", label: "Saves per 90", group: "Underlying", format: "dec2" },
+  { key: "xgc_90", label: "Expected goals conceded per 90", group: "Underlying", format: "dec2" },
+  { key: "gc_90", label: "Goals conceded per 90", group: "Underlying", format: "dec2" },
+  { key: "cs_90", label: "Clean sheets per 90", group: "Underlying", format: "dec2" },
 
   { key: "goals_minus_xg", label: "Goals minus xG", group: "Luck check", format: "dec2" },
   { key: "assists_minus_xa", label: "Assists minus xA", group: "Luck check", format: "dec2" },
@@ -117,6 +122,11 @@ export interface PlotElement {
   expected_assists_per_90: number;
   expected_goal_involvements_per_90: number;
   defensive_contribution_per_90: number;
+  defensive_contribution: number;
+  saves_per_90: number;
+  clean_sheets_per_90: number;
+  expected_goals_conceded_per_90: number;
+  goals_conceded_per_90: number;
   transfers_in_event: number;
   transfers_out_event: number;
   cost_change_start: number;
@@ -271,6 +281,11 @@ export function buildPlotPlayers(input: {
       threat: num(e.threat),
       ict: num(e.ict_index),
       dc_90: num(e.defensive_contribution_per_90),
+      dc: num(e.defensive_contribution),
+      saves_90: num(e.saves_per_90),
+      xgc_90: num(e.expected_goals_conceded_per_90),
+      gc_90: num(e.goals_conceded_per_90),
+      cs_90: num(e.clean_sheets_per_90),
 
       goals_minus_xg: diff(goals, xg),
       assists_minus_xa: diff(assists, xa),
@@ -460,7 +475,7 @@ export interface LabelPoint {
   r: number;
 }
 
-interface Rect { x: number; y: number; w: number; h: number }
+export interface Rect { x: number; y: number; w: number; h: number }
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
@@ -476,12 +491,17 @@ function labelRect(p: LabelPoint, side: LabelSide): Rect {
 
 /**
  * Greedy label placement: points are visited in priority order; each takes the first of right / left /
- * above / below whose box stays inside the chart and overlaps neither a dot nor an already placed label.
+ * above / below whose box stays inside the chart and overlaps neither a dot, an already placed label nor a
+ * blocked area (e.g. a corner caption).
  * A point with no free side gets null (no label; it shows on hover or tap instead).
  */
-export function declutterLabels(points: LabelPoint[], bounds: { width: number; height: number }): Map<number, LabelSide | null> {
+export function declutterLabels(
+  points: LabelPoint[],
+  bounds: { width: number; height: number },
+  blocked: Rect[] = [],
+): Map<number, LabelSide | null> {
   const result = new Map<number, LabelSide | null>();
-  const placed: Rect[] = [];
+  const placed: Rect[] = [...blocked];
   const dots: Array<Rect & { id: number }> = points.map((p) => ({ id: p.id, x: p.x - p.r, y: p.y - p.r, w: p.r * 2, h: p.r * 2 }));
   const order = [...points].sort((a, b) => a.priority - b.priority || a.id - b.id);
   for (const p of order) {
@@ -546,18 +566,20 @@ function sameList<T>(a: T[], b: T[]): boolean {
 
 export function encodePlotState(state: PlotState): string {
   const d = DEFAULT_PLOT_STATE;
+  // axes, scales and the minutes floor are only written when they differ from what the chosen position opens on
+  const base = presetBaseline(state.positions);
   const params = new URLSearchParams();
-  if (state.x !== d.x) params.set("x", state.x);
-  if (state.y !== d.y) params.set("y", state.y);
+  if (state.x !== base.x) params.set("x", state.x);
+  if (state.y !== base.y) params.set("y", state.y);
   if (!sameList(state.positions, d.positions)) params.set("pos", state.positions.join(","));
   if (!sameList(state.teamIds, d.teamIds)) params.set("team", state.teamIds.join(","));
-  if (state.minMinutes !== d.minMinutes) params.set("mins", String(state.minMinutes));
+  if (state.minMinutes !== base.minMinutes) params.set("mins", String(state.minMinutes));
   if (state.maxPrice !== d.maxPrice && state.maxPrice !== null) params.set("maxp", String(state.maxPrice));
   if (state.top !== d.top) params.set("top", String(state.top));
   if (state.from !== d.from) params.set("from", String(state.from));
   if (state.to !== d.to) params.set("to", String(state.to));
-  if (state.xScale !== d.xScale) params.set("xs", state.xScale);
-  if (state.yScale !== d.yScale) params.set("ys", state.yScale);
+  if (state.xScale !== base.xScale) params.set("xs", state.xScale);
+  if (state.yScale !== base.yScale) params.set("ys", state.yScale);
   if (state.median !== d.median) params.set("med", state.median ? "1" : "0");
   return params.toString().replace(/%2C/g, ",");
 }
@@ -583,18 +605,19 @@ export function decodePlotState(search: string): PlotState {
     .map((s) => parseInt(s, 10))
     .filter((n) => n > 0);
   const top = Math.min(MAX_TOP, Math.max(MIN_TOP, int(q.get("top"), d.top, 0)));
+  const base = presetBaseline(positions);
   return {
-    x: stat(q.get("x"), d.x),
-    y: stat(q.get("y"), d.y),
+    x: stat(q.get("x"), base.x),
+    y: stat(q.get("y"), base.y),
     positions,
     teamIds,
-    minMinutes: int(q.get("mins"), d.minMinutes, 0),
+    minMinutes: int(q.get("mins"), base.minMinutes, 0),
     maxPrice,
     top,
     from: int(q.get("from"), d.from, 1),
     to: int(q.get("to"), d.to, 1),
-    xScale: scale(q.get("xs"), d.xScale),
-    yScale: scale(q.get("ys"), d.yScale),
+    xScale: scale(q.get("xs"), base.xScale),
+    yScale: scale(q.get("ys"), base.yScale),
     median: q.get("med") === "0" ? false : q.get("med") === "1" ? true : d.median,
   };
 }
@@ -607,63 +630,134 @@ export interface PlotPreset {
   id: string;
   label: string;
   title: string;
+  /** [] = the general presets (any/several positions); one entry = that position's presets */
+  positions: PlotPosition[];
   x: string;
   y: string;
   xScale: ScaleKind;
   yScale: ScaleKind;
+  /** Minutes floor applied with the preset (per-90 stats from a few minutes of football are noise). */
+  minMinutes?: number;
   /** Corner captions, only where "top-left" etc. has a clear meaning for the two stats. */
   quadrants?: { tl: string; tr: string; bl: string; br: string };
+  /** Top-left is the good corner and bottom-right the bad one (tints and Target/Avoid lists). Default true. */
+  goodTopLeft?: boolean;
   hint: string;
 }
 
+const VALUE_QUADRANTS = { tl: "Bargains", tr: "Premium", bl: "Budget fillers", br: "Overpriced" };
+const DIFF_QUADRANTS = { tl: "Differentials", tr: "Template picks", bl: "Avoid", br: "Overowned" };
+const DIFF_HINT = "Up = more projected points. Left = fewer managers own them. Top-left players are your differentials; bottom-right are popular but projected to underdeliver.";
+const VALUE_HINT = "Up = more projected points. Left = cheaper. Top-left players give the most points for the money.";
+
+// The FIRST preset of each list is that list's default graph.
 export const PLOT_PRESETS: PlotPreset[] = [
+  // ---- All positions / several positions
+  { id: "differentials", label: "Differentials", title: "Differentials: high xPts, low ownership", positions: [], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  { id: "value", label: "Value", title: "Value: projected points vs price", positions: [], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
   {
-    id: "differentials",
-    label: "Differentials",
-    title: "Differentials: high xPts, low ownership",
-    x: "ownership",
-    y: "xpts_total",
-    xScale: "sqrt",
-    yScale: "linear",
-    quadrants: { tl: "Differentials", tr: "Template picks", bl: "Avoid", br: "Overowned" },
-    hint: "Up = more projected points. Left = fewer managers own them. Top-left players are your differentials; bottom-right are popular but projected to underdeliver.",
-  },
-  {
-    id: "value",
-    label: "Value",
-    title: "Value: projected points vs price",
-    x: "price",
-    y: "xpts_total",
-    xScale: "linear",
-    yScale: "linear",
-    quadrants: { tl: "Bargains", tr: "Premium", bl: "Budget fillers", br: "Overpriced" },
-    hint: "Up = more projected points. Left = cheaper. Top-left players give the most points for the money.",
-  },
-  {
-    id: "form-price",
-    label: "Form vs price",
-    title: "Form vs price",
-    x: "price",
-    y: "form",
-    xScale: "linear",
-    yScale: "linear",
+    id: "form-price", label: "Form vs price", title: "Form vs price", positions: [], x: "price", y: "form", xScale: "linear", yScale: "linear",
     quadrants: { tl: "Cheap and in form", tr: "Premium and in form", bl: "Cheap and cold", br: "Pricey and cold" },
     hint: "Up = better recent form (FPL's form figure). Left = cheaper.",
   },
   {
-    id: "luck",
-    label: "Luck check",
-    title: "Luck check: results vs underlying numbers",
-    x: "xgi",
-    y: "gi_minus_xgi",
-    xScale: "linear",
-    yScale: "linear",
+    id: "luck", label: "Luck check", title: "Luck check: results vs underlying numbers", positions: [], x: "xgi", y: "gi_minus_xgi", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
     hint: "Right = more expected goal involvements. Above zero = scoring/assisting more than the chances suggest (may cool off); below zero = unlucky (may come good).",
+  },
+  {
+    id: "minutes", label: "Minutes security", title: "Minutes security: expected minutes vs projected points", positions: [], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    hint: "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek. Top-right players are secure and productive.",
+  },
+
+  // ---- Goalkeepers
+  { id: "gk-value", label: "Value", title: "Goalkeepers: value, xPts vs price", positions: ["GKP"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
+  {
+    id: "gk-saves", label: "Saves vs chances", title: "Goalkeepers: saves vs chances conceded", positions: ["GKP"], x: "xgc_90", y: "saves_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    hint: "Right = the team concedes better chances (expected goals conceded per 90). Up = more saves per 90, and save points. Busy keepers sit top-right, but they also concede more.",
+  },
+  {
+    id: "gk-cs", label: "Clean sheets vs chances", title: "Goalkeepers: clean sheets vs chances conceded", positions: ["GKP"], x: "xgc_90", y: "cs_90", xScale: "linear", yScale: "linear", minMinutes: 180,
+    quadrants: { tl: "Solid and lucky-proof", tr: "Keeping out chances", bl: "Poor defence", br: "Getting by" }, goodTopLeft: true,
+    hint: "Left = the team allows fewer good chances (expected goals conceded per 90). Up = more clean sheets per 90. Top-left keepers are both well protected and keeping clean sheets.",
+  },
+  { id: "gk-diff", label: "Differentials", title: "Goalkeepers: high xPts, low ownership", positions: ["GKP"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+
+  // ---- Defenders
+  {
+    id: "def-attack", label: "Attack vs clean sheets", title: "Defenders: attacking threat vs clean sheets", positions: ["DEF"], x: "xgi_90", y: "cs_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Clean-sheet specialists", tr: "Attack and clean sheets", bl: "Quiet", br: "Attacking but leaky" },
+    hint: "Right = more attacking threat (expected goal involvements per 90). Up = more clean sheets per 90. Top-right defenders return from both.",
+  },
+  { id: "def-value", label: "Value", title: "Defenders: value, xPts vs price", positions: ["DEF"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
+  {
+    id: "def-dc", label: "Defensive contributions", title: "Defenders: defensive contributions vs projected points", positions: ["DEF"], x: "dc_90", y: "xpts_total", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    hint: "Right = more defensive contributions per 90 (the extra-points threshold stat). Up = more projected points.",
+  },
+  { id: "def-diff", label: "Differentials", title: "Defenders: high xPts, low ownership", positions: ["DEF"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+
+  // ---- Midfielders
+  {
+    id: "mid-creators", label: "Creators vs scorers", title: "Midfielders: creators vs scorers", positions: ["MID"], x: "xa_90", y: "xg_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Goal threats", tr: "Complete mids", bl: "Quiet", br: "Creators" },
+    hint: "Right = more expected assists per 90 (creating). Up = more expected goals per 90 (shooting). Top-right midfielders do both.",
+  },
+  { id: "mid-value", label: "Value", title: "Midfielders: value, xPts vs price", positions: ["MID"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
+  {
+    id: "mid-luck", label: "Luck check", title: "Midfielders: luck check", positions: ["MID"], x: "xgi", y: "gi_minus_xgi", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    hint: "Right = more expected goal involvements. Above zero = scoring/assisting more than the chances suggest (may cool off); below zero = unlucky (may come good).",
+  },
+  { id: "mid-diff", label: "Differentials", title: "Midfielders: high xPts, low ownership", positions: ["MID"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+
+  // ---- Forwards
+  {
+    id: "fwd-finishing", label: "Finishing", title: "Forwards: finishing vs chances", positions: ["FWD"], x: "xg", y: "goals_minus_xg", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    hint: "Right = more expected goals (better chances). Above zero = scoring more than the chances suggest (may cool off); below zero = unlucky or wasteful (may come good).",
+  },
+  { id: "fwd-value", label: "Value", title: "Forwards: value, xPts vs price", positions: ["FWD"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
+  { id: "fwd-diff", label: "Differentials", title: "Forwards: high xPts, low ownership", positions: ["FWD"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  {
+    id: "fwd-minutes", label: "Minutes security", title: "Forwards: expected minutes vs projected points", positions: ["FWD"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    hint: "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek.",
   },
 ];
 
-export function plotTitle(state: Pick<PlotState, "x" | "y">): string {
-  const preset = PLOT_PRESETS.find((p) => p.x === state.x && p.y === state.y);
+/** The presets to offer: that position's own list for exactly one position, otherwise the general list. */
+export function presetsForPositions(positions: PlotPosition[]): PlotPreset[] {
+  if (positions.length === 1) return PLOT_PRESETS.filter((p) => p.positions.length === 1 && p.positions[0] === positions[0]);
+  return PLOT_PRESETS.filter((p) => p.positions.length === 0);
+}
+
+/** The graph a position (or All) opens on: the axes, scales and minutes floor of its first preset. */
+export function presetBaseline(positions: PlotPosition[]): Pick<PlotState, "x" | "y" | "xScale" | "yScale" | "minMinutes"> {
+  const first = presetsForPositions(positions)[0];
+  return { x: first.x, y: first.y, xScale: first.xScale, yScale: first.yScale, minMinutes: first.minMinutes ?? 0 };
+}
+
+/** Apply a preset: its axes, scales and minutes floor (and its position, for a position preset); other filters stay. */
+export function stateForPreset(state: PlotState, preset: PlotPreset): PlotState {
+  return {
+    ...state,
+    positions: preset.positions.length === 1 ? [...preset.positions] : state.positions,
+    x: preset.x,
+    y: preset.y,
+    xScale: preset.xScale,
+    yScale: preset.yScale,
+    minMinutes: preset.minMinutes ?? 0,
+  };
+}
+
+/** Select one position (or null = All) and open its default graph; other filters stay. */
+export function stateForPosition(state: PlotState, position: PlotPosition | null): PlotState {
+  const positions = position ? [position] : [];
+  return { ...state, positions, ...presetBaseline(positions) };
+}
+
+export function findPreset(state: Pick<PlotState, "x" | "y" | "positions">): PlotPreset | undefined {
+  return presetsForPositions(state.positions).find((p) => p.x === state.x && p.y === state.y);
+}
+
+export function plotTitle(state: Pick<PlotState, "x" | "y" | "positions">): string {
+  const preset = findPreset(state);
   if (preset) return preset.title;
   return `${getStat(state.y)?.label ?? state.y} vs ${getStat(state.x)?.label ?? state.x}`;
 }
