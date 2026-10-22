@@ -43,3 +43,10 @@ every template and size includes the watermark text and a reserved footer strip;
 
 ## Order of work
 1. Tests + `shared/graphics.ts` (spec/URL + Player Card + Fixtures Comparison). 2. Page shell, preview scaling, share/copy link. 3. Player Comparison, Differentials, Price Change. 4. Check in Chrome (desktop + phone, light + dark, all three sizes), `npx tsc --noEmit -p .`, `npx vitest run`. Commit locally in logical chunks; no push.
+
+## Update 2026-10-23 — Predicted Lineups (6th template)
+Built: `buildPredictedLineup` in shared/graphics.ts (8 new tests, 48 in tests/graphics.test.ts), `LineupFace` + pitch in graphic-faces.tsx, club + gameweek controls on the page, `predicted-lineup` in the link (`tm` = club, `from`=`to` = gameweek).
+Method: for one club and one gameweek, the legal XI (1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD) with the highest TOTAL expected minutes (our `xMinsPerGW`), using the same formation search as `shared/lineup.ts` (`bestLineup`, fed minutes instead of xPts). Bench strip = the next 5 players by expected minutes. Players with no expected minutes that gameweek, or marked unavailable (u) or suspended (s), are never listed. Doubtful/injured players are flagged (amber) with the chance of playing when FPL gives one below 100.
+Limits: this is our forecast (expected minutes already include injury news), NOT official team news, and the graphic says so. It shows the most likely XI by minutes, so it can produce unusual shapes (e.g. 5-4-1 for a club whose second forward is a sub). Expected minutes are shown rounded and capped at 90. Double gameweek: minutes semantics are still an unverified assumption (see known issues), so a DGW shows the likely XI for the whole gameweek with minutes capped at 90 and both fixtures listed. Blank gameweek or too little minutes data shows a clear message panel instead of a pitch, never invented players.
+Verified in the browser: square, portrait, landscape, phone width, light/midnight/club themes, a doubtful starter (Crystal Palace GW8), the blank-gameweek message (GW39), and the exported PNG (1080x1080, watermark in the footer).
+

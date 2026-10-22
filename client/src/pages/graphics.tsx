@@ -17,6 +17,7 @@ import {
   buildDifferentials,
   buildFixturesGrid,
   buildPlayerCard,
+  buildPredictedLineup,
   buildPriceChanges,
   decodeSpec,
   encodeSpec,
@@ -48,6 +49,8 @@ const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 
 interface PlayerProjection {
   playerId: number;
   gameweekProjections?: Record<string, number>;
+  xMinsPerGW?: Record<string, number>;
+  chanceOfPlayingNextRound?: number | null;
 }
 
 function useElementWidth<T extends HTMLElement>() {
@@ -200,6 +203,8 @@ export default function GraphicsPage() {
   const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultRange.to));
   const gameweeks = useMemo(() => Array.from({ length: to - from + 1 }, (_, i) => from + i), [from, to]);
   const gwLabel = gameweekLabel(from, to);
+  // Predicted Lineups is about one gameweek, held in `from` (and `to`) of the link
+  const lineupGw = spec.from || defaultRange.from;
 
   const openGameweeks = useMemo(() => {
     const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean }>;
@@ -220,11 +225,15 @@ export default function GraphicsPage() {
         .map((x) => x.id);
       if (ranked.length === need) update({ players: ranked });
     }
+    if (spec.template === "predicted-lineup" && spec.teams.length === 0 && fixtures) {
+      const next = (fixtures as any[]).find((f) => f.event === lineupGw && !f.finished) ?? (fixtures as any[]).find((f) => f.event !== null && !f.finished);
+      if (next) update({ teams: [next.team_h] });
+    }
     if (spec.template === "fixtures-comparison" && spec.teams.length === 0 && teams.length) {
       update({ teams: [...teams].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 3).map((t) => t.id) });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements.length, projections, spec.template, spec.players.length, spec.teams.length, teams.length]);
+  }, [elements.length, projections, fixtures, spec.template, spec.players.length, spec.teams.length, teams.length]);
 
   const selectedElements = useMemo(() => {
     const byId = new Map(elements.map((e) => [e.id, e]));
@@ -232,7 +241,7 @@ export default function GraphicsPage() {
   }, [elements, spec.players]);
 
   const clubColor = useMemo(() => {
-    const team = spec.template === "fixtures-comparison" ? spec.teams[0] : selectedElements[0]?.team;
+    const team = spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0] : selectedElements[0]?.team;
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
   }, [spec.template, spec.teams, selectedElements, teamShortById]);
   const theme = resolveTheme(spec.theme, clubColor);
@@ -272,6 +281,12 @@ export default function GraphicsPage() {
         const dateLabel = priceContent.date ? `Confirmed price changes · ${longDate(priceContent.date)}` : "Confirmed price changes";
         return { data: { kind: "price-change", prices: priceContent, dateLabel }, problem: null };
       }
+      case "predicted-lineup": {
+        if (spec.teams.length < 1) return { data: null, problem: "Pick a club to predict its lineup." };
+        if (!fixtures || !projections) return { data: null, problem: null };
+        const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
+        return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+      }
       case "top-differentials": {
         const rows = buildDifferentials({
           elements,
@@ -287,7 +302,7 @@ export default function GraphicsPage() {
         return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
       }
     }
-  }, [elements, spec, selectedElements, gwLabel, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
+  }, [elements, spec, selectedElements, gwLabel, lineupGw, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
 
   const { width: fullWidth, height: fullHeight } = GRAPHIC_SIZES[spec.size];
   const scale = previewWidth > 0 ? Math.min(1, previewWidth / fullWidth) : 1;
@@ -315,7 +330,10 @@ export default function GraphicsPage() {
   const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials";
   const activeStats = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
   const loading = bootstrapLoading;
-  const fileParts = spec.template === "price-change" ? [priceContent.date ?? ""] : selectedElements.map((e) => e.web_name);
+  const fileParts =
+    spec.template === "price-change" ? [priceContent.date ?? ""]
+    : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
+    : selectedElements.map((e) => e.web_name);
 
   return (
     <div className="min-h-screen">
@@ -335,7 +353,13 @@ export default function GraphicsPage() {
             <button
               key={t.id}
               type="button"
-              onClick={() => update({ template: t.id as TemplateId })}
+              onClick={() =>
+                update({
+                  template: t.id as TemplateId,
+                  // a lineup is one gameweek; do not carry that single gameweek into other templates' ranges (or the reverse)
+                  ...(t.id === "predicted-lineup" || spec.template === "predicted-lineup" ? { from: 0, to: 0 } : {}),
+                })
+              }
               aria-pressed={spec.template === t.id}
               className={`rounded-xl border px-3 py-2.5 sm:p-3 text-left ${spec.template === t.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-800 hover:bg-gray-50"}`}
               data-testid={`template-${t.id}`}
@@ -380,6 +404,27 @@ export default function GraphicsPage() {
                     </div>
                   </Field>
                 </>
+              )}
+
+              {spec.template === "predicted-lineup" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Club">
+                    <SimpleSelect
+                      value={spec.teams[0] ? String(spec.teams[0]) : ""}
+                      onChange={(v) => update({ teams: [parseInt(v, 10)] })}
+                      options={[...teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => ({ value: String(t.id), label: t.name }))}
+                      testId="select-lineup-club"
+                    />
+                  </Field>
+                  <Field label="Gameweek">
+                    <SimpleSelect
+                      value={String(lineupGw)}
+                      onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                      options={(openGameweeks.includes(lineupGw) ? openGameweeks : [...openGameweeks, lineupGw].sort((a, b) => a - b)).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                      testId="select-lineup-gw"
+                    />
+                  </Field>
+                </div>
               )}
 
               {spec.template === "fixtures-comparison" && (

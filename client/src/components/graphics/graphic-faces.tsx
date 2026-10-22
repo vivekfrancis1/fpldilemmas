@@ -11,7 +11,9 @@ import {
   type FixtureGridContent,
   type GraphicSpec,
   type GraphicTheme,
+  type LineupToken,
   type PlayerCardContent,
+  type PredictedLineupContent,
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
@@ -28,7 +30,8 @@ export type GraphicData =
   | { kind: "player-comparison"; comparison: ComparisonContent }
   | { kind: "fixtures-comparison"; grid: FixtureGridContent; gwLabel: string }
   | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
-  | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string };
+  | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
+  | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string };
 
 interface Metrics {
   pad: number;
@@ -415,6 +418,129 @@ function DifferentialsFace({ spec, theme, rows, gwLabel, subtitle }: { spec: Gra
   );
 }
 
+
+// ---------- Predicted Lineup ----------
+
+const AMBER = "#fbbf24";
+
+function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jersey: number; nameFont: number; minFont: number }) {
+  const warn = p.flag !== null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.1 }}>
+      <Jersey team={p.teamShort} position={p.position} px={jersey} />
+      <div
+        style={{
+          maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "2px 12px", borderRadius: 999, fontSize: nameFont, fontWeight: 800, lineHeight: 1.25,
+          background: "rgba(0,0,0,0.62)", color: "#ffffff", border: warn ? `2px solid ${AMBER}` : "2px solid transparent", ...ellipsis,
+        }}
+      >
+        {warn ? "⚠ " : ""}{p.name}
+      </div>
+      <div style={{ fontSize: minFont, fontWeight: 800, color: warn ? AMBER : "#ffffff", textShadow: "0 1px 3px rgba(0,0,0,0.7)", marginTop: 2 }}>
+        {p.xMins}&apos;{p.chance !== null ? ` · ${p.chance}%` : ""}
+      </div>
+    </div>
+  );
+}
+
+function Pitch({ lineup, jersey, nameFont, minFont }: { lineup: PredictedLineupContent; jersey: number; nameFont: number; minFont: number }) {
+  const line = "rgba(255,255,255,0.45)";
+  // attack at the top: forwards first, goalkeeper at the bottom
+  const rows = [...lineup.rows].reverse();
+  return (
+    <div
+      style={{
+        position: "relative", flex: 1, minHeight: 0, borderRadius: 20, overflow: "hidden", border: `3px solid ${line}`,
+        background: "repeating-linear-gradient(180deg, #1e7a3b 0px, #1e7a3b 70px, #23893f 70px, #23893f 140px)",
+      }}
+    >
+      <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 3, background: line }} />
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: 150, height: 150, marginLeft: -75, marginTop: -75, borderRadius: "50%", border: `3px solid ${line}`, boxSizing: "border-box" }} />
+      <div style={{ position: "absolute", left: "27%", right: "27%", top: 0, height: "14%", border: `3px solid ${line}`, borderTop: "none", boxSizing: "border-box" }} />
+      <div style={{ position: "absolute", left: "27%", right: "27%", bottom: 0, height: "14%", border: `3px solid ${line}`, borderBottom: "none", boxSizing: "border-box" }} />
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "8px 14px" }}>
+        {rows.map((r) => (
+          <div key={r.position} style={{ display: "flex", justifyContent: "space-evenly", alignItems: "flex-start", gap: 6 }}>
+            {r.players.map((p) => (
+              <LineupTokenView key={p.id} p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function fixtureText(lineup: PredictedLineupContent): string {
+  return lineup.fixtures.map((f) => `${f.opponent} (${f.isHome ? "H" : "A"})`).join(", ");
+}
+
+function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; lineup: PredictedLineupContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 56 : tall ? 116 : 74;
+  const nameFont = land ? 17 : tall ? 27 : 23;
+  const minFont = land ? 15 : tall ? 24 : 20;
+  const subtitle = lineup.blank
+    ? `${lineup.teamName} · ${gwLabel}`
+    : `${lineup.teamName} vs ${fixtureText(lineup)} · ${gwLabel}${lineup.formation ? ` · ${lineup.formation}` : ""}`;
+  const message = lineup.blank
+    ? `No fixture for ${lineup.teamName} in ${gwLabel}.`
+    : !lineup.complete
+      ? `Not enough expected-minutes data for ${lineup.teamName} in ${gwLabel} yet.`
+      : null;
+
+  const bench = lineup.bench.length > 0 && (
+    <div style={{ ...panel(theme), padding: land ? "12px 16px" : "14px 22px", flexShrink: 0 }}>
+      <div style={{ fontSize: land ? 15 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 6 : 10 }}>ALSO IN CONTENTION</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: land ? 6 : 10, flexDirection: land ? "column" : "row" }}>
+        {lineup.bench.map((p) => (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, background: theme.panel, borderRadius: 999, padding: land ? "4px 12px" : "6px 16px", fontSize: land ? 16 : 22, fontWeight: 800 }}>
+            <span>{p.flag ? "⚠ " : ""}{p.name}</span>
+            <span style={{ color: p.flag ? AMBER : theme.muted, fontWeight: 700 }}>{p.position} · {p.xMins}&apos;{p.chance !== null ? ` · ${p.chance}%` : ""}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  const note = (
+    <div style={{ fontSize: land ? 14 : 18, color: theme.muted, fontWeight: 600, lineHeight: 1.3, flexShrink: 0 }}>
+      Based on our expected minutes, which include injury news. Not official team news. Minutes are capped at 90.
+    </div>
+  );
+
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {message ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+          {message}
+        </div>
+      ) : land ? (
+        <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>
+            <Pitch lineup={lineup} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+            <div style={{ ...panel(theme), padding: "12px 16px", flexShrink: 0 }}>
+              <div style={{ fontSize: 34, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{lineup.formation}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: theme.muted, marginTop: 4 }}>{lineup.doubleGameweek ? "Double gameweek: likeliest XI across both matches" : "Most likely formation"}</div>
+            </div>
+            {bench}
+            <div style={{ flex: 1 }} />
+            {note}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0 }}>
+          <Pitch lineup={lineup} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+          {bench}
+          {note}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -423,6 +549,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "player-comparison": return <ComparisonFace spec={spec} theme={theme} comparison={data.comparison} />;
     case "fixtures-comparison": return <FixturesFace spec={spec} theme={theme} grid={data.grid} gwLabel={data.gwLabel} />;
     case "price-change": return <PriceFace spec={spec} theme={theme} prices={data.prices} dateLabel={data.dateLabel} />;
+    case "predicted-lineup": return <LineupFace spec={spec} theme={theme} lineup={data.lineup} gwLabel={data.gwLabel} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }
