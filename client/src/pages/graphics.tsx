@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ImagePlus, Link2, Search, X } from "lucide-react";
+import { Check, ImagePlus, Link2, Search, Sparkles, X } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -19,6 +19,17 @@ import {
   buildPlayerCard,
   buildPredictedLineup,
   buildPriceChanges,
+  buildTeamReveal,
+  canAddToSquad,
+  squadCounts,
+  squadFromPicks,
+  suggestSquadSetup,
+  CHIP_LABELS,
+  SQUAD_QUOTA,
+  SQUAD_SIZE,
+  BENCH_PLAYERS,
+  MAX_MANAGER_NAME,
+  type ChipId,
   decodeSpec,
   encodeSpec,
   gameweekLabel,
@@ -40,11 +51,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShareImageButton } from "@/components/share-image-button";
 import { GraphicCanvas, type GraphicData } from "@/components/graphics/graphic-faces";
 import { teamColor } from "@/lib/team-colors";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 const DEFAULT_WEEKS = 5;
 const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "FWD"];
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+// Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal"];
 
 interface PlayerProjection {
   playerId: number;
@@ -161,6 +175,235 @@ function PlayerPicker({
   );
 }
 
+const POSITION_ORDER: GraphicPosition[] = ["GKP", "DEF", "MID", "FWD"];
+
+type LoadState = { busy: boolean; error: string | null; info: string | null };
+
+function SquadBuilder({
+  spec, update, elements, teamShortById, xptsById, gameweek, gameweekOptions,
+}: {
+  spec: GraphicSpec;
+  update: (patch: Partial<GraphicSpec>) => void;
+  elements: GraphicElement[];
+  teamShortById: Map<number, string>;
+  xptsById: Map<number, number | null>;
+  gameweek: number;
+  gameweekOptions: number[];
+}) {
+  const [query, setQuery] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const [idText, setIdText] = useState("");
+  const [load, setLoad] = useState<LoadState>({ busy: false, error: null, info: null });
+  const byId = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
+  const counts = squadCounts(elements, spec.squad);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return elements
+      .filter((e) => !spec.squad.includes(e.id) && `${e.web_name} ${e.first_name ?? ""} ${e.second_name ?? ""}`.toLowerCase().includes(q))
+      .sort((a, b) => (Number(b.total_points) || 0) - (Number(a.total_points) || 0))
+      .slice(0, 8);
+  }, [elements, query, spec.squad]);
+
+  const applySuggestion = (squad: number[]) => {
+    const s = suggestSquadSetup({ elements, squad, xptsById });
+    if (s.bench.length) update({ squad, bench: s.bench, captain: s.captain, vice: s.vice });
+    else update({ squad });
+    return s.bench.length > 0;
+  };
+
+  const add = (id: number) => {
+    const check = canAddToSquad({ elements, squad: spec.squad, id, teamShortById });
+    if (!check.ok) {
+      setNote(check.reason);
+      return;
+    }
+    setNote(null);
+    setQuery("");
+    const squad = [...spec.squad, id];
+    if (squad.length === SQUAD_SIZE && spec.bench.length === 0) {
+      if (applySuggestion(squad)) setNote("Squad complete. We suggested a bench, captain and vice from expected points. Change anything you like.");
+    } else {
+      update({ squad });
+    }
+  };
+
+  const remove = (id: number) => {
+    setNote(null);
+    update({
+      squad: spec.squad.filter((x) => x !== id),
+      bench: spec.bench.filter((x) => x !== id),
+      captain: spec.captain === id ? 0 : spec.captain,
+      vice: spec.vice === id ? 0 : spec.vice,
+    });
+  };
+
+  const toggleBench = (id: number) => {
+    if (spec.bench.includes(id)) {
+      setNote(null);
+      update({ bench: spec.bench.filter((x) => x !== id) });
+    } else if (spec.bench.length >= BENCH_PLAYERS) {
+      setNote("The bench is full (4). Move someone to the XI first.");
+    } else {
+      setNote(null);
+      update({ bench: [...spec.bench, id] });
+    }
+  };
+
+  const setCaptain = (id: number) => update({ captain: spec.captain === id ? 0 : id, vice: spec.vice === id ? 0 : spec.vice });
+  const setVice = (id: number) => update({ vice: spec.vice === id ? 0 : id, captain: spec.captain === id ? 0 : spec.captain });
+
+  const loadFromId = async () => {
+    const id = extractManagerId(idText);
+    if (!id || id === "0") {
+      setLoad({ busy: false, error: "Enter your FPL team ID, or paste your team link from the FPL site.", info: null });
+      return;
+    }
+    setLoad({ busy: true, error: null, info: null });
+    try {
+      const res = await fetch(`/api/manager/${id}/team`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message =
+          body?.code === "TEAM_NOT_AVAILABLE"
+            ? "We couldn't get picks for that team. Check the ID, or the picks may still be hidden until the deadline. You can build the squad below instead."
+            : res.status === 404 ? "No FPL team was found with that ID." : "Couldn't load that team right now. Please try again.";
+        setLoad({ busy: false, error: message, info: null });
+        return;
+      }
+      const picks = Array.isArray(body.picks) ? body.picks : [];
+      if (picks.length !== SQUAD_SIZE) {
+        setLoad({ busy: false, error: "That team doesn't have a full 15-player squad to load.", info: null });
+        return;
+      }
+      const loaded = squadFromPicks(picks);
+      const patch: Partial<GraphicSpec> = { ...loaded };
+      if (!spec.manager.trim()) {
+        const name = typeof body.manager === "string" && body.manager.trim() ? body.manager.trim() : null;
+        if (name) patch.manager = name.slice(0, MAX_MANAGER_NAME);
+        else {
+          try {
+            const info = await (await fetch(`/api/manager/${id}`)).json();
+            const full = `${info?.player_first_name ?? ""} ${info?.player_last_name ?? ""}`.trim();
+            if (full) patch.manager = full.slice(0, MAX_MANAGER_NAME);
+          } catch {
+            /* the name is optional */
+          }
+        }
+      }
+      update(patch);
+      const from = body.resolvedGameweek ?? body.gameweek;
+      setNote(null);
+      setLoad({ busy: false, error: null, info: `Loaded the GW${from ?? "?"} squad. Make this week's transfers below, then pick your chip.` });
+    } catch {
+      setLoad({ busy: false, error: "Couldn't load that team right now. Please try again.", info: null });
+    }
+  };
+
+  const toggleBtn = (active: boolean) =>
+    `rounded-md border px-2 py-1 text-xs font-bold leading-none ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`;
+
+  return (
+    <div className="space-y-4" data-testid="squad-builder">
+      <Field label="Load your squad from your FPL team ID (optional)">
+        <div className="flex gap-2">
+          <Input value={idText} onChange={(e) => setIdText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadFromId(); }} inputMode="numeric" placeholder="Team ID or team link" data-testid="input-fpl-id" />
+          <Button type="button" variant="outline" onClick={loadFromId} disabled={load.busy} data-testid="button-load-fpl">{load.busy ? "Loading…" : "Load"}</Button>
+        </div>
+        {load.error && <p className="text-xs text-red-600" role="alert" data-testid="load-error">{load.error}</p>}
+        {load.info && <p className="text-xs text-emerald-700" role="status" data-testid="load-info">{load.info}</p>}
+      </Field>
+
+      <Field label={`Squad (${spec.squad.length}/${SQUAD_SIZE})`}>
+        <p className="text-xs text-gray-600" data-testid="squad-counts">
+          {POSITION_ORDER.map((pos) => `${pos} ${counts[pos]}/${SQUAD_QUOTA[pos]}`).join(" · ")}
+        </p>
+        {spec.squad.length < SQUAD_SIZE && (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a player to add…" className="pl-9" data-testid="input-squad-search" />
+            {matches.length > 0 && (
+              <ul className="absolute z-20 mt-1 w-full rounded-lg border bg-white shadow-lg" role="listbox">
+                {matches.map((e) => (
+                  <li key={e.id}>
+                    <button type="button" onClick={() => add(e.id)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50" data-testid={`option-squad-${e.id}`}>
+                      <span className="font-medium">{e.web_name}</span>
+                      <span className="text-xs text-gray-500">{teamShortById.get(e.team)} · {POSITION_BY_TYPE[e.element_type]} · £{(e.now_cost / 10).toFixed(1)}m</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {note && <p className="text-xs text-amber-700" role="status" data-testid="squad-note">{note}</p>}
+
+        {spec.squad.length > 0 && (
+          <div className="space-y-2 pt-1" data-testid="squad-list">
+            {POSITION_ORDER.map((pos) => {
+              const rows = spec.squad.map((id) => byId.get(id)).filter((e): e is GraphicElement => !!e && POSITION_BY_TYPE[e.element_type] === pos);
+              if (!rows.length) return null;
+              return (
+                <div key={pos}>
+                  <div className="text-[11px] font-bold tracking-wide text-gray-500">{pos}</div>
+                  {rows.map((e) => {
+                    const onBench = spec.bench.includes(e.id);
+                    return (
+                      <div key={e.id} className="flex items-center justify-between gap-2 border-b border-gray-100 py-1.5" data-testid={`squad-row-${e.id}`}>
+                        <div className="min-w-0 text-sm">
+                          <span className="font-medium">{e.web_name}</span>{" "}
+                          <span className="text-xs text-gray-500">{teamShortById.get(e.team)} · £{(e.now_cost / 10).toFixed(1)}m</span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button type="button" className={toggleBtn(spec.captain === e.id)} aria-pressed={spec.captain === e.id} aria-label={`Captain ${e.web_name}`} onClick={() => setCaptain(e.id)} data-testid={`captain-${e.id}`}>C</button>
+                          <button type="button" className={toggleBtn(spec.vice === e.id)} aria-pressed={spec.vice === e.id} aria-label={`Vice captain ${e.web_name}`} onClick={() => setVice(e.id)} data-testid={`vice-${e.id}`}>V</button>
+                          <button type="button" className={toggleBtn(onBench)} aria-pressed={onBench} aria-label={`${e.web_name} on the bench`} onClick={() => toggleBench(e.id)} data-testid={`bench-${e.id}`}>Bench</button>
+                          <button type="button" aria-label={`Remove ${e.web_name}`} onClick={() => remove(e.id)} className="rounded-md p-1 text-gray-500 hover:bg-gray-100" data-testid={`remove-${e.id}`}>
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {spec.squad.length === SQUAD_SIZE && (
+          <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => { setNote(applySuggestion(spec.squad) ? "Bench, captain and vice set from expected points." : "Couldn't suggest a setup for this squad."); }} data-testid="button-suggest">
+            <Sparkles className="h-4 w-4" />
+            Suggest bench, captain &amp; vice
+          </Button>
+        )}
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Chip this week (optional)">
+          <SimpleSelect
+            value={spec.chip || "none"}
+            onChange={(v) => update({ chip: v === "none" ? "" : (v as ChipId) })}
+            options={[{ value: "none", label: "No chip" }, ...(Object.keys(CHIP_LABELS) as Array<Exclude<ChipId, "">>).map((c) => ({ value: c, label: CHIP_LABELS[c] }))]}
+            testId="select-chip"
+          />
+        </Field>
+        <Field label="Gameweek">
+          <SimpleSelect
+            value={String(gameweek)}
+            onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+            options={gameweekOptions.map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+            testId="select-reveal-gw"
+          />
+        </Field>
+      </div>
+      <Field label="Manager name (optional)">
+        <Input value={spec.manager} maxLength={MAX_MANAGER_NAME} onChange={(e) => update({ manager: e.target.value })} placeholder="Shown under the headline" data-testid="input-manager" />
+      </Field>
+    </div>
+  );
+}
+
 function longDate(date: string): string {
   const d = new Date(`${date}T12:00:00Z`);
   return Number.isNaN(d.getTime()) ? date : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -235,15 +478,23 @@ export default function GraphicsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements.length, projections, fixtures, spec.template, spec.players.length, spec.teams.length, teams.length]);
 
+  const squadXptsById = useMemo(
+    () => new Map<number, number | null>((projections ?? []).map((p) => [p.playerId, p.gameweekProjections?.[String(lineupGw)] ?? null])),
+    [projections, lineupGw],
+  );
+
   const selectedElements = useMemo(() => {
     const byId = new Map(elements.map((e) => [e.id, e]));
     return spec.players.map((id) => byId.get(id)).filter((e): e is GraphicElement => !!e);
   }, [elements, spec.players]);
 
   const clubColor = useMemo(() => {
-    const team = spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0] : selectedElements[0]?.team;
+    const team =
+      spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0]
+      : spec.template === "team-reveal" ? elements.find((e) => e.id === spec.captain)?.team
+      : selectedElements[0]?.team;
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
-  }, [spec.template, spec.teams, selectedElements, teamShortById]);
+  }, [spec.template, spec.teams, spec.captain, elements, selectedElements, teamShortById]);
   const theme = resolveTheme(spec.theme, clubColor);
 
   const priceContent = useMemo(
@@ -286,6 +537,15 @@ export default function GraphicsPage() {
         if (!fixtures || !projections) return { data: null, problem: null };
         const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
         return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+      }
+      case "team-reveal": {
+        if (spec.squad.length === 0) return { data: null, problem: "Add your 15 players below, or load your squad from your FPL team ID." };
+        if (!fixtures) return { data: null, problem: null };
+        const reveal = buildTeamReveal({
+          elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,
+          gameweek: lineupGw, fixtures: fixtures as any, teamShortById,
+        });
+        return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
       }
       case "top-differentials": {
         const rows = buildDifferentials({
@@ -333,6 +593,7 @@ export default function GraphicsPage() {
   const fileParts =
     spec.template === "price-change" ? [priceContent.date ?? ""]
     : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
+    : spec.template === "team-reveal" ? [spec.manager || "squad", `gw${lineupGw}`]
     : selectedElements.map((e) => e.web_name);
 
   return (
@@ -357,7 +618,7 @@ export default function GraphicsPage() {
                 update({
                   template: t.id as TemplateId,
                   // a lineup is one gameweek; do not carry that single gameweek into other templates' ranges (or the reverse)
-                  ...(t.id === "predicted-lineup" || spec.template === "predicted-lineup" ? { from: 0, to: 0 } : {}),
+                  ...(SINGLE_GAMEWEEK.includes(t.id as TemplateId) || SINGLE_GAMEWEEK.includes(spec.template) ? { from: 0, to: 0 } : {}),
                 })
               }
               aria-pressed={spec.template === t.id}
@@ -404,6 +665,18 @@ export default function GraphicsPage() {
                     </div>
                   </Field>
                 </>
+              )}
+
+              {spec.template === "team-reveal" && (
+                <SquadBuilder
+                  spec={spec}
+                  update={update}
+                  elements={elements}
+                  teamShortById={teamShortById}
+                  xptsById={squadXptsById}
+                  gameweek={lineupGw}
+                  gameweekOptions={openGameweeks.includes(lineupGw) ? openGameweeks : [...openGameweeks, lineupGw].sort((a, b) => a - b)}
+                />
               )}
 
               {spec.template === "predicted-lineup" && (
@@ -533,7 +806,7 @@ export default function GraphicsPage() {
                   {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
                   {copied ? "Copied" : "Copy link"}
                 </Button>
-                {data && (
+                {data && !(data.kind === "team-reveal" && !data.reveal.complete) && (
                   <ShareImageButton
                     renderCard={() => <GraphicCanvas spec={spec} theme={theme} data={data} />}
                     title={GRAPHIC_TEMPLATES.find((t) => t.id === spec.template)!.label}

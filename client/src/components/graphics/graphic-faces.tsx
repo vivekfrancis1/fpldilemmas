@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import {
   GRAPHIC_SIZES,
   fdrColor,
@@ -14,6 +14,8 @@ import {
   type LineupToken,
   type PlayerCardContent,
   type PredictedLineupContent,
+  type RevealToken,
+  type TeamRevealContent,
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
@@ -31,7 +33,8 @@ export type GraphicData =
   | { kind: "fixtures-comparison"; grid: FixtureGridContent; gwLabel: string }
   | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
   | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
-  | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string };
+  | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
+  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string };
 
 interface Metrics {
   pad: number;
@@ -443,10 +446,10 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
   );
 }
 
-function Pitch({ lineup, jersey, nameFont, minFont }: { lineup: PredictedLineupContent; jersey: number; nameFont: number; minFont: number }) {
+function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode }) {
   const line = "rgba(255,255,255,0.45)";
   // attack at the top: forwards first, goalkeeper at the bottom
-  const rows = [...lineup.rows].reverse();
+  const ordered = [...rows].reverse();
   return (
     <div
       style={{
@@ -459,10 +462,10 @@ function Pitch({ lineup, jersey, nameFont, minFont }: { lineup: PredictedLineupC
       <div style={{ position: "absolute", left: "27%", right: "27%", top: 0, height: "14%", border: `3px solid ${line}`, borderTop: "none", boxSizing: "border-box" }} />
       <div style={{ position: "absolute", left: "27%", right: "27%", bottom: 0, height: "14%", border: `3px solid ${line}`, borderBottom: "none", boxSizing: "border-box" }} />
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "8px 14px" }}>
-        {rows.map((r) => (
+        {ordered.map((r) => (
           <div key={r.position} style={{ display: "flex", justifyContent: "space-evenly", alignItems: "flex-start", gap: 6 }}>
             {r.players.map((p) => (
-              <LineupTokenView key={p.id} p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+              <Fragment key={p.id}>{renderToken(p)}</Fragment>
             ))}
           </div>
         ))}
@@ -490,6 +493,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
       ? `Not enough expected-minutes data for ${lineup.teamName} in ${gwLabel} yet.`
       : null;
 
+  const pitch = <Pitch rows={lineup.rows} renderToken={(p) => <LineupTokenView p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />} />;
   const bench = lineup.bench.length > 0 && (
     <div style={{ ...panel(theme), padding: land ? "12px 16px" : "14px 22px", flexShrink: 0 }}>
       <div style={{ fontSize: land ? 15 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 6 : 10 }}>ALSO IN CONTENTION</div>
@@ -518,7 +522,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
       ) : land ? (
         <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
           <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>
-            <Pitch lineup={lineup} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+            {pitch}
           </div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
             <div style={{ ...panel(theme), padding: "12px 16px", flexShrink: 0 }}>
@@ -532,9 +536,113 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0 }}>
-          <Pitch lineup={lineup} jersey={jersey} nameFont={nameFont} minFont={minFont} />
+          {pitch}
           {bench}
           {note}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+// ---------- Team Reveal ----------
+
+function RevealTokenView({ p, jersey, nameFont, fixFont }: { p: RevealToken; jersey: number; nameFont: number; fixFont: number }) {
+  const badge = p.isCaptain ? { text: "C", bg: "#facc15", fg: "#713f12" } : p.isVice ? { text: "V", bg: "#e5e7eb", fg: "#111827" } : null;
+  const badgePx = Math.round(jersey * 0.42);
+  const first = p.fixtures[0];
+  const double = p.fixtures.length > 1;
+  const c = first ? fdrColor(first.difficulty) : null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2 }}>
+      <div style={{ position: "relative", width: jersey, height: jersey }}>
+        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        {badge && (
+          <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: badge.bg, color: badge.fg, border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {badge.text}
+          </div>
+        )}
+      </div>
+      <div style={{ maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "1px 10px", borderRadius: "8px 8px 0 0", fontSize: nameFont, fontWeight: 800, lineHeight: 1.25, background: "rgba(255,255,255,0.96)", color: "#111827", ...ellipsis }}>{p.name}</div>
+      <div
+        style={{
+          maxWidth: "100%", boxSizing: "border-box", padding: "1px 8px", borderRadius: "0 0 8px 8px", fontSize: double ? Math.round(fixFont * 0.8) : fixFont, fontWeight: 800, lineHeight: 1.25, textAlign: "center",
+          background: c ? c.bg : "rgba(0,0,0,0.6)", color: c ? c.fg : "#ffffff", ...ellipsis,
+        }}
+      >
+        {first ? p.fixtures.map((f) => `${f.opponent} (${f.isHome ? "H" : "A"})`).join(" · ") : "No game"}
+      </div>
+    </div>
+  );
+}
+
+function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; reveal: TeamRevealContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 52 : tall ? 104 : 66;
+  const nameFont = land ? 15 : tall ? 24 : 20;
+  const fixFont = land ? 13 : tall ? 20 : 17;
+  const manager = spec.manager.trim();
+  const subtitle = [manager, gwLabel, reveal.formation].filter(Boolean).join(" · ");
+  const token = (p: RevealToken) => <RevealTokenView p={p} jersey={jersey} nameFont={nameFont} fixFont={fixFont} />;
+  const pitch = <Pitch rows={reveal.rows} renderToken={token} />;
+  const captain = reveal.rows.flatMap((r) => r.players).concat(reveal.bench).find((p) => p.isCaptain);
+  const vice = reveal.rows.flatMap((r) => r.players).concat(reveal.bench).find((p) => p.isVice);
+
+  const chip = reveal.chipLabel && (
+    <span style={{ background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "4px 14px" : "6px 18px", fontSize: land ? 16 : 22, fontWeight: 900, letterSpacing: 1 }}>
+      {reveal.chipLabel.toUpperCase()}
+    </span>
+  );
+  const value = (
+    <span style={{ ...panel(theme, { borderRadius: 999 }), padding: land ? "4px 14px" : "6px 18px", fontSize: land ? 16 : 22, fontWeight: 800 }}>
+      <span style={{ color: theme.muted }}>Squad value </span>{reveal.squadValue}
+    </span>
+  );
+  const bench = (
+    <div style={{ ...panel(theme), padding: land ? "10px 12px" : "10px 14px", flexShrink: 0 }}>
+      <div style={{ fontSize: land ? 14 : 18, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 4 : 6 }}>BENCH</div>
+      <div style={{ display: "flex", flexWrap: land ? "wrap" : "nowrap", gap: land ? 8 : 10, justifyContent: "space-around" }}>
+        {reveal.bench.map((p) => (
+          <div key={p.id} style={{ flex: land ? "0 0 46%" : 1, minWidth: 0, display: "flex", justifyContent: "center" }}>{token(p)}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {!reveal.complete ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 40, textAlign: "center", fontSize: land ? 22 : 30, color: theme.muted, fontWeight: 700 }}>
+          <div style={{ color: theme.text, fontWeight: 900 }}>Finish your squad to reveal it</div>
+          {reveal.problems.map((m) => (<div key={m}>{m}</div>))}
+        </div>
+      ) : land ? (
+        <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>{pitch}</div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>{chip}{value}</div>
+            {bench}
+            <div style={{ flex: 1 }} />
+            {(captain || vice) && (
+              <div style={{ fontSize: 15, fontWeight: 700, color: theme.muted, flexShrink: 0 }}>
+                {captain ? `Captain: ${captain.name}` : ""}{captain && vice ? " · " : ""}{vice ? `Vice: ${vice.name}` : ""}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {chip}{value}
+            {(captain || vice) && (
+              <span style={{ fontSize: 20, fontWeight: 700, color: theme.muted }}>
+                {captain ? `C: ${captain.name}` : ""}{captain && vice ? " · " : ""}{vice ? `V: ${vice.name}` : ""}
+              </span>
+            )}
+          </div>
+          {pitch}
+          {bench}
         </div>
       )}
     </Frame>
@@ -550,6 +658,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "fixtures-comparison": return <FixturesFace spec={spec} theme={theme} grid={data.grid} gwLabel={data.gwLabel} />;
     case "price-change": return <PriceFace spec={spec} theme={theme} prices={data.prices} dateLabel={data.dateLabel} />;
     case "predicted-lineup": return <LineupFace spec={spec} theme={theme} lineup={data.lineup} gwLabel={data.gwLabel} />;
+    case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }
