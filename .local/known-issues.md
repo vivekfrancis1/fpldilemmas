@@ -223,6 +223,8 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Double-gameweek Copilot format is an assumption** (>90 = total, <=90 = per fixture): no DGW exists this season yet — verify against the first DGW export.
 - **Local dev servers and tests share the production database** (`.env` DATABASE_URL), so schedulers, snapshots and caches started locally can touch production; mitigated per-job (production-only gates) but a separate dev/test database is the real fix.
 
-## 2026-10-23 — Noticed while building the Graphics Maker (open)
+## 2026-10-23 — Local `.env` database password rejected (FIXED 2026-10-23)
 
-- **Local `.env` DATABASE_URL password is rejected by Railway (`password authentication failed for user "postgres"`)**, so `npm run dev` logs DB errors, cached projection endpoints hang, and the dev server exits after ~1 minute (orchestrator job timeout -> unhandledRejection). The credential in `.env` (dated Aug 2) looks stale. Workaround used to verify UI: run only Vite with `/api` proxied (read-only) to https://fpldilemmas.com. Needs the current Railway DB URL in `.env`.
+- **Where:** local `.env` `DATABASE_URL`.
+- **Status:** Fixed. Railway's Postgres `POSTGRES_PASSWORD` was changed about 10 hours before this was noticed, so the Aug-2 password in `.env` was rejected (`password authentication failed for user "postgres"`): the dev server crashed after ~1 minute and cached projection endpoints hung. `DATABASE_URL` was replaced with the current `DATABASE_PUBLIC_URL` from the Railway dashboard (copied via the clipboard, never printed). Checked: direct `pg` connection OK (65 public tables); a fresh dev server started with no auth errors (content creators seeded, CBIT cache populated with 668 players).
+- **Notes:** `.env` is git-ignored. If the Postgres password is rotated again, repeat: Railway dashboard -> Postgres -> Variables -> copy `DATABASE_PUBLIC_URL` into `.env`. The Railway CLI login also expires (`railway login`). Local servers still talk to the PRODUCTION database (see the open item above).
