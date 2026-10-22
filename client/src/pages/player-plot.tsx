@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ArrowLeftRight, Check, ChartScatter, Link2, Search, SlidersHorizontal } from "lucide-react";
@@ -60,6 +60,26 @@ function useElementWidth<T extends HTMLElement>() {
     return () => ro.disconnect();
   }, []);
   return [ref, width] as const;
+}
+
+// Share-image chart: takes whatever height the card has left (the title and chips can wrap to a different
+// number of lines), measured once the card is laid out, so it never runs into the lists or footer below it.
+function FillChart(props: Omit<ComponentProps<typeof PlayerPlotChart>, "width" | "height">) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 1008, height: 700 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) setSize({ width: Math.round(r.width), height: Math.floor(r.height) });
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "relative", flex: 1, minHeight: 0, marginTop: 16 }}>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <PlayerPlotChart {...props} width={size.width} height={size.height} />
+      </div>
+    </div>
+  );
 }
 
 function StatSelect({ value, onChange, label, testId }: { value: string; onChange: (key: string) => void; label: string; testId: string }) {
@@ -299,23 +319,19 @@ export default function PlayerPlotPage() {
           <b style={{ color: "#fbbf24", letterSpacing: 1.5 }}>HOW TO READ </b>
           {preset?.hint ?? "Each dot is a player. Further right means more of the horizontal stat, higher up means more of the vertical stat."}
         </div>
-        <div style={{ marginTop: 16, flex: 1, minHeight: 0 }}>
-          <PlayerPlotChart
-            width={1008}
-            height={picks ? 760 : 900}
-            fontSize={22}
-            players={shown}
-            xKey={state.x}
-            yKey={state.y}
-            xScale={state.xScale}
-            yScale={state.yScale}
-            showMedian={state.median}
-            quadrants={preset?.quadrants}
-            tint={goodCorners}
-            theme={CARD_THEME}
-            interactive={false}
-          />
-        </div>
+        <FillChart
+          fontSize={22}
+          players={shown}
+          xKey={state.x}
+          yKey={state.y}
+          xScale={state.xScale}
+          yScale={state.yScale}
+          showMedian={state.median}
+          quadrants={preset?.quadrants}
+          tint={goodCorners}
+          theme={CARD_THEME}
+          interactive={false}
+        />
         {picks && (
           <div style={{ display: "flex", gap: 18, marginTop: 8 }}>
             {list(`TARGET: ${preset!.quadrants!.tl.toUpperCase()}`, "#34d399", "rgba(52,211,153,0.5)", "rgba(52,211,153,0.07)", picks.tl)}

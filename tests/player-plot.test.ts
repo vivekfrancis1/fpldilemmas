@@ -318,6 +318,12 @@ describe("declutterLabels", () => {
     const none = declutterLabels([pt(1, 100, 100)], bounds, [{ x: 0, y: 0, w: 400, h: 300 }]);
     expect(none.get(1)).toBeNull();
   });
+  it("lets the top-priority points label over a blocked area when nothing else is free", () => {
+    const blockedAll = [{ x: 0, y: 0, w: 400, h: 300 }];
+    const res = declutterLabels([pt(1, 100, 100, 1), pt(2, 300, 200, 9)], bounds, blockedAll, 1);
+    expect(res.get(1)).not.toBeNull(); // top priority overrides the blocked area
+    expect(res.get(2)).toBeNull(); // the rest still respect it
+  });
   it("hides labels that have no free space", () => {
     const crowded = Array.from({ length: 40 }, (_, i) => pt(i + 1, 200, 150));
     const res = declutterLabels(crowded, bounds);

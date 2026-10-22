@@ -499,24 +499,29 @@ export function declutterLabels(
   points: LabelPoint[],
   bounds: { width: number; height: number },
   blocked: Rect[] = [],
+  /** The N highest-priority points may label over a blocked area if they have no other free side. */
+  softTop = 0,
 ): Map<number, LabelSide | null> {
   const result = new Map<number, LabelSide | null>();
-  const placed: Rect[] = [...blocked];
+  const placed: Rect[] = [];
   const dots: Array<Rect & { id: number }> = points.map((p) => ({ id: p.id, x: p.x - p.r, y: p.y - p.r, w: p.r * 2, h: p.r * 2 }));
   const order = [...points].sort((a, b) => a.priority - b.priority || a.id - b.id);
-  for (const p of order) {
-    let chosen: LabelSide | null = null;
+  const tryPlace = (p: LabelPoint, avoid: Rect[]): LabelSide | null => {
     for (const side of ["right", "left", "above", "below"] as LabelSide[]) {
       const r = labelRect(p, side);
       if (r.x < 0 || r.y < 0 || r.x + r.w > bounds.width || r.y + r.h > bounds.height) continue;
-      if (placed.some((q) => overlaps(r, q))) continue;
+      if (avoid.some((q) => overlaps(r, q))) continue;
       if (dots.some((d) => d.id !== p.id && overlaps(r, d))) continue;
-      chosen = side;
       placed.push(r);
-      break;
+      return side;
     }
+    return null;
+  };
+  order.forEach((p, i) => {
+    let chosen = tryPlace(p, [...placed, ...blocked]);
+    if (chosen === null && i < softTop) chosen = tryPlace(p, placed);
     result.set(p.id, chosen);
-  }
+  });
   return result;
 }
 

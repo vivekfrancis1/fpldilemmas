@@ -156,7 +156,7 @@ export default function PlayerPlotChart({
     const blocked = quadrants
       ? [capRect(quadrants.tl, false, false), capRect(quadrants.tr, true, false), capRect(quadrants.bl, false, true), capRect(quadrants.br, true, true)]
       : [];
-    return declutterLabels(points, { width: pw, height: ph }, blocked);
+    return declutterLabels(points, { width: pw, height: ph }, blocked, 5);
   }, [model, xKey, yKey, fontSize, pw, ph, ml, mt, highlightIds, selectedId, quadrants]);
 
   if (!model) {
