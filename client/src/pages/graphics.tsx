@@ -1,0 +1,521 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, ImagePlus, Link2, Search, X } from "lucide-react";
+import { BootstrapData, Fixture } from "@shared/schema";
+import { getDefaultGameweekRange } from "@shared/gameweek-utils";
+import {
+  DEFAULT_COMPARE_STATS,
+  GRAPHIC_SIZES,
+  GRAPHIC_STATS,
+  GRAPHIC_TEMPLATES,
+  GRAPHIC_THEMES,
+  MAX_RANGE_GAMEWEEKS,
+  MAX_STATS,
+  PRICE_LIST_LIMIT,
+  THEME_LABEL,
+  buildComparison,
+  buildDifferentials,
+  buildFixturesGrid,
+  buildPlayerCard,
+  buildPriceChanges,
+  decodeSpec,
+  encodeSpec,
+  gameweekLabel,
+  graphicFileName,
+  resolveTheme,
+  type GraphicElement,
+  type GraphicPosition,
+  type GraphicSpec,
+  type PriceChangeInput,
+  type SizeId,
+  type TemplateId,
+  type ThemeId,
+} from "@shared/graphics";
+import { projectionWindow } from "@shared/compare-utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShareImageButton } from "@/components/share-image-button";
+import { GraphicCanvas, type GraphicData } from "@/components/graphics/graphic-faces";
+import { teamColor } from "@/lib/team-colors";
+
+const DEFAULT_WEEKS = 5;
+const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "FWD"];
+const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
+const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+
+interface PlayerProjection {
+  playerId: number;
+  gameweekProjections?: Record<string, number>;
+}
+
+function useElementWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setWidth(Math.round(el.getBoundingClientRect().width));
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1 min-w-0">
+      <label className="text-xs font-medium text-gray-600">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SimpleSelect({ value, onChange, options, testId }: { value: string; onChange: (v: string) => void; options: Array<{ value: string; label: string }>; testId: string }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full" data-testid={testId}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-[60vh]">
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function PlayerPicker({
+  elements, teamShortById, selected, max, onChange,
+}: {
+  elements: GraphicElement[];
+  teamShortById: Map<number, string>;
+  selected: number[];
+  max: number;
+  onChange: (ids: number[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const byId = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return elements
+      .filter((e) => !selected.includes(e.id) && `${e.web_name} ${e.first_name ?? ""} ${e.second_name ?? ""}`.toLowerCase().includes(q))
+      .sort((a, b) => (Number(b.total_points) || 0) - (Number(a.total_points) || 0))
+      .slice(0, 8);
+  }, [elements, query, selected]);
+  const full = selected.length >= max;
+  const add = (id: number) => {
+    onChange(max === 1 ? [id] : [...selected, id].slice(0, max));
+    setQuery("");
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {selected.map((id) => {
+          const e = byId.get(id);
+          if (!e) return null;
+          return (
+            <span key={id} className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-900" data-testid={`chip-player-${id}`}>
+              {e.web_name} <span className="text-xs text-indigo-600">{teamShortById.get(e.team)}</span>
+              <button type="button" aria-label={`Remove ${e.web_name}`} onClick={() => onChange(selected.filter((x) => x !== id))} className="rounded-full p-0.5 hover:bg-indigo-100">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+      {(!full || max === 1) && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={max === 1 ? "Search a player…" : "Search a player to add…"}
+            className="pl-9"
+            data-testid="input-graphics-player-search"
+          />
+          {matches.length > 0 && (
+            <ul className="absolute z-20 mt-1 w-full rounded-lg border bg-white shadow-lg" role="listbox">
+              {matches.map((e) => (
+                <li key={e.id}>
+                  <button type="button" onClick={() => add(e.id)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50" data-testid={`option-player-${e.id}`}>
+                    <span className="font-medium">{e.web_name}</span>
+                    <span className="text-xs text-gray-500">{teamShortById.get(e.team)} · {POSITION_BY_TYPE[e.element_type]} · £{(e.now_cost / 10).toFixed(1)}m</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function longDate(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? date : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+export default function GraphicsPage() {
+  const [spec, setSpec] = useState<GraphicSpec>(() => decodeSpec(typeof window !== "undefined" ? window.location.search : ""));
+  const [copied, setCopied] = useState(false);
+  const [previewRef, previewWidth] = useElementWidth<HTMLDivElement>();
+
+  const { data: bootstrap, isLoading: bootstrapLoading, error: bootstrapError } = useQuery<BootstrapData>({ queryKey: ["/api/bootstrap-static"], staleTime: 5 * 60 * 1000 });
+  const { data: projections } = useQuery<PlayerProjection[]>({ queryKey: ["/api/cached/player-total-points"], staleTime: 5 * 60 * 1000 });
+  const { data: fixtures } = useQuery<Fixture[]>({ queryKey: ["/api/fixtures"], staleTime: 5 * 60 * 1000 });
+  const { data: priceChanges, isLoading: pricesLoading } = useQuery<PriceChangeInput[]>({
+    queryKey: ["/api/price-changes/recent"],
+    staleTime: 5 * 60 * 1000,
+    enabled: spec.template === "price-change",
+  });
+
+  const update = (patch: Partial<GraphicSpec>) => setSpec((s) => ({ ...s, ...patch }));
+
+  // keep the address bar in step with the controls, so the current graphic can be shared as a link
+  useEffect(() => {
+    const qs = encodeSpec(spec);
+    window.history.replaceState(window.history.state, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+  }, [spec]);
+
+  const elements = useMemo(() => (bootstrap?.elements ?? []) as unknown as GraphicElement[], [bootstrap]);
+  const teams = bootstrap?.teams ?? [];
+  const teamShortById = useMemo(() => new Map(teams.map((t) => [t.id, t.short_name])), [teams]);
+  const teamNameById = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
+  const projectionById = useMemo(() => new Map((projections ?? []).map((p) => [p.playerId, p.gameweekProjections])), [projections]);
+
+  const defaultRange = useMemo(() => {
+    if (!bootstrap?.events) return { from: 1, to: DEFAULT_WEEKS };
+    const r = getDefaultGameweekRange(bootstrap.events as any, DEFAULT_WEEKS);
+    return { from: parseInt(r.startGameweek, 10), to: parseInt(r.endGameweek, 10) };
+  }, [bootstrap?.events]);
+  const from = spec.from || defaultRange.from;
+  const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultRange.to));
+  const gameweeks = useMemo(() => Array.from({ length: to - from + 1 }, (_, i) => from + i), [from, to]);
+  const gwLabel = gameweekLabel(from, to);
+
+  const openGameweeks = useMemo(() => {
+    const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean }>;
+    const ids = events.filter((e) => !e.finished).map((e) => e.id);
+    return ids.length ? ids : [from];
+  }, [bootstrap?.events, from]);
+
+  // First visit: start with sensible picks so the preview is never empty (they go into the link too).
+  useEffect(() => {
+    if (!elements.length || !projections) return;
+    if ((spec.template === "player-card" || spec.template === "player-comparison") && spec.players.length === 0) {
+      const need = spec.template === "player-card" ? 1 : 2;
+      const ranked = elements
+        .filter((e) => (e.status ?? "a") === "a")
+        .map((e) => ({ id: e.id, xpts: projectionWindow(projectionById.get(e.id), gameweeks).total ?? -1 }))
+        .sort((a, b) => b.xpts - a.xpts)
+        .slice(0, need)
+        .map((x) => x.id);
+      if (ranked.length === need) update({ players: ranked });
+    }
+    if (spec.template === "fixtures-comparison" && spec.teams.length === 0 && teams.length) {
+      update({ teams: [...teams].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 3).map((t) => t.id) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elements.length, projections, spec.template, spec.players.length, spec.teams.length, teams.length]);
+
+  const selectedElements = useMemo(() => {
+    const byId = new Map(elements.map((e) => [e.id, e]));
+    return spec.players.map((id) => byId.get(id)).filter((e): e is GraphicElement => !!e);
+  }, [elements, spec.players]);
+
+  const clubColor = useMemo(() => {
+    const team = spec.template === "fixtures-comparison" ? spec.teams[0] : selectedElements[0]?.team;
+    return team !== undefined ? teamColor(teamShortById.get(team)) : null;
+  }, [spec.template, spec.teams, selectedElements, teamShortById]);
+  const theme = resolveTheme(spec.theme, clubColor);
+
+  const priceContent = useMemo(
+    () => buildPriceChanges({ changes: priceChanges ?? [], date: spec.date || null, limit: PRICE_LIST_LIMIT[spec.size] }),
+    [priceChanges, spec.date, spec.size],
+  );
+
+  const { data, problem } = useMemo((): { data: GraphicData | null; problem: string | null } => {
+    if (!elements.length) return { data: null, problem: null };
+    switch (spec.template) {
+      case "player-card": {
+        const e = selectedElements[0];
+        if (!e) return { data: null, problem: "Search and pick a player to create the card." };
+        return {
+          data: {
+            kind: "player-card",
+            gwLabel,
+            card: buildPlayerCard({ element: e, teamShortById, teamNameById, gameweekProjections: projectionById.get(e.id), gameweeks, fixtures: (fixtures ?? []) as any }),
+          },
+          problem: null,
+        };
+      }
+      case "player-comparison": {
+        if (selectedElements.length < 2) return { data: null, problem: "Pick at least two players to compare." };
+        const xptsByPlayer = new Map(selectedElements.map((e) => [e.id, projectionWindow(projectionById.get(e.id), gameweeks).total]));
+        return { data: { kind: "player-comparison", comparison: buildComparison({ elements: selectedElements, statKeys: spec.stats, xptsByPlayer, teamShortById }) }, problem: null };
+      }
+      case "fixtures-comparison": {
+        if (spec.teams.length < 2) return { data: null, problem: "Pick at least two teams to compare." };
+        if (!fixtures) return { data: null, problem: null };
+        return { data: { kind: "fixtures-comparison", gwLabel, grid: buildFixturesGrid({ teamIds: spec.teams, gameweeks, fixtures: fixtures as any, teamShortById, teamNameById }) }, problem: null };
+      }
+      case "price-change": {
+        if (pricesLoading) return { data: null, problem: null };
+        const dateLabel = priceContent.date ? `Confirmed price changes · ${longDate(priceContent.date)}` : "Confirmed price changes";
+        return { data: { kind: "price-change", prices: priceContent, dateLabel }, problem: null };
+      }
+      case "top-differentials": {
+        const rows = buildDifferentials({
+          elements,
+          projections: projections ?? [],
+          teamShortById,
+          from,
+          to,
+          pos: spec.pos,
+          maxOwn: spec.maxOwn,
+          top: spec.top,
+        });
+        const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
+        return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
+      }
+    }
+  }, [elements, spec, selectedElements, gwLabel, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
+
+  const { width: fullWidth, height: fullHeight } = GRAPHIC_SIZES[spec.size];
+  const scale = previewWidth > 0 ? Math.min(1, previewWidth / fullWidth) : 1;
+  const canvas = data ? <GraphicCanvas spec={spec} theme={theme} data={data} /> : null;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked: the address bar already holds the link */
+    }
+  };
+
+  const toggleStat = (key: string) => {
+    const current = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key].slice(0, MAX_STATS);
+    update({ stats: next.length ? next : current });
+  };
+  const toggleTeam = (id: number) => {
+    update({ teams: spec.teams.includes(id) ? spec.teams.filter((t) => t !== id) : [...spec.teams, id].slice(0, 4) });
+  };
+
+  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials";
+  const activeStats = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
+  const loading = bootstrapLoading;
+  const fileParts = spec.template === "price-change" ? [priceContent.date ?? ""] : selectedElements.map((e) => e.web_name);
+
+  return (
+    <div className="min-h-screen">
+      <div className="w-full py-4 sm:py-8 fpl-page-container">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <ImagePlus />
+              <h1 data-testid="text-page-title">Graphics Maker</h1>
+            </div>
+            <p className="fpl-page-subtitle">Make a shareable FPL graphic in seconds. Pick a template, choose your data, then download the image or copy a link.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-3" role="group" aria-label="Template" data-testid="graphics-templates">
+          {GRAPHIC_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => update({ template: t.id as TemplateId })}
+              aria-pressed={spec.template === t.id}
+              className={`rounded-xl border px-3 py-2.5 sm:p-3 text-left ${spec.template === t.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-800 hover:bg-gray-50"}`}
+              data-testid={`template-${t.id}`}
+            >
+              <div className="text-sm font-bold">{t.label}</div>
+              <div className={`mt-0.5 hidden text-xs leading-snug sm:block ${spec.template === t.id ? "text-indigo-100" : "text-gray-500"}`}>{t.description}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <Card>
+            <CardContent className="p-3 sm:p-4 space-y-4">
+              {spec.template === "player-card" && (
+                <Field label="Player">
+                  <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={1} onChange={(players) => update({ players })} />
+                </Field>
+              )}
+
+              {spec.template === "player-comparison" && (
+                <>
+                  <Field label="Players (2 or 3)">
+                    <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={3} onChange={(players) => update({ players })} />
+                  </Field>
+                  <Field label={`Stats to show (up to ${MAX_STATS})`}>
+                    <div className="flex flex-wrap gap-1.5" data-testid="graphics-stats">
+                      {GRAPHIC_STATS.map((s) => {
+                        const on = activeStats.includes(s.key);
+                        return (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => toggleStat(s.key)}
+                            aria-pressed={on}
+                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
+                            data-testid={`stat-${s.key}`}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Field>
+                </>
+              )}
+
+              {spec.template === "fixtures-comparison" && (
+                <Field label="Teams (2 to 4)">
+                  <div className="flex flex-wrap gap-1.5" data-testid="graphics-teams">
+                    {[...teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => {
+                      const on = spec.teams.includes(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => toggleTeam(t.id)}
+                          aria-pressed={on}
+                          disabled={!on && spec.teams.length >= 4}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
+                          data-testid={`team-${t.short_name}`}
+                        >
+                          {t.short_name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Field>
+              )}
+
+              {spec.template === "price-change" && (
+                <Field label="Day">
+                  <SimpleSelect
+                    value={spec.date || "latest"}
+                    onChange={(v) => update({ date: v === "latest" ? "" : v })}
+                    options={[{ value: "latest", label: "Latest day with changes" }, ...priceContent.availableDates.map((d) => ({ value: d, label: longDate(d) }))]}
+                    testId="select-price-day"
+                  />
+                </Field>
+              )}
+
+              {spec.template === "top-differentials" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Position">
+                    <SimpleSelect
+                      value={spec.pos ?? "ALL"}
+                      onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })}
+                      options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))}
+                      testId="select-position"
+                    />
+                  </Field>
+                  <Field label="Owned by under">
+                    <SimpleSelect
+                      value={String(spec.maxOwn)}
+                      onChange={(v) => update({ maxOwn: parseInt(v, 10) })}
+                      options={(OWNERSHIP_OPTIONS.includes(spec.maxOwn) ? OWNERSHIP_OPTIONS : [...OWNERSHIP_OPTIONS, spec.maxOwn].sort((a, b) => a - b)).map((n) => ({ value: String(n), label: `${n}%` }))}
+                      testId="select-ownership"
+                    />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={[3, 4, 5, 6, 7, 8, 9, 10].map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                </div>
+              )}
+
+              {usesRange && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="From gameweek">
+                    <SimpleSelect
+                      value={String(from)}
+                      onChange={(v) => {
+                        const f = parseInt(v, 10);
+                        update({ from: f, to: Math.min(f + MAX_RANGE_GAMEWEEKS - 1, Math.max(f, to)) });
+                      }}
+                      options={openGameweeks.map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                      testId="select-from"
+                    />
+                  </Field>
+                  <Field label="To gameweek">
+                    <SimpleSelect
+                      value={String(to)}
+                      onChange={(v) => update({ from, to: parseInt(v, 10) })}
+                      options={openGameweeks.filter((gw) => gw >= from && gw < from + MAX_RANGE_GAMEWEEKS).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                      testId="select-to"
+                    />
+                  </Field>
+                </div>
+              )}
+
+              <div className="border-t pt-4 grid grid-cols-2 gap-3">
+                <Field label="Size">
+                  <SimpleSelect value={spec.size} onChange={(v) => update({ size: v as SizeId })} options={(Object.keys(GRAPHIC_SIZES) as SizeId[]).map((s) => ({ value: s, label: GRAPHIC_SIZES[s].label }))} testId="select-size" />
+                </Field>
+                <Field label="Colours">
+                  <SimpleSelect value={spec.theme} onChange={(v) => update({ theme: v as ThemeId })} options={GRAPHIC_THEMES.map((t) => ({ value: t, label: THEME_LABEL[t] }))} testId="select-theme" />
+                </Field>
+                <div className="col-span-2">
+                  <Field label="Headline (optional)">
+                    <Input value={spec.headline} maxLength={60} onChange={(e) => update({ headline: e.target.value })} placeholder="Use the default headline" data-testid="input-headline" />
+                  </Field>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="order-first min-w-0 space-y-3 lg:order-none">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-gray-500">Preview. The saved image is {fullWidth}×{fullHeight}px and carries the FPL Dilemmas watermark.</p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={copyLink} className="gap-2" data-testid="button-copy-link">
+                  {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                  {copied ? "Copied" : "Copy link"}
+                </Button>
+                {data && (
+                  <ShareImageButton
+                    renderCard={() => <GraphicCanvas spec={spec} theme={theme} data={data} />}
+                    title={GRAPHIC_TEMPLATES.find((t) => t.id === spec.template)!.label}
+                    width={fullWidth}
+                    height={fullHeight}
+                    fileName={graphicFileName(spec, fileParts)}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div ref={previewRef} className="w-full" data-testid="graphics-preview">
+              {bootstrapError ? (
+                <div className="py-16 text-center text-sm text-gray-500" role="status">Couldn't load player data. Please refresh.</div>
+              ) : loading || (!data && !problem) ? (
+                <div className="py-16 text-center text-sm text-gray-500" role="status">Loading…</div>
+              ) : problem ? (
+                <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center text-sm text-gray-600" role="status" data-testid="graphics-problem">{problem}</div>
+              ) : (
+                <div style={{ width: fullWidth * scale, height: fullHeight * scale, overflow: "hidden", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.18)" }}>
+                  <div style={{ width: fullWidth, height: fullHeight, transform: `scale(${scale})`, transformOrigin: "top left" }}>{canvas}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

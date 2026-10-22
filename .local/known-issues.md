@@ -222,3 +222,7 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Low-scoring-team defender distortion** (e.g. Van Hecke ~0.64 goals/GW from 1 goal in 540 min): remaining cause is dividing by a tiny team goal total then applying it to a larger odds-based team projection. Position-average priors and last-season blending are ruled out by decision; needs a new approach.
 - **Double-gameweek Copilot format is an assumption** (>90 = total, <=90 = per fixture): no DGW exists this season yet — verify against the first DGW export.
 - **Local dev servers and tests share the production database** (`.env` DATABASE_URL), so schedulers, snapshots and caches started locally can touch production; mitigated per-job (production-only gates) but a separate dev/test database is the real fix.
+
+## 2026-10-23 — Noticed while building the Graphics Maker (open)
+
+- **Local `.env` DATABASE_URL password is rejected by Railway (`password authentication failed for user "postgres"`)**, so `npm run dev` logs DB errors, cached projection endpoints hang, and the dev server exits after ~1 minute (orchestrator job timeout -> unhandledRejection). The credential in `.env` (dated Aug 2) looks stale. Workaround used to verify UI: run only Vite with `/api` proxied (read-only) to https://fpldilemmas.com. Needs the current Railway DB URL in `.env`.
