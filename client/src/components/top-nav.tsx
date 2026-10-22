@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { PRIMARY_NAV_ITEMS } from "@/components/primary-nav-items";
 import RefreshButton from "@/components/refresh-button";
 import InstallAppButton from "@/components/install-app-button";
 
@@ -51,6 +52,10 @@ interface NavItem {
 
 interface NavSection {
   section: string;
+  /** Sections sharing a `group` render as columns of one dropdown, labelled with the group name. */
+  group?: string;
+  /** Column heading inside a grouped dropdown (defaults to the section name). */
+  heading?: string;
   items: NavItem[];
 }
 
@@ -65,6 +70,8 @@ const navSections: NavSection[] = [
   },
   {
     section: "Team Projections",
+    group: "Projections",
+    heading: "Team",
     items: [
       { path: "/match-predictions", label: "Match Predictions", icon: Target },
       { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3 },
@@ -75,6 +82,8 @@ const navSections: NavSection[] = [
   },
   {
     section: "Player Projections",
+    group: "Projections",
+    heading: "Player",
     items: [
       { path: "/player-total-points", label: "Points", icon: Target },
       { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy },
@@ -87,17 +96,26 @@ const navSections: NavSection[] = [
   },
   {
     section: "Popular Tools",
+    group: "Tools",
+    heading: "Popular",
     items: [
       { path: "/deadline-brief", label: "Pre-deadline Brief", icon: AlarmClock },
       { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
       { path: "/compare", label: "Compare Players", icon: GitCompareArrows },
       { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown },
-      { path: "/player-plot", label: "Player Plot", icon: ChartScatter },
-      { path: "/graphics", label: "Graphics Maker", icon: ImagePlus },
       { path: "/price-changes", label: "Price Changes", icon: RefreshCw },
       { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3 },
       { path: "/best-freehit-team", label: "Freehit Team", icon: Users },
       { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star },
+    ],
+  },
+  {
+    section: "Visual Tools",
+    group: "Tools",
+    heading: "Visual",
+    items: [
+      { path: "/player-plot", label: "Player Plot", icon: ChartScatter },
+      { path: "/graphics", label: "Graphics Maker", icon: ImagePlus },
     ],
   },
   {
@@ -153,14 +171,17 @@ const adminSection: NavSection = {
 };
 
 function NavDropdown({
-  section,
+  label,
+  columns,
   isActive,
   twoCol = false,
 }: {
-  section: NavSection;
+  label: string;
+  columns: NavSection[];
   isActive: boolean;
   twoCol?: boolean;
 }) {
+  const multiColumn = columns.length > 1;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,13 +220,13 @@ function NavDropdown({
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 px-2.5 h-full text-sm font-medium transition-colors whitespace-nowrap ${
+        className={`flex items-center gap-0.5 xl:gap-1 px-1.5 xl:px-2 h-full text-[13px] xl:text-sm font-medium transition-colors whitespace-nowrap ${
           isActive
             ? "bg-white/15 text-white"
             : "text-purple-100 hover:bg-white/10 hover:text-white"
         }`}
       >
-        {section.section}
+        {label}
         <ChevronDown
           className={`h-3.5 w-3.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
         />
@@ -214,24 +235,33 @@ function NavDropdown({
       {open && (
         <div
           className={`absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1 min-w-[180px] ${
-            twoCol ? "w-[380px]" : "w-[220px]"
+            multiColumn ? "w-[440px]" : twoCol ? "w-[380px]" : "w-[220px]"
           }`}
         >
-          <div className={twoCol ? "grid grid-cols-2 gap-x-1 p-1" : "p-1"}>
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.path} href={item.path}>
-                  <div
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-fpl-purple/10 hover:text-fpl-purple cursor-pointer transition-colors"
-                  >
-                    <Icon className="h-3.5 w-3.5 flex-shrink-0 text-fpl-purple/60" />
-                    <span className="truncate">{item.label}</span>
+          <div className={multiColumn ? "grid grid-cols-2 gap-x-1 p-1" : twoCol ? "grid grid-cols-2 gap-x-1 p-1" : "p-1"}>
+            {columns.map((col) => (
+              <div key={col.section} className={multiColumn ? undefined : "contents"}>
+                {multiColumn && (
+                  <div className="px-3 pt-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    {col.heading ?? col.section}
                   </div>
-                </Link>
-              );
-            })}
+                )}
+                {col.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.path} href={item.path}>
+                      <div
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-fpl-purple/10 hover:text-fpl-purple cursor-pointer transition-colors"
+                      >
+                        <Icon className="h-3.5 w-3.5 flex-shrink-0 text-fpl-purple/60" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -267,29 +297,57 @@ export default function TopNav() {
     }))
     .filter((s) => s.items.length > 0);
 
+  // One dropdown per section, except sections sharing a `group`, which become columns of one dropdown.
+  const dropdowns: { label: string; columns: NavSection[] }[] = [];
+  for (const s of visibleSections) {
+    const label = s.group ?? s.section;
+    const existing = dropdowns.find((d) => d.label === label);
+    if (existing) existing.columns.push(s);
+    else dropdowns.push({ label, columns: [s] });
+  }
+
   return (
     <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 px-3 mr-4 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
+      <Link href="/" className="flex items-center gap-2 px-3 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
         <span className="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-indigo-600 text-[13px] leading-none flex-shrink-0">
           ⚽
         </span>
-        <span className="text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
+        <span className="hidden xl:inline text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
       </Link>
 
       {/* Nav dropdowns — flex-1 so they fill available space */}
       <nav className="flex items-center h-full flex-1 min-w-0">
-        {visibleSections.map((section) => (
+        {/* Primary tabs: same four as the mobile bottom bar */}
+        {PRIMARY_NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
+          const active = match.some((m) => location.startsWith(m));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-1.5 px-1.5 xl:px-2 h-full text-[13px] xl:text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
+                active ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              }`}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon className="h-3.5 w-3.5 text-fpl-green hidden xl:block" />
+              {label}
+            </Link>
+          );
+        })}
+        <span className="h-5 w-px bg-purple-500/40 mx-1 flex-shrink-0" aria-hidden />
+        {dropdowns.map((d) => (
           <NavDropdown
-            key={section.section}
-            section={section}
-            isActive={isSectionActive(section)}
-            twoCol={false}
+            key={d.label}
+            label={d.label}
+            columns={d.columns}
+            isActive={d.columns.some(isSectionActive)}
           />
         ))}
         {isAdmin && (
           <NavDropdown
-            section={adminSection}
+            label={adminSection.section}
+            columns={[adminSection]}
             isActive={adminSection.items.some((i) => location === i.path)}
             twoCol
           />

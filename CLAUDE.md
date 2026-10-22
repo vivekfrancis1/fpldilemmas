@@ -70,7 +70,7 @@ If a test fails intermittently: re-run it alone; if it then passes, do **not** a
 - **Time-Weighted Blend for goalShare/assistShare**: Players who missed a block of games (AFCON, injury, mid-season transfer) but are now regularly playing get a blend of their raw season total and an extrapolated per-game rate. Four-condition gate: activeGames≥3, maxConsecDNP≥4, startRate≥70%, played last 4 fixtures. Qualifying players (~50) stored in `blend_eligible_players` DB table, refreshed on every goalShare/assistShare cache miss. Admin endpoint: `GET /api/admin/blend-eligible-players`.
 - **FPL Content Creators Admin**: Streamlined admin interface for managing content creators with CRUD functionality.
 - **Loading Experience**: Enhanced loading screens with shared components for a consistent user experience on slow-loading pages.
-- **Top nav order**: Statistics (Team Stats, Player Stats, Match Stats), Team Projections, Player Projections, Popular Tools, Top Managers, My FPL.
+- **Top nav order**: four primary tabs (Matches, Players, Fixtures, Prices — shared with the mobile bottom bar via `primary-nav-items.ts`), then dropdowns: Statistics (Team Stats, Player Stats, Match Stats), Projections (Team | Player columns), Tools (Popular | Visual columns; Visual = Player Plot, Graphics Maker), Top Managers, My FPL.
 
 ## External Dependencies
 

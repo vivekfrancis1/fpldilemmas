@@ -1,12 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, Menu, Target, TrendingUp, Trophy } from "lucide-react";
-
-const ITEMS = [
-  { href: "/match-predictions", label: "Matches", icon: Target, match: ["/match-predictions", "/projected-goals-cs", "/match-odds-history"] },
-  { href: "/player-total-points", label: "Players", icon: Trophy, match: ["/player-"] },
-  { href: "/fixtures", label: "Fixtures", icon: Calendar, match: ["/fixtures", "/results-and-fixtures"] },
-  { href: "/recent-price-changes", label: "Prices", icon: TrendingUp, match: ["/recent-price-changes"] },
-];
+import { Menu } from "lucide-react";
+import { PRIMARY_NAV_ITEMS as ITEMS } from "./primary-nav-items";
 
 /** Phone-only primary navigation. The hamburger/sidebar stays available under "More". */
 export default function MobileBottomNav({ onMore }: { onMore: () => void }) {
