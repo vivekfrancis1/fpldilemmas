@@ -100,7 +100,7 @@ export default function FiltersPanel({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by player name..."
+            placeholder="Search players..."
             value={filters.search}
             onChange={(e) => handleFilterChange("search", e.target.value)}
             className="pl-10"
@@ -115,7 +115,7 @@ export default function FiltersPanel({
           data-testid="button-more-filters"
         >
           <SlidersHorizontal className="h-4 w-4 text-blue-600" />
-          More Filters
+          <span className="hidden sm:inline">More</span> Filters
           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
         </button>
       </div>

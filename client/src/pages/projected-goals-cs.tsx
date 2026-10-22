@@ -627,14 +627,14 @@ export default function ProjectedGoalsCS() {
       <div className="fpl-section-spacing !space-y-2">
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <div className="flex flex-1 flex-wrap gap-x-3 gap-y-1 items-center">
 
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">From:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className="w-[72px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-[88px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -651,7 +651,7 @@ export default function ProjectedGoalsCS() {
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <label className="text-xs font-semibold text-gray-700">To:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className="w-[72px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                    <SelectTrigger className="w-[88px] sm:w-20 !h-7 !min-h-0 !py-0 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

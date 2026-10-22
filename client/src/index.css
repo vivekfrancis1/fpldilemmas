@@ -452,7 +452,7 @@ html {
 
 /* Filter Section */
 .fpl-filters {
-  @apply fpl-card mb-8;
+  @apply fpl-card mb-4 sm:mb-8;
 }
 
 .fpl-filters-header {

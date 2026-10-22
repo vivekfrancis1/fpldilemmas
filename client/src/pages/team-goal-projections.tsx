@@ -1099,7 +1099,7 @@ export default function TeamGoalProjections() {
       <div className="fpl-section-spacing">
 
           {/* Gameweek range — always visible, not buried behind the collapsible */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
 
                 <div className="flex items-center gap-1.5">
                   <label className="text-xs font-medium text-gray-600">Start:</label>
