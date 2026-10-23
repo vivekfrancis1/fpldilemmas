@@ -177,3 +177,20 @@ export function buildTemplateTeam(input: {
     totalValue,
   };
 }
+
+// ---- Which group of managers the template is built from ----
+
+export type TemplateGroup = "top100" | "creators";
+
+/** The two groups the Template Team tool can show, and the internal endpoint that returns each group's squads. */
+export const TEMPLATE_GROUPS: Record<TemplateGroup, { label: string; source: string }> = {
+  top100: { label: "Top 100 managers", source: "api/top-managers/teams" },
+  creators: { label: "Content creators", source: "api/content-creators/teams" },
+};
+
+/** The `group` query value: missing/empty means the Top 100 (the original behaviour); anything unknown is null (rejected). */
+export function parseTemplateGroup(value: unknown): TemplateGroup | null {
+  if (value === undefined || value === "") return "top100";
+  return value === "top100" || value === "creators" ? value : null;
+}
+

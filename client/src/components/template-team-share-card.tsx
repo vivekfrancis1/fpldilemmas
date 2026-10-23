@@ -66,7 +66,10 @@ export function TemplateTeamShareCard({
   startingXI,
   bench,
   captain,
+  groupLabel,
 }: {
+  /** Who the squads belong to, e.g. "Top 100 managers" or "Content creators". Defaults to the Top N managers. */
+  groupLabel?: string;
   gameweek: number | null;
   formation: string | null;
   managersCounted: number;
@@ -88,7 +91,7 @@ export function TemplateTeamShareCard({
         Template Team{formation ? ` · ${formation}` : ""}
       </div>
       <div style={{ fontSize: 25, color: "#cbd5e1", marginTop: 8 }}>
-        Most-owned squad among the Top {managersRequested} managers · GW{gameweek ?? "?"} · {managersCounted} of {managersRequested} squads · £{totalValue.toFixed(1)}m
+        Most-owned squad among the {groupLabel ?? `Top ${managersRequested} managers`} · GW{gameweek ?? "?"} · {managersCounted} of {managersRequested} squads · £{totalValue.toFixed(1)}m
       </div>
 
       <div style={{ position: "relative", flex: 1, marginTop: 22, borderRadius: 22, overflow: "hidden", background: "linear-gradient(180deg, #16a34a 0%, #15803d 100%)", display: "flex", flexDirection: "column", padding: "18px 20px 14px" }}>

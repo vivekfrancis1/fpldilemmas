@@ -36,7 +36,7 @@ import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayer
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
-import { buildTemplateTeam } from "@shared/template-team";
+import { TEMPLATE_GROUPS, buildTemplateTeam, parseTemplateGroup } from "@shared/template-team";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
 import { buildLeagueOwnership } from "@shared/league-ownership";
@@ -1850,12 +1850,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Template Team: the most-owned squad among the Top 100 managers we already load for /top-managers
-  // (same cached picks, same gameweek). Counting and selection live in shared/template-team.ts.
-  app.get("/api/template-team", async (_req, res) => {
+  // Template Team: the most-owned squad among a group of managers: the Top 100 we already load for /top-managers
+  // (default) or the Content Creators (?group=creators), each with its own cached picks and gameweek. Counting and
+  // selection live in shared/template-team.ts.
+  app.get("/api/template-team", async (req, res) => {
     try {
+      const group = parseTemplateGroup(req.query.group);
+      if (!group) return res.status(400).json({ error: "Invalid group. Use top100 or creators" });
       const [topResponse, bootstrapResponse] = await Promise.all([
-        internalFetch("api/top-managers/teams"),
+        internalFetch(TEMPLATE_GROUPS[group].source),
         internalFetch("api/bootstrap-static"),
       ]);
       if (!topResponse.ok || !bootstrapResponse.ok) {
@@ -1868,7 +1871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         picks: t.success ? t.teamData?.picks ?? null : null,
       }));
       const template = buildTemplateTeam({ managers, elements: bootstrap.elements, teams: bootstrap.teams });
-      res.json({ gameweek: top.metadata?.gameweek ?? null, fetchedAt: top.metadata?.fetchedAt ?? null, ...template });
+      res.json({ group, gameweek: top.metadata?.gameweek ?? null, fetchedAt: top.metadata?.fetchedAt ?? null, ...template });
     } catch (error) {
       console.error("Error building template team:", error);
       res.status(500).json({ error: "Failed to build template team" });

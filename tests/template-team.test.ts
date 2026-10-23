@@ -166,3 +166,31 @@ describe("GET /api/template-team (consistency with the Top 100 squads we already
     expect(Math.max(...perClub.values())).toBeLessThanOrEqual(3);
   });
 });
+
+// ---- Template Team for two groups: Top 100 managers and Content Creators ----
+import { TEMPLATE_GROUPS, parseTemplateGroup } from "../shared/template-team";
+
+describe("template team groups", () => {
+  it("defaults to the Top 100 managers when no group is given", () => {
+    expect(parseTemplateGroup(undefined)).toBe("top100");
+    expect(parseTemplateGroup("")).toBe("top100");
+  });
+
+  it("accepts the two groups", () => {
+    expect(parseTemplateGroup("top100")).toBe("top100");
+    expect(parseTemplateGroup("creators")).toBe("creators");
+  });
+
+  it("rejects anything else instead of guessing", () => {
+    for (const bad of ["Top100", "creator", "all", "1", "top100,creators", ["creators"], 5, null]) {
+      expect(parseTemplateGroup(bad as unknown), String(bad)).toBeNull();
+    }
+  });
+
+  it("each group names its own people and data source", () => {
+    expect(TEMPLATE_GROUPS.top100.label).toBe("Top 100 managers");
+    expect(TEMPLATE_GROUPS.creators.label).toBe("Content creators");
+    expect(TEMPLATE_GROUPS.top100.source).toBe("api/top-managers/teams");
+    expect(TEMPLATE_GROUPS.creators.source).toBe("api/content-creators/teams");
+  });
+});
