@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
 import { ShareImageButton } from "@/components/share-image-button";
 import { DeadlineReminderToggle } from "@/components/deadline-reminder-toggle";
-import { captainsCard, shareFileName } from "@shared/share-cards";
+import { availabilityCard, bestPicksCard, captainsCard, deadlineCard, dgwBgwCard, priceWatchCard, shareFileName } from "@shared/share-cards";
 
 function countdown(deadlineIso: string, now: number): string {
   const ms = new Date(deadlineIso).getTime() - now;
@@ -57,6 +57,16 @@ function PriceList({ title, rows }: { title: string; rows: PriceRow[] }) {
   );
 }
 
+/** A section title with its "Share image" button on the right (same pattern as the captain card). */
+function SectionTitle({ title, share }: { title: string; share?: React.ReactNode }) {
+  return (
+    <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
+      <span>{title}</span>
+      {share}
+    </CardTitle>
+  );
+}
+
 export default function DeadlineBriefPage() {
   const { data, isLoading, error } = useQuery<DeadlineBrief>({
     queryKey: ["/api/deadline-brief"],
@@ -67,6 +77,10 @@ export default function DeadlineBriefPage() {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  const deadlineText = data
+    ? new Date(data.deadlineTime).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
 
   return (
     <div className="min-h-screen">
@@ -90,9 +104,13 @@ export default function DeadlineBriefPage() {
               <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4" data-testid="deadline">
                 <div>
                   <div className="text-xs text-muted-foreground">Gameweek {data.gameweek} deadline</div>
-                  <div className="font-semibold">{new Date(data.deadlineTime).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                  <div className="font-semibold">{deadlineText}</div>
                 </div>
                 <div className="text-2xl font-bold" data-testid="text-countdown">{countdown(data.deadlineTime, now)}</div>
+                <ShareImageButton
+                  getCard={() => deadlineCard({ gameweek: data.gameweek, deadlineLabel: deadlineText })}
+                  fileName={shareFileName(["deadline", `gw${data.gameweek}`])}
+                />
                 <div className="w-full"><DeadlineReminderToggle /></div>
               </CardContent>
             </Card>
@@ -131,7 +149,17 @@ export default function DeadlineBriefPage() {
 
             {data.projectionsAvailable && (
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">Best picks by position</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <SectionTitle
+                    title="Best picks by position"
+                    share={
+                      <ShareImageButton
+                        getCard={() => bestPicksCard({ gameweek: data.gameweek, byPosition: data.byPosition })}
+                        fileName={shareFileName(["best-picks", `gw${data.gameweek}`])}
+                      />
+                    }
+                  />
+                </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2" data-testid="by-position">
                   {(["GKP", "DEF", "MID", "FWD"] as const).map((pos) => (
                     <div key={pos}>
@@ -146,7 +174,17 @@ export default function DeadlineBriefPage() {
             )}
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Availability watch</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <SectionTitle
+                  title="Availability watch"
+                  share={
+                    <ShareImageButton
+                      getCard={() => availabilityCard({ gameweek: data.gameweek, players: data.availability })}
+                      fileName={shareFileName(["availability", `gw${data.gameweek}`])}
+                    />
+                  }
+                />
+              </CardHeader>
               <CardContent className="space-y-2 text-sm" data-testid="availability">
                 {data.availability.length === 0 ? (
                   <p className="text-muted-foreground">No injury or suspension flags among players owned by 10% or more.</p>
@@ -165,7 +203,17 @@ export default function DeadlineBriefPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Price-change watch</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <SectionTitle
+                  title="Price-change watch"
+                  share={
+                    <ShareImageButton
+                      getCard={() => priceWatchCard({ gameweek: data.gameweek, risers: data.priceWatch.risers, fallers: data.priceWatch.fallers })}
+                      fileName={shareFileName(["price-watch", `gw${data.gameweek}`])}
+                    />
+                  }
+                />
+              </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2" data-testid="price-watch">
                 <PriceList title="May rise" rows={data.priceWatch.risers} />
                 <PriceList title="May fall" rows={data.priceWatch.fallers} />
@@ -176,7 +224,17 @@ export default function DeadlineBriefPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Double and blank gameweeks</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <SectionTitle
+                  title="Double and blank gameweeks"
+                  share={
+                    <ShareImageButton
+                      getCard={() => dgwBgwCard({ gameweek: data.gameweek, doubles: data.doubles, blanks: data.blanks, tbc: data.tbc })}
+                      fileName={shareFileName(["double-blank", `gw${data.gameweek}`])}
+                    />
+                  }
+                />
+              </CardHeader>
               <CardContent className="space-y-2 text-sm" data-testid="dgw-bgw">
                 <div>
                   <span className="font-medium">Double: </span>
@@ -196,10 +254,7 @@ export default function DeadlineBriefPage() {
               </CardContent>
             </Card>
 
-            <p className="text-xs text-muted-foreground">
-              More: <Link href="/template-team" className="underline">Template Team</Link> · <Link href="/fixtures" className="underline">Fixture Analyzer</Link> · <Link href="/rate-my-team" className="underline">Rate My Team</Link>.
-              Expected points are model estimates, not guarantees.
-            </p>
+            <p className="text-xs text-muted-foreground">Expected points are model estimates, not guarantees.</p>
           </div>
         )}
       </div>

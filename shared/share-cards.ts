@@ -82,3 +82,113 @@ export function hindsightCard(input: {
     footer: "fpldilemmas.com · Shown in hindsight, not advice",
   };
 }
+
+// ---------- Pre-deadline Brief sections ----------
+// One card per section of the brief, built only from what the section already shows.
+
+const SITE = "fpldilemmas.com";
+const withMore = (rows: ShareCardRow[], total: number, shown: number): ShareCardRow[] =>
+  total > shown ? [...rows, { left: `+${total - shown} more`, right: "" }] : rows;
+
+export function bestPicksCard(input: {
+  gameweek: number;
+  byPosition: Record<"GKP" | "DEF" | "MID" | "FWD", Array<{ name: string; teamShort: string; xPts: number }>>;
+  perPosition?: number;
+}): ShareCard {
+  const { gameweek, byPosition, perPosition = 3 } = input;
+  return {
+    title: "Best picks by position",
+    subtitle: `Gameweek ${gameweek}`,
+    sections: (["GKP", "DEF", "MID", "FWD"] as const).map((pos) => {
+      const rows = byPosition[pos].slice(0, perPosition).map((p) => ({
+        left: `${truncateName(p.name, 18)} (${p.teamShort})`,
+        right: `${p.xPts.toFixed(1)} xPts`,
+      }));
+      return { heading: pos, rows: rows.length ? rows : [{ left: "No projections yet", right: "" }] };
+    }),
+    footer: `${SITE} · Projections are estimates, not guarantees`,
+  };
+}
+
+/** FPL's status letter (plus chance of playing when below 100) as short text. */
+export function statusLabel(status: string, chance: number | null): string {
+  const base = status === "s" ? "Suspended" : status === "i" ? "Injured" : status === "u" ? "Unavailable" : "Doubtful";
+  return chance !== null && chance < 100 ? `${base} · ${chance}% chance` : base;
+}
+
+export function availabilityCard(input: {
+  gameweek: number;
+  players: Array<{ name: string; teamShort: string; status: string; chanceOfPlayingNextRound: number | null; ownership: number }>;
+  limit?: number;
+}): ShareCard {
+  const { gameweek, players, limit = 10 } = input;
+  const rows = players.slice(0, limit).map((p) => ({
+    left: `${truncateName(p.name, 16)} (${p.teamShort}) · ${Math.round(p.ownership)}%`,
+    right: statusLabel(p.status, p.chanceOfPlayingNextRound),
+  }));
+  return {
+    title: "Availability watch",
+    subtitle: `Gameweek ${gameweek} · players owned by 10%+`,
+    sections: [{ rows: rows.length ? withMore(rows, players.length, limit) : [{ left: "No injury or suspension flags", right: "" }] }],
+    footer: `${SITE} · FPL's own status and news; it can change before the deadline`,
+  };
+}
+
+export function priceWatchCard(input: { gameweek: number; risers: PriceRowLike[]; fallers: PriceRowLike[]; limit?: number }): ShareCard {
+  const { gameweek, risers, fallers, limit = 5 } = input;
+  const list = (items: PriceRowLike[]): ShareCardRow[] =>
+    items.length
+      ? withMore(
+          items.slice(0, limit).map((r) => ({
+            left: `${truncateName(r.name, 18)} (${r.teamShort})`,
+            right: `£${(r.currentPrice / 10).toFixed(1)}m · ${Math.round(r.ownership)}% owned`,
+          })),
+          items.length,
+          limit,
+        )
+      : [{ left: "None predicted", right: "" }];
+  return {
+    title: "Price-change watch",
+    subtitle: `Gameweek ${gameweek}`,
+    sections: [
+      { heading: "May rise", rows: list(risers) },
+      { heading: "May fall", rows: list(fallers) },
+    ],
+    footer: `${SITE} · Predictions from transfer momentum, not certainties`,
+  };
+}
+type PriceRowLike = { name: string; teamShort: string; currentPrice: number; ownership: number };
+
+export function dgwBgwCard(input: {
+  gameweek: number;
+  doubles: Array<{ name: string }>;
+  blanks: Array<{ name: string }>;
+  tbc: Array<{ name: string }>;
+  limit?: number;
+}): ShareCard {
+  const { gameweek, doubles, blanks, tbc, limit = 8 } = input;
+  const section = (heading: string, teams: Array<{ name: string }>) => ({
+    heading,
+    rows: withMore(teams.slice(0, limit).map((t) => ({ left: t.name, right: "" })), teams.length, limit),
+  });
+  const sections = [
+    doubles.length ? section("Double gameweek", doubles) : null,
+    blanks.length ? section("Blank gameweek", blanks) : null,
+    tbc.length ? section("Fixture TBC", tbc) : null,
+  ].filter((s): s is NonNullable<typeof s> => s !== null);
+  return {
+    title: "Double and blank gameweeks",
+    subtitle: `Gameweek ${gameweek}`,
+    sections: sections.length ? sections : [{ rows: [{ left: "No double or blank gameweeks", right: "" }] }],
+    footer: `${SITE} · From the official FPL fixture list`,
+  };
+}
+
+export function deadlineCard(input: { gameweek: number; deadlineLabel: string }): ShareCard {
+  return {
+    title: `Gameweek ${input.gameweek} deadline`,
+    subtitle: "Fantasy Premier League",
+    sections: [{ rows: [{ left: "Deadline", right: input.deadlineLabel }, { left: "Gameweek", right: `GW${input.gameweek}` }] }],
+    footer: `${SITE} · Set your team before the deadline`,
+  };
+}
