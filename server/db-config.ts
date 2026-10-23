@@ -22,6 +22,35 @@ export function poolSslOption(url: string): false | { rejectUnauthorized: false 
   return isLocalDatabaseUrl(url) ? false : { rejectUnauthorized: false };
 }
 
+const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
+// Generous: no web request waits longer than the 120 s internal-API timeout, and the heaviest job queries take seconds.
+const DEFAULT_QUERY_TIMEOUT_MS = 120_000;
+
+/** A whole number of milliseconds from an env var, or null when unset or not a non-negative integer. */
+function envMillis(value: string | undefined): number | null {
+  return value !== undefined && /^\d+$/.test(value) ? parseInt(value, 10) : null;
+}
+
+/**
+ * Options for the pg Pool. A connection that died silently (laptop sleep, a proxy or NAT dropping an idle socket)
+ * used to hang every query on it until the OS gave up minutes later (`read ETIMEDOUT`), which stalled the whole
+ * server. TCP keep-alive finds a dead peer early, and the timeouts make a stuck connect or query fail fast.
+ * PG_CONNECTION_TIMEOUT_MS and PG_QUERY_TIMEOUT_MS override the defaults (0 turns the query timeout off, for a
+ * one-off script that really needs a very long query); anything that is not a plain number is ignored.
+ */
+export function poolOptions(url: string, env: Record<string, string | undefined>) {
+  const connect = envMillis(env.PG_CONNECTION_TIMEOUT_MS);
+  const query = envMillis(env.PG_QUERY_TIMEOUT_MS);
+  return {
+    connectionString: url,
+    ssl: poolSslOption(url),
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+    connectionTimeoutMillis: connect !== null && connect > 0 ? connect : DEFAULT_CONNECTION_TIMEOUT_MS,
+    query_timeout: query === null ? DEFAULT_QUERY_TIMEOUT_MS : query === 0 ? undefined : query,
+  };
+}
+
 /**
  * Refuses to run a development or test process against a remote database. Production, and processes with no
  * NODE_ENV (one-off scripts, `railway run`), are not restricted. Set ALLOW_REMOTE_DB=1 to deliberately use a

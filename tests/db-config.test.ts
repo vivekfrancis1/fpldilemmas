@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assertSafeDatabase, isLocalDatabaseUrl, poolSslOption } from "../server/db-config";
+import { assertSafeDatabase, isLocalDatabaseUrl, poolOptions, poolSslOption } from "../server/db-config";
 
 describe("isLocalDatabaseUrl", () => {
   it("accepts localhost, 127.0.0.1, ::1 and *.localhost, with or without credentials and port", () => {
@@ -68,5 +68,47 @@ describe("assertSafeDatabase (dev and test must never touch a remote database by
     expect(() => assertSafeDatabase(remote, { NODE_ENV: "production" })).not.toThrow();
     expect(() => assertSafeDatabase(remote, {})).not.toThrow();
     expect(() => assertSafeDatabase(remote, { NODE_ENV: "development", ALLOW_REMOTE_DB: "1" })).not.toThrow();
+  });
+});
+
+// A dead connection (laptop sleep, NAT/proxy dropping an idle socket) used to hang every query until the OS gave up
+// minutes later (`read ETIMEDOUT`), which stalled the whole server. Keep-alive finds a dead peer early; the timeouts
+// make a stuck connect or query fail fast instead of hanging forever.
+describe("poolOptions", () => {
+  const remote = "postgresql://u:p@tokaido.proxy.rlwy.net:17343/railway";
+  const local = "postgresql://localhost:5433/fpldilemmas_dev";
+
+  it("turns on TCP keep-alive with an early first probe", () => {
+    const o = poolOptions(remote, {});
+    expect(o.keepAlive).toBe(true);
+    expect(o.keepAliveInitialDelayMillis).toBeGreaterThan(0);
+    expect(o.keepAliveInitialDelayMillis).toBeLessThanOrEqual(30_000);
+  });
+
+  it("never waits forever to connect (pg's default is no timeout) or to run a query", () => {
+    const o = poolOptions(remote, {});
+    expect(o.connectionTimeoutMillis).toBeGreaterThan(0);
+    expect(o.connectionTimeoutMillis).toBeLessThanOrEqual(30_000);
+    expect(o.query_timeout).toBeGreaterThanOrEqual(60_000);
+    expect(o.query_timeout).toBeLessThanOrEqual(300_000);
+  });
+
+  it("keeps the connection string and the TLS rule: off for a local database, on without hostname checks for a remote one", () => {
+    expect(poolOptions(remote, {})).toMatchObject({ connectionString: remote, ssl: { rejectUnauthorized: false } });
+    expect(poolOptions(local, {})).toMatchObject({ connectionString: local, ssl: false });
+  });
+
+  it("PG_QUERY_TIMEOUT_MS and PG_CONNECTION_TIMEOUT_MS override the defaults; 0 turns the query timeout off", () => {
+    expect(poolOptions(remote, { PG_QUERY_TIMEOUT_MS: "600000" }).query_timeout).toBe(600_000);
+    expect(poolOptions(remote, { PG_QUERY_TIMEOUT_MS: "0" }).query_timeout).toBeUndefined();
+    expect(poolOptions(remote, { PG_CONNECTION_TIMEOUT_MS: "5000" }).connectionTimeoutMillis).toBe(5_000);
+  });
+
+  it("ignores junk overrides instead of disabling the protection", () => {
+    const base = poolOptions(remote, {});
+    for (const bad of ["abc", "-5", "1.5", "", " "]) {
+      expect(poolOptions(remote, { PG_QUERY_TIMEOUT_MS: bad }).query_timeout, bad).toBe(base.query_timeout);
+      expect(poolOptions(remote, { PG_CONNECTION_TIMEOUT_MS: bad }).connectionTimeoutMillis, bad).toBe(base.connectionTimeoutMillis);
+    }
   });
 });

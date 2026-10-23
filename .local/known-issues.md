@@ -228,3 +228,11 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Where:** local `.env` `DATABASE_URL`.
 - **Status:** Fixed. Railway's Postgres `POSTGRES_PASSWORD` was changed about 10 hours before this was noticed, so the Aug-2 password in `.env` was rejected (`password authentication failed for user "postgres"`): the dev server crashed after ~1 minute and cached projection endpoints hung. `DATABASE_URL` was replaced with the current `DATABASE_PUBLIC_URL` from the Railway dashboard (copied via the clipboard, never printed). Checked: direct `pg` connection OK (65 public tables); a fresh dev server started with no auth errors (content creators seeded, CBIT cache populated with 668 players).
 - **Notes:** `.env` is git-ignored. If the Postgres password is rotated again, repeat: Railway dashboard -> Postgres -> Variables -> copy `DATABASE_PUBLIC_URL` into `.env`. The Railway CLI login also expires (`railway login`). Local servers still talk to the PRODUCTION database (see the open item above).
+
+## 2026-10-23 — Database pool had no keep-alive or timeouts (FIXED, not yet deployed)
+
+- **Where:** `server/db.ts` (shared by dev and production).
+- **Symptom:** a dev server left running overnight against the remote DB stalled completely: connections that died silently (sleep / proxy drop) hung every query until the OS gave up (`read ETIMEDOUT`), internal API calls timed out in a cascade, and `/api/cached/player-total-points` returned 500 after 2 minutes each time. A restart fixed it.
+- **Fix:** `poolOptions()` in `server/db-config.ts`: TCP keep-alive (first probe 10 s), connect timeout 10 s (pg's default is none), query timeout 120 s (`PG_CONNECTION_TIMEOUT_MS` / `PG_QUERY_TIMEOUT_MS` override; `PG_QUERY_TIMEOUT_MS=0` turns the query timeout off for a one-off script), and a pool `error` listener so a dropped idle connection is logged and discarded instead of being an uncaught exception. Tests in `tests/db-config.test.ts`; checked for real: unreachable host rejects at the connect timeout, `pg_sleep(3)` rejects at a 0.7 s query timeout.
+- **Notes:** the two one-off scripts that build their own `Pool` (`scripts/populate-historical-data.js`, `scripts/update-player-names.ts`) were left as they are.
+
