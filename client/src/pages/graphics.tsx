@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRange, Check, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -14,7 +14,14 @@ import {
   PRICE_LIST_LIMIT,
   THEME_LABEL,
   buildComparison,
+  buildCaptainPicks,
   buildCover,
+  buildFixtureTicker,
+  buildStatLeaders,
+  buildTeamOfTheWeek,
+  buildTransferTrends,
+  LEADER_STATS,
+  MIN_RATE_MINUTES,
   buildNewsQuote,
   MAX_QUOTE,
   MAX_SOURCE,
@@ -70,6 +77,11 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "team-reveal": Users,
   cover: ImageIcon,
   "player-news": Newspaper,
+  "captain-picks": Crown,
+  "fixture-ticker": CalendarClock,
+  "transfer-trends": ArrowLeftRight,
+  "team-of-the-week": Trophy,
+  "stat-leaders": BarChart3,
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -79,7 +91,8 @@ const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week"];
+const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
 interface PlayerProjection {
   playerId: number;
@@ -446,6 +459,11 @@ export default function GraphicsPage() {
 
   const update = (patch: Partial<GraphicSpec>) => setSpec((s) => ({ ...s, ...patch }));
 
+  // on a phone the template cards scroll sideways: keep the chosen one in view
+  useEffect(() => {
+    document.querySelector(`[data-testid="template-${spec.template}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [spec.template]);
+
   // keep the address bar in step with the controls, so the current graphic can be shared as a link
   useEffect(() => {
     const qs = encodeSpec(spec);
@@ -475,6 +493,22 @@ export default function GraphicsPage() {
     const ids = events.filter((e) => !e.finished).map((e) => e.id);
     return ids.length ? ids : [from];
   }, [bootstrap?.events, from]);
+
+  // Team of the Week is about one FINISHED gameweek (default: the latest); Transfer Trends is about the gameweek being picked for now.
+  const finishedGameweeks = useMemo(
+    () => ((bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean }>).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b),
+    [bootstrap?.events],
+  );
+  const totwGw = spec.from && finishedGameweeks.includes(spec.from) ? spec.from : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
+  const transfersGw = useMemo(() => {
+    const events = (bootstrap?.events ?? []) as Array<{ id: number; is_next?: boolean; is_current?: boolean }>;
+    return events.find((e) => e.is_next)?.id ?? events.find((e) => e.is_current)?.id ?? 0;
+  }, [bootstrap?.events]);
+  const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: Array<{ id: number; stats: { total_points: number; minutes: number } }> }>({
+    queryKey: [`/api/event/${totwGw}/live`],
+    staleTime: 5 * 60 * 1000,
+    enabled: spec.template === "team-of-the-week" && totwGw > 0,
+  });
 
   // First visit: start with sensible picks so the preview is never empty (they go into the link too).
   useEffect(() => {
@@ -588,6 +622,33 @@ export default function GraphicsPage() {
         });
         return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
       }
+      case "captain-picks": {
+        if (!fixtures || !projections) return { data: null, problem: null };
+        const rows = buildCaptainPicks({ elements, projections, teamShortById, fixtures: fixtures as any, gameweek: lineupGw, top: spec.top, pos: spec.pos });
+        const label = gameweekLabel(lineupGw, lineupGw);
+        return { data: { kind: "captain-picks", rows, gwLabel: label, subtitle: `${label} · ${spec.pos ?? "all positions"} · ranked by our expected points` }, problem: null };
+      }
+      case "fixture-ticker": {
+        if (!fixtures) return { data: null, problem: null };
+        const grid = buildFixtureTicker({ teamIds: teams.map((t) => t.id), gameweeks, fixtures: fixtures as any, teamShortById, teamNameById });
+        return { data: { kind: "fixture-ticker", grid, gwLabel }, problem: null };
+      }
+      case "transfer-trends": {
+        const trends = buildTransferTrends({ elements, teamShortById, pos: spec.pos, top: spec.top });
+        const label = transfersGw ? `GW${transfersGw} transfers so far` : "Transfers so far";
+        return { data: { kind: "transfer-trends", trends, gwLabel: label, subtitle: `${spec.pos ?? "All positions"} · ${label}` }, problem: null };
+      }
+      case "team-of-the-week": {
+        if (totwGw === 0) return { data: null, problem: "No gameweek has finished yet, so there is no Team of the Week to show." };
+        if (liveLoading || !liveData) return { data: null, problem: null };
+        const totw = buildTeamOfTheWeek({ elements, live: liveData.elements, teamShortById, gameweek: totwGw });
+        return { data: { kind: "team-of-the-week", totw, gwLabel: gameweekLabel(totwGw, totwGw) }, problem: null };
+      }
+      case "stat-leaders": {
+        const result = buildStatLeaders({ elements, statKey: spec.stat, pos: spec.pos, top: spec.top, teamShortById });
+        const label = `Season to date${result.minutesRule ? ` · min. ${MIN_RATE_MINUTES} minutes` : ""}`;
+        return { data: { kind: "stat-leaders", rows: result.rows, gwLabel: label, subtitle: `${result.stat?.label ?? spec.stat}${spec.pos ? ` · ${spec.pos}` : ""} · season to date` }, problem: null };
+      }
       case "top-differentials": {
         const rows = buildDifferentials({
           elements,
@@ -603,7 +664,7 @@ export default function GraphicsPage() {
         return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
       }
     }
-  }, [elements, spec, selectedElements, gwLabel, lineupGw, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
+  }, [elements, spec, selectedElements, gwLabel, lineupGw, totwGw, transfersGw, liveData, liveLoading, teams, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
 
   const { width: fullWidth, height: fullHeight } = GRAPHIC_SIZES[spec.size];
   const scale = previewWidth > 0 ? Math.min(1, previewWidth / fullWidth) : 1;
@@ -628,7 +689,7 @@ export default function GraphicsPage() {
     update({ teams: spec.teams.includes(id) ? spec.teams.filter((t) => t !== id) : [...spec.teams, id].slice(0, 4) });
   };
 
-  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials";
+  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials" || spec.template === "fixture-ticker";
   const activeStats = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
   const loading = bootstrapLoading;
   const fileParts =
@@ -636,6 +697,11 @@ export default function GraphicsPage() {
     : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
     : spec.template === "team-reveal" ? [spec.manager || "squad", `gw${lineupGw}`]
     : spec.template === "player-news" ? selectedElements.map((e) => e.web_name)
+    : spec.template === "captain-picks" ? [`gw${lineupGw}`]
+    : spec.template === "fixture-ticker" ? [gwLabel]
+    : spec.template === "transfer-trends" ? [`gw${transfersGw}`]
+    : spec.template === "team-of-the-week" ? [`gw${totwGw}`]
+    : spec.template === "stat-leaders" ? [spec.stat]
     : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
 
@@ -652,7 +718,8 @@ export default function GraphicsPage() {
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Template" data-testid="graphics-templates">
+        <div className="mb-5 overflow-x-auto pb-2 sm:overflow-visible sm:pb-0">
+        <div className="flex snap-x gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Template" data-testid="graphics-templates">
           {GRAPHIC_TEMPLATES.map((t) => {
             const Icon = TEMPLATE_ICON[t.id] ?? ImagePlus;
             const on = spec.template === t.id;
@@ -668,7 +735,7 @@ export default function GraphicsPage() {
                   })
                 }
                 aria-pressed={on}
-                className={`group flex items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:flex-col sm:items-start sm:gap-2 sm:p-4 ${
+                className={`group flex w-44 shrink-0 snap-start items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:w-auto sm:shrink sm:flex-col sm:items-start sm:gap-2 sm:p-4 ${
                   on
                     ? "border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg ring-2 ring-indigo-300/50"
                     : "border-gray-200 bg-white text-gray-800 shadow-sm hover:-translate-y-0.5 hover:shadow-md"
@@ -685,6 +752,7 @@ export default function GraphicsPage() {
               </button>
             );
           })}
+        </div>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -748,6 +816,65 @@ export default function GraphicsPage() {
                   )}
                   {spec.quote.trim() && <p className="text-xs text-gray-500">The graphic says this quote was entered by the creator, so only use words you can stand behind.</p>}
                 </>
+              )}
+
+              {spec.template === "captain-picks" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Gameweek">
+                    <SimpleSelect
+                      value={String(lineupGw)}
+                      onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                      options={(openGameweeks.includes(lineupGw) ? openGameweeks : [...openGameweeks, lineupGw].sort((a, b) => a - b)).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                      testId="select-captain-gw"
+                    />
+                  </Field>
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))} testId="select-position" />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                </div>
+              )}
+
+              {spec.template === "transfer-trends" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))} testId="select-position" />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                  <p className="col-span-2 text-xs text-gray-500">Counts are FPL's own transfers for GW{transfersGw || "?"} so far. They reset at each deadline.</p>
+                </div>
+              )}
+
+              {spec.template === "team-of-the-week" && (
+                <Field label="Finished gameweek">
+                  <SimpleSelect
+                    value={String(totwGw || "")}
+                    onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                    options={[...finishedGameweeks].reverse().map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                    testId="select-totw-gw"
+                  />
+                </Field>
+              )}
+
+              {spec.template === "stat-leaders" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Field label="Stat">
+                      <SimpleSelect value={spec.stat} onChange={(v) => update({ stat: v })} options={LEADER_STATS.map((x) => ({ value: x.key, label: x.label }))} testId="select-leader-stat" />
+                    </Field>
+                  </div>
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))} testId="select-position" />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                  {LEADER_STATS.find((x) => x.key === spec.stat)?.rate && <p className="col-span-2 text-xs text-gray-500">Per-game and form stats only count players with {MIN_RATE_MINUTES}+ minutes.</p>}
+                </div>
               )}
 
               {spec.template === "cover" && (

@@ -7,7 +7,12 @@ import {
   resolveHeadline,
   watermarkText,
   type ComparisonContent,
+  type CaptainPickRow,
   type CoverContent,
+  type LeaderRow,
+  type TeamOfTheWeekContent,
+  type TotwToken,
+  type TransferRow,
   type NewsQuoteContent,
   coverTitleFont,
   quoteFont,
@@ -40,7 +45,12 @@ export type GraphicData =
   | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
   | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
   | { kind: "cover"; cover: CoverContent }
-  | { kind: "player-news"; news: NewsQuoteContent };
+  | { kind: "player-news"; news: NewsQuoteContent }
+  | { kind: "captain-picks"; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }
+  | { kind: "fixture-ticker"; grid: FixtureGridContent; gwLabel: string }
+  | { kind: "transfer-trends"; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }
+  | { kind: "team-of-the-week"; totw: TeamOfTheWeekContent; gwLabel: string }
+  | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string };
 
 interface Metrics {
   pad: number;
@@ -770,6 +780,245 @@ function NewsFace({ spec, theme, news }: { spec: GraphicSpec; theme: GraphicThem
   );
 }
 
+// ---------- Captain Picks ----------
+
+function CaptainFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const nameFont = land ? 26 : spec.size === "portrait" ? 42 : 38;
+  const jersey = land ? 44 : 76;
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {rows.length === 0 ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+          No projections for this gameweek yet.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 12, flex: 1, minHeight: 0 }}>
+          {rows.map((r) => (
+            <div key={r.id} style={{ ...panel(theme), flex: 1, maxHeight: land ? 84 : 150, display: "flex", alignItems: "center", gap: land ? 12 : 20, padding: land ? "0 16px" : "0 26px", minHeight: 0 }}>
+              <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, width: land ? 34 : 54, flexShrink: 0 }}>{r.rank}</div>
+              <Jersey team={r.teamShort} position={r.position} px={jersey} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}{r.doubtful ? " ⚠" : ""}</div>
+                <div style={{ fontSize: land ? 14 : 21, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price} · {r.ownership} owned</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, width: land ? 104 : 168, flexShrink: 0 }}>
+                {(r.fixtures.length ? r.fixtures : [null]).slice(0, 2).map((f, i) => {
+                  const c = f ? fdrColor(f.difficulty) : null;
+                  return (
+                    <div key={i} style={{ background: c ? c.bg : theme.panel, color: c ? c.fg : theme.muted, borderRadius: 10, textAlign: "center", fontSize: land ? 15 : 22, fontWeight: 800, padding: land ? "2px 0" : "4px 0" }}>
+                      {f ? `${f.opponent} (${f.isHome ? "H" : "A"})` : "No game"}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0, minWidth: land ? 84 : 130 }}>
+                <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{r.xpts.toFixed(1)}</div>
+                <div style={{ fontSize: land ? 12 : 17, color: theme.muted, fontWeight: 700 }}>xPts · cap {r.captainPoints.toFixed(1)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+// ---------- Fixture Ticker ----------
+
+function TickerTable({ rows, gameweeks, theme, font }: { rows: FixtureGridContent["rows"]; gameweeks: number[]; theme: GraphicTheme; font: number }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+      <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+        <div style={{ width: Math.round(font * 3.1), flexShrink: 0 }} />
+        {gameweeks.map((gw) => (
+          <div key={gw} style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: Math.round(font * 0.85), fontWeight: 800, color: theme.muted }}>GW{gw}</div>
+        ))}
+        <div style={{ width: Math.round(font * 2.6), flexShrink: 0, textAlign: "center", fontSize: Math.round(font * 0.85), fontWeight: 800, color: theme.muted }}>AVG</div>
+      </div>
+      {rows.map((r) => {
+        const avg = r.avgFdr === null ? null : fdrColor(r.avgFdr);
+        return (
+          <div key={r.teamId} style={{ display: "flex", gap: 3, flex: 1, minHeight: 0, maxHeight: 64 }}>
+            <div style={{ width: Math.round(font * 3.1), flexShrink: 0, display: "flex", alignItems: "center", fontSize: Math.round(font * 1.1), fontWeight: 900 }}>{r.short}</div>
+            {r.cells.map((c) => (
+              <div key={c.gameweek} style={{ flex: 1, minWidth: 0, display: "flex", gap: 2 }}>
+                {c.status === "fixtures" ? (
+                  c.fixtures.map((f, i) => {
+                    const col = fdrColor(f.difficulty);
+                    return (
+                      <div key={i} style={{ flex: 1, minWidth: 0, background: col.bg, color: col.fg, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: c.fixtures.length > 1 ? Math.round(font * 0.72) : font, fontWeight: 800 }}>
+                        {f.isHome ? f.opponent : f.opponent.toLowerCase()}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ flex: 1, background: theme.panel, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(font * 0.8), fontWeight: 800, color: theme.muted }}>
+                    {c.status === "tbc" ? "TBC" : "–"}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{ width: Math.round(font * 2.6), flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(font * 0.95), fontWeight: 900, background: avg ? avg.bg : theme.panel, color: avg ? avg.fg : theme.muted }}>
+              {r.avgFdr === null ? "–" : r.avgFdr.toFixed(1)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TickerFace({ spec, theme, grid, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; grid: FixtureGridContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const font = land ? 17 : spec.size === "portrait" ? 23 : 19;
+  const half = Math.ceil(grid.rows.length / 2);
+  return (
+    <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · easiest run first · CAPS = home, lower case = away`} gwLabel={gwLabel}>
+      {land ? (
+        <div style={{ display: "flex", gap: 22, flex: 1, minHeight: 0 }}>
+          <TickerTable rows={grid.rows.slice(0, half)} gameweeks={grid.gameweeks} theme={theme} font={font} />
+          <TickerTable rows={grid.rows.slice(half)} gameweeks={grid.gameweeks} theme={theme} font={font} />
+        </div>
+      ) : (
+        <TickerTable rows={grid.rows} gameweeks={grid.gameweeks} theme={theme} font={font} />
+      )}
+    </Frame>
+  );
+}
+
+// ---------- Transfer Trends ----------
+
+function TrendList({ title, color, rows, theme, land, tall }: { title: string; color: string; rows: TransferRow[]; theme: GraphicTheme; land: boolean; tall: boolean }) {
+  return (
+    <div style={{ ...panel(theme), flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", padding: land ? "10px 14px" : "16px 22px" }}>
+      <div style={{ fontSize: land ? 19 : 28, fontWeight: 900, color, letterSpacing: 1.5, marginBottom: land ? 2 : 8, flexShrink: 0 }}>{title}</div>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        {rows.length === 0 ? (
+          <div style={{ color: theme.muted, fontSize: land ? 18 : 24, fontWeight: 700, paddingTop: 12 }}>No transfers yet</div>
+        ) : (
+          rows.map((r, i) => (
+            <div key={r.id} style={{ flex: 1, maxHeight: land ? 56 : tall ? 100 : 86, display: "flex", alignItems: "center", gap: land ? 8 : 14, borderTop: i === 0 ? "none" : `1px solid ${theme.panelBorder}`, minHeight: 0 }}>
+              <div style={{ width: land ? 20 : 36, fontSize: land ? 18 : 30, fontWeight: 900, color: theme.accent, flexShrink: 0 }}>{r.rank}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: land ? 20 : tall ? 34 : 30, fontWeight: 900, lineHeight: 1.1, ...ellipsis }}>{r.name}</div>
+                <div style={{ fontSize: land ? 12 : 18, color: theme.muted, fontWeight: 600, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price} · {r.ownership}</div>
+              </div>
+              <div style={{ fontSize: land ? 22 : tall ? 38 : 32, fontWeight: 900, color, flexShrink: 0 }}>{r.countLabel}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TrendsFace({ spec, theme, trends, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      <div style={{ display: "flex", flexDirection: tall ? "column" : "row", gap: land ? 12 : 18, flex: 1, minHeight: 0 }}>
+        <TrendList title="MOST IN ▲" color={theme.good} rows={trends.ins} theme={theme} land={land} tall={tall} />
+        <TrendList title="MOST OUT ▼" color={theme.bad} rows={trends.outs} theme={theme} land={land} tall={tall} />
+      </div>
+    </Frame>
+  );
+}
+
+// ---------- Team of the Week ----------
+
+function TotwTokenView({ p, jersey, nameFont, ptsFont }: { p: TotwToken; jersey: number; nameFont: number; ptsFont: number }) {
+  const badgePx = Math.round(jersey * 0.42);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2 }}>
+      <div style={{ position: "relative", width: jersey, height: jersey }}>
+        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        {p.isCaptain && (
+          <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: "#facc15", color: "#713f12", border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>C</div>
+        )}
+      </div>
+      <div style={{ maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "1px 10px", borderRadius: "8px 8px 0 0", fontSize: nameFont, fontWeight: 800, lineHeight: 1.25, background: "rgba(255,255,255,0.96)", color: "#111827", ...ellipsis }}>{p.name}</div>
+      <div style={{ maxWidth: "100%", boxSizing: "border-box", padding: "1px 12px", borderRadius: "0 0 8px 8px", fontSize: ptsFont, fontWeight: 900, lineHeight: 1.25, background: "#7c3aed", color: "#ffffff", textAlign: "center" }}>{p.points} pts</div>
+    </div>
+  );
+}
+
+function TotwFace({ spec, theme, totw, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; totw: TeamOfTheWeekContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 56 : tall ? 118 : 80;
+  const nameFont = land ? 16 : tall ? 26 : 22;
+  const ptsFont = land ? 15 : tall ? 24 : 20;
+  const captain = totw.rows.flatMap((r) => r.players).find((p) => p.isCaptain);
+  const pitch = <Pitch rows={totw.rows} renderToken={(p) => <TotwTokenView p={p} jersey={jersey} nameFont={nameFont} ptsFont={ptsFont} />} />;
+  const summary = (
+    <div style={{ ...panel(theme), padding: land ? "12px 16px" : "14px 24px", flexShrink: 0, display: "flex", flexDirection: land ? "column" : "row", alignItems: land ? "flex-start" : "center", justifyContent: "space-between", gap: land ? 4 : 20 }}>
+      <div>
+        <div style={{ fontSize: land ? 40 : 54, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{totw.total} pts</div>
+        <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: 4 }}>XI total, captain counted twice</div>
+      </div>
+      <div style={{ textAlign: land ? "left" : "right", fontSize: land ? 15 : 22, fontWeight: 700, color: theme.muted }}>
+        {totw.formation && <div style={{ fontSize: land ? 26 : 36, fontWeight: 900, color: theme.text }}>{totw.formation}</div>}
+        {captain && <div>Captain: {captain.name}</div>}
+      </div>
+    </div>
+  );
+  return (
+    <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · best legal XI by actual points`} gwLabel={gwLabel}>
+      {!totw.complete ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+          Not enough players have points for {gwLabel} yet.
+        </div>
+      ) : land ? (
+        <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>{pitch}</div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>{summary}</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0 }}>
+          {pitch}
+          {summary}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+// ---------- Stat Leaders ----------
+
+function LeadersFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; rows: LeaderRow[]; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const nameFont = land ? 26 : spec.size === "portrait" ? 42 : 38;
+  const jersey = land ? 44 : 76;
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {rows.length === 0 ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+          No players match these filters yet.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 12, flex: 1, minHeight: 0 }}>
+          {rows.map((r) => (
+            <div key={r.id} style={{ ...panel(theme), position: "relative", overflow: "hidden", flex: 1, maxHeight: land ? 84 : 150, minHeight: 0 }}>
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(4, r.share * 100)}%`, background: theme.accent, opacity: 0.22 }} />
+              <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", gap: land ? 14 : 22, padding: land ? "0 18px" : "0 28px" }}>
+                <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, width: land ? 36 : 58, flexShrink: 0 }}>{r.rank}</div>
+                <Jersey team={r.teamShort} position={r.position} px={jersey} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}</div>
+                  <div style={{ fontSize: land ? 15 : 22, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price}</div>
+                </div>
+                <div style={{ fontSize: land ? 34 : 56, fontWeight: 900, lineHeight: 1, flexShrink: 0 }}>{r.valueLabel}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -782,6 +1031,11 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} />;
     case "cover": return <CoverFace spec={spec} theme={theme} cover={data.cover} />;
     case "player-news": return <NewsFace spec={spec} theme={theme} news={data.news} />;
+    case "captain-picks": return <CaptainFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "fixture-ticker": return <TickerFace spec={spec} theme={theme} grid={data.grid} gwLabel={data.gwLabel} />;
+    case "transfer-trends": return <TrendsFace spec={spec} theme={theme} trends={data.trends} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "team-of-the-week": return <TotwFace spec={spec} theme={theme} totw={data.totw} gwLabel={data.gwLabel} />;
+    case "stat-leaders": return <LeadersFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }
