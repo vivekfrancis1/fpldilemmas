@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeftRight, Check, ChartScatter, Link2, Search, SlidersHorizontal, Star, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowLeftRight, Check, ChartScatter, Download, Link2, Search, SlidersHorizontal, Star, TrendingDown, TrendingUp, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { compareUrl } from "@shared/compare-utils";
@@ -22,6 +22,7 @@ import {
   colorLegend,
   fitLine,
   mineRows,
+  plotCsv,
   parseManagerId,
   plotTitle,
   presetsForPositions,
@@ -42,6 +43,7 @@ import {
   type TeamProjection,
 } from "@shared/player-plot";
 import { shareFileName } from "@shared/share-cards";
+import { csvFileName } from "@shared/csv";
 import JerseyIcon from "@/components/jersey-icon";
 import { IconTile, PosChip, SectionCard, SegmentedControl, TeamChip, asPos } from "@/components/tool-ui";
 import { Card, CardContent } from "@/components/ui/card";
@@ -278,6 +280,15 @@ export default function PlayerPlotPage() {
   );
   const outliers = useMemo(() => (trendLine ? trendOutliers(plotted, state.x, state.y, trendLine, 3) : null), [plotted, trendLine, state.x, state.y]);
   const mineList = useMemo(() => mineRows(allPlayers, mineIds, state.x, state.y, new Set(plotted.map((p) => p.id))), [allPlayers, mineIds, state.x, state.y, plotted]);
+  const downloadCsv = () => {
+    const blob = new Blob(["\uFEFF" + plotCsv(plotted, state.x, state.y, mineIds)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = csvFileName(["fpl-dilemmas", "player-plot", state.y, "vs", state.x], new Date().toISOString().slice(0, 10));
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const applyMine = () => {
     const id = parseManagerId(mineInput);
     if (!id) return;
@@ -633,6 +644,10 @@ export default function PlayerPlotPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={downloadCsv} disabled={plotted.length === 0} className="gap-2" data-testid="button-export-csv">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
                 <Button type="button" variant="outline" size="sm" onClick={copyLink} className="gap-2" data-testid="button-copy-link">
                   {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
                   {copied ? "Copied" : "Copy link"}

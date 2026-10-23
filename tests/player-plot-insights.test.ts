@@ -186,3 +186,48 @@ describe("my team", () => {
     expect(rows[2]).toMatchObject({ x: null, y: 5, onChart: false });
   });
 });
+
+import { plotCsv } from "../shared/player-plot";
+
+describe("plotCsv (the plotted players as a spreadsheet)", () => {
+  const rows = [
+    pl({ id: 1, name: "Haaland", teamShort: "MCI", position: "FWD", price: 15.7, ownership: 76.9, values: { xg: 6.2, xpts_total: 30.5 } }),
+    pl({ id: 2, name: "Saka, B.", teamShort: "ARS", position: "MID", price: 10.1, ownership: 31.4, available: false, values: { xg: null, xpts_total: 22 } }),
+    pl({ id: 3, name: "Cherki", teamShort: "MCI", position: "MID", price: 8, ownership: 39, values: { xg: 2, xpts_total: 33.7 } }),
+  ];
+
+  it("has a header with the plotted stats' names, then one row per player, best first by the vertical stat", () => {
+    const lines = plotCsv(rows, "xg", "xpts_total", new Set()).split("\r\n");
+    expect(lines[0]).toBe('Player,Team,Position,Price (£m),Ownership (%),Expected goals (xG),"Projected points (xPts, range total)",Your team,Available');
+    expect(lines).toHaveLength(4);
+    expect(lines[1].startsWith("Cherki,MCI,MID,8,39,2,33.7")).toBe(true);
+    expect(lines[2].startsWith("Haaland,MCI,FWD,15.7,76.9,6.2,30.5")).toBe(true);
+  });
+
+  it("writes raw numbers, leaves a missing stat empty (never 0), quotes names with commas", () => {
+    const lines = plotCsv(rows, "xg", "xpts_total", new Set()).split("\r\n");
+    expect(lines[3]).toBe('"Saka, B.",ARS,MID,10.1,31.4,,22,No,No');
+  });
+
+  it("marks the squad when a team is shown", () => {
+    const lines = plotCsv(rows, "xg", "xpts_total", new Set([1])).split("\r\n");
+    expect(lines.find((l) => l.startsWith("Haaland"))).toContain(",Yes,");
+    expect(lines.find((l) => l.startsWith("Cherki"))).toContain(",No,");
+  });
+});
+
+describe("plotCsv polish", () => {
+  const one = [pl({ id: 1, name: "Isak", price: 9, ownership: 14, values: { xpts_total: 25.759999999999998, xg: 1.23456789, price: 9, ownership: 14 } })];
+
+  it("rounds away floating-point noise", () => {
+    const line = plotCsv(one, "xg", "xpts_total", new Set()).split("\r\n")[1];
+    expect(line).toContain(",1.2346,25.76,");
+    expect(line).not.toContain("25.7599");
+  });
+
+  it("does not repeat price or ownership when one is an axis", () => {
+    const header = plotCsv(one, "ownership", "xpts_total", new Set()).split("\r\n")[0];
+    expect(header.match(/Ownership/g)).toHaveLength(1);
+    expect(plotCsv(one, "ownership", "price", new Set()).split("\r\n")[0]).toBe("Player,Team,Position,Price (£m),Ownership (%),Your team,Available");
+  });
+});

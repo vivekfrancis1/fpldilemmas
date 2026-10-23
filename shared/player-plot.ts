@@ -3,6 +3,8 @@
 // projections summed over the chosen gameweek range, or an exact ratio / difference of those (named
 // in the stat's label). Missing data is null, never a made-up number.
 
+import { buildCsv } from "./csv";
+
 export type PlotPosition = "GKP" | "DEF" | "MID" | "FWD";
 export const PLOT_POSITIONS: PlotPosition[] = ["GKP", "DEF", "MID", "FWD"];
 const POSITION_BY_TYPE: Record<number, PlotPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
@@ -1040,3 +1042,22 @@ export function mineRows(all: PlotPlayer[], mine: Set<number>, xKey: string, yKe
     .sort((a, b) => (b.y ?? -Infinity) - (a.y ?? -Infinity) || a.player.id - b.player.id);
 }
 
+// ---------------------------------------------------------------------------------------------
+// CSV export
+// ---------------------------------------------------------------------------------------------
+
+/** The plotted players as a CSV: raw numbers (empty where a stat is missing), best first by the vertical stat. */
+export function plotCsv(players: PlotPlayer[], xKey: string, yKey: string, mine: Set<number>): string {
+  const round = (v: number | null | undefined) => (v === null || v === undefined ? null : Math.round(v * 10_000) / 10_000);
+  // price and ownership are always columns, so an axis on one of them is not repeated
+  const extra = [xKey, yKey].filter((key, i, all) => key !== "price" && key !== "ownership" && all.indexOf(key) === i);
+  const sorted = [...players].sort((a, b) => (b.values[yKey] ?? -Infinity) - (a.values[yKey] ?? -Infinity) || a.name.localeCompare(b.name));
+  return buildCsv(
+    ["Player", "Team", "Position", "Price (£m)", "Ownership (%)", ...extra.map((k) => getStat(k)?.label ?? k), "Your team", "Available"],
+    sorted.map((p) => [
+      p.name, p.teamShort, p.position, round(p.price), round(p.ownership),
+      ...extra.map((k) => round(p.values[k])),
+      mine.has(p.id) ? "Yes" : "No", p.available ? "Yes" : "No",
+    ]),
+  );
+}
