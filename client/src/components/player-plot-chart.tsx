@@ -1,15 +1,22 @@
 import { useMemo } from "react";
 import {
+  colorCategory,
+  colorLegend,
   declutterLabels,
+  dotRadius,
   getStat,
   labelRect,
   makeScale,
   median,
   niceDomain,
   niceTicks,
+  sizeValue,
+  type ColorMode,
   type PlotPlayer,
   type ScaleKind,
+  type SizeMode,
   type StatDef,
+  type TrendLine,
 } from "@shared/player-plot";
 import { teamColor } from "@/lib/team-colors";
 
@@ -67,6 +74,14 @@ interface Props {
   tint?: boolean;
   theme: PlotTheme;
   highlightIds?: Set<number>;
+  /** Colour dots by this instead of the club (club colours when omitted). */
+  colorMode?: ColorMode;
+  /** Scale dot size by this stat (same size when omitted). */
+  sizeMode?: SizeMode;
+  /** The person's own squad: gold ring and bold label. */
+  mineIds?: Set<number>;
+  /** A straight trend line through the plotted players. */
+  trend?: TrendLine | null;
   selectedId?: number | null;
   onSelect?: (id: number | null) => void;
   interactive?: boolean;
@@ -103,6 +118,10 @@ export default function PlayerPlotChart({
   tint = true,
   theme,
   highlightIds,
+  colorMode = "club",
+  sizeMode = "none",
+  mineIds,
+  trend = null,
   selectedId,
   onSelect,
   interactive = true,
@@ -144,7 +163,7 @@ export default function PlayerPlotChart({
       w: Math.ceil(p.name.length * fontSize * 0.58) + 4,
       h: fontSize + 3,
       // highlighted and selected players always get first pick of label space; the rest by the order given
-      priority: p.id === selectedId ? -2 : highlightIds?.has(p.id) ? -1 : i,
+      priority: p.id === selectedId ? -3 : mineIds?.has(p.id) ? -2 : highlightIds?.has(p.id) ? -1 : i,
       r,
     }));
     // corner captions are text too: keep player labels off them (coordinates here are inside the plot area)
@@ -157,7 +176,7 @@ export default function PlayerPlotChart({
       ? [capRect(quadrants.tl, false, false), capRect(quadrants.tr, true, false), capRect(quadrants.bl, false, true), capRect(quadrants.br, true, true)]
       : [];
     return declutterLabels(points, { width: pw, height: ph }, blocked, 5);
-  }, [model, xKey, yKey, fontSize, pw, ph, ml, mt, highlightIds, selectedId, quadrants]);
+  }, [model, xKey, yKey, fontSize, pw, ph, ml, mt, highlightIds, mineIds, selectedId, quadrants]);
 
   if (!model) {
     return (
@@ -179,6 +198,33 @@ export default function PlayerPlotChart({
   const radius = Math.max(4, Math.round(fontSize * 0.5));
   const capSize = Math.round(fontSize * 0.85);
   const hasHighlight = !!highlightIds && highlightIds.size > 0;
+  const legend = new Map(colorLegend(colorMode).map((l) => [l.key, l.color]));
+  const dotColor = (p: PlotPlayer) => {
+    const cat = colorCategory(p, colorMode);
+    return (cat !== null && legend.get(cat)) || teamColor(p.teamShort);
+  };
+  const sizes = sizeMode === "none" ? [] : pts.map((p) => sizeValue(p, sizeMode)).filter((v): v is number => v !== null);
+  const sizeMin = sizes.length ? Math.min(...sizes) : 0;
+  const sizeMax = sizes.length ? Math.max(...sizes) : 0;
+  const rOf = (p: PlotPlayer) => dotRadius(sizeValue(p, sizeMode), sizeMin, sizeMax, radius);
+  // trend line sampled across the x range, so it also bends correctly on a stretched axis
+  const trendPath = (() => {
+    if (!trend) return null;
+    const pieces: string[] = [];
+    const steps = 60;
+    let drawing = false;
+    for (let i = 0; i <= steps; i++) {
+      const xv = model.xLo + ((model.xHi - model.xLo) * i) / steps;
+      const yv = trend.intercept + trend.slope * xv;
+      if (yv < model.yLo || yv > model.yHi) {
+        drawing = false;
+        continue;
+      }
+      pieces.push(`${drawing ? "L" : "M"}${px(xv).toFixed(1)} ${py(yv).toFixed(1)}`);
+      drawing = true;
+    }
+    return pieces.length > 1 ? pieces.join(" ") : null;
+  })();
 
   return (
     <svg
@@ -260,15 +306,30 @@ export default function PlayerPlotChart({
         </g>
       )}
 
+      {/* trend line */}
+      {trend && trendPath && (
+        <g>
+          <path d={trendPath} fill="none" stroke="#8b5cf6" strokeWidth={2.5} strokeDasharray="8 5" strokeLinecap="round" opacity={0.9} />
+          <text x={right - 6} y={top + capSize * 2 + 12} textAnchor="end" fill="#8b5cf6" fontSize={capSize} fontWeight={800} letterSpacing={0.6} stroke={theme.halo} strokeWidth={3} paintOrder="stroke">
+            {`TREND · R² ${trend.r2.toFixed(2)}`}
+          </text>
+        </g>
+      )}
+
       {/* dots: selected and highlighted last so they sit on top */}
       {[...pts]
-        .sort((a, b) => Number(a.id === selectedId || !!highlightIds?.has(a.id)) - Number(b.id === selectedId || !!highlightIds?.has(b.id)))
+        .sort((a, b) => {
+          const w = (p: PlotPlayer) => Number(p.id === selectedId || !!highlightIds?.has(p.id)) * 2 + Number(!!mineIds?.has(p.id));
+          return w(a) - w(b);
+        })
         .map((p) => {
           const cx = px(p.values[xKey] as number);
           const cy = py(p.values[yKey] as number);
           const isSel = p.id === selectedId;
           const isHi = !!highlightIds?.has(p.id);
-          const dim = hasHighlight && !isHi && !isSel;
+          const isMine = !!mineIds?.has(p.id);
+          const dim = hasHighlight && !isHi && !isSel && !isMine;
+          const r = rOf(p);
           return (
             <g
               key={p.id}
@@ -278,13 +339,14 @@ export default function PlayerPlotChart({
               onClick={interactive && onSelect ? () => onSelect(isSel ? null : p.id) : undefined}
               data-testid={`plot-dot-${p.id}`}
             >
-              {interactive && <circle cx={cx} cy={cy} r={radius + 9} fill="transparent" />}
-              {(isSel || isHi) && <circle cx={cx} cy={cy} r={radius + 4} fill="none" stroke={theme.text} strokeWidth={2} />}
+              {interactive && <circle cx={cx} cy={cy} r={r + 9} fill="transparent" />}
+              {(isSel || isHi) && <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={theme.text} strokeWidth={2} />}
+              {isMine && <circle cx={cx} cy={cy} r={r + 5} fill="none" stroke="#f59e0b" strokeWidth={3} />}
               <circle
                 cx={cx}
                 cy={cy}
-                r={radius}
-                fill={teamColor(p.teamShort)}
+                r={r}
+                fill={dotColor(p)}
                 stroke="rgba(148,163,184,0.95)"
                 strokeWidth={1.5}
                 strokeDasharray={p.available ? undefined : "2 2"}
@@ -301,10 +363,10 @@ export default function PlayerPlotChart({
         const h = fontSize + 3;
         const cx = px(p.values[xKey] as number);
         const cy = py(p.values[yKey] as number);
-        const rect = labelRect({ id: p.id, x: cx, y: cy, w, h, priority: 0, r: radius }, side);
+        const rect = labelRect({ id: p.id, x: cx, y: cy, w, h, priority: 0, r: rOf(p) }, side);
         const anchor = side === "right" ? "start" : side === "left" ? "end" : "middle";
         const tx = side === "right" ? rect.x : side === "left" ? rect.x + rect.w : rect.x + rect.w / 2;
-        const bold = p.id === selectedId || !!highlightIds?.has(p.id);
+        const bold = p.id === selectedId || !!highlightIds?.has(p.id) || !!mineIds?.has(p.id);
         const dim = hasHighlight && !bold;
         return (
           <text

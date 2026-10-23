@@ -531,6 +531,22 @@ export { labelRect };
 // Page state <-> URL
 // ---------------------------------------------------------------------------------------------
 
+export type ColorMode = "club" | "position" | "price" | "ownership";
+export type SizeMode = "none" | "ownership" | "price" | "minutes";
+
+export const COLOR_MODES: Array<{ id: ColorMode; label: string }> = [
+  { id: "club", label: "Club" },
+  { id: "position", label: "Position" },
+  { id: "price", label: "Price" },
+  { id: "ownership", label: "Ownership" },
+];
+export const SIZE_MODES: Array<{ id: SizeMode; label: string }> = [
+  { id: "none", label: "Same size" },
+  { id: "ownership", label: "Ownership" },
+  { id: "price", label: "Price" },
+  { id: "minutes", label: "Minutes" },
+];
+
 export interface PlotState {
   x: string;
   y: string;
@@ -545,6 +561,12 @@ export interface PlotState {
   xScale: ScaleKind;
   yScale: ScaleKind;
   median: boolean;
+  /** An FPL team ID whose 15 players are ringed on the chart ("" = none). */
+  mine: string;
+  color: ColorMode;
+  size: SizeMode;
+  /** Draw the straight-line trend through the plotted players. */
+  trend: boolean;
 }
 
 export const DEFAULT_PLOT_STATE: PlotState = {
@@ -560,6 +582,10 @@ export const DEFAULT_PLOT_STATE: PlotState = {
   xScale: "sqrt",
   yScale: "linear",
   median: true,
+  mine: "",
+  color: "club",
+  size: "none",
+  trend: false,
 };
 
 export const MIN_TOP = 5;
@@ -586,6 +612,10 @@ export function encodePlotState(state: PlotState): string {
   if (state.xScale !== base.xScale) params.set("xs", state.xScale);
   if (state.yScale !== base.yScale) params.set("ys", state.yScale);
   if (state.median !== d.median) params.set("med", state.median ? "1" : "0");
+  if (state.mine) params.set("my", state.mine);
+  if (state.color !== d.color) params.set("cb", state.color);
+  if (state.size !== d.size) params.set("sz", state.size);
+  if (state.trend) params.set("tr", "1");
   return params.toString().replace(/%2C/g, ",");
 }
 
@@ -624,7 +654,19 @@ export function decodePlotState(search: string): PlotState {
     xScale: scale(q.get("xs"), base.xScale),
     yScale: scale(q.get("ys"), base.yScale),
     median: q.get("med") === "0" ? false : q.get("med") === "1" ? true : d.median,
+    mine: parseManagerId(q.get("my") ?? ""),
+    color: COLOR_MODES.some((m) => m.id === q.get("cb")) ? (q.get("cb") as ColorMode) : d.color,
+    size: SIZE_MODES.some((m) => m.id === q.get("sz")) ? (q.get("sz") as SizeMode) : d.size,
+    trend: q.get("tr") === "1",
   };
+}
+
+/** A team ID from digits or an FPL entry link ("" when it is neither). */
+export function parseManagerId(input: string): string {
+  const text = input.trim();
+  const fromLink = /entry\/(\d{1,9})(?:\D|$)/.exec(text);
+  const id = fromLink ? fromLink[1] : /^\d{1,9}$/.test(text) ? text : "";
+  return id && parseInt(id, 10) > 0 ? String(parseInt(id, 10)) : "";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -823,3 +865,136 @@ export function plotTitle(state: Pick<PlotState, "x" | "y" | "positions">): stri
   if (preset) return preset.title;
   return `${getStat(state.y)?.label ?? state.y} vs ${getStat(state.x)?.label ?? state.x}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Colour and size by a third stat
+// ---------------------------------------------------------------------------------------------
+
+const POSITION_COLORS: Record<PlotPosition, string> = { GKP: "#f59e0b", DEF: "#10b981", MID: "#0ea5e9", FWD: "#f43f5e" };
+const PRICE_BANDS = [
+  { key: "p1", label: "Under £5.0m", color: "#34d399" },
+  { key: "p2", label: "£5.0m to £6.9m", color: "#fbbf24" },
+  { key: "p3", label: "£7.0m to £9.9m", color: "#fb923c" },
+  { key: "p4", label: "£10.0m and over", color: "#ef4444" },
+];
+const OWNERSHIP_BANDS = [
+  { key: "o1", label: "Under 5% owned", color: "#a5b4fc" },
+  { key: "o2", label: "5% to 15%", color: "#818cf8" },
+  { key: "o3", label: "15% to 30%", color: "#6366f1" },
+  { key: "o4", label: "30% and over", color: "#4338ca" },
+];
+
+/** Which colour group a player falls in for this mode (null for club: the chart uses the club colour). */
+export function colorCategory(p: PlotPlayer, mode: ColorMode): string | null {
+  if (mode === "position") return p.position;
+  if (mode === "price") return p.price < 5 ? "p1" : p.price < 7 ? "p2" : p.price < 10 ? "p3" : "p4";
+  if (mode === "ownership") return p.ownership < 5 ? "o1" : p.ownership < 15 ? "o2" : p.ownership < 30 ? "o3" : "o4";
+  return null;
+}
+
+export function colorLegend(mode: ColorMode): Array<{ key: string; label: string; color: string }> {
+  if (mode === "position") return PLOT_POSITIONS.map((pos) => ({ key: pos, label: pos, color: POSITION_COLORS[pos] }));
+  if (mode === "price") return PRICE_BANDS;
+  if (mode === "ownership") return OWNERSHIP_BANDS;
+  return [];
+}
+
+export function sizeValue(p: PlotPlayer, mode: SizeMode): number | null {
+  if (mode === "ownership") return p.ownership;
+  if (mode === "price") return p.price;
+  if (mode === "minutes") return p.minutes;
+  return null;
+}
+
+/** Dot radius: the base size, or 0.7x to 1.9x of it as the value goes from the smallest to the largest on the chart. */
+export function dotRadius(value: number | null, min: number, max: number, base: number): number {
+  if (value === null || !(max > min)) return base;
+  const t = Math.min(1, Math.max(0, (value - min) / (max - min)));
+  return base * (0.7 + 1.2 * t);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Trend line and outliers
+// ---------------------------------------------------------------------------------------------
+
+export interface TrendLine {
+  slope: number;
+  intercept: number;
+  /** Share of the vertical spread the line explains (0 to 1). */
+  r2: number;
+  n: number;
+}
+
+/** Ordinary least squares through the points; null with fewer than three points or when x never changes. */
+export function fitLine(points: Array<{ x: number; y: number }>): TrendLine | null {
+  const n = points.length;
+  if (n < 3) return null;
+  const mx = points.reduce((a, p) => a + p.x, 0) / n;
+  const my = points.reduce((a, p) => a + p.y, 0) / n;
+  let sxx = 0;
+  let sxy = 0;
+  let syy = 0;
+  for (const p of points) {
+    sxx += (p.x - mx) ** 2;
+    sxy += (p.x - mx) * (p.y - my);
+    syy += (p.y - my) ** 2;
+  }
+  if (sxx === 0) return null;
+  const slope = sxy / sxx;
+  const intercept = my - slope * mx;
+  const ssRes = points.reduce((a, p) => a + (p.y - (slope * p.x + intercept)) ** 2, 0);
+  return { slope, intercept, r2: syy === 0 ? 1 : Math.max(0, 1 - ssRes / syy), n };
+}
+
+export interface Outlier {
+  player: PlotPlayer;
+  /** Actual minus what the line predicts (positive = above the line). */
+  residual: number;
+}
+
+/** The players furthest above and below the line, largest gap first. */
+export function trendOutliers(players: PlotPlayer[], xKey: string, yKey: string, line: TrendLine, n = 3): { above: Outlier[]; below: Outlier[] } {
+  const rows: Outlier[] = [];
+  for (const p of players) {
+    const x = p.values[xKey];
+    const y = p.values[yKey];
+    if (x == null || y == null) continue;
+    rows.push({ player: p, residual: y - (line.slope * x + line.intercept) });
+  }
+  return {
+    above: rows.filter((r) => r.residual > 0).sort((a, b) => b.residual - a.residual).slice(0, n),
+    below: rows.filter((r) => r.residual < 0).sort((a, b) => a.residual - b.residual).slice(0, n),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// My team on the chart
+// ---------------------------------------------------------------------------------------------
+
+/** The chart's players plus any of your squad that the filters or Top N left out (when they have both stats). */
+export function withMine(shown: PlotPlayer[], all: PlotPlayer[], mine: Set<number>, xKey: string, yKey: string): PlotPlayer[] {
+  if (mine.size === 0) return shown;
+  const ids = new Set(shown.map((p) => p.id));
+  const extra = all.filter((p) => mine.has(p.id) && !ids.has(p.id) && p.values[xKey] != null && p.values[yKey] != null);
+  return extra.length ? [...shown, ...extra] : shown;
+}
+
+export interface MineRow {
+  player: PlotPlayer;
+  x: number | null;
+  y: number | null;
+  onChart: boolean;
+}
+
+/** Your squad with the two plotted values, best first by the vertical stat (missing values last). */
+export function mineRows(all: PlotPlayer[], mine: Set<number>, xKey: string, yKey: string, shownIds: Set<number>): MineRow[] {
+  return all
+    .filter((p) => mine.has(p.id))
+    .map((p) => {
+      const x = p.values[xKey] ?? null;
+      const y = p.values[yKey] ?? null;
+      return { player: p, x, y, onChart: shownIds.has(p.id) && x !== null && y !== null };
+    })
+    .sort((a, b) => (b.y ?? -Infinity) - (a.y ?? -Infinity) || a.player.id - b.player.id);
+}
+

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeftRight, Check, ChartScatter, Link2, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, Check, ChartScatter, Link2, Search, SlidersHorizontal, Star, TrendingDown, TrendingUp, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { compareUrl } from "@shared/compare-utils";
@@ -17,9 +17,19 @@ import {
   formatStatValue,
   getStat,
   median,
+  COLOR_MODES,
+  SIZE_MODES,
+  colorLegend,
+  fitLine,
+  mineRows,
+  parseManagerId,
   plotTitle,
   presetsForPositions,
   quadrantPicks,
+  trendOutliers,
+  withMine,
+  type ColorMode,
+  type SizeMode,
   stateForPosition,
   stateForPreset,
   topByStat,
@@ -41,6 +51,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ShareImageButton } from "@/components/share-image-button";
 import PlayerPlotChart, { CARD_THEME, SCREEN_THEME } from "@/components/player-plot-chart";
 import { teamColor } from "@/lib/team-colors";
+import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 
 const PROJECTION_WEEKS = 4;
 const MIN_MINUTES_OPTIONS = [0, 90, 180, 300, 450, 600];
@@ -223,6 +234,37 @@ export default function PlayerPlotPage() {
     return [...top, ...searchMatches.filter((p) => !ids.has(p.id))];
   }, [filtered, state.y, state.top, searchMatches]);
 
+  // Your squad (from the team ID in the link): ringed on the chart and always plotted, even when a filter or Top N drops it.
+  const [mineInput, setMineInput] = useState(() => state.mine || readToolManagerId());
+  const { data: mineTeam, isFetching: mineLoading, error: mineError } = useQuery<{ picks?: Array<{ element: number }> }>({
+    queryKey: ["/api/manager", state.mine, "team"],
+    enabled: !!state.mine,
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch(`/api/manager/${encodeURIComponent(state.mine)}/team`);
+      if (!res.ok) throw new Error("We couldn't find that team. Check the ID and try again.");
+      return res.json();
+    },
+  });
+  const mineIds = useMemo(() => new Set((mineTeam?.picks ?? []).map((p) => p.element)), [mineTeam]);
+  const plotted = useMemo(() => withMine(shown, allPlayers, mineIds, state.x, state.y), [shown, allPlayers, mineIds, state.x, state.y]);
+  const trendLine = useMemo(
+    () =>
+      state.trend
+        ? fitLine(plotted.filter((p) => p.values[state.x] != null && p.values[state.y] != null).map((p) => ({ x: p.values[state.x] as number, y: p.values[state.y] as number })))
+        : null,
+    [plotted, state.trend, state.x, state.y],
+  );
+  const outliers = useMemo(() => (trendLine ? trendOutliers(plotted, state.x, state.y, trendLine, 3) : null), [plotted, trendLine, state.x, state.y]);
+  const mineList = useMemo(() => mineRows(allPlayers, mineIds, state.x, state.y, new Set(plotted.map((p) => p.id))), [allPlayers, mineIds, state.x, state.y, plotted]);
+  const applyMine = () => {
+    const id = parseManagerId(mineInput);
+    if (!id) return;
+    saveToolManagerId(id);
+    update({ mine: id });
+  };
+
   const selected = selectedId !== null ? allPlayers.find((p) => p.id === selectedId) ?? null : null;
   const xDef = getStat(state.x);
   const yDef = getStat(state.y);
@@ -323,7 +365,7 @@ export default function PlayerPlotPage() {
         </div>
         <FillChart
           fontSize={22}
-          players={shown}
+          players={plotted}
           xKey={state.x}
           yKey={state.y}
           xScale={state.xScale}
@@ -332,6 +374,10 @@ export default function PlayerPlotPage() {
           quadrants={preset?.quadrants}
           tint={goodCorners}
           theme={CARD_THEME}
+          colorMode={state.color}
+          sizeMode={state.size}
+          mineIds={mineIds}
+          trend={trendLine}
           interactive={false}
         />
         {picks && (
@@ -419,6 +465,10 @@ export default function PlayerPlotPage() {
                 <Switch checked={state.median} onCheckedChange={(median) => update({ median })} data-testid="switch-median" />
                 Median lines
               </label>
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                <Switch checked={state.trend} onCheckedChange={(trend) => update({ trend })} data-testid="switch-trend" />
+                Trend line
+              </label>
               <button
                 type="button"
                 onClick={() => setShowFilters((v) => !v)}
@@ -429,6 +479,42 @@ export default function PlayerPlotPage() {
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Filters
               </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-gray-100 pt-3" data-testid="plot-dimensions">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Colour by</span>
+                <SegmentedControl ariaLabel="Colour by" testIdPrefix="color" value={state.color} onChange={(color) => update({ color: color as ColorMode })} options={COLOR_MODES.map((m) => ({ value: m.id, label: m.label }))} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Size by</span>
+                <SegmentedControl ariaLabel="Size by" testIdPrefix="size" value={state.size} onChange={(size) => update({ size: size as SizeMode })} options={SIZE_MODES.map((m) => ({ value: m.id, label: m.label }))} />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-3" data-testid="plot-mine">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                  <Star className="h-3.5 w-3.5 text-amber-500" /> My team
+                </span>
+                <Input
+                  value={mineInput}
+                  onChange={(e) => setMineInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applyMine()}
+                  placeholder="Your FPL team ID or entry link, to ring your 15 players"
+                  className="h-9 min-w-[220px] flex-1 rounded-xl"
+                  data-testid="input-my-team"
+                />
+                <Button type="button" size="sm" onClick={applyMine} disabled={!parseManagerId(mineInput) || mineLoading} className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 font-bold text-white hover:from-amber-400 hover:to-orange-400" data-testid="button-my-team">
+                  {mineLoading ? "Loading…" : "Show my team"}
+                </Button>
+                {state.mine && (
+                  <button type="button" onClick={() => update({ mine: "" })} className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100" data-testid="button-clear-my-team">
+                    <X className="h-3.5 w-3.5" /> Clear
+                  </button>
+                )}
+              </div>
+              {mineError && <p className="mt-1.5 text-xs text-red-600" role="alert">{(mineError as Error).message}</p>}
             </div>
 
             {showFilters && (
@@ -520,7 +606,7 @@ export default function PlayerPlotPage() {
                 <div className="min-w-0">
                 <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg" data-testid="text-plot-title">{title}</h2>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  {shown.length} players
+                  {plotted.length} players
                   {usesHorizon ? ` · ${horizonLabel}` : ""}
                   {filterSummary.length ? ` · ${filterSummary.join(" · ")}` : ""}
                 </p>
@@ -556,7 +642,7 @@ export default function PlayerPlotPage() {
                   width={chartWidth}
                   height={chartHeight}
                   fontSize={fontSize}
-                  players={shown}
+                  players={plotted}
                   xKey={state.x}
                   yKey={state.y}
                   xScale={state.xScale}
@@ -565,6 +651,10 @@ export default function PlayerPlotPage() {
                   quadrants={preset?.quadrants}
                   tint={goodCorners}
                   theme={SCREEN_THEME}
+                  colorMode={state.color}
+                  sizeMode={state.size}
+                  mineIds={mineIds}
+                  trend={trendLine}
                   highlightIds={highlightIds}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
@@ -572,8 +662,34 @@ export default function PlayerPlotPage() {
               )}
             </div>
 
+            {(state.color !== "club" || state.size !== "none" || mineIds.size > 0 || trendLine) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-gray-600" data-testid="plot-legend">
+                {colorLegend(state.color).map((l) => (
+                  <span key={l.key} className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: l.color }} /> {l.label}
+                  </span>
+                ))}
+                {state.size !== "none" && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+                    <span className="inline-block h-3.5 w-3.5 rounded-full bg-gray-400" /> Bigger = more {SIZE_MODES.find((m) => m.id === state.size)?.label.toLowerCase()}
+                  </span>
+                )}
+                {mineIds.size > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-3.5 w-3.5 rounded-full border-[3px] border-amber-500" /> Your team
+                  </span>
+                )}
+                {trendLine && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-0 w-6 border-t-[3px] border-dashed border-violet-500" /> Trend ({Math.round(trendLine.r2 * 100)}% of the spread)
+                  </span>
+                )}
+              </div>
+            )}
+
             <p className="mt-1 text-[11px] text-gray-500">
-              Dot colour = club. Faded dashed dots are doubtful or unavailable players. Tap a dot for details.
+              Dot colour = {state.color === "club" ? "club" : state.color}. Faded dashed dots are doubtful or unavailable players. Tap a dot for details.
               {state.xScale === "sqrt" || state.yScale === "sqrt" ? " Stretched scale spreads out the crowded low end, so distances are not proportional." : ""}
             </p>
 
@@ -612,6 +728,67 @@ export default function PlayerPlotPage() {
             )}
           </div>
         </section>
+
+        {outliers && trendLine && (outliers.above.length > 0 || outliers.below.length > 0) && (
+          <SectionCard
+            icon={TrendingUp}
+            title="Beating and missing the trend"
+            subtitle={`The line explains ${Math.round(trendLine.r2 * 100)}% of the spread in ${yDef?.label ?? state.y}. The biggest gaps from it:`}
+            className="mt-5"
+            testId="plot-outliers"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              {([["above", "Above the line", TrendingUp, "emerald"], ["below", "Below the line", TrendingDown, "red"]] as const).map(([key, label, Icon, tone]) => (
+                <div key={key} className={`rounded-xl border p-3 ${tone === "emerald" ? "border-emerald-500/25 bg-emerald-500/[0.05]" : "border-red-500/25 bg-red-500/[0.05]"}`}>
+                  <h3 className={`mb-1 flex items-center gap-1.5 text-sm font-bold ${tone === "emerald" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+                    <Icon className="h-4 w-4" /> {label}
+                  </h3>
+                  <ul className="divide-y divide-gray-200/70">
+                    {outliers[key].map((o) => (
+                      <li key={o.player.id} className="flex items-center gap-2.5 py-2">
+                        <JerseyIcon team={o.player.teamShort} position={o.player.position} className="h-7 w-7 shrink-0 object-contain" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-bold text-gray-900">{o.player.name}</div>
+                          <div className="text-xs text-gray-500">{o.player.teamShort} · {o.player.position}</div>
+                        </div>
+                        <span className={`text-sm font-extrabold tabular-nums ${tone === "emerald" ? "text-emerald-600 dark:text-emerald-300" : "text-red-600 dark:text-red-300"}`}>
+                          {o.residual > 0 ? "+" : "−"}{formatStatValue(yDef, Math.abs(o.residual))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        {mineList.length > 0 && (
+          <SectionCard
+            icon={Star}
+            title="Your squad on this chart"
+            subtitle={`${mineList.length} players, best first by ${yDef?.label ?? state.y}`}
+            className="mt-5"
+            testId="plot-mine-list"
+          >
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {mineList.map((r) => (
+                <li key={r.player.id} className="flex items-center gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.05] px-3 py-2">
+                  <JerseyIcon team={r.player.teamShort} position={r.player.position} className="h-8 w-8 shrink-0 object-contain" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-gray-900">{r.player.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {r.x === null || r.y === null ? "No data for these stats" : `${formatStatValue(xDef, r.x)} · ${formatStatValue(yDef, r.y)}`}
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setSelectedId(r.player.id)} className="rounded-full border border-amber-500/30 px-2.5 py-1 text-[11px] font-bold text-amber-700 hover:bg-amber-500/10 dark:text-amber-300" disabled={!r.onChart}>
+                    Locate
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        )}
       </div>
     </div>
   );
