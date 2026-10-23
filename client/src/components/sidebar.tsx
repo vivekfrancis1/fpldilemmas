@@ -96,7 +96,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/deadline-brief", label: "Pre-deadline Brief", icon: AlarmClock, description: "Deadline, captains, availability and price watch for the next gameweek", popular: false },
         { path: "/compare", label: "Compare Players", icon: GitCompareArrows, description: "Side-by-side fixtures, expected points and stats", popular: false },
         { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown, description: "Best captain options per team, ranked by expected points", popular: false },
-        { path: "/price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
         { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false },
         { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
         { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false },
