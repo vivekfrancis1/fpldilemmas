@@ -73,7 +73,6 @@ const navSections: NavSection[] = [
     group: "Projections",
     heading: "Team",
     items: [
-      { path: "/match-predictions", label: "Match Predictions", icon: Target },
       { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3 },
       { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield },
       { path: "/team-cs-projections", label: "Clean Sheet Odds", icon: Shield },
