@@ -159,3 +159,91 @@ export function EmptyNote({ icon: Icon, children }: { icon: LucideIcon; children
     </div>
   );
 }
+
+/** Brand gradient banner with soft glows, used for each tool's headline numbers. */
+export function HeroPanel({ children, className = "", testId }: { children: ReactNode; className?: string; testId?: string }) {
+  return (
+    <section
+      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-lg sm:p-7 ${className}`}
+      data-testid={testId}
+    >
+      <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+      <div className="relative">{children}</div>
+    </section>
+  );
+}
+
+/** A big number with a label and a line of context, for use on a HeroPanel. */
+export function HeroStat({ label, value, sub, testId, valueTestId }: { label: string; value: ReactNode; sub?: ReactNode; testId?: string; valueTestId?: string }) {
+  return (
+    <div data-testid={testId}>
+      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">{label}</div>
+      <div className="mt-1 text-4xl font-extrabold leading-none tabular-nums sm:text-5xl" data-testid={valueTestId}>{value}</div>
+      {sub && <div className="mt-1.5 text-xs font-medium text-white/75">{sub}</div>}
+    </div>
+  );
+}
+
+/** Pill-style switcher (same look as the position filter on the Captaincy Matrix). */
+export function SegmentedControl<T extends string | number>({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+  testIdPrefix,
+}: {
+  options: Array<{ value: T; label: string }>;
+  value: T;
+  onChange: (v: T) => void;
+  ariaLabel: string;
+  testIdPrefix?: string;
+}) {
+  return (
+    <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1" role="group" aria-label={ariaLabel}>
+      {options.map((o) => (
+        <button
+          key={String(o.value)}
+          type="button"
+          onClick={() => onChange(o.value)}
+          aria-pressed={value === o.value}
+          data-testid={testIdPrefix ? `${testIdPrefix}-${o.value}` : undefined}
+          className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-colors ${
+            value === o.value ? "bg-white text-indigo-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A percentage as a bar with its label on the right. */
+export function PercentBar({ percent, label, tone = "indigo" }: { percent: number; label: ReactNode; tone?: "indigo" | Pos }) {
+  const fill = tone === "indigo" ? "from-indigo-500 to-violet-500" : POS_BAR[tone];
+  return (
+    <span className="flex min-w-[110px] flex-1 items-center gap-2">
+      <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200/70 dark:bg-white/10">
+        <span className={`block h-full rounded-full bg-gradient-to-r ${fill}`} style={{ width: `${Math.max(3, Math.min(100, percent))}%` }} />
+      </span>
+      <span className="min-w-[64px] text-right text-xs font-bold tabular-nums text-gray-900">{label}</span>
+    </span>
+  );
+}
+
+/** Panel that holds a tool's inputs (team ID, league ID...). */
+export function InputPanel({ icon: Icon, title, subtitle, children }: { icon: LucideIcon; title: string; subtitle?: string; children: ReactNode }) {
+  return (
+    <section className="mb-5 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <IconTile icon={Icon} />
+        <div>
+          <h2 className="text-base font-bold leading-tight text-gray-900">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}

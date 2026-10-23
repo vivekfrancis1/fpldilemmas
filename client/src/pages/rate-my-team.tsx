@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { compareUrl } from "@shared/compare-utils";
-import { ClipboardCheck, ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarRange, ClipboardCheck, Crown, Search, ShieldAlert, ShieldCheck, TrendingUp } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
+import { EmptyNote, HeroPanel, HeroStat, InputPanel, Pill, SectionCard, SegmentedControl, StatusPill, TeamChip, XptsBar } from "@/components/tool-ui";
+import { teamColor } from "@/lib/team-colors";
 
 interface RmtResponse {
   managerId: number;
@@ -34,6 +35,7 @@ interface RmtResponse {
 }
 
 const HORIZONS = [1, 3, 5, 8];
+const CHIP_LABEL: Record<string, string> = { bboost: "Bench Boost", "3xc": "Triple Captain", freehit: "Free Hit", wildcard: "Wildcard", manager: "Assistant Manager" };
 const money = (tenths: number) => `£${(tenths / 10).toFixed(1)}m`;
 const signedMoney = (tenths: number) => `${tenths > 0 ? "+" : tenths < 0 ? "-" : ""}£${Math.abs(tenths / 10).toFixed(1)}m`;
 
@@ -74,6 +76,12 @@ export default function RateMyTeam() {
 
   const gwLabel = data ? `GW${data.gameweeks[0]}${data.gameweeks.length > 1 ? `-${data.gameweeks[data.gameweeks.length - 1]}` : ""}` : "";
 
+  const maxGw = data ? Math.max(0.1, ...data.perGameweek.map((g) => g.total)) : 1;
+  const maxGain = data ? Math.max(0.1, ...data.upgrades.map((u) => u.gain)) : 1;
+  const noFlags = data
+    ? data.flags.availability.length === 0 && data.flags.blanks.length === 0 && data.flags.doubles.length === 0 && data.flags.tbc.length === 0
+    : false;
+
   return (
     <div className="min-h-screen">
       <div className="w-full py-4 sm:py-8">
@@ -89,171 +97,181 @@ export default function RateMyTeam() {
           </div>
         </div>
 
-        <Card className="mb-4">
-          <CardContent className="space-y-3 p-4">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                value={input}
-                onChange={(e) => setInput(extractManagerId(e.target.value))}
-                onKeyDown={(e) => e.key === "Enter" && submit()}
-                placeholder="Paste your FPL team ID or entry link"
-                className="flex-1 text-base"
-                data-testid="input-manager-id"
-              />
-              <Button onClick={submit} disabled={!input.trim() || isFetching} data-testid="button-rate">
-                {isFetching ? "Rating…" : "Rate my team"}
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Look ahead:</span>
-              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5" role="group" aria-label="Horizon">
-                {HORIZONS.map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => setHorizon(h)}
-                    aria-pressed={horizon === h}
-                    data-testid={`horizon-${h}`}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium ${horizon === h ? "bg-white text-blue-700 shadow-sm" : "text-gray-600"}`}
-                  >
-                    {h} GW{h > 1 ? "s" : ""}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <InputPanel icon={Search} title="Find your team" subtitle="Paste your FPL team ID or the link to your entry page">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={input}
+              onChange={(e) => setInput(extractManagerId(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              placeholder="Paste your FPL team ID or entry link"
+              className="h-11 flex-1 rounded-xl text-base"
+              data-testid="input-manager-id"
+            />
+            <Button onClick={submit} disabled={!input.trim() || isFetching} className="h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 font-bold text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-rate">
+              {isFetching ? "Rating…" : "Rate my team"}
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Look ahead</span>
+            <SegmentedControl
+              ariaLabel="Horizon"
+              testIdPrefix="horizon"
+              value={horizon}
+              onChange={setHorizon}
+              options={HORIZONS.map((h) => ({ value: h, label: `${h} GW${h > 1 ? "s" : ""}` }))}
+            />
+          </div>
+        </InputPanel>
 
         {error && (
           <Card><CardContent className="p-6 text-sm" data-testid="text-error">{(error as Error).message}</CardContent></Card>
         )}
 
         {data && (
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="grid gap-4 p-4 sm:grid-cols-3" data-testid="summary">
+          <div className="space-y-5">
+            <HeroPanel testId="summary">
+              <div className="grid gap-6 sm:grid-cols-3">
+                <HeroStat
+                  label={`Projected points · ${gwLabel}`}
+                  value={data.projectedTotal.toFixed(1)}
+                  valueTestId="text-projected-total"
+                  sub="Best XI + captain each gameweek"
+                />
                 <div>
-                  <div className="text-xs text-muted-foreground">Projected points, {gwLabel}</div>
-                  <div className="text-3xl font-bold" data-testid="text-projected-total">{data.projectedTotal.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground">Best XI + captain each gameweek</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Rank among the Top 100 squads</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Rank among the Top 100 squads</div>
                   {data.rank.rank === null ? (
-                    <div className="text-sm">No Top 100 squads loaded right now.</div>
+                    <div className="mt-2 text-sm text-white/85">No Top 100 squads loaded right now.</div>
                   ) : (
                     <>
-                      <div className="text-3xl font-bold" data-testid="text-rank">
+                      <div className="mt-1 text-4xl font-extrabold leading-none tabular-nums sm:text-5xl" data-testid="text-rank">
                         {data.rank.rank}
-                        <span className="text-base font-normal text-muted-foreground"> of {data.rank.fieldSize}</span>
+                        <span className="ml-1.5 text-base font-semibold text-white/70">of {data.rank.fieldSize}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Top 100 average {data.rank.average?.toFixed(1)} · highest {data.rank.best?.toFixed(1)}
-                      </div>
+                      {data.rank.best !== null && data.rank.best > 0 && (
+                        <div className="mt-3">
+                          <div className="relative h-2.5 rounded-full bg-white/20">
+                            <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-300 to-amber-400" style={{ width: `${Math.min(100, (data.projectedTotal / data.rank.best) * 100)}%` }} />
+                            {data.rank.average !== null && (
+                              <div className="absolute -top-1 w-0.5 rounded bg-white" style={{ left: `${Math.min(100, (data.rank.average / data.rank.best) * 100)}%`, height: 18 }} title="Top 100 average" />
+                            )}
+                          </div>
+                          <div className="mt-1.5 text-xs font-medium text-white/75">
+                            Top 100 average {data.rank.average?.toFixed(1)} (marker) · highest {data.rank.best?.toFixed(1)}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Bench, {gwLabel}</div>
-                  <div className="text-3xl font-bold">{data.benchTotal.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground">Projected points sitting on your bench</div>
+                <HeroStat label={`Bench · ${gwLabel}`} value={data.benchTotal.toFixed(1)} sub="Projected points sitting on your bench" />
+              </div>
+              {data.activeChip && (
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold ring-1 ring-white/25">
+                  <Crown className="h-3.5 w-3.5" /> {CHIP_LABEL[data.activeChip] ?? data.activeChip} was active in your last squad
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </HeroPanel>
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Gameweek by gameweek</CardTitle></CardHeader>
-              <CardContent className="overflow-x-auto p-0">
-                <table className="w-full min-w-[360px] text-sm" data-testid="table-gameweeks">
-                  <thead>
-                    <tr className="border-b text-xs text-muted-foreground">
-                      <th className="p-2 text-left font-medium">GW</th>
-                      <th className="p-2 text-right font-medium">Projected</th>
-                      <th className="p-2 text-left font-medium">Captain</th>
-                      <th className="p-2 text-right font-medium">Bench</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.perGameweek.map((g) => (
-                      <tr key={g.gameweek} className="border-b last:border-0">
-                        <td className="p-2 font-medium">GW{g.gameweek}</td>
-                        <td className="p-2 text-right font-semibold">{g.total.toFixed(1)}</td>
-                        <td className="p-2">{g.captainName ?? "—"}</td>
-                        <td className="p-2 text-right text-muted-foreground">{g.benchTotal.toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            <SectionCard icon={CalendarRange} title="Gameweek by gameweek" subtitle="Your best XI and captain for each gameweek" bodyClassName="p-0">
+              <ul className="divide-y divide-gray-100" data-testid="table-gameweeks">
+                {data.perGameweek.map((g) => (
+                  <li key={g.gameweek} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
+                    <span className="w-14 rounded-lg bg-indigo-500/10 py-1 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300">GW{g.gameweek}</span>
+                    <XptsBar value={g.total} max={maxGw} label="projected" />
+                    <span className="inline-flex min-w-[130px] items-center gap-1.5 text-sm font-semibold text-gray-800">
+                      <Crown className="h-4 w-4 text-amber-500" /> {g.captainName ?? "—"}
+                    </span>
+                    <Pill>Bench {g.benchTotal.toFixed(1)}</Pill>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Best single upgrades</CardTitle></CardHeader>
-              <CardContent>
-                {data.upgrades.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No affordable single swap improves your projected points over {gwLabel}.
-                  </p>
-                ) : (
-                  <ul className="space-y-2" data-testid="list-upgrades">
-                    {data.upgrades.map((u) => (
-                      <li key={u.outId} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border p-2 text-sm">
-                        <span className="font-medium">{u.outName}</span>
-                        <span className="text-xs text-muted-foreground">{u.outTeam}</span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{u.inName}</span>
-                        <span className="text-xs text-muted-foreground">{u.inTeam} · {money(u.inPrice)}</span>
-                        <span className="ml-auto font-semibold text-primary">+{u.gain.toFixed(1)} pts</span>
-                        <Link href={compareUrl([u.outId, u.inId])} className="text-xs underline" data-testid={`compare-${u.outId}-${u.inId}`}>Compare</Link>
-                        <span className="w-full text-xs text-muted-foreground">
-                          Player xPts {u.outHorizonXPts.toFixed(1)} → {u.inHorizonXPts.toFixed(1)} · cost {signedMoney(u.priceDelta)}
+            <SectionCard
+              icon={TrendingUp}
+              title="Best single upgrades"
+              subtitle={`The swaps that add the most projected points over ${gwLabel}`}
+            >
+              {data.upgrades.length === 0 ? (
+                <EmptyNote icon={ShieldCheck}>No affordable single swap improves your projected points over {gwLabel}.</EmptyNote>
+              ) : (
+                <ul className="space-y-3" data-testid="list-upgrades">
+                  {data.upgrades.map((u) => (
+                    <li key={u.outId} className="rounded-2xl border border-gray-200 bg-gray-50/60 p-3 sm:p-4">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <div className="flex min-w-[130px] flex-1 items-center gap-2.5 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-3 py-2" style={{ boxShadow: `inset 4px 0 0 0 ${teamColor(u.outTeam)}` }}>
+                          <div className="min-w-0 pl-1">
+                            <div className="truncate text-sm font-extrabold text-gray-900">{u.outName}</div>
+                            <div className="mt-0.5 flex items-center gap-1"><TeamChip>{u.outTeam}</TeamChip><span className="text-xs text-gray-500">{u.outHorizonXPts.toFixed(1)} xPts</span></div>
+                          </div>
+                        </div>
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+                          <ArrowRight className="h-4 w-4" />
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Each row is an alternative, not an add-on: the gain is your squad's projected total with only that
-                  one swap. Transfer cost (a free transfer or −4 points) is not included.
-                  {data.sellingPricesApproximate && " Selling prices are approximate: we use current prices, so what you'd actually receive can differ."}
-                </p>
-              </CardContent>
-            </Card>
+                        <div className="flex min-w-[130px] flex-1 items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-2" style={{ boxShadow: `inset 4px 0 0 0 ${teamColor(u.inTeam)}` }}>
+                          <div className="min-w-0 pl-1">
+                            <div className="truncate text-sm font-extrabold text-gray-900">{u.inName}</div>
+                            <div className="mt-0.5 flex items-center gap-1"><TeamChip>{u.inTeam}</TeamChip><span className="text-xs text-gray-500">{u.inHorizonXPts.toFixed(1)} xPts · {money(u.inPrice)}</span></div>
+                          </div>
+                        </div>
+                        <div className="ml-auto flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-300">+{u.gain.toFixed(1)}<span className="ml-0.5 text-xs font-bold"> pts</span></div>
+                            <div className="text-[11px] font-semibold text-gray-500">cost {signedMoney(u.priceDelta)}</div>
+                          </div>
+                          <Link href={compareUrl([u.outId, u.inId])} className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-500/20 dark:text-indigo-300" data-testid={`compare-${u.outId}-${u.inId}`}>
+                            Compare
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-200/70 dark:bg-white/10">
+                        <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500" style={{ width: `${Math.max(6, (u.gain / maxGain) * 100)}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-xs text-gray-500">
+                Each row is an alternative, not an add-on: the gain is your squad's projected total with only that
+                one swap. Transfer cost (a free transfer or −4 points) is not included.
+                {data.sellingPricesApproximate && " Selling prices are approximate: we use current prices, so what you'd actually receive can differ."}
+              </p>
+            </SectionCard>
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Things to check</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm" data-testid="flags">
-                {data.flags.availability.length === 0 && data.flags.blanks.length === 0 && data.flags.doubles.length === 0 && data.flags.tbc.length === 0 && (
-                  <p className="text-muted-foreground">No injury flags, blank or double gameweeks in your squad over {gwLabel}.</p>
-                )}
+            <SectionCard icon={ShieldAlert} title="Things to check" subtitle={`Injuries, blanks and doubles in your squad over ${gwLabel}`}>
+              <div className="space-y-2" data-testid="flags">
+                {noFlags && <EmptyNote icon={ShieldCheck}>No injury flags, blank or double gameweeks in your squad over {gwLabel}.</EmptyNote>}
                 {data.flags.availability.map((a) => (
-                  <div key={a.playerId} className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{a.name}</span>
-                    <PlayerAvailabilityBadge player={{ status: a.status, chanceOfPlayingNextRound: a.chanceOfPlayingNextRound, news: a.news }} />
-                    {a.news && <span className="text-xs text-muted-foreground">{a.news}</span>}
+                  <div key={a.playerId} className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2">
+                    <span className="text-sm font-bold text-gray-900">{a.name}</span>
+                    <StatusPill status={a.status} chance={a.chanceOfPlayingNextRound} />
+                    {a.news && <span className="text-xs text-gray-600">{a.news}</span>}
                   </div>
                 ))}
                 {data.flags.blanks.map((b) => (
-                  <div key={`b${b.playerId}`}>
-                    <span className="font-medium">{b.name}</span>: no fixture in {b.gameweeks.map((g) => `GW${g}`).join(", ")}
+                  <div key={`b${b.playerId}`} className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-300/60 bg-gray-500/[0.06] px-3 py-2 text-sm">
+                    <span className="font-bold text-gray-900">{b.name}</span>
+                    <Pill>Blank</Pill> no fixture in {b.gameweeks.map((g) => `GW${g}`).join(", ")}
                   </div>
                 ))}
                 {data.flags.tbc.map((b) => (
-                  <div key={`t${b.playerId}`}>
-                    <span className="font-medium">{b.name}</span>: fixture TBC in {b.gameweeks.map((g) => `GW${g}`).join(", ")} (not yet scheduled)
+                  <div key={`t${b.playerId}`} className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/[0.07] px-3 py-2 text-sm">
+                    <span className="font-bold text-gray-900">{b.name}</span>
+                    <Pill tone="indigo">TBC</Pill> fixture TBC in {b.gameweeks.map((g) => `GW${g}`).join(", ")} (not yet scheduled)
                   </div>
                 ))}
                 {data.flags.doubles.map((d) => (
-                  <div key={`d${d.playerId}`}>
-                    <span className="font-medium">{d.name}</span>: double gameweek in {d.gameweeks.map((g) => `GW${g}`).join(", ")}
+                  <div key={`d${d.playerId}`} className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2 text-sm">
+                    <span className="font-bold text-gray-900">{d.name}</span>
+                    <Pill tone="amber">Double</Pill> double gameweek in {d.gameweeks.map((g) => `GW${g}`).join(", ")}
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               Squad as at GW{data.resolvedGameweek}
-              {data.activeChip ? ` (${data.activeChip} was active; chips are not modelled)` : ""}. Projections are our
+              {data.activeChip ? ` (${CHIP_LABEL[data.activeChip] ?? data.activeChip} was active; chips are not modelled)` : ""}. Projections are our
               model's estimates, not guarantees, and are the same ones shown on the Points page. The Top 100 squads are
               from our fixed all-time list, as at the last completed gameweek, scored with the same method.
             </p>
