@@ -236,6 +236,9 @@ export interface GraphicSpec {
   source: string;
   /** Stat Leaders: the FPL stat to rank by (a key of LEADER_STATS). */
   stat: string;
+  /** Creator brand: an optional @handle (stored without the @) shown on the footer strip next to the watermark, and an accent colour (#rrggbb). */
+  handle: string;
+  accent: string;
 }
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
@@ -274,6 +277,8 @@ export const DEFAULT_SPEC: GraphicSpec = {
   quote: "",
   source: "",
   stat: "goals_scored",
+  handle: "",
+  accent: "",
 };
 
 const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3 };
@@ -352,6 +357,8 @@ export function decodeSpec(search: string): GraphicSpec {
     quote: (q.get("q") ?? "").slice(0, MAX_QUOTE),
     source: (q.get("src") ?? "").slice(0, MAX_SOURCE),
     stat: LEADER_STATS.some((x) => x.key === q.get("st")) ? (q.get("st") as string) : d.stat,
+    handle: normaliseHandle(q.get("handle") ?? ""),
+    accent: normaliseAccent(q.get("accent") ?? ""),
   };
 }
 
@@ -386,6 +393,8 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.quote) add("q", spec.quote.slice(0, MAX_QUOTE));
   if (spec.source) add("src", spec.source.slice(0, MAX_SOURCE));
   if (spec.stat !== d.stat) add("st", spec.stat);
+  if (spec.handle) add("handle", spec.handle);
+  if (spec.accent) add("accent", spec.accent.replace(/^#/, ""));
   return parts.join("&");
 }
 
@@ -1394,4 +1403,242 @@ export function buildStatLeaders(input: {
   rows.sort((a, b) => b.value - a.value || b.totalPoints - a.totalPoints || a.name.localeCompare(b.name));
   const lead = rows[0]?.value ?? 1;
   return { stat, minutesRule, rows: rows.slice(0, top).map(({ totalPoints: _tp, ...r }, i) => ({ rank: i + 1, share: r.value / lead, ...r })) };
+}
+
+
+// ---------- Creator brand: handle and accent colour ----------
+
+/** An @handle as stored: letters, digits and underscore, 1-15 characters, one leading @ stripped. Anything else is "" (none). */
+export function normaliseHandle(input: string): string {
+  const text = input.trim().replace(/^@/, "");
+  return /^[A-Za-z0-9_]{1,15}$/.test(text) ? text : "";
+}
+
+/** An accent colour as #rrggbb (lower case) from 6 or 3 hex digits with or without the #; anything else is "". */
+export function normaliseAccent(input: string): string {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(input.trim());
+  if (!m) return "";
+  const hex = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
+  return `#${hex.toLowerCase()}`;
+}
+
+function darken(hex: string, amount: number): string {
+  const rgb = parseHex(hex) ?? [0, 0, 0];
+  const mixed = rgb.map((v) => Math.round(v * (1 - amount)));
+  return `#${mixed.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** The theme with the creator's accent colour, nudged lighter (dark themes) or darker (light theme) until it can be read on the background. */
+export function withAccent(theme: GraphicTheme, accent: string): GraphicTheme {
+  const base = normaliseAccent(accent);
+  if (!base) return theme;
+  const lightBackground = (luminance(theme.bg) + luminance(theme.bg2)) / 2 > 0.5;
+  let color = base;
+  for (let i = 0; i < 24 && Math.min(contrastRatio(color, theme.bg), contrastRatio(color, theme.bg2)) < 3; i++) {
+    color = lightBackground ? darken(color, 0.15) : lighten(color, 0.15);
+  }
+  return { ...theme, accent: color };
+}
+
+// ---------- every graphic's data, in one type ----------
+
+export type GraphicData =
+  | { kind: "player-card"; card: PlayerCardContent; gwLabel: string }
+  | { kind: "player-comparison"; comparison: ComparisonContent }
+  | { kind: "fixtures-comparison"; grid: FixtureGridContent; gwLabel: string }
+  | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
+  | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
+  | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
+  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
+  | { kind: "cover"; cover: CoverContent }
+  | { kind: "player-news"; news: NewsQuoteContent }
+  | { kind: "captain-picks"; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }
+  | { kind: "fixture-ticker"; grid: FixtureGridContent; gwLabel: string }
+  | { kind: "transfer-trends"; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }
+  | { kind: "team-of-the-week"; totw: TeamOfTheWeekContent; gwLabel: string }
+  | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string; statLabel: string };
+
+// ---------- post captions ----------
+
+/** X allows 280 characters and counts a link as 23 plus the space before it. */
+const CAPTION_MAX = 256;
+
+const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
+  "captain-picks": "#Captain",
+  "fixture-ticker": "#FDR",
+  "fixtures-comparison": "#FDR",
+  "transfer-trends": "#FPLTransfers",
+  "price-change": "#FPLPrices",
+  "top-differentials": "#Differentials",
+  "team-of-the-week": "#TeamOfTheWeek",
+  "team-reveal": "#TeamReveal",
+  "predicted-lineup": "#PredictedLineup",
+  "player-news": "#FPLNews",
+};
+
+function captionGw(label: string | null | undefined): string | null {
+  const m = /GW(\d+)/i.exec(label ?? "");
+  return m ? `#GW${m[1]}` : null;
+}
+
+function finishCaption(body: string, spec: GraphicSpec, kind: GraphicData["kind"], gwText: string | null | undefined): string {
+  const handle = normaliseHandle(spec.handle);
+  const tags = ["#FPL", "#FantasyPremierLeague", captionGw(gwText), KIND_TAG[kind]].filter((t): t is string => !!t).join(" ");
+  const tail = `${handle ? ` by @${handle}` : ""} · fpldilemmas.com ${tags}`;
+  const room = CAPTION_MAX - tail.length;
+  const text = body.length <= room ? body : `${body.slice(0, Math.max(0, room - 1)).replace(/[\s,;·:.\-–(]+$/, "")}…`;
+  return `${text}${tail}`;
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * A ready-to-post caption for a graphic, built only from the numbers and names on it: no claims beyond the data.
+ * At most 256 characters, so it fits an X post with a link; the site and hashtags are never cut.
+ */
+export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
+  const done = (body: string, gw?: string | null) => finishCaption(body, spec, data.kind, gw);
+  switch (data.kind) {
+    case "captain-picks": {
+      const top = data.rows.slice(0, 3).map((r) => `${r.rank}. ${r.name} ${r.xpts.toFixed(1)}`).join(" · ");
+      return done(top ? `${data.gwLabel} captain picks by our xPts: ${top}` : `${data.gwLabel} captain picks`, data.gwLabel);
+    }
+    case "top-differentials": {
+      const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.xpts.toFixed(1)} xPts (${r.ownership})`).join(" · ");
+      return done(top ? `Top differentials ${data.gwLabel}: ${top}` : `Top differentials ${data.gwLabel}`, data.gwLabel);
+    }
+    case "fixture-ticker": {
+      const rows = data.grid.rows.filter((r) => r.avgFdr !== null);
+      const fmt = (r: { short: string; avgFdr: number | null }) => `${r.short} ${(r.avgFdr as number).toFixed(1)}`;
+      const easy = rows.slice(0, 3);
+      const hard = rows.slice(Math.max(3, rows.length - 3)).reverse();
+      return done(`Easiest ${data.gwLabel} fixture runs (avg FDR): ${easy.map(fmt).join(", ")}.${hard.length ? ` Toughest: ${hard.map(fmt).join(", ")}.` : ""}`, data.gwLabel);
+    }
+    case "fixtures-comparison": {
+      const list = data.grid.rows.map((r) => `${r.short} ${r.avgFdr === null ? "–" : r.avgFdr.toFixed(1)}`).join(" · ");
+      return done(`${data.gwLabel} fixtures, avg FDR: ${list}`, data.gwLabel);
+    }
+    case "transfer-trends": {
+      const part = (rows: TransferRow[]) => rows.slice(0, 3).map((r) => `${r.name} ${r.countLabel}`).join(", ");
+      return done(`${data.gwLabel}: most in ${part(data.trends.ins) || "none yet"}; most out ${part(data.trends.outs) || "none yet"}.`, data.gwLabel);
+    }
+    case "price-change": {
+      const { prices } = data;
+      const risers = prices.risers.length + prices.moreRisers;
+      const fallers = prices.fallers.length + prices.moreFallers;
+      const day = data.dateLabel.includes("·") ? data.dateLabel.split("·").slice(1).join("·").trim() : "";
+      if (!prices.date || risers + fallers === 0) return done(`No price changes recorded${day ? ` for ${day}` : ""}.`);
+      const names = (rows: PriceChangeRow[]) => rows.slice(0, 2).map((r) => `${r.name} ${r.change}`).join(", ");
+      return done(`Price changes${day ? ` · ${day}` : ""}: ▲ ${plural(risers, "riser", "risers")} (${names(prices.risers)}) · ▼ ${plural(fallers, "faller", "fallers")} (${names(prices.fallers)})`);
+    }
+    case "team-of-the-week": {
+      const { totw } = data;
+      if (!totw.complete) return done(`Team of the Week ${data.gwLabel}: not enough data yet.`, data.gwLabel);
+      const captain = totw.rows.flatMap((r) => r.players).find((p) => p.isCaptain);
+      return done(`Team of the Week ${data.gwLabel}: ${totw.formation}, ${totw.total} pts${captain ? `. Captain ${captain.name} (${captain.points} pts)` : ""}.`, data.gwLabel);
+    }
+    case "stat-leaders": {
+      const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.valueLabel}`).join(" · ");
+      return done(`${data.statLabel} leaders: ${top || "no one yet"} (season to date)`);
+    }
+    case "cover": {
+      const { cover } = data;
+      return done(`${cover.headline}${cover.subtitle ? ` – ${cover.subtitle}` : ""}`, cover.headline);
+    }
+    case "player-news": {
+      const { news } = data;
+      const who = `${news.player.name} (${news.player.teamShort})`;
+      if (news.kind === "official") return done(`${who}: ${news.quote} · source: official FPL news`);
+      if (news.kind === "custom") return done(`${who}: “${news.quote}”${news.source ? ` — ${news.source}` : ""}`);
+      return done(`${who}: no news right now`);
+    }
+    case "team-reveal": {
+      const { reveal } = data;
+      const players = [...reveal.rows.flatMap((r) => r.players), ...reveal.bench];
+      const captain = players.find((p) => p.isCaptain);
+      const vice = players.find((p) => p.isVice);
+      const owner = spec.manager.trim();
+      if (!reveal.complete) return done(`${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: squad not finished yet.`, data.gwLabel);
+      return done(
+        `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}.`,
+        data.gwLabel,
+      );
+    }
+    case "predicted-lineup": {
+      const { lineup } = data;
+      if (!lineup.complete) return done(`${lineup.teamName} ${data.gwLabel}: not enough expected-minutes data for a predicted XI yet.`, data.gwLabel);
+      return done(`Predicted ${lineup.teamName} XI for ${data.gwLabel}${lineup.formation ? ` (${lineup.formation})` : ""}, from our expected minutes.`, data.gwLabel);
+    }
+    case "player-card": {
+      const { card } = data;
+      const tile = (label: string) => card.tiles.find((t) => t.label === label)?.value;
+      const bits = [
+        card.xpts.total === null ? null : `${card.xpts.total.toFixed(1)} xPts`,
+        tile("Selected by") ? `${tile("Selected by")} owned` : null,
+        tile("Form") ? `form ${tile("Form")}` : null,
+      ].filter((b): b is string => !!b);
+      return done(`${card.name} (${card.teamShort}, ${card.price}) ${data.gwLabel}${bits.length ? `: ${bits.join(", ")}` : ""}.`, data.gwLabel);
+    }
+    case "player-comparison": {
+      const { comparison } = data;
+      const rows = comparison.rows.slice(0, 3).map((r) => `${r.label} ${r.values.join(" / ")}`).join(" · ");
+      return done(`${comparison.columns.map((c) => c.name).join(" vs ")}${rows ? `: ${rows}` : ""}`);
+    }
+  }
+}
+
+// ---------- the gameweek pack ----------
+
+export const GAMEWEEK_PACK: Array<{ id: string; template: TemplateId; label: string }> = [
+  { id: "deadline", template: "cover", label: "Deadline card" },
+  { id: "captains", template: "captain-picks", label: "Captain picks" },
+  { id: "differentials", template: "top-differentials", label: "Top differentials" },
+  { id: "fixtures", template: "fixture-ticker", label: "Fixture ticker" },
+  { id: "transfers", template: "transfer-trends", label: "Transfer trends" },
+  { id: "prices", template: "price-change", label: "Price changes" },
+];
+
+/** The deadline as UK time, e.g. "Sat 24 Oct · 17:30"; null when it is not a date. */
+export function formatDeadline(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("weekday")} ${get("day")} ${get("month")} · ${get("hour")}:${get("minute")}`;
+}
+
+/**
+ * The graphics of the standard pack for a gameweek. Each keeps the user's size, theme, handle and accent, but none of
+ * the other settings (players, teams, quote...), so a pack never carries leftovers from the template being edited.
+ */
+export function packSpecs(
+  base: GraphicSpec,
+  gameweek: number,
+  options: { deadline: string | null },
+): Array<{ item: (typeof GAMEWEEK_PACK)[number]; spec: GraphicSpec }> {
+  const common: GraphicSpec = { ...DEFAULT_SPEC, size: base.size, theme: base.theme, handle: base.handle, accent: base.accent };
+  const deadline = formatDeadline(options.deadline);
+  const overrides: Record<string, Partial<GraphicSpec>> = {
+    deadline: { headline: `GW${gameweek} Deadline`, subtitle: "Captains, differentials, fixtures and price moves", tag: deadline ?? "" },
+    captains: { from: gameweek, to: gameweek },
+    differentials: { from: gameweek, to: gameweek + 3 },
+    fixtures: { from: gameweek, to: gameweek + 4 },
+    transfers: {},
+    prices: {},
+  };
+  return GAMEWEEK_PACK.map((item) => ({ item, spec: { ...common, template: item.template, ...overrides[item.id] } }));
+}
+
+export function packFileName(index: number, template: TemplateId): string {
+  return `${String(index + 1).padStart(2, "0")}-${template}.png`;
+}
+
+export function packZipName(gameweek: number): string {
+  return `fpl-dilemmas-gw${gameweek}-pack.zip`;
+}
+
+/** captions.txt for the pack: each image's file name followed by its caption. */
+export function buildCaptionsFile(items: Array<{ fileName: string; caption: string }>): string {
+  return `${items.map((i) => `${i.fileName}\n${i.caption}\n`).join("\n")}`;
 }

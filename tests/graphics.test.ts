@@ -19,6 +19,17 @@ import {
   buildTransferTrends,
   buildTeamOfTheWeek,
   buildStatLeaders,
+  buildCaption,
+  buildCaptionsFile,
+  formatDeadline,
+  GAMEWEEK_PACK,
+  normaliseAccent,
+  normaliseHandle,
+  packFileName,
+  packSpecs,
+  packZipName,
+  withAccent,
+  type GraphicData,
   formatCount,
   LEADER_STATS,
   formatNewsDate,
@@ -1103,5 +1114,216 @@ describe("buildStatLeaders", () => {
 
   it("an unknown stat gives no rows", () => {
     expect(run({ statKey: "nonsense" }).rows).toEqual([]);
+  });
+});
+
+describe("creator handle and accent", () => {
+  it("validates a handle: letters, digits, underscore, up to 15, one leading @ stripped; anything else is none", () => {
+    expect(normaliseHandle("@steve")).toBe("steve");
+    expect(normaliseHandle("  steve_f1 ")).toBe("steve_f1");
+    expect(normaliseHandle("FPL_Dilemmas9")).toBe("FPL_Dilemmas9");
+    expect(normaliseHandle("a".repeat(15))).toBe("a".repeat(15));
+    for (const bad of ["", "@", "@@steve", "bad name", "a".repeat(16), "né", "steve!", "x-y", "@ste ve", "https://x.com/steve"]) expect(normaliseHandle(bad)).toBe("");
+  });
+
+  it("validates an accent colour: 6 or 3 hex digits, with or without #, returned as #rrggbb", () => {
+    expect(normaliseAccent("#FBBF24")).toBe("#fbbf24");
+    expect(normaliseAccent("fbbf24")).toBe("#fbbf24");
+    expect(normaliseAccent("#fb2")).toBe("#ffbb22");
+    for (const bad of ["", "red", "#12345", "#1234567", "#gggggg", "rgb(1,2,3)"]) expect(normaliseAccent(bad)).toBe("");
+  });
+
+  it("handle and accent live in the link; defaults and invalid values are left out", () => {
+    expect(DEFAULT_SPEC).toMatchObject({ handle: "", accent: "" });
+    expect(encodeSpec({ ...DEFAULT_SPEC, handle: "steve_f", accent: "#fbbf24" })).toBe("handle=steve_f&accent=fbbf24");
+    expect(decodeSpec("handle=@steve_f&accent=FBBF24")).toMatchObject({ handle: "steve_f", accent: "#fbbf24" });
+    expect(decodeSpec("handle=bad%20name&accent=zzz")).toMatchObject({ handle: "", accent: "" });
+    const spec = { ...DEFAULT_SPEC, template: "captain-picks" as const, handle: "x1", accent: "#123456" };
+    expect(decodeSpec(encodeSpec(spec))).toMatchObject({ handle: "x1", accent: "#123456" });
+  });
+
+  it("an accent never makes a theme unreadable: it is lightened or darkened until it has contrast against the background", () => {
+    const accents = ["#fbbf24", "#ff0000", "#00ff00", "#000000", "#ffffff", "#4f46e5", "#ffff00"];
+    for (const id of ["indigo", "midnight", "light"] as const) {
+      const base = resolveTheme(id, null);
+      for (const a of accents) {
+        const t = withAccent(base, a);
+        for (const bg of [t.bg, t.bg2]) expect(contrastRatio(t.accent, bg)).toBeGreaterThanOrEqual(3);
+        expect(t.bg).toBe(base.bg);
+        expect(t.text).toBe(base.text);
+      }
+    }
+    const midnight = resolveTheme("midnight", null);
+    expect(withAccent(midnight, "#fbbf24").accent.toLowerCase()).toBe("#fbbf24");
+    expect(withAccent(midnight, "")).toBe(midnight);
+    expect(withAccent(midnight, "nonsense")).toBe(midnight);
+  });
+});
+
+describe("deadline text and the gameweek pack plan", () => {
+  it("formats a deadline in UK time", () => {
+    expect(formatDeadline("2026-10-24T16:30:00Z")).toBe("Sat 24 Oct · 17:30"); // BST
+    expect(formatDeadline("2026-11-07T17:30:00Z")).toBe("Sat 7 Nov · 17:30"); // GMT
+    expect(formatDeadline("nonsense")).toBeNull();
+    expect(formatDeadline(null)).toBeNull();
+  });
+
+  it("the pack is the standard set for a gameweek, in order, keeping the user's size, theme, handle and accent", () => {
+    const base = { ...DEFAULT_SPEC, template: "player-card" as const, size: "portrait" as const, theme: "midnight" as const, handle: "steve", accent: "#fbbf24", headline: "mine", players: [1], teams: [2], quote: "q" };
+    const specs = packSpecs(base, 9, { deadline: "2026-10-24T16:30:00Z" });
+    expect(specs.map((x) => x.spec.template)).toEqual(["cover", "captain-picks", "top-differentials", "fixture-ticker", "transfer-trends", "price-change"]);
+    expect(GAMEWEEK_PACK.map((x) => x.template)).toEqual(specs.map((x) => x.spec.template));
+    for (const { spec } of specs) {
+      expect(spec).toMatchObject({ size: "portrait", theme: "midnight", handle: "steve", accent: "#fbbf24" });
+      expect(spec.players).toEqual([]);
+      expect(spec.teams).toEqual([]);
+      expect(spec.quote).toBe("");
+      expect(decodeSpec(encodeSpec(spec))).toEqual(spec);
+    }
+    expect(specs[0].spec).toMatchObject({ headline: "GW9 Deadline", tag: "Sat 24 Oct · 17:30" });
+    expect(specs[0].spec.subtitle.length).toBeGreaterThan(0);
+    expect(specs[1].spec).toMatchObject({ from: 9, to: 9, headline: "" });
+    expect(specs[2].spec).toMatchObject({ from: 9, to: 12 });
+    expect(specs[3].spec).toMatchObject({ from: 9, to: 13 });
+  });
+
+  it("the cover has no tag when the deadline is unknown", () => {
+    expect(packSpecs(DEFAULT_SPEC, 9, { deadline: null })[0].spec.tag).toBe("");
+  });
+
+  it("file names are numbered in pack order, and the zip is named for the gameweek", () => {
+    expect(packFileName(0, "cover")).toBe("01-cover.png");
+    expect(packFileName(5, "price-change")).toBe("06-price-change.png");
+    expect(packZipName(9)).toBe("fpl-dilemmas-gw9-pack.zip");
+  });
+
+  it("captions.txt lists each image with its caption, in order", () => {
+    const text = buildCaptionsFile([
+      { fileName: "01-cover.png", caption: "GW9 deadline #FPL" },
+      { fileName: "02-captain-picks.png", caption: "Captains #FPL" },
+    ]);
+    expect(text.indexOf("01-cover.png")).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf("01-cover.png")).toBeLessThan(text.indexOf("GW9 deadline #FPL"));
+    expect(text.indexOf("GW9 deadline #FPL")).toBeLessThan(text.indexOf("02-captain-picks.png"));
+    expect(text.endsWith("\n")).toBe(true);
+    expect(text).toContain("\n\n");
+  });
+});
+
+describe("post captions from the real numbers", () => {
+  const spec = (over: Record<string, unknown> = {}) => ({ ...DEFAULT_SPEC, ...over }) as any;
+  const tail = "fpldilemmas.com #FPL #FantasyPremierLeague";
+
+  it("captain picks: the top three with their xPts, the gameweek hashtag and the site", () => {
+    const data = {
+      kind: "captain-picks", gwLabel: "GW8", subtitle: "",
+      rows: [
+        { rank: 1, name: "Isak", xpts: 7.1 }, { rank: 2, name: "Cherki", xpts: 6.9 }, { rank: 3, name: "João Pedro", xpts: 6.7 }, { rank: 4, name: "Mbeumo", xpts: 6.1 },
+      ],
+    } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "captain-picks" }));
+    expect(c).toContain("GW8");
+    expect(c).toContain("Isak 7.1");
+    expect(c).toContain("Cherki 6.9");
+    expect(c).toContain("João Pedro 6.7");
+    expect(c).not.toContain("Mbeumo");
+    expect(c).toContain(tail);
+    expect(c).toContain("#GW8");
+  });
+
+  it("every caption fits an X post (256 characters) and keeps the site and hashtags even when the body is long", () => {
+    const rows = Array.from({ length: 5 }, (_, i) => ({ rank: i + 1, name: `A very long player name number ${i} with plenty of extra words added to force the cut`, xpts: 7.1 }));
+    const c = buildCaption({ kind: "captain-picks", gwLabel: "GW8", subtitle: "", rows } as unknown as GraphicData, spec({ template: "captain-picks", handle: "a_creator" }));
+    expect(c.length).toBeLessThanOrEqual(256);
+    expect(c).toContain(tail);
+    expect(c).toContain("…");
+  });
+
+  it("adds the creator's handle next to the site when there is one, and not otherwise", () => {
+    const data = { kind: "captain-picks", gwLabel: "GW8", subtitle: "", rows: [{ rank: 1, name: "Isak", xpts: 7.1 }] } as unknown as GraphicData;
+    expect(buildCaption(data, spec({ template: "captain-picks", handle: "steve_f" }))).toContain("by @steve_f");
+    expect(buildCaption(data, spec({ template: "captain-picks" }))).not.toContain("@");
+  });
+
+  it("fixture ticker: easiest and toughest runs with their average difficulty", () => {
+    const row = (short: string, avg: number | null) => ({ short, avgFdr: avg });
+    const data = { kind: "fixture-ticker", gwLabel: "GW8-12", grid: { gameweeks: [8], rows: [row("COV", 2.8), row("CRY", 2.84), row("IPS", 2.9), row("MUN", 3.4), row("LIV", 3.5), row("MCI", 3.6), row("XXX", null)] } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "fixture-ticker" }));
+    expect(c).toContain("COV 2.8");
+    expect(c).toContain("CRY 2.8");
+    expect(c).toContain("MCI 3.6");
+    expect(c).not.toContain("XXX");
+  });
+
+  it("transfer trends: the biggest mover in and out with the counts", () => {
+    const data = { kind: "transfer-trends", gwLabel: "GW8 transfers so far", subtitle: "", trends: { ins: [{ name: "Tavernier", countLabel: "561k" }, { name: "Cherki", countLabel: "413k" }], outs: [{ name: "Saka", countLabel: "623k" }] } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "transfer-trends" }));
+    expect(c).toContain("Tavernier 561k");
+    expect(c).toContain("Saka 623k");
+    expect(c).toContain("#FPLTransfers");
+  });
+
+  it("price changes: counts and the first names", () => {
+    const data = { kind: "price-change", dateLabel: "Confirmed price changes · Thursday, 22 October 2026", prices: { date: "2026-10-22", risers: [{ name: "Calvert-Lewin", change: "+£0.1m" }], fallers: [{ name: "Palacios", change: "-£0.1m" }], moreRisers: 2, moreFallers: 0 } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "price-change" }));
+    expect(c).toContain("Calvert-Lewin");
+    expect(c).toContain("Palacios");
+    expect(c).toContain("3 risers");
+    expect(c).toContain("1 faller");
+  });
+
+  it("an empty price day says so rather than inventing moves", () => {
+    const data = { kind: "price-change", dateLabel: "Confirmed price changes", prices: { date: null, risers: [], fallers: [], moreRisers: 0, moreFallers: 0 } } as unknown as GraphicData;
+    expect(buildCaption(data, spec({ template: "price-change" }))).toContain("No price changes");
+  });
+
+  it("team of the week: formation, total and captain", () => {
+    const data = { kind: "team-of-the-week", gwLabel: "GW7", totw: { complete: true, formation: "3-4-3", total: 143, rows: [{ position: "MID", players: [{ name: "Neto", points: 15, isCaptain: true }] }] } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "team-of-the-week" }));
+    expect(c).toContain("3-4-3");
+    expect(c).toContain("143");
+    expect(c).toContain("Neto");
+  });
+
+  it("stat leaders: the stat and the top three", () => {
+    const data = { kind: "stat-leaders", gwLabel: "Season to date", subtitle: "", statLabel: "Assists", rows: [{ name: "Groß", valueLabel: "6" }, { name: "Gvardiol", valueLabel: "4" }, { name: "Palmer", valueLabel: "4" }, { name: "X", valueLabel: "4" }] } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "stat-leaders" }));
+    expect(c).toContain("Assists");
+    expect(c).toContain("Groß 6");
+    expect(c).not.toContain("X 4");
+  });
+
+  it("top differentials: the first three with xPts and ownership", () => {
+    const data = { kind: "top-differentials", gwLabel: "GW8-12", subtitle: "", rows: [{ name: "Gakpo", xpts: 25.5, ownership: "6.5%" }, { name: "Belloumi", xpts: 24.7, ownership: "9.1%" }] } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "top-differentials" }));
+    expect(c).toContain("Gakpo 25.5 xPts (6.5%)");
+    expect(c).toContain("#Differentials");
+  });
+
+  it("cover: the headline and subtitle", () => {
+    const data = { kind: "cover", cover: { headline: "GW9 Deadline", subtitle: "Captains and fixtures", tag: "Sat 24 Oct", players: [] } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "cover" }));
+    expect(c).toContain("GW9 Deadline");
+    expect(c).toContain("Captains and fixtures");
+  });
+
+  it("player news: official news is credited to FPL; a typed quote uses only the typed source", () => {
+    const official = { kind: "player-news", news: { kind: "official", quote: "Thigh injury - 50% chance of playing", source: "Official FPL news · 21 Oct 2026", player: { name: "Saka", teamShort: "ARS" } } } as unknown as GraphicData;
+    expect(buildCaption(official, spec({ template: "player-news" }))).toContain("Saka");
+    expect(buildCaption(official, spec({ template: "player-news" }))).toContain("official FPL news");
+    const custom = { kind: "player-news", news: { kind: "custom", quote: "Back in training", source: "Arteta, press conference", player: { name: "Saka", teamShort: "ARS" } } } as unknown as GraphicData;
+    const c = buildCaption(custom, spec({ template: "player-news" }));
+    expect(c).toContain("Back in training");
+    expect(c).toContain("Arteta, press conference");
+    expect(c).not.toContain("official FPL news");
+  });
+
+  it("team reveal: manager, formation, captain and chip", () => {
+    const data = { kind: "team-reveal", gwLabel: "GW9", reveal: { complete: true, formation: "4-4-2", chipLabel: "Triple Captain", rows: [{ position: "FWD", players: [{ name: "Haaland", isCaptain: true, isVice: false }] }], bench: [] } } as unknown as GraphicData;
+    const c = buildCaption(data, spec({ template: "team-reveal", manager: "Steve F" }));
+    expect(c).toContain("Steve F");
+    expect(c).toContain("4-4-2");
+    expect(c).toContain("Haaland");
+    expect(c).toContain("Triple Captain");
   });
 });
