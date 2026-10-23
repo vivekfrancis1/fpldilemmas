@@ -655,6 +655,12 @@ const DIFF_QUADRANTS = { tl: "Differentials", tr: "Template picks", bl: "Avoid",
 const DIFF_HINT = "Up = more projected points. Left = fewer managers own them. Top-left players are your differentials; bottom-right are popular but projected to underdeliver.";
 const VALUE_HINT = "Up = more projected points. Left = cheaper. Top-left players give the most points for the money.";
 
+const FORM_PRICE_QUADRANTS = { tl: "Cheap and in form", tr: "Premium and in form", bl: "Cheap and cold", br: "Pricey and cold" };
+const SEASON_QUADRANTS = { tl: "Bargains so far", tr: "Premium returners", bl: "Budget fillers", br: "Overpriced so far" };
+const FORM_PRICE_HINT = "Up = better recent form (FPL's form figure). Left = cheaper.";
+const SEASON_HINT = "Up = more points scored so far this season. Left = cheaper. Top-left players have returned the most for the money.";
+const MINUTES_HINT = "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek. Top-right players are secure and productive.";
+
 // The FIRST preset of each list is that list's default graph.
 export const PLOT_PRESETS: PlotPreset[] = [
   // ---- All positions / several positions
@@ -674,6 +680,32 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek. Top-right players are secure and productive.",
   },
 
+  {
+    id: "market", label: "Market movers", title: "Market movers: who managers are buying and selling", positions: [], x: "net_transfers", y: "xpts_total", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    quadrants: { tl: "Sold but projected well", tr: "Bought and projected well", bl: "Sold and projected poorly", br: "Bought but projected poorly" },
+    hint: "Right = more managers bought than sold the player this gameweek; left = more sold. Up = more projected points. Top-left is the contrarian zone; bottom-right is a bandwagon our projections do not back.",
+  },
+  {
+    id: "form-xpts", label: "Form vs projection", title: "Form vs projection: is the form backed up?", positions: [], x: "form", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    quadrants: { tl: "Cold but projected well", tr: "In form and projected well", bl: "Cold and projected poorly", br: "Hot but may cool" },
+    hint: "Right = better recent form (FPL's form figure). Up = more projected points per gameweek. Bottom-right players are hot now but our projections expect them to cool.",
+  },
+  {
+    id: "form-diff", label: "In-form differentials", title: "In-form differentials: form vs ownership", positions: [], x: "ownership", y: "form", xScale: "sqrt", yScale: "linear",
+    quadrants: { tl: "Hidden gems", tr: "Popular and hot", bl: "Under the radar", br: "Owned but cold" },
+    hint: "Up = better recent form. Left = fewer managers own the player. Top-left players are hot and under-owned.",
+  },
+  { id: "season-value", label: "Season value", title: "Season value: points so far vs price", positions: [], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  {
+    id: "efficiency", label: "Points per 90", title: "Efficiency: points per 90 vs minutes played", positions: [], x: "minutes", y: "points_per_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Efficient but rarely playing", tr: "Productive regulars", bl: "Quiet cameos", br: "Regulars returning little" },
+    hint: "Right = more minutes played. Up = more points per 90 minutes. Top-right players are both regulars and productive; top-left players return well but play little.",
+  },
+  {
+    id: "bonus", label: "Bonus magnets", title: "Bonus magnets: BPS vs bonus points", positions: [], x: "bps", y: "bonus", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    hint: "Right = more total BPS (the bonus points system's raw score). Up = more bonus points awarded. Players above the pack turn BPS into bonus most often.",
+  },
+
   // ---- Goalkeepers
   { id: "gk-value", label: "Value", title: "Goalkeepers: value, xPts vs price", positions: ["GKP"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
   {
@@ -686,6 +718,9 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Left = the team allows fewer good chances (expected goals conceded per 90). Up = more clean sheets per 90. Top-left keepers are both well protected and keeping clean sheets.",
   },
   { id: "gk-diff", label: "Differentials", title: "Goalkeepers: high xPts, low ownership", positions: ["GKP"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  { id: "gk-form", label: "Form vs price", title: "Goalkeepers: form vs price", positions: ["GKP"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
+  { id: "gk-season", label: "Season value", title: "Goalkeepers: points so far vs price", positions: ["GKP"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  { id: "gk-minutes", label: "Minutes security", title: "Goalkeepers: expected minutes vs projected points", positions: ["GKP"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
 
   // ---- Defenders
   {
@@ -699,6 +734,13 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Right = more defensive contributions per 90 (the extra-points threshold stat). Up = more projected points.",
   },
   { id: "def-diff", label: "Differentials", title: "Defenders: high xPts, low ownership", positions: ["DEF"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  { id: "def-form", label: "Form vs price", title: "Defenders: form vs price", positions: ["DEF"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
+  { id: "def-season", label: "Season value", title: "Defenders: points so far vs price", positions: ["DEF"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  { id: "def-minutes", label: "Minutes security", title: "Defenders: expected minutes vs projected points", positions: ["DEF"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
+  {
+    id: "def-luck", label: "Luck check", title: "Defenders: luck check", positions: ["DEF"], x: "xgi", y: "gi_minus_xgi", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    hint: "Right = more expected goal involvements. Above zero = scoring/assisting more than the chances suggest (may cool off); below zero = unlucky (may come good).",
+  },
 
   // ---- Midfielders
   {
@@ -712,6 +754,14 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Right = more expected goal involvements. Above zero = scoring/assisting more than the chances suggest (may cool off); below zero = unlucky (may come good).",
   },
   { id: "mid-diff", label: "Differentials", title: "Midfielders: high xPts, low ownership", positions: ["MID"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  {
+    id: "mid-threat", label: "Threat vs creativity", title: "Midfielders: threat vs creativity", positions: ["MID"], x: "creativity", y: "threat", xScale: "linear", yScale: "linear", goodTopLeft: false,
+    quadrants: { tl: "Shooters", tr: "Complete mids", bl: "Quiet", br: "Creators" },
+    hint: "Right = more creativity (FPL's chance-creation index). Up = more threat (FPL's goal-threat index). Top-right midfielders carry both.",
+  },
+  { id: "mid-form", label: "Form vs price", title: "Midfielders: form vs price", positions: ["MID"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
+  { id: "mid-season", label: "Season value", title: "Midfielders: points so far vs price", positions: ["MID"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  { id: "mid-minutes", label: "Minutes security", title: "Midfielders: expected minutes vs projected points", positions: ["MID"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
 
   // ---- Forwards
   {
@@ -723,6 +773,13 @@ export const PLOT_PRESETS: PlotPreset[] = [
   {
     id: "fwd-minutes", label: "Minutes security", title: "Forwards: expected minutes vs projected points", positions: ["FWD"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false,
     hint: "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek.",
+  },
+  { id: "fwd-form", label: "Form vs price", title: "Forwards: form vs price", positions: ["FWD"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
+  { id: "fwd-season", label: "Season value", title: "Forwards: points so far vs price", positions: ["FWD"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  {
+    id: "fwd-chances", label: "Chances for the price", title: "Forwards: chance quality per 90 vs price", positions: ["FWD"], x: "price", y: "xg_90", xScale: "linear", yScale: "linear", minMinutes: 180,
+    quadrants: { tl: "Cheap chance-getters", tr: "Premium chance-getters", bl: "Cheap and quiet", br: "Pricey and quiet" },
+    hint: "Up = more expected goals per 90 (the quality and quantity of chances). Left = cheaper. Top-left forwards are getting premium-level chances at a lower price.",
   },
 ];
 

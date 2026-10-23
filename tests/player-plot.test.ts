@@ -497,3 +497,51 @@ describe("URL state with position defaults", () => {
     expect(decodePlotState(encodePlotState(s))).toEqual(s);
   });
 });
+
+describe("more quick views", () => {
+  const ids = (positions: Array<"GKP" | "DEF" | "MID" | "FWD">) => presetsForPositions(positions).map((p) => p.id);
+
+  it("the default graph of every list is unchanged", () => {
+    expect(ids([])[0]).toBe("differentials");
+    expect(ids(["GKP"])[0]).toBe("gk-value");
+    expect(ids(["DEF"])[0]).toBe("def-attack");
+    expect(ids(["MID"])[0]).toBe("mid-creators");
+    expect(ids(["FWD"])[0]).toBe("fwd-finishing");
+  });
+
+  it("the general list offers market movers, form vs projection, in-form differentials, season value, points per 90 and bonus", () => {
+    for (const id of ["market", "form-xpts", "form-diff", "season-value", "efficiency", "bonus"]) expect(ids([]), id).toContain(id);
+    expect(presetsForPositions([]).length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("each position list has at least seven quick views, including form, season value and minutes", () => {
+    for (const pos of PLOT_POSITIONS) {
+      const list = presetsForPositions([pos]);
+      expect(list.length, pos).toBeGreaterThanOrEqual(7);
+      const axes = list.map((p) => `${p.x}|${p.y}`);
+      expect(axes, pos).toContain("price|form");
+      expect(axes, pos).toContain("price|total_points");
+      expect(axes, pos).toContain("xmins_avg|xpts_avg");
+    }
+  });
+
+  it("no two quick views in one list plot the same pair of stats (each is found by its axes)", () => {
+    for (const positions of [[], ["GKP"], ["DEF"], ["MID"], ["FWD"]] as Array<Array<"GKP" | "DEF" | "MID" | "FWD">>) {
+      const keys = presetsForPositions(positions).map((p) => `${p.x}|${p.y}`);
+      expect(new Set(keys).size, positions.join() || "all").toBe(keys.length);
+    }
+  });
+
+  it("market movers plots net transfers against projected points", () => {
+    const p = PLOT_PRESETS.find((x) => x.id === "market")!;
+    expect([p.x, p.y]).toEqual(["net_transfers", "xpts_total"]);
+  });
+
+  it("every quick view has a title, a label short enough for a pill, and a hint", () => {
+    for (const p of PLOT_PRESETS) {
+      expect(p.title.length, p.id).toBeGreaterThan(5);
+      expect(p.label.length, p.id).toBeLessThanOrEqual(26);
+      expect(p.hint.length, p.id).toBeGreaterThan(20);
+    }
+  });
+});
