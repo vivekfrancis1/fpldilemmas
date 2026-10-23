@@ -1512,7 +1512,7 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       const fmt = (r: { short: string; avgFdr: number | null }) => `${r.short} ${(r.avgFdr as number).toFixed(1)}`;
       const easy = rows.slice(0, 3);
       const hard = rows.slice(Math.max(3, rows.length - 3)).reverse();
-      return done(`Easiest ${data.gwLabel} fixture runs (avg FDR): ${easy.map(fmt).join(", ")}.${hard.length ? ` Toughest: ${hard.map(fmt).join(", ")}.` : ""}`, data.gwLabel);
+      return done(`Easiest ${data.gwLabel} fixture runs (avg FDR): ${easy.map(fmt).join(", ")}${hard.length ? `. Toughest: ${hard.map(fmt).join(", ")}` : ""}`, data.gwLabel);
     }
     case "fixtures-comparison": {
       const list = data.grid.rows.map((r) => `${r.short} ${r.avgFdr === null ? "–" : r.avgFdr.toFixed(1)}`).join(" · ");
@@ -1520,22 +1520,22 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     }
     case "transfer-trends": {
       const part = (rows: TransferRow[]) => rows.slice(0, 3).map((r) => `${r.name} ${r.countLabel}`).join(", ");
-      return done(`${data.gwLabel}: most in ${part(data.trends.ins) || "none yet"}; most out ${part(data.trends.outs) || "none yet"}.`, data.gwLabel);
+      return done(`${data.gwLabel}: most in ${part(data.trends.ins) || "none yet"}; most out ${part(data.trends.outs) || "none yet"}`, data.gwLabel);
     }
     case "price-change": {
       const { prices } = data;
       const risers = prices.risers.length + prices.moreRisers;
       const fallers = prices.fallers.length + prices.moreFallers;
       const day = data.dateLabel.includes("·") ? data.dateLabel.split("·").slice(1).join("·").trim() : "";
-      if (!prices.date || risers + fallers === 0) return done(`No price changes recorded${day ? ` for ${day}` : ""}.`);
+      if (!prices.date || risers + fallers === 0) return done(`No price changes recorded${day ? ` for ${day}` : ""}`);
       const names = (rows: PriceChangeRow[]) => rows.slice(0, 2).map((r) => `${r.name} ${r.change}`).join(", ");
       return done(`Price changes${day ? ` · ${day}` : ""}: ▲ ${plural(risers, "riser", "risers")} (${names(prices.risers)}) · ▼ ${plural(fallers, "faller", "fallers")} (${names(prices.fallers)})`);
     }
     case "team-of-the-week": {
       const { totw } = data;
-      if (!totw.complete) return done(`Team of the Week ${data.gwLabel}: not enough data yet.`, data.gwLabel);
+      if (!totw.complete) return done(`Team of the Week ${data.gwLabel}: not enough data yet`, data.gwLabel);
       const captain = totw.rows.flatMap((r) => r.players).find((p) => p.isCaptain);
-      return done(`Team of the Week ${data.gwLabel}: ${totw.formation}, ${totw.total} pts${captain ? `. Captain ${captain.name} (${captain.points} pts)` : ""}.`, data.gwLabel);
+      return done(`Team of the Week ${data.gwLabel}: ${totw.formation}, ${totw.total} pts${captain ? `. Captain ${captain.name} (${captain.points} pts)` : ""}`, data.gwLabel);
     }
     case "stat-leaders": {
       const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.valueLabel}`).join(" · ");
@@ -1543,7 +1543,7 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     }
     case "cover": {
       const { cover } = data;
-      return done(`${cover.headline}${cover.subtitle ? ` – ${cover.subtitle}` : ""}`, cover.headline);
+      return done(`${cover.headline}${cover.tag ? ` · ${cover.tag}` : ""}${cover.subtitle ? ` – ${cover.subtitle}` : ""}`, cover.headline);
     }
     case "player-news": {
       const { news } = data;
@@ -1558,16 +1558,16 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       const captain = players.find((p) => p.isCaptain);
       const vice = players.find((p) => p.isVice);
       const owner = spec.manager.trim();
-      if (!reveal.complete) return done(`${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: squad not finished yet.`, data.gwLabel);
+      if (!reveal.complete) return done(`${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: squad not finished yet`, data.gwLabel);
       return done(
-        `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}.`,
+        `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}`,
         data.gwLabel,
       );
     }
     case "predicted-lineup": {
       const { lineup } = data;
-      if (!lineup.complete) return done(`${lineup.teamName} ${data.gwLabel}: not enough expected-minutes data for a predicted XI yet.`, data.gwLabel);
-      return done(`Predicted ${lineup.teamName} XI for ${data.gwLabel}${lineup.formation ? ` (${lineup.formation})` : ""}, from our expected minutes.`, data.gwLabel);
+      if (!lineup.complete) return done(`${lineup.teamName} ${data.gwLabel}: not enough expected-minutes data for a predicted XI yet`, data.gwLabel);
+      return done(`Predicted ${lineup.teamName} XI for ${data.gwLabel}${lineup.formation ? ` (${lineup.formation})` : ""}, from our expected minutes`, data.gwLabel);
     }
     case "player-card": {
       const { card } = data;
@@ -1577,7 +1577,7 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
         tile("Selected by") ? `${tile("Selected by")} owned` : null,
         tile("Form") ? `form ${tile("Form")}` : null,
       ].filter((b): b is string => !!b);
-      return done(`${card.name} (${card.teamShort}, ${card.price}) ${data.gwLabel}${bits.length ? `: ${bits.join(", ")}` : ""}.`, data.gwLabel);
+      return done(`${card.name} (${card.teamShort}, ${card.price}) ${data.gwLabel}${bits.length ? `: ${bits.join(", ")}` : ""}`, data.gwLabel);
     }
     case "player-comparison": {
       const { comparison } = data;

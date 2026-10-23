@@ -8,6 +8,7 @@ import {
   watermarkText,
   type ComparisonContent,
   type CaptainPickRow,
+  type GraphicData,
   type CoverContent,
   type LeaderRow,
   type TeamOfTheWeekContent,
@@ -36,21 +37,7 @@ import badge from "@/assets/fpl-dilemmas-badge.png?inline";
 
 const FONT = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
 
-export type GraphicData =
-  | { kind: "player-card"; card: PlayerCardContent; gwLabel: string }
-  | { kind: "player-comparison"; comparison: ComparisonContent }
-  | { kind: "fixtures-comparison"; grid: FixtureGridContent; gwLabel: string }
-  | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
-  | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
-  | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
-  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
-  | { kind: "cover"; cover: CoverContent }
-  | { kind: "player-news"; news: NewsQuoteContent }
-  | { kind: "captain-picks"; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }
-  | { kind: "fixture-ticker"; grid: FixtureGridContent; gwLabel: string }
-  | { kind: "transfer-trends"; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }
-  | { kind: "team-of-the-week"; totw: TeamOfTheWeekContent; gwLabel: string }
-  | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string };
+export type { GraphicData };
 
 interface Metrics {
   pad: number;
@@ -126,10 +113,23 @@ function Frame({
           padding: `0 ${m.pad}px`, boxSizing: "border-box",
         }}
       >
-        <span style={{ fontSize: land ? 16 : 19, color: theme.muted, fontWeight: 600, ...ellipsis }}>{footerNote(spec, gwLabel)}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, opacity: 0.6 }}>
-          <img src={badge} alt="" width={land ? 30 : 36} height={land ? 30 : 36} style={{ width: land ? 30 : 36, height: land ? 30 : 36 }} />
-          <span style={{ fontSize: land ? 16 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.text }}>{watermarkText()}</span>
+        <span
+          style={
+            spec.handle
+              ? { fontSize: land ? 13 : 15, lineHeight: 1.2, color: theme.muted, fontWeight: 600, minWidth: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }
+              : { fontSize: land ? 16 : 19, color: theme.muted, fontWeight: 600, ...ellipsis }
+          }
+        >
+          {footerNote(spec, gwLabel)}
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: land ? 14 : 20, flexShrink: 0 }}>
+          {spec.handle && (
+            <span style={{ fontSize: land ? 16 : 19, fontWeight: 800, color: theme.text, opacity: 0.85 }}>@{spec.handle}</span>
+          )}
+          <span style={{ display: "flex", alignItems: "center", gap: 10, opacity: 0.6 }}>
+            <img src={badge} alt="" width={land ? 30 : 36} height={land ? 30 : 36} style={{ width: land ? 30 : 36, height: land ? 30 : 36 }} />
+            <span style={{ fontSize: land ? 16 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.text }}>{watermarkText()}</span>
+          </span>
         </span>
       </div>
     </div>

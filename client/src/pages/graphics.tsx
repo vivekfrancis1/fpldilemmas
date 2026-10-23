@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -43,6 +43,15 @@ import {
   BENCH_PLAYERS,
   MAX_MANAGER_NAME,
   type ChipId,
+  GAMEWEEK_PACK,
+  buildCaption,
+  buildCaptionsFile,
+  normaliseAccent,
+  normaliseHandle,
+  packFileName,
+  packSpecs,
+  packZipName,
+  withAccent,
   decodeSpec,
   encodeSpec,
   gameweekLabel,
@@ -85,6 +94,9 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { computeGraphicData, longDate, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { renderToPng } from "@/lib/render-png";
+import { createZip } from "@shared/zip";
 
 const DEFAULT_WEEKS = 5;
 const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "FWD"];
@@ -93,13 +105,6 @@ const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
 const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
-
-interface PlayerProjection {
-  playerId: number;
-  gameweekProjections?: Record<string, number>;
-  xMinsPerGW?: Record<string, number>;
-  chanceOfPlayingNextRound?: number | null;
-}
 
 function useElementWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -438,14 +443,41 @@ function SquadBuilder({
   );
 }
 
-function longDate(date: string): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  return Number.isNaN(d.getTime()) ? date : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const BRAND_KEY = "fpld-graphics-brand";
+
+/** The creator's own handle and accent, remembered in this browser. Never overrides a link that carries its own. */
+function loadBrand(): { handle: string; accent: string } {
+  try {
+    const raw = window.localStorage.getItem(BRAND_KEY);
+    const j = raw ? JSON.parse(raw) : {};
+    return { handle: normaliseHandle(String(j?.handle ?? "")), accent: normaliseAccent(String(j?.accent ?? "")) };
+  } catch {
+    return { handle: "", accent: "" };
+  }
 }
 
+function saveBrand(brand: { handle: string; accent: string }) {
+  try {
+    window.localStorage.setItem(BRAND_KEY, JSON.stringify(brand));
+  } catch {
+    /* storage can be blocked; the link still carries the handle */
+  }
+}
+
+type PackState = { busy: boolean; done: number; total: number; message: string | null; ok: boolean };
+
 export default function GraphicsPage() {
-  const [spec, setSpec] = useState<GraphicSpec>(() => decodeSpec(typeof window !== "undefined" ? window.location.search : ""));
+  const [spec, setSpec] = useState<GraphicSpec>(() => {
+    const fromLink = decodeSpec(typeof window !== "undefined" ? window.location.search : "");
+    // a link made by someone else keeps its own handle and accent; otherwise start from this browser's saved ones
+    return fromLink.handle || fromLink.accent || typeof window === "undefined" ? fromLink : { ...fromLink, ...loadBrand() };
+  });
+  const [handleText, setHandleText] = useState(() => (spec.handle ? `@${spec.handle}` : ""));
   const [copied, setCopied] = useState(false);
+  const [captionCopied, setCaptionCopied] = useState(false);
+  const [packGw, setPackGw] = useState<number | null>(null);
+  const [pack, setPack] = useState<PackState>({ busy: false, done: 0, total: GAMEWEEK_PACK.length, message: null, ok: true });
+  const queryClient = useQueryClient();
   const [previewRef, previewWidth] = useElementWidth<HTMLDivElement>();
 
   const { data: bootstrap, isLoading: bootstrapLoading, error: bootstrapError } = useQuery<BootstrapData>({ queryKey: ["/api/bootstrap-static"], staleTime: 5 * 60 * 1000 });
@@ -481,12 +513,7 @@ export default function GraphicsPage() {
     const r = getDefaultGameweekRange(bootstrap.events as any, DEFAULT_WEEKS);
     return { from: parseInt(r.startGameweek, 10), to: parseInt(r.endGameweek, 10) };
   }, [bootstrap?.events]);
-  const from = spec.from || defaultRange.from;
-  const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultRange.to));
-  const gameweeks = useMemo(() => Array.from({ length: to - from + 1 }, (_, i) => from + i), [from, to]);
-  const gwLabel = gameweekLabel(from, to);
-  // Predicted Lineups is about one gameweek, held in `from` (and `to`) of the link
-  const lineupGw = spec.from || defaultRange.from;
+  const { from, to, gameweeks, gwLabel, singleGw: lineupGw } = resolveGameweeks(spec, defaultRange);
 
   const openGameweeks = useMemo(() => {
     const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean }>;
@@ -499,12 +526,12 @@ export default function GraphicsPage() {
     () => ((bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean }>).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b),
     [bootstrap?.events],
   );
-  const totwGw = spec.from && finishedGameweeks.includes(spec.from) ? spec.from : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
+  const totwGw = resolveTotwGw(spec, finishedGameweeks);
   const transfersGw = useMemo(() => {
     const events = (bootstrap?.events ?? []) as Array<{ id: number; is_next?: boolean; is_current?: boolean }>;
     return events.find((e) => e.is_next)?.id ?? events.find((e) => e.is_current)?.id ?? 0;
   }, [bootstrap?.events]);
-  const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: Array<{ id: number; stats: { total_points: number; minutes: number } }> }>({
+  const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: LiveElement[] }>({
     queryKey: [`/api/event/${totwGw}/live`],
     staleTime: 5 * 60 * 1000,
     enabled: spec.template === "team-of-the-week" && totwGw > 0,
@@ -556,7 +583,7 @@ export default function GraphicsPage() {
       : selectedElements[0]?.team;
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
   }, [spec.template, spec.teams, spec.captain, elements, selectedElements, teamShortById]);
-  const theme = resolveTheme(spec.theme, clubColor);
+  const theme = withAccent(resolveTheme(spec.theme, clubColor), spec.accent);
 
   const officialNews = useMemo(() => {
     if (spec.template !== "player-news" || !selectedElements[0]) return null;
@@ -569,102 +596,16 @@ export default function GraphicsPage() {
     [priceChanges, spec.date, spec.size],
   );
 
-  const { data, problem } = useMemo((): { data: GraphicData | null; problem: string | null } => {
-    if (!elements.length) return { data: null, problem: null };
-    switch (spec.template) {
-      case "player-card": {
-        const e = selectedElements[0];
-        if (!e) return { data: null, problem: "Search and pick a player to create the card." };
-        return {
-          data: {
-            kind: "player-card",
-            gwLabel,
-            card: buildPlayerCard({ element: e, teamShortById, teamNameById, gameweekProjections: projectionById.get(e.id), gameweeks, fixtures: (fixtures ?? []) as any }),
-          },
-          problem: null,
-        };
-      }
-      case "player-comparison": {
-        if (selectedElements.length < 2) return { data: null, problem: "Pick at least two players to compare." };
-        const xptsByPlayer = new Map(selectedElements.map((e) => [e.id, projectionWindow(projectionById.get(e.id), gameweeks).total]));
-        return { data: { kind: "player-comparison", comparison: buildComparison({ elements: selectedElements, statKeys: spec.stats, xptsByPlayer, teamShortById }) }, problem: null };
-      }
-      case "fixtures-comparison": {
-        if (spec.teams.length < 2) return { data: null, problem: "Pick at least two teams to compare." };
-        if (!fixtures) return { data: null, problem: null };
-        return { data: { kind: "fixtures-comparison", gwLabel, grid: buildFixturesGrid({ teamIds: spec.teams, gameweeks, fixtures: fixtures as any, teamShortById, teamNameById }) }, problem: null };
-      }
-      case "price-change": {
-        if (pricesLoading) return { data: null, problem: null };
-        const dateLabel = priceContent.date ? `Confirmed price changes · ${longDate(priceContent.date)}` : "Confirmed price changes";
-        return { data: { kind: "price-change", prices: priceContent, dateLabel }, problem: null };
-      }
-      case "predicted-lineup": {
-        if (spec.teams.length < 1) return { data: null, problem: "Pick a club to predict its lineup." };
-        if (!fixtures || !projections) return { data: null, problem: null };
-        const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
-        return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
-      }
-      case "player-news": {
-        const news = buildNewsQuote({ spec, elements, teamShortById, teamNameById });
-        if (!news) return { data: null, problem: "Search and pick a player to quote their news." };
-        if (news.kind === "none") return { data: null, problem: `There is no official FPL news for ${news.player.name} right now. Type a quote below to use your own words.` };
-        return { data: { kind: "player-news", news }, problem: null };
-      }
-      case "cover":
-        return { data: { kind: "cover", cover: buildCover({ spec, elements, teamShortById }) }, problem: null };
-      case "team-reveal": {
-        if (spec.squad.length === 0) return { data: null, problem: "Add your 15 players below, or load your squad from your FPL team ID." };
-        if (!fixtures) return { data: null, problem: null };
-        const reveal = buildTeamReveal({
-          elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,
-          gameweek: lineupGw, fixtures: fixtures as any, teamShortById,
-        });
-        return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
-      }
-      case "captain-picks": {
-        if (!fixtures || !projections) return { data: null, problem: null };
-        const rows = buildCaptainPicks({ elements, projections, teamShortById, fixtures: fixtures as any, gameweek: lineupGw, top: spec.top, pos: spec.pos });
-        const label = gameweekLabel(lineupGw, lineupGw);
-        return { data: { kind: "captain-picks", rows, gwLabel: label, subtitle: `${label} · ${spec.pos ?? "all positions"} · ranked by our expected points` }, problem: null };
-      }
-      case "fixture-ticker": {
-        if (!fixtures) return { data: null, problem: null };
-        const grid = buildFixtureTicker({ teamIds: teams.map((t) => t.id), gameweeks, fixtures: fixtures as any, teamShortById, teamNameById });
-        return { data: { kind: "fixture-ticker", grid, gwLabel }, problem: null };
-      }
-      case "transfer-trends": {
-        const trends = buildTransferTrends({ elements, teamShortById, pos: spec.pos, top: spec.top });
-        const label = transfersGw ? `GW${transfersGw} transfers so far` : "Transfers so far";
-        return { data: { kind: "transfer-trends", trends, gwLabel: label, subtitle: `${spec.pos ?? "All positions"} · ${label}` }, problem: null };
-      }
-      case "team-of-the-week": {
-        if (totwGw === 0) return { data: null, problem: "No gameweek has finished yet, so there is no Team of the Week to show." };
-        if (liveLoading || !liveData) return { data: null, problem: null };
-        const totw = buildTeamOfTheWeek({ elements, live: liveData.elements, teamShortById, gameweek: totwGw });
-        return { data: { kind: "team-of-the-week", totw, gwLabel: gameweekLabel(totwGw, totwGw) }, problem: null };
-      }
-      case "stat-leaders": {
-        const result = buildStatLeaders({ elements, statKey: spec.stat, pos: spec.pos, top: spec.top, teamShortById });
-        const label = `Season to date${result.minutesRule ? ` · min. ${MIN_RATE_MINUTES} minutes` : ""}`;
-        return { data: { kind: "stat-leaders", rows: result.rows, gwLabel: label, subtitle: `${result.stat?.label ?? spec.stat}${spec.pos ? ` · ${spec.pos}` : ""} · season to date` }, problem: null };
-      }
-      case "top-differentials": {
-        const rows = buildDifferentials({
-          elements,
-          projections: projections ?? [],
-          teamShortById,
-          from,
-          to,
-          pos: spec.pos,
-          maxOwn: spec.maxOwn,
-          top: spec.top,
-        });
-        const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
-        return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
-      }
-    }
-  }, [elements, spec, selectedElements, gwLabel, lineupGw, totwGw, transfersGw, liveData, liveLoading, teams, teamShortById, teamNameById, projectionById, projections, gameweeks, fixtures, pricesLoading, priceContent, from, to]);
+  // everything the graphics are built from; the Gameweek pack builds each of its images from the same pieces
+  const dataContext = useMemo(
+    () => ({
+      elements, teams, teamShortById, teamNameById, projections, fixtures, defaultRange, transfersGw, finishedGameweeks,
+      liveElements: liveData?.elements,
+      priceChanges: pricesLoading ? undefined : priceChanges ?? [],
+    }),
+    [elements, teams, teamShortById, teamNameById, projections, fixtures, defaultRange, transfersGw, finishedGameweeks, liveData, pricesLoading, priceChanges],
+  );
+  const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
   const { width: fullWidth, height: fullHeight } = GRAPHIC_SIZES[spec.size];
   const scale = previewWidth > 0 ? Math.min(1, previewWidth / fullWidth) : 1;
@@ -677,6 +618,72 @@ export default function GraphicsPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* clipboard blocked: the address bar already holds the link */
+    }
+  };
+
+  const caption = data ? buildCaption(data, spec) : null;
+  const copyCaption = async () => {
+    if (!caption) return;
+    try {
+      await navigator.clipboard.writeText(caption);
+      setCaptionCopied(true);
+      setTimeout(() => setCaptionCopied(false), 2000);
+    } catch {
+      /* clipboard blocked */
+    }
+  };
+
+  const changeHandle = (text: string) => {
+    setHandleText(text);
+    const handle = normaliseHandle(text);
+    update({ handle });
+    saveBrand({ handle, accent: spec.accent });
+  };
+  const changeAccent = (value: string) => {
+    const accent = normaliseAccent(value);
+    update({ accent });
+    saveBrand({ handle: spec.handle, accent });
+  };
+
+  const selectedPackGw = packGw ?? defaultRange.from;
+  const runPack = async () => {
+    if (pack.busy) return;
+    const total = GAMEWEEK_PACK.length;
+    setPack({ busy: true, done: 0, total, message: null, ok: true });
+    try {
+      const changes = await queryClient.fetchQuery<PriceChangeInput[]>({ queryKey: ["/api/price-changes/recent"], staleTime: 5 * 60 * 1000 });
+      const events = (bootstrap?.events ?? []) as Array<{ id: number; deadline_time?: string }>;
+      const deadline = events.find((e) => e.id === selectedPackGw)?.deadline_time ?? null;
+      const planned = packSpecs(spec, selectedPackGw, { deadline });
+      const files: Array<{ name: string; data: Uint8Array }> = [];
+      const captions: Array<{ fileName: string; caption: string }> = [];
+      const skipped: string[] = [];
+      for (let i = 0; i < planned.length; i++) {
+        const { item, spec: s } = planned[i];
+        setPack((p) => ({ ...p, done: i }));
+        const { data: graphic } = computeGraphicData(s, { ...dataContext, priceChanges: changes ?? [] });
+        if (!graphic) {
+          skipped.push(item.label);
+          continue;
+        }
+        const size = GRAPHIC_SIZES[s.size];
+        const blob = await renderToPng(<GraphicCanvas spec={s} theme={withAccent(resolveTheme(s.theme, null), s.accent)} data={graphic} />, size.width, size.height);
+        const fileName = packFileName(i, s.template);
+        files.push({ name: fileName, data: new Uint8Array(await blob.arrayBuffer()) });
+        captions.push({ fileName, caption: buildCaption(graphic, s) });
+      }
+      if (files.length === 0) throw new Error("nothing to build");
+      files.push({ name: "captions.txt", data: new TextEncoder().encode(buildCaptionsFile(captions)) });
+      const zip = createZip(files);
+      const url = URL.createObjectURL(new Blob([zip.buffer as ArrayBuffer], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = packZipName(selectedPackGw);
+      a.click();
+      URL.revokeObjectURL(url);
+      setPack({ busy: false, done: total, total, ok: true, message: `Downloaded ${captions.length} images and captions.txt${skipped.length ? `. Skipped (no data yet): ${skipped.join(", ")}.` : "."}` });
+    } catch {
+      setPack({ busy: false, done: 0, total, ok: false, message: "Couldn't build the pack. Please try again." });
     }
   };
 
@@ -1025,6 +1032,56 @@ export default function GraphicsPage() {
                   </Field>
                 </div>}
               </div>
+
+              <div className="grid grid-cols-2 gap-3 border-t pt-4">
+                <Field label="Your handle (optional)">
+                  <Input value={handleText} maxLength={16} onChange={(e) => changeHandle(e.target.value)} placeholder="@yourname" data-testid="input-handle" />
+                </Field>
+                <Field label="Accent colour (optional)">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={spec.accent || "#fbbf24"}
+                      onChange={(e) => changeAccent(e.target.value)}
+                      className="h-9 w-12 cursor-pointer rounded-md border border-gray-200 bg-transparent p-0.5"
+                      aria-label="Accent colour"
+                      data-testid="input-accent"
+                    />
+                    {spec.accent && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => changeAccent("")} data-testid="button-accent-reset">Reset</Button>
+                    )}
+                  </div>
+                </Field>
+                {handleText.trim() && !spec.handle && (
+                  <p className="col-span-2 text-xs text-amber-700" role="status" data-testid="handle-hint">Use letters, numbers and _ only, up to 15 characters. No handle is shown until it is valid.</p>
+                )}
+                <p className="col-span-2 text-xs text-gray-500">Your handle sits next to the FPL Dilemmas watermark on the footer strip, and goes in the post caption. Saved in this browser.</p>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3" data-testid="gameweek-pack">
+                <div className="flex items-center gap-2 text-sm font-extrabold">
+                  <Package className="h-4 w-4 text-indigo-600" />
+                  Gameweek pack
+                </div>
+                <p className="text-xs text-gray-600">One download with the standard set for a gameweek ({GAMEWEEK_PACK.map((x) => x.label.toLowerCase()).join(", ")}) plus a captions.txt with a ready-to-post caption for each image. Uses your size, colours and handle.</p>
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Field label="Gameweek">
+                      <SimpleSelect
+                        value={String(selectedPackGw)}
+                        onChange={(v) => setPackGw(parseInt(v, 10))}
+                        options={(openGameweeks.includes(selectedPackGw) ? openGameweeks : [...openGameweeks, selectedPackGw].sort((a, b) => a - b)).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                        testId="select-pack-gw"
+                      />
+                    </Field>
+                  </div>
+                  <Button type="button" onClick={runPack} disabled={pack.busy || !elements.length} className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-pack">
+                    <Download className="h-4 w-4" />
+                    {pack.busy ? `Making ${Math.min(pack.done + 1, pack.total)} of ${pack.total}…` : "Download pack"}
+                  </Button>
+                </div>
+                {pack.message && <p className={`text-xs ${pack.ok ? "text-emerald-700" : "text-red-600"}`} role="status" data-testid="pack-message">{pack.message}</p>}
+              </div>
           </SectionCard>
 
           <div className="order-first min-w-0 space-y-3 lg:order-none">
@@ -1033,10 +1090,14 @@ export default function GraphicsPage() {
                 <span className="rounded-full bg-indigo-500/10 px-2.5 py-1 font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Preview</span>
                 The saved image is {fullWidth}×{fullHeight}px and carries the FPL Dilemmas watermark.
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={copyLink} className="gap-2" data-testid="button-copy-link">
                   {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
                   {copied ? "Copied" : "Copy link"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={copyCaption} disabled={!caption} className="gap-2" data-testid="button-copy-caption">
+                  {captionCopied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                  {captionCopied ? "Copied" : "Copy caption"}
                 </Button>
                 {data && !(data.kind === "team-reveal" && !data.reveal.complete) && (
                   <ShareImageButton
@@ -1045,6 +1106,7 @@ export default function GraphicsPage() {
                     width={fullWidth}
                     height={fullHeight}
                     fileName={graphicFileName(spec, fileParts)}
+                    caption={caption ?? undefined}
                     className="border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 hover:text-white"
                   />
                 )}

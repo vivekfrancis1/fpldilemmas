@@ -1304,7 +1304,15 @@ describe("post captions from the real numbers", () => {
     const data = { kind: "cover", cover: { headline: "GW9 Deadline", subtitle: "Captains and fixtures", tag: "Sat 24 Oct", players: [] } } as unknown as GraphicData;
     const c = buildCaption(data, spec({ template: "cover" }));
     expect(c).toContain("GW9 Deadline");
+    expect(c).toContain("Sat 24 Oct");
     expect(c).toContain("Captains and fixtures");
+    expect(c).toContain("#GW9");
+  });
+
+  it("no caption ends its body with a full stop right before the site or the handle", () => {
+    const data = { kind: "fixture-ticker", gwLabel: "GW8", grid: { gameweeks: [8], rows: [{ short: "A", avgFdr: 2 }, { short: "B", avgFdr: 3 }, { short: "C", avgFdr: 4 }, { short: "D", avgFdr: 5 }, { short: "E", avgFdr: 6 }, { short: "F", avgFdr: 7 }] } } as unknown as GraphicData;
+    expect(buildCaption(data, spec({ template: "fixture-ticker", handle: "steve" }))).not.toMatch(/\. by @/);
+    expect(buildCaption(data, spec({ template: "fixture-ticker" }))).not.toMatch(/\. ·/);
   });
 
   it("player news: official news is credited to FPL; a typed quote uses only the typed source", () => {

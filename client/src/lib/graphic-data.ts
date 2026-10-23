@@ -1,0 +1,181 @@
+import type { Fixture } from "@shared/schema";
+import { projectionWindow } from "@shared/compare-utils";
+import {
+  MAX_RANGE_GAMEWEEKS,
+  MIN_RATE_MINUTES,
+  PRICE_LIST_LIMIT,
+  buildCaptainPicks,
+  buildComparison,
+  buildCover,
+  buildDifferentials,
+  buildFixtureTicker,
+  buildFixturesGrid,
+  buildNewsQuote,
+  buildPlayerCard,
+  buildPredictedLineup,
+  buildPriceChanges,
+  buildStatLeaders,
+  buildTeamOfTheWeek,
+  buildTeamReveal,
+  buildTransferTrends,
+  gameweekLabel,
+  type GraphicData,
+  type GraphicElement,
+  type GraphicSpec,
+  type PriceChangeInput,
+} from "@shared/graphics";
+
+// Turns a graphic's settings plus the site's data into what gets drawn. Used by the page (the live preview) and by the
+// Gameweek pack, so a pack image is exactly what the single graphic would be.
+
+export interface PlayerProjection {
+  playerId: number;
+  gameweekProjections?: Record<string, number>;
+  xMinsPerGW?: Record<string, number>;
+  chanceOfPlayingNextRound?: number | null;
+}
+
+export interface LiveElement {
+  id: number;
+  stats: { total_points: number; minutes: number };
+}
+
+export interface GraphicDataContext {
+  elements: GraphicElement[];
+  teams: Array<{ id: number }>;
+  teamShortById: Map<number, string>;
+  teamNameById: Map<number, string>;
+  projections: PlayerProjection[] | undefined;
+  fixtures: Fixture[] | undefined;
+  /** The default "next few gameweeks" range. */
+  defaultRange: { from: number; to: number };
+  /** The gameweek FPL's transfer counts are for right now. */
+  transfersGw: number;
+  finishedGameweeks: number[];
+  /** Live points for the Team of the Week's gameweek; undefined while loading. */
+  liveElements: LiveElement[] | undefined;
+  /** Confirmed price changes; undefined while loading. */
+  priceChanges: PriceChangeInput[] | undefined;
+}
+
+export interface ResolvedGameweeks {
+  from: number;
+  to: number;
+  gameweeks: number[];
+  gwLabel: string;
+  /** Single-gameweek templates keep their gameweek in `from`. */
+  singleGw: number;
+}
+
+export function resolveGameweeks(spec: Pick<GraphicSpec, "from" | "to">, defaultRange: { from: number; to: number }): ResolvedGameweeks {
+  const from = spec.from || defaultRange.from;
+  const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultRange.to));
+  return { from, to, gameweeks: Array.from({ length: to - from + 1 }, (_, i) => from + i), gwLabel: gameweekLabel(from, to), singleGw: from };
+}
+
+/** Team of the Week's gameweek: the chosen one if it has finished, otherwise the latest finished one (0 if none). */
+export function resolveTotwGw(spec: Pick<GraphicSpec, "from">, finishedGameweeks: number[]): number {
+  return spec.from && finishedGameweeks.includes(spec.from) ? spec.from : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
+}
+
+export function longDate(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? date : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): { data: GraphicData | null; problem: string | null } {
+  const { elements, teams, teamShortById, teamNameById, projections, fixtures } = ctx;
+  if (!elements.length) return { data: null, problem: null };
+  const { from, to, gameweeks, gwLabel, singleGw: lineupGw } = resolveGameweeks(spec, ctx.defaultRange);
+  const totwGw = resolveTotwGw(spec, ctx.finishedGameweeks);
+  const projectionById = new Map((projections ?? []).map((p) => [p.playerId, p.gameweekProjections]));
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const selectedElements = spec.players.map((id) => byId.get(id)).filter((e): e is GraphicElement => !!e);
+
+  switch (spec.template) {
+    case "player-card": {
+      const e = selectedElements[0];
+      if (!e) return { data: null, problem: "Search and pick a player to create the card." };
+      return {
+        data: {
+          kind: "player-card",
+          gwLabel,
+          card: buildPlayerCard({ element: e, teamShortById, teamNameById, gameweekProjections: projectionById.get(e.id), gameweeks, fixtures: (fixtures ?? []) as any }),
+        },
+        problem: null,
+      };
+    }
+    case "player-comparison": {
+      if (selectedElements.length < 2) return { data: null, problem: "Pick at least two players to compare." };
+      const xptsByPlayer = new Map(selectedElements.map((e) => [e.id, projectionWindow(projectionById.get(e.id), gameweeks).total]));
+      return { data: { kind: "player-comparison", comparison: buildComparison({ elements: selectedElements, statKeys: spec.stats, xptsByPlayer, teamShortById }) }, problem: null };
+    }
+    case "fixtures-comparison": {
+      if (spec.teams.length < 2) return { data: null, problem: "Pick at least two teams to compare." };
+      if (!fixtures) return { data: null, problem: null };
+      return { data: { kind: "fixtures-comparison", gwLabel, grid: buildFixturesGrid({ teamIds: spec.teams, gameweeks, fixtures: fixtures as any, teamShortById, teamNameById }) }, problem: null };
+    }
+    case "price-change": {
+      if (!ctx.priceChanges) return { data: null, problem: null };
+      const prices = buildPriceChanges({ changes: ctx.priceChanges, date: spec.date || null, limit: PRICE_LIST_LIMIT[spec.size] });
+      const dateLabel = prices.date ? `Confirmed price changes · ${longDate(prices.date)}` : "Confirmed price changes";
+      return { data: { kind: "price-change", prices, dateLabel }, problem: null };
+    }
+    case "predicted-lineup": {
+      if (spec.teams.length < 1) return { data: null, problem: "Pick a club to predict its lineup." };
+      if (!fixtures || !projections) return { data: null, problem: null };
+      const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
+      return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+    }
+    case "player-news": {
+      const news = buildNewsQuote({ spec, elements, teamShortById, teamNameById });
+      if (!news) return { data: null, problem: "Search and pick a player to quote their news." };
+      if (news.kind === "none") return { data: null, problem: `There is no official FPL news for ${news.player.name} right now. Type a quote below to use your own words.` };
+      return { data: { kind: "player-news", news }, problem: null };
+    }
+    case "cover":
+      return { data: { kind: "cover", cover: buildCover({ spec, elements, teamShortById }) }, problem: null };
+    case "team-reveal": {
+      if (spec.squad.length === 0) return { data: null, problem: "Add your 15 players below, or load your squad from your FPL team ID." };
+      if (!fixtures) return { data: null, problem: null };
+      const reveal = buildTeamReveal({
+        elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,
+        gameweek: lineupGw, fixtures: fixtures as any, teamShortById,
+      });
+      return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+    }
+    case "captain-picks": {
+      if (!fixtures || !projections) return { data: null, problem: null };
+      const rows = buildCaptainPicks({ elements, projections, teamShortById, fixtures: fixtures as any, gameweek: lineupGw, top: spec.top, pos: spec.pos });
+      const label = gameweekLabel(lineupGw, lineupGw);
+      return { data: { kind: "captain-picks", rows, gwLabel: label, subtitle: `${label} · ${spec.pos ?? "all positions"} · ranked by our expected points` }, problem: null };
+    }
+    case "fixture-ticker": {
+      if (!fixtures) return { data: null, problem: null };
+      const grid = buildFixtureTicker({ teamIds: teams.map((t) => t.id), gameweeks, fixtures: fixtures as any, teamShortById, teamNameById });
+      return { data: { kind: "fixture-ticker", grid, gwLabel }, problem: null };
+    }
+    case "transfer-trends": {
+      const trends = buildTransferTrends({ elements, teamShortById, pos: spec.pos, top: spec.top });
+      const label = ctx.transfersGw ? `GW${ctx.transfersGw} transfers so far` : "Transfers so far";
+      return { data: { kind: "transfer-trends", trends, gwLabel: label, subtitle: `${spec.pos ?? "All positions"} · ${label}` }, problem: null };
+    }
+    case "team-of-the-week": {
+      if (totwGw === 0) return { data: null, problem: "No gameweek has finished yet, so there is no Team of the Week to show." };
+      if (!ctx.liveElements) return { data: null, problem: null };
+      const totw = buildTeamOfTheWeek({ elements, live: ctx.liveElements, teamShortById, gameweek: totwGw });
+      return { data: { kind: "team-of-the-week", totw, gwLabel: gameweekLabel(totwGw, totwGw) }, problem: null };
+    }
+    case "stat-leaders": {
+      const result = buildStatLeaders({ elements, statKey: spec.stat, pos: spec.pos, top: spec.top, teamShortById });
+      const label = `Season to date${result.minutesRule ? ` · min. ${MIN_RATE_MINUTES} minutes` : ""}`;
+      const statLabel = result.stat?.label ?? spec.stat;
+      return { data: { kind: "stat-leaders", rows: result.rows, gwLabel: label, statLabel, subtitle: `${statLabel}${spec.pos ? ` · ${spec.pos}` : ""} · season to date` }, problem: null };
+    }
+    case "top-differentials": {
+      const rows = buildDifferentials({ elements, projections: projections ?? [], teamShortById, from, to, pos: spec.pos, maxOwn: spec.maxOwn, top: spec.top });
+      const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
+      return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
+    }
+  }
+}
