@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown, isSeasonEnded } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
-import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 import { getFdrCellClass, getAvgFdrCellClass } from "@/lib/heatmap-colors";
 import { quintileTier, lookupProjected, formatProjected, type ProjectedKind, type ProjectionRow } from "@shared/projected-fdr";
@@ -88,8 +87,10 @@ function TBCCell({ fixtures, onFixtureClick }: {
   );
 }
 
+// The grid opens on the next 8 gameweeks (the admin projection window, 6 weeks, is for the projection pages).
+const FIXTURES_DEFAULT_WEEKS = 8;
+
 export default function Fixtures() {
-  const { defaultWeeks } = useProjectionSettings();
   const [, setLocation] = useLocation();
   // Dynamic gameweek range based on current gameweek
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number } | null>(null);
@@ -230,7 +231,7 @@ export default function Fixtures() {
   useEffect(() => {
     if (bootstrapData?.events && !gameweekRange) {
       const range = computeNextRange(bootstrapData.events);
-      const endGw = Math.min(range.start + 5, 38);
+      const endGw = Math.min(range.start + FIXTURES_DEFAULT_WEEKS - 1, 38);
       setGameweekRange({ start: range.start, end: endGw });
     }
   }, [bootstrapData?.events, gameweekRange]);
@@ -290,9 +291,9 @@ export default function Fixtures() {
   // Calculate dynamic gameweek defaults using shared utilities
   const defaultGameweekRange = useMemo(() => {
     if (!bootstrapData?.events) {
-      return { startGameweek: "10", endGameweek: "15" }; // Fallback
+      return { startGameweek: "10", endGameweek: "17" }; // Fallback
     }
-    return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+    return getDefaultGameweekRange(bootstrapData.events, FIXTURES_DEFAULT_WEEKS);
   }, [bootstrapData?.events]);
 
   // Extract next gameweek for highlighting purposes
@@ -309,10 +310,10 @@ export default function Fixtures() {
     return Array.from({ length: 38 - nextGW + 1 }, (_, i) => nextGW + i);
   }, [bootstrapData?.events]);
 
-  // Update gameweek range when bootstrap data changes (default next 6 gameweeks)
+  // Update gameweek range when bootstrap data changes (default: the next 8 gameweeks)
   useEffect(() => {
     if (bootstrapData?.events) {
-      const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
+      const range = getDefaultGameweekRange(bootstrapData.events, FIXTURES_DEFAULT_WEEKS);
       setGameweekRange({
         start: parseInt(range.startGameweek),
         end: parseInt(range.endGameweek)
@@ -1196,9 +1197,9 @@ export default function Fixtures() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             </div>
           ) : (
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden w-fit max-w-full">
               <div className="overflow-auto max-h-[75vh]" data-testid="fixture-grid-scroll">
-                <table className="w-full text-[9px] sm:text-[10px] md:text-xs lg:text-sm border-collapse">
+                <table className="w-auto text-[9px] sm:text-[10px] md:text-xs lg:text-sm border-collapse">
                   <thead>
                     <tr className="border-b bg-gray-50">
                       <th className="sticky top-0 left-0 bg-gray-50 px-1 sm:px-2 py-1 text-left font-semibold min-w-[50px] sm:min-w-[65px] md:min-w-[80px] lg:min-w-[100px] z-30">
