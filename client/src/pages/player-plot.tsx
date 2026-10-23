@@ -39,6 +39,7 @@ import {
   type PlotProjection,
   type PlotState,
   type ScaleKind,
+  type TeamProjection,
 } from "@shared/player-plot";
 import { shareFileName } from "@shared/share-cards";
 import JerseyIcon from "@/components/jersey-icon";
@@ -194,6 +195,24 @@ export default function PlayerPlotPage() {
   const teams = bootstrap?.teams ?? [];
   const teamShortById = useMemo(() => new Map(teams.map((t) => [t.id, t.short_name])), [teams]);
 
+  // Team fixture stats (our projected team goals / clean-sheet chance over the range) come from the team projection
+  // endpoints; they are fetched only when one of them is on an axis.
+  const needsTeamData = getStat(state.x)?.group === "Team fixtures" || getStat(state.y)?.group === "Team fixtures";
+  const { data: teamGoals, isLoading: teamGoalsLoading } = useQuery<TeamProjection[]>({
+    queryKey: [`/api/team-goal-projections?startGameweek=${fromGW}&endGameweek=${toGW}`],
+    enabled: needsTeamData,
+    staleTime: 30 * 60 * 1000,
+  });
+  const { data: teamCs, isLoading: teamCsLoading } = useQuery<Array<{ id: number; gameweekProjections: Record<string, number> }>>({
+    queryKey: [`/api/team-cs-projections?startGameweek=${fromGW}&endGameweek=${toGW}`],
+    enabled: needsTeamData,
+    staleTime: 30 * 60 * 1000,
+  });
+  const teamProjections = useMemo(
+    () => ({ goals: teamGoals ?? [], cs: (teamCs ?? []).map((t) => ({ teamId: t.id, gameweekProjections: t.gameweekProjections })) }),
+    [teamGoals, teamCs],
+  );
+
   const allPlayers = useMemo(
     () =>
       bootstrap
@@ -203,9 +222,10 @@ export default function PlayerPlotPage() {
             teamShortById,
             fromGW,
             toGW,
+            teamProjections,
           })
         : [],
-    [bootstrap, projections, teamShortById, fromGW, toGW],
+    [bootstrap, projections, teamShortById, fromGW, toGW, teamProjections],
   );
 
   const filtered = useMemo(
@@ -394,7 +414,7 @@ export default function PlayerPlotPage() {
     );
   };
 
-  const loading = bootstrapLoading || projectionsLoading;
+  const loading = bootstrapLoading || projectionsLoading || (needsTeamData && (teamGoalsLoading || teamCsLoading));
 
   return (
     <div className="min-h-screen">

@@ -7,7 +7,7 @@ export type PlotPosition = "GKP" | "DEF" | "MID" | "FWD";
 export const PLOT_POSITIONS: PlotPosition[] = ["GKP", "DEF", "MID", "FWD"];
 const POSITION_BY_TYPE: Record<number, PlotPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 
-export type StatGroup = "Our projections" | "Market" | "Results so far" | "Underlying" | "Luck check";
+export type StatGroup = "Our projections" | "Team fixtures" | "Market" | "Results so far" | "Underlying" | "Luck check";
 export type StatFormat = "int" | "dec1" | "dec2" | "price" | "percent";
 
 export interface StatDef {
@@ -26,6 +26,9 @@ export const PLOT_STATS: StatDef[] = [
   { key: "xmins_avg", label: "Expected minutes per GW", group: "Our projections", format: "int", usesHorizon: true },
   { key: "xgoal_pts", label: "Projected goal points", group: "Our projections", format: "dec1", usesHorizon: true },
   { key: "xassist_pts", label: "Projected assist points", group: "Our projections", format: "dec1", usesHorizon: true },
+
+  { key: "team_goals_range", label: "Team projected goals (range total)", group: "Team fixtures", format: "dec1", usesHorizon: true },
+  { key: "team_cs_avg", label: "Team clean-sheet chance (range average)", group: "Team fixtures", format: "percent", usesHorizon: true },
 
   { key: "price", label: "Price (£m)", group: "Market", format: "price" },
   { key: "ownership", label: "Ownership %", group: "Market", format: "percent" },
@@ -71,7 +74,7 @@ export const PLOT_STATS: StatDef[] = [
   { key: "gi_minus_xgi", label: "Goal involvements minus xGI", group: "Luck check", format: "dec2" },
 ];
 
-export const STAT_GROUPS: StatGroup[] = ["Our projections", "Market", "Results so far", "Underlying", "Luck check"];
+export const STAT_GROUPS: StatGroup[] = ["Our projections", "Team fixtures", "Market", "Results so far", "Underlying", "Luck check"];
 
 export function getStat(key: string): StatDef | undefined {
   return PLOT_STATS.find((s) => s.key === key);
@@ -141,6 +144,12 @@ export interface PlotProjection {
   xMinsPerGW?: Record<string, number>;
   pointsFromGoals?: Record<string, number>;
   pointsFromAssists?: Record<string, number>;
+}
+
+/** One team's per-gameweek projection (goals scored, or clean-sheet chance in %), as the team projection endpoints serve it. */
+export interface TeamProjection {
+  teamId: number;
+  gameweekProjections: Record<string, number>;
 }
 
 export interface PlotPlayer {
@@ -219,9 +228,13 @@ export function buildPlotPlayers(input: {
   teamShortById: Map<number, string>;
   fromGW: number;
   toGW: number;
+  /** Our team-level projections per gameweek (goals scored, clean-sheet %), which already reflect each team's opponents. */
+  teamProjections?: { goals?: TeamProjection[]; cs?: TeamProjection[] };
 }): PlotPlayer[] {
-  const { elements, projections, teamShortById, fromGW, toGW } = input;
+  const { elements, projections, teamShortById, fromGW, toGW, teamProjections } = input;
   const projById = new Map(projections.map((p) => [p.playerId, p]));
+  const teamGoals = new Map((teamProjections?.goals ?? []).map((t) => [t.teamId, t.gameweekProjections]));
+  const teamCs = new Map((teamProjections?.cs ?? []).map((t) => [t.teamId, t.gameweekProjections]));
   return elements.map((e) => {
     const proj = projById.get(e.id);
     const price = e.now_cost / 10;
@@ -247,6 +260,9 @@ export function buildPlotPlayers(input: {
       xmins_avg: horizonMean(proj?.xMinsPerGW, fromGW, toGW),
       xgoal_pts: horizonSum(proj?.pointsFromGoals, fromGW, toGW),
       xassist_pts: horizonSum(proj?.pointsFromAssists, fromGW, toGW),
+
+      team_goals_range: horizonSum(teamGoals.get(e.team), fromGW, toGW),
+      team_cs_avg: horizonMean(teamCs.get(e.team), fromGW, toGW),
 
       price: priceOrNull ?? 0,
       ownership: num(e.selected_by_percent),
@@ -748,6 +764,12 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Right = more total BPS (the bonus points system's raw score). Up = more bonus points awarded. Players above the pack turn BPS into bonus most often.",
   },
 
+  {
+    id: "fixtures-attack", label: "Output vs fixtures", title: "Output vs fixtures: chances per 90 against the team's projected goals", positions: [], x: "team_goals_range", y: "xgi_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Good chances, tough run", tr: "Good chances, good run", bl: "Quiet, tough run", br: "Easy run, quiet so far" },
+    hint: "Right = the team is projected to score more over the chosen gameweeks (a good run of fixtures). Up = more expected goal involvements per 90 so far. Top-right players have both the output and the fixtures.",
+  },
+
   // ---- Goalkeepers
   { id: "gk-value", label: "Value", title: "Goalkeepers: value, xPts vs price", positions: ["GKP"], x: "price", y: "xpts_total", xScale: "linear", yScale: "linear", quadrants: VALUE_QUADRANTS, hint: VALUE_HINT },
   {
@@ -762,6 +784,11 @@ export const PLOT_PRESETS: PlotPreset[] = [
   { id: "gk-diff", label: "Differentials", title: "Goalkeepers: high xPts, low ownership", positions: ["GKP"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
   { id: "gk-form", label: "Form vs price", title: "Goalkeepers: form vs price", positions: ["GKP"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
   { id: "gk-season", label: "Season value", title: "Goalkeepers: points so far vs price", positions: ["GKP"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
+  {
+    id: "gk-fixtures", label: "Clean sheets vs fixtures", title: "Goalkeepers: clean sheets so far vs the team's clean-sheet chance ahead", positions: ["GKP"], x: "team_cs_avg", y: "cs_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Overperforming the run", tr: "Solid and a good run", bl: "Poor so far, tough run", br: "Due clean sheets" },
+    hint: "Right = our projections give the team a higher clean-sheet chance over the chosen gameweeks. Up = more clean sheets per 90 so far. Bottom-right keepers have a good run ahead but have not kept many so far.",
+  },
   { id: "gk-minutes", label: "Minutes security", title: "Goalkeepers: expected minutes vs projected points", positions: ["GKP"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
 
   // ---- Defenders
@@ -776,6 +803,11 @@ export const PLOT_PRESETS: PlotPreset[] = [
     hint: "Right = more defensive contributions per 90 (the extra-points threshold stat). Up = more projected points.",
   },
   { id: "def-diff", label: "Differentials", title: "Defenders: high xPts, low ownership", positions: ["DEF"], x: "ownership", y: "xpts_total", xScale: "sqrt", yScale: "linear", quadrants: DIFF_QUADRANTS, hint: DIFF_HINT },
+  {
+    id: "def-fixtures", label: "Clean sheets vs fixtures", title: "Defenders: clean sheets so far vs the team's clean-sheet chance ahead", positions: ["DEF"], x: "team_cs_avg", y: "cs_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Overperforming the run", tr: "Solid and a good run", bl: "Poor so far, tough run", br: "Due clean sheets" },
+    hint: "Right = our projections give the team a higher clean-sheet chance over the chosen gameweeks. Up = more clean sheets per 90 so far. Bottom-right defenders have a good run ahead but have not kept many so far.",
+  },
   { id: "def-form", label: "Form vs price", title: "Defenders: form vs price", positions: ["DEF"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
   { id: "def-season", label: "Season value", title: "Defenders: points so far vs price", positions: ["DEF"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
   { id: "def-minutes", label: "Minutes security", title: "Defenders: expected minutes vs projected points", positions: ["DEF"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
@@ -801,6 +833,11 @@ export const PLOT_PRESETS: PlotPreset[] = [
     quadrants: { tl: "Shooters", tr: "Complete mids", bl: "Quiet", br: "Creators" },
     hint: "Right = more creativity (FPL's chance-creation index). Up = more threat (FPL's goal-threat index). Top-right midfielders carry both.",
   },
+  {
+    id: "mid-fixtures", label: "Chances vs fixtures", title: "Midfielders: chances per 90 against the team's projected goals", positions: ["MID"], x: "team_goals_range", y: "xgi_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Good chances, tough run", tr: "Good chances, good run", bl: "Quiet, tough run", br: "Easy run, quiet so far" },
+    hint: "Right = the team is projected to score more over the chosen gameweeks. Up = more expected goal involvements per 90. Top-right midfielders have the output and the fixtures.",
+  },
   { id: "mid-form", label: "Form vs price", title: "Midfielders: form vs price", positions: ["MID"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
   { id: "mid-season", label: "Season value", title: "Midfielders: points so far vs price", positions: ["MID"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
   { id: "mid-minutes", label: "Minutes security", title: "Midfielders: expected minutes vs projected points", positions: ["MID"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false, hint: MINUTES_HINT },
@@ -815,6 +852,11 @@ export const PLOT_PRESETS: PlotPreset[] = [
   {
     id: "fwd-minutes", label: "Minutes security", title: "Forwards: expected minutes vs projected points", positions: ["FWD"], x: "xmins_avg", y: "xpts_avg", xScale: "linear", yScale: "linear", goodTopLeft: false,
     hint: "Right = more expected minutes per gameweek (less rotation risk). Up = more projected points per gameweek.",
+  },
+  {
+    id: "fwd-fixtures", label: "Chances vs fixtures", title: "Forwards: chances per 90 against the team's projected goals", positions: ["FWD"], x: "team_goals_range", y: "xg_90", xScale: "linear", yScale: "linear", minMinutes: 180, goodTopLeft: false,
+    quadrants: { tl: "Good chances, tough run", tr: "Good chances, good run", bl: "Quiet, tough run", br: "Easy run, quiet so far" },
+    hint: "Right = the team is projected to score more over the chosen gameweeks. Up = more expected goals per 90. Top-right forwards have the chances and the fixtures.",
   },
   { id: "fwd-form", label: "Form vs price", title: "Forwards: form vs price", positions: ["FWD"], x: "price", y: "form", xScale: "linear", yScale: "linear", quadrants: FORM_PRICE_QUADRANTS, hint: FORM_PRICE_HINT },
   { id: "fwd-season", label: "Season value", title: "Forwards: points so far vs price", positions: ["FWD"], x: "price", y: "total_points", xScale: "linear", yScale: "linear", quadrants: SEASON_QUADRANTS, hint: SEASON_HINT },
