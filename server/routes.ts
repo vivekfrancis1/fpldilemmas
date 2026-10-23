@@ -37,6 +37,7 @@ import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/d
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
 import { TEMPLATE_GROUPS, buildTemplateTeam, parseTemplateGroup } from "@shared/template-team";
+import { registerSharedGraphicsRoutes } from "./shared-graphics-routes";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
 import { buildLeagueOwnership } from "@shared/league-ownership";
@@ -514,6 +515,9 @@ function requireReadiness(requiredComponents: string[], endpoint: string) {
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Link previews for shared graphics: /api/shared-graphics (upload), /g/:id and /g/:id.png
+  registerSharedGraphicsRoutes(app);
+
   // Initialize team configuration to avoid circular dependency
   const { setAdminGoalSettings, setCreateTeamService } = await import('./team-config');
 

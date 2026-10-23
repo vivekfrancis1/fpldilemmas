@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toPng } from "html-to-image";
-import { ChevronDown, Copy, Download, Facebook, Instagram, Linkedin, MessageCircle, Send, Share2, type LucideIcon } from "lucide-react";
+import { ChevronDown, Copy, Download, Facebook, Instagram, Link2, Linkedin, MessageCircle, Send, Share2, type LucideIcon } from "lucide-react";
 import type { ShareCard } from "@shared/share-cards";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SOCIAL_NETWORKS, buildShareLinks, defaultCaption, type SocialNetwork } from "@shared/social-share";
+import { composeLinkCard, sharePath, uploadLinkCard } from "@/lib/share-link";
 
 const SIZE = 1080;
 
@@ -99,6 +100,9 @@ export function ShareImageButton({
   // never use Share pay nothing for it.
   const [card, setCard] = useState<{ node: ReactNode; title: string } | null>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  // The short link whose preview shows this graphic (made in the background once the image exists).
+  const linkRef = useRef<Promise<string | null> | null>(null);
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
 
   // notes ("Image copied...") fade after a few seconds
   useEffect(() => {
@@ -110,6 +114,10 @@ export function ShareImageButton({
   const make = async () => {
     setBusy(true);
     setMessage(null);
+    // a fresh image and link every time: the page may have changed (plot settings, selected players...). The link is
+    // reset here rather than on close, because choosing an item closes the menu before its action has finished.
+    linkRef.current = null;
+    setShortUrl(null);
     try {
       let built: { node: ReactNode; title: string };
       if (renderCard) {
@@ -125,6 +133,18 @@ export function ShareImageButton({
       const dataUrl = await toPng(ref.current, { width, height, pixelRatio: 1, cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
       setImage({ blob, title: built.title });
+      // Link preview: a 1200x630 card of the graphic is saved on the server and gets a short link (/g/<id>). Posts that use
+      // it show the graphic itself on X, Facebook and WhatsApp. If anything fails the page link is used instead.
+      linkRef.current = (async () => {
+        try {
+          const card = await composeLinkCard(blob);
+          const url = await uploadLinkCard(card, { title: built.title, target: sharePath(window.location) });
+          setShortUrl(url);
+          return url;
+        } catch {
+          return null;
+        }
+      })();
     } catch {
       setMessage({ text: "Couldn't create the image. Please try again.", ok: false });
     } finally {
@@ -137,7 +157,6 @@ export function ShareImageButton({
     if (open) {
       if (!busy) void make();
     } else {
-      // regenerate next time: the page may have changed (plot settings, selected players...)
       setImage(null);
     }
   };
@@ -146,6 +165,12 @@ export function ShareImageButton({
   const canNativeShare = !!file && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
   const postCaption = () => caption ?? defaultCaption(image?.title ?? title ?? "FPL Dilemmas");
   const pageUrl = () => (typeof window !== "undefined" ? window.location.href : "https://fpldilemmas.com");
+  /** The preview short link when it is ready (waits a moment for it), otherwise the page's own link. */
+  const resolveLink = async (): Promise<{ url: string; preview: boolean }> => {
+    const pending = linkRef.current ?? Promise.resolve(null);
+    const short = await Promise.race([pending, new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))]);
+    return short ? { url: short, preview: true } : { url: pageUrl(), preview: false };
+  };
 
   const download = () => {
     if (!image) return;
@@ -179,20 +204,42 @@ export function ShareImageButton({
 
   const post = async (network: SocialNetwork) => {
     if (!image) return;
-    const link = buildShareLinks({ caption: postCaption(), url: pageUrl() })[network];
-    if (link === null) {
-      // Instagram: no web composer. On a phone the share sheet reaches the Instagram app; otherwise save the image.
+    if (network === "instagram") {
+      // no web composer: on a phone the share sheet reaches the Instagram app; otherwise save the image
       if (canNativeShare) return nativeShare();
       download();
       setMessage({ text: "Image saved. Open Instagram and add it from your photos.", ok: true });
       return;
     }
+    // Open the tab now, while the click still counts (browsers block pop-ups opened after a wait), then point it at the composer.
+    const tab = window.open("about:blank", "_blank");
     const copied = await copyImage();
-    window.open(link, "_blank", "noopener,noreferrer");
+    const { url, preview } = await resolveLink();
+    const link = buildShareLinks({ caption: postCaption(), url })[network]!;
+    if (tab) {
+      tab.opener = null;
+      tab.location.href = link;
+    } else {
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
     setMessage({
-      text: copied ? "Image copied. Paste it into your post (Ctrl/Cmd+V)." : "Couldn't copy the image. Use Download image, then attach it to your post.",
-      ok: copied,
+      text: preview
+        ? `The link will show your graphic in the post${copied ? ". The image is copied too, if you would rather attach it." : "."}`
+        : copied
+          ? "Image copied. Paste it into your post (Ctrl/Cmd+V)."
+          : "Couldn't copy the image. Use Download image, then attach it to your post.",
+      ok: preview || copied,
     });
+  };
+
+  const copyLink = async () => {
+    const { url, preview } = await resolveLink();
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage({ text: preview ? "Link copied. Pasting it shows your graphic as a preview." : "Link copied.", ok: true });
+    } catch {
+      setMessage({ text: "Your browser blocked copying the link.", ok: false });
+    }
   };
 
   const copyOnly = async () => {
@@ -230,6 +277,9 @@ export function ShareImageButton({
               <Share2 className="h-4 w-4" /> Share via your device…
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem disabled={!image} onSelect={() => void copyLink()} className="gap-2.5" data-testid="share-copy-link">
+            <Link2 className="h-4 w-4" /> {shortUrl ? "Copy link (shows a preview)" : "Copy link"}
+          </DropdownMenuItem>
           <DropdownMenuItem disabled={!image} onSelect={() => void copyOnly()} className="gap-2.5" data-testid="share-copy">
             <Copy className="h-4 w-4" /> Copy image
           </DropdownMenuItem>
