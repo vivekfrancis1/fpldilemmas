@@ -242,7 +242,7 @@ export default function TeamGoalProjections() {
   };
 
   // Fetch fixtures for opponent information (must be before hasTBCFixture)
-  const { data: fixturesData } = useQuery({
+  const { data: fixturesData, isLoading: fixturesLoading } = useQuery({
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
   });
@@ -281,7 +281,7 @@ export default function TeamGoalProjections() {
   // The last gameweek with real Odds API coverage — the Projections tab defaults its visible
   // end to this instead of a fixed week count, so the range only ever covers gameweeks bookmakers
   // have actually opened lines for (e.g. "GW2-GW4" today, growing as more lines are posted).
-  const { data: maxOddsGameweekData } = useQuery<{ maxGameweek: number | null }>({
+  const { data: maxOddsGameweekData, isLoading: oddsLoading } = useQuery<{ maxGameweek: number | null }>({
     queryKey: ["/api/fixture-odds-max-gameweek"],
     staleTime: 15 * 60 * 1000,
   });
@@ -310,6 +310,15 @@ export default function TeamGoalProjections() {
     return gws;
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted]);
 
+  // The default future range depends on bootstrap events, the fixtures (current gameweek, TBC) and the odds coverage.
+  // The projections request waits until all three have loaded and the range has been set from them. Before, it fired
+  // at once for a placeholder range (GW1-8), then again for the real one, so the table appeared only after two
+  // round trips and the first was wasted work on the server.
+  const [futureRangeReady, setFutureRangeReady] = useState(false);
+  const rangeInputsLoaded = !isLoading && !fixturesLoading && !oddsLoading;
+  // If bootstrap itself failed there is nothing to derive a range from: fall back to the placeholder range as before.
+  const rangeInputsFailed = rangeInputsLoaded && !bootstrapData?.events;
+
   // Update state when bootstrap data or view mode changes
   useEffect(() => {
     if ((viewMode === "past" || viewMode === "pastXg") && (historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW)) {
@@ -318,7 +327,7 @@ export default function TeamGoalProjections() {
       setStartGameweek(String(startGW));
       setEndGameweek(String(lastFinished));
       setSelectedGameweeks(new Set());
-    } else if (viewMode === "future" && bootstrapData?.events) {
+    } else if (viewMode === "future" && bootstrapData?.events && rangeInputsLoaded) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       // Fold the current gameweek in when it still has an unstarted fixture — the default
       // range normally starts the gameweek after the current one.
@@ -336,8 +345,9 @@ export default function TeamGoalProjections() {
           : newRange.endGameweek;
       setEndGameweek(effectiveEnd);
       setSelectedGameweeks(new Set());
+      setFutureRangeReady(true);
     }
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks, maxGameweekWithOdds]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, historyData?.liveGameweek, xgHistoryData?.lastFinishedGW, hasTBCFixture, fixtureMode, currentGameweek, currentGWHasUnstarted, defaultWeeks, maxGameweekWithOdds, rangeInputsLoaded]);
 
   // When switching away from base mode, snap endGameweek back from GW39 to the regular range
   useEffect(() => {
@@ -413,7 +423,7 @@ export default function TeamGoalProjections() {
     staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 2,
     retryDelay: 1000,
-    enabled: viewMode === "future" && !!startGameweek && !!endGameweek,
+    enabled: viewMode === "future" && (futureRangeReady || rangeInputsFailed) && !!startGameweek && !!endGameweek,
   });
 
   // Unified data for display - adapts based on view mode
@@ -618,7 +628,7 @@ export default function TeamGoalProjections() {
   }, [filteredProjections, bootstrapData, activeGameweeks, viewMode, currentGameweek, currentGWDecidedTeamIds]);
 
 
-  const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXg" && xgHistoryLoading);
+  const isDataLoading = isLoading || (viewMode === "future" && (projectionsLoading || !(futureRangeReady || rangeInputsFailed))) || (viewMode === "past" && historyLoading) || (viewMode === "pastXg" && xgHistoryLoading);
 
   const pageHeaderAndTabs = (
     <>
