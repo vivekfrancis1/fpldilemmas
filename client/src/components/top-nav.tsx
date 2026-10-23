@@ -98,7 +98,6 @@ const navSections: NavSection[] = [
     heading: "Popular",
     items: [
       { path: "/deadline-brief", label: "Pre-deadline Brief", icon: AlarmClock },
-      { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar },
       { path: "/compare", label: "Compare Players", icon: GitCompareArrows },
       { path: "/captaincy-matrix", label: "Captaincy Matrix", icon: Crown },
       { path: "/price-changes", label: "Price Changes", icon: RefreshCw },
@@ -109,8 +108,6 @@ const navSections: NavSection[] = [
   },
   {
     section: "Visual Tools",
-    group: "Tools",
-    heading: "Visual",
     items: [
       { path: "/player-plot", label: "Player Plot", icon: ChartScatter },
       { path: "/graphics", label: "Graphics Maker", icon: ImagePlus },
@@ -218,7 +215,7 @@ function NavDropdown({
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-0.5 xl:gap-1 px-1.5 xl:px-2 h-full text-[13px] xl:text-sm font-medium transition-colors whitespace-nowrap ${
+        className={`flex items-center gap-0.5 xl:gap-1 px-1 lg:px-1.5 xl:px-2 h-full text-[12px] lg:text-[13px] xl:text-sm font-medium transition-colors whitespace-nowrap ${
           isActive
             ? "bg-white/15 text-white"
             : "text-purple-100 hover:bg-white/10 hover:text-white"
@@ -226,7 +223,7 @@ function NavDropdown({
       >
         {label}
         <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          className={`hidden lg:block h-3.5 w-3.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -307,11 +304,11 @@ export default function TopNav() {
   return (
     <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 px-3 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
+      <Link href="/" className="flex items-center gap-2 px-2 lg:px-3 mr-1 lg:mr-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
         <span className="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-indigo-600 text-[13px] leading-none flex-shrink-0">
           ⚽
         </span>
-        <span className="hidden xl:inline text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
+        <span className="hidden 2xl:inline text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
       </Link>
 
       {/* Nav dropdowns — flex-1 so they fill available space */}
@@ -323,7 +320,7 @@ export default function TopNav() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-1.5 px-1.5 xl:px-2 h-full text-[13px] xl:text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-1 lg:px-1.5 xl:px-2 h-full text-[12px] lg:text-[13px] xl:text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
                 active ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
               }`}
               aria-current={active ? "page" : undefined}
@@ -353,19 +350,20 @@ export default function TopNav() {
       </nav>
 
       {/* Right side: refresh + auth */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 px-3 border-l border-purple-500/30 h-full">
+      <div className="flex items-center gap-1 lg:gap-1.5 flex-shrink-0 px-2 lg:px-3 border-l border-purple-500/30 h-full">
         <ThemeToggle className="text-purple-200 hover:text-white" />
-        <RefreshButton className="text-purple-200 hover:text-white" />
+        <RefreshButton className="text-purple-200 hover:text-white" labelClassName="hidden 2xl:inline" />
         <InstallAppButton className="text-purple-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => (window.location.href = "/api/auth/google")}
+            aria-label="Login"
             className="text-fpl-purple border-white bg-white hover:bg-purple-50 text-xs h-7 px-2"
           >
-            <LogIn className="h-3.5 w-3.5 mr-1" />
-            Login
+            <LogIn className="h-3.5 w-3.5 lg:mr-1" />
+            <span className="hidden lg:inline">Login</span>
           </Button>
         )}
         {!isLoading && isAuthenticated && (

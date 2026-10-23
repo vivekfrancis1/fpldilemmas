@@ -8,12 +8,15 @@ interface RefreshButtonProps {
   className?: string;
   size?: "sm" | "default" | "lg";
   variant?: "outline" | "ghost" | "default";
+  /** Classes for the text label (the top bar hides it on narrower screens to save room). */
+  labelClassName?: string;
 }
 
 export default function RefreshButton({ 
   className = "", 
   size = "sm", 
-  variant = "ghost" 
+  variant = "ghost",
+  labelClassName = "hidden sm:inline",
 }: RefreshButtonProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
@@ -63,7 +66,7 @@ export default function RefreshButton({
       data-testid="button-refresh-fpl-api"
     >
       <RefreshCw className={`${isRefreshing ? 'animate-spin' : ''} ${size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
-      <span className="text-xs hidden sm:inline">Refresh</span>
+      <span className={`text-xs ${labelClassName}`}>Refresh</span>
     </Button>
   );
 }
