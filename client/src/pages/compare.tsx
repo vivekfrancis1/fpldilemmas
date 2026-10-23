@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { GitCompareArrows, Search, X, Link2, Check } from "lucide-react";
+import { GitCompareArrows, Search, X, Link2, Check, CalendarRange, Radar, ListChecks, UserPlus } from "lucide-react";
 import { BootstrapData, Fixture, CURRENT_SEASON } from "@shared/schema";
 import {
   COMPARE_STATS,
@@ -32,6 +32,7 @@ import CompareRadarChart, { RADAR_CARD_THEME, RADAR_COLORS, RADAR_SCREEN_THEME }
 import { PlayerAvailabilityBadge } from "@/components/player-availability-badge";
 import JerseyIcon from "@/components/jersey-icon";
 import { getFdrCellClass } from "@/lib/heatmap-colors";
+import { Pill, PosChip, SectionCard, TeamChip, asPos } from "@/components/tool-ui";
 
 type Element = BootstrapData["elements"][number];
 
@@ -287,75 +288,109 @@ export default function Compare() {
           </div>
         </div>
 
-        <Card className="mb-4">
-          <CardContent className="p-4 space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={
-                  ids.length >= MAX_COMPARE_PLAYERS ? "Remove a player to add another" : "Search a player to add…"
-                }
-                disabled={ids.length >= MAX_COMPARE_PLAYERS || bootstrapLoading}
-                className="pl-9"
-                data-testid="input-player-search"
-              />
-              {suggestions.length > 0 && (
-                <ul className="absolute z-20 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-                  {suggestions.map((e) => (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        onClick={() => addPlayer(e.id)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                        data-testid={`option-player-${e.id}`}
-                      >
-                        <JerseyIcon team={teamById.get(e.team)?.name} position={POSITION_BY_TYPE[e.element_type]} />
-                        <span className="font-medium">{e.web_name}</span>
-                        <span className="text-muted-foreground">
-                          {teamById.get(e.team)?.short_name} · {POSITION_SHORT[e.element_type]}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-indigo-500" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                ids.length >= MAX_COMPARE_PLAYERS ? "Remove a player to add another" : "Search a player to add…"
+              }
+              disabled={ids.length >= MAX_COMPARE_PLAYERS || bootstrapLoading}
+              className="h-12 rounded-xl border-gray-200 bg-gray-50/70 pl-11 text-base"
+              data-testid="input-player-search"
+            />
+            {suggestions.length > 0 && (
+              <ul className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl">
+                {suggestions.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      onClick={() => addPlayer(e.id)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-accent"
+                      data-testid={`option-player-${e.id}`}
+                    >
+                      <JerseyIcon team={teamById.get(e.team)?.short_name} position={POSITION_SHORT[e.element_type]} className="h-8 w-8 shrink-0 object-contain" />
+                      <span className="font-bold">{e.web_name}</span>
+                      <TeamChip>{teamById.get(e.team)?.short_name}</TeamChip>
+                      <PosChip pos={asPos(POSITION_SHORT[e.element_type])} />
+                      <span className="ml-auto text-xs text-muted-foreground">£{(e.now_cost / 10).toFixed(1)}m · {e.selected_by_percent}% owned</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-            {selected.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {selected.map((e) => (
-                  <Badge key={e.id} variant="secondary" className="flex items-center gap-1.5 py-1 pl-2 pr-1 text-sm">
-                    <JerseyIcon team={teamById.get(e.team)?.name} position={POSITION_BY_TYPE[e.element_type]} />
-                    {e.web_name}
+          {selected.length > 0 ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" data-testid="selected-players">
+              {selected.map((e, k) => {
+                const team = teamById.get(e.team);
+                return (
+                  <div
+                    key={e.id}
+                    className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-gray-50/80 to-white p-3.5 shadow-sm"
+                    data-testid={`player-card-${e.id}`}
+                  >
+                    <span className="absolute inset-x-0 top-0 h-1.5" style={{ background: RADAR_COLORS[k] }} />
                     <button
                       type="button"
                       onClick={() => setIds(ids.filter((id) => id !== e.id))}
                       aria-label={`Remove ${e.web_name}`}
-                      className="rounded p-0.5 hover:bg-background"
+                      className="absolute right-2 top-3 rounded-full p-1 text-gray-400 hover:bg-gray-200/70 hover:text-gray-700"
                       data-testid={`button-remove-${e.id}`}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Search above to add players. Pick at least two to compare them side by side.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="flex items-center gap-3 pt-1.5">
+                      <JerseyIcon team={team?.short_name} position={POSITION_BY_TYPE[e.element_type]} className="h-14 w-14 shrink-0 object-contain" />
+                      <div className="min-w-0 pr-5">
+                        <div className="truncate text-base font-extrabold leading-tight text-gray-900">{e.web_name}</div>
+                        <div className="mt-1 flex items-center gap-1">
+                          <TeamChip>{team?.short_name}</TeamChip>
+                          <PosChip pos={asPos(POSITION_SHORT[e.element_type])} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
+                      {[
+                        ["Price", `£${(e.now_cost / 10).toFixed(1)}m`],
+                        ["Owned", `${e.selected_by_percent}%`],
+                        ["Form", String(e.form)],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-lg bg-gray-100/80 px-1 py-1.5">
+                          <div className="text-sm font-bold tabular-nums text-gray-900">{value}</div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {ids.length < MAX_COMPARE_PLAYERS && (
+                <div className="flex min-h-[132px] items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 text-sm font-semibold text-gray-400">
+                  <UserPlus className="mr-2 h-5 w-5" /> Add another player
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-4 py-5 text-sm text-gray-600">
+              <UserPlus className="h-6 w-6 shrink-0 text-indigo-500" />
+              Search above to add players. Pick at least two to compare them side by side.
+            </div>
+          )}
+        </section>
 
         {selected.length > 0 && (
           <>
-            <Card className="mb-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Upcoming fixtures &amp; expected points</CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-x-auto p-0 sm:p-0">
+            <SectionCard
+              icon={CalendarRange}
+              title="Upcoming fixtures & expected points"
+              subtitle="Our projection for each gameweek, with the fixture difficulty underneath"
+              className="mb-5"
+              bodyClassName="overflow-x-auto p-0"
+            >
                 {windowGameweeks.length === 0 ? (
                   <p className="p-4 text-sm text-muted-foreground">
                     {projections ? "No upcoming projections available yet." : "Loading projections…"}
@@ -363,7 +398,7 @@ export default function Compare() {
                 ) : (
                   <table className="w-full min-w-[560px] text-sm" data-testid="table-upcoming">
                     <thead>
-                      <tr className="border-b text-muted-foreground">
+                      <tr className="border-b bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
                         <th className="sticky left-0 bg-card p-2 text-left font-medium">Player</th>
                         {windowGameweeks.map((gw) => (
                           <th key={gw} className="p-2 text-center font-medium">GW{gw}</th>
@@ -377,6 +412,7 @@ export default function Compare() {
                           projectionWindow(projectionById.get(e.id)?.gameweekProjections, windowGameweeks),
                         );
                         const bestTotals = bestValueIndexes(windows.map((w) => w.total), "higher");
+                        const maxCell = Math.max(0, ...windows.flatMap((w) => w.perGameweek.filter((v): v is number => v !== null)));
                         return selected.map((e, row) => {
                           const w = windows[row];
                           const perTeam = fixtures
@@ -384,19 +420,26 @@ export default function Compare() {
                             : [];
                           const proj = projectionById.get(e.id);
                           return (
-                            <tr key={e.id} className="border-b last:border-0 align-top">
-                              <td className="sticky left-0 bg-card p-2 font-medium whitespace-nowrap">
-                                {e.web_name}
-                                <span className="ml-1 text-xs text-muted-foreground">
-                                  {teamById.get(e.team)?.short_name}
+                            <tr key={e.id} className="border-b last:border-0 align-top odd:bg-gray-50/40">
+                              <td className="sticky left-0 z-10 bg-card p-2 whitespace-nowrap">
+                                <span className="flex items-center gap-2">
+                                  <span className="h-8 w-1.5 shrink-0 rounded-full" style={{ background: RADAR_COLORS[row] }} />
+                                  <JerseyIcon team={teamById.get(e.team)?.short_name} position={POSITION_BY_TYPE[e.element_type]} className="h-8 w-8 shrink-0 object-contain" />
+                                  <span>
+                                    <span className="block text-sm font-bold text-gray-900">{e.web_name}</span>
+                                    <span className="text-xs text-muted-foreground">{teamById.get(e.team)?.short_name}</span>
+                                  </span>
+                                  {proj && <PlayerAvailabilityBadge player={proj} compact />}
                                 </span>
-                                {proj && <PlayerAvailabilityBadge player={proj} compact />}
                               </td>
                               {windowGameweeks.map((gw, i) => {
                                 const gwFixtures = perTeam[i]?.fixtures ?? [];
                                 return (
                                   <td key={gw} className="p-2 text-center">
-                                    <div className="font-semibold">
+                                    <div
+                                      className="mx-auto w-fit min-w-[44px] rounded-lg px-2 py-0.5 text-base font-extrabold tabular-nums text-gray-900"
+                                      style={{ background: w.perGameweek[i] === null ? undefined : `rgba(99,102,241,${(0.06 + 0.26 * (w.perGameweek[i]! / Math.max(0.1, maxCell))).toFixed(3)})` }}
+                                    >
                                       {w.perGameweek[i] === null ? "—" : w.perGameweek[i]!.toFixed(1)}
                                     </div>
                                     <div className="mt-1 flex flex-col items-center gap-0.5">
@@ -415,10 +458,14 @@ export default function Compare() {
                                   </td>
                                 );
                               })}
-                              <td
-                                className={`p-2 text-center font-semibold ${bestTotals.includes(row) ? "bg-primary/10 text-primary" : ""}`}
-                              >
-                                {w.total === null ? "—" : w.total.toFixed(1)}
+                              <td className="p-2 text-center">
+                                <span
+                                  className={`inline-flex min-w-[52px] items-center justify-center gap-1 rounded-full px-2.5 py-1 text-base font-extrabold tabular-nums ${
+                                    bestTotals.includes(row) ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm" : "text-gray-900"
+                                  }`}
+                                >
+                                  {w.total === null ? "—" : w.total.toFixed(1)}
+                                </span>
                               </td>
                             </tr>
                           );
@@ -427,27 +474,25 @@ export default function Compare() {
                     </tbody>
                   </table>
                 )}
-              </CardContent>
-            </Card>
+            </SectionCard>
 
-            <Card className="mb-4" data-testid="card-radar">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Player profile</CardTitle>
-                  <ShareImageButton
-                    renderCard={renderRadarShareCard}
-                    title="Player profile"
-                    width={1080}
-                    height={1350}
-                    fileName={shareFileName(["compare", ...radarNames])}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  The outer ring is the best of these players on each stat. This season only; per-90 stats need{" "}
-                  {MIN_RADAR_MINUTES}+ minutes.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <SectionCard
+              icon={Radar}
+              title="Player profile"
+              subtitle={<>The outer ring is the best of these players on each stat. This season only; per-90 stats need {MIN_RADAR_MINUTES}+ minutes.</>}
+              className="mb-5"
+              testId="card-radar"
+              bodyClassName="space-y-4 p-4 sm:p-5"
+              action={
+                <ShareImageButton
+                  renderCard={renderRadarShareCard}
+                  title="Player profile"
+                  width={1080}
+                  height={1350}
+                  fileName={shareFileName(["compare", ...radarNames])}
+                />
+              }
+            >
                 <div className="flex flex-wrap gap-1.5" data-testid="radar-axis-chips">
                   {RADAR_AXES.map((a) => {
                     const on = axisKeys.includes(a.key);
@@ -458,8 +503,8 @@ export default function Compare() {
                         onClick={() => toggleAxis(a.key)}
                         aria-pressed={on}
                         title={a.label}
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                          on ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"
+                        className={`rounded-full border px-3 py-1 text-xs font-bold transition-colors ${
+                          on ? "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm" : "border-gray-200 text-gray-600 hover:bg-gray-100"
                         }`}
                         data-testid={`chip-axis-${a.key}`}
                       >
@@ -470,7 +515,7 @@ export default function Compare() {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {selected.map((e, k) => (
-                    <span key={e.id} className="inline-flex items-center gap-1.5 text-sm font-medium">
+                    <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-bold text-gray-900">
                       <span className="inline-block h-3 w-3 rounded-full" style={{ background: RADAR_COLORS[k] }} />
                       {e.web_name}
                     </span>
@@ -503,13 +548,15 @@ export default function Compare() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
+            </SectionCard>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Season stats</CardTitle>
-                <Tabs value={season} onValueChange={setSeason} className="w-full overflow-x-auto">
+            <SectionCard
+              icon={ListChecks}
+              title="Season stats"
+              subtitle="The best value in each row is highlighted"
+              bodyClassName="overflow-x-auto p-0"
+              action={
+                <Tabs value={season} onValueChange={setSeason} className="max-w-full overflow-x-auto">
                   <TabsList>
                     <TabsTrigger value="current">{CURRENT_SEASON}</TabsTrigger>
                     {pastSeasons.map((s) => (
@@ -517,17 +564,17 @@ export default function Compare() {
                     ))}
                   </TabsList>
                 </Tabs>
-              </CardHeader>
-              <CardContent className="overflow-x-auto p-0 sm:p-0">
+              }
+            >
                 {!isCurrent && historicalLoading ? (
                   <p className="p-4 text-sm text-muted-foreground">Loading {season}…</p>
                 ) : (
                   <table className="w-full min-w-[420px] text-sm" data-testid="table-stats">
                     <thead>
-                      <tr className="border-b text-muted-foreground">
-                        <th className="sticky left-0 bg-card p-2 text-left font-medium">Stat</th>
-                        {selected.map((e) => (
-                          <th key={e.id} className="p-2 text-center font-medium">
+                      <tr className="border-b bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
+                        <th className="sticky left-0 z-10 bg-card p-2.5 text-left font-semibold">Stat</th>
+                        {selected.map((e, k) => (
+                          <th key={e.id} className="p-2.5 text-center font-bold" style={{ boxShadow: `inset 0 -3px 0 0 ${RADAR_COLORS[k]}` }}>
                             {e.web_name}
                             {!hasSeasonRow(e) && (
                               <div className="text-xs font-normal">No data</div>
@@ -541,14 +588,17 @@ export default function Compare() {
                         const values = selected.map((e) => statValue(e, stat.key));
                         const best = stat.better ? bestValueIndexes(values, stat.better) : [];
                         return (
-                          <tr key={stat.key} className="border-b last:border-0">
-                            <td className="sticky left-0 bg-card p-2 font-medium whitespace-nowrap">{stat.label}</td>
+                          <tr key={stat.key} className="border-b last:border-0 odd:bg-gray-50/40">
+                            <td className="sticky left-0 z-10 bg-card p-2.5 text-sm font-semibold whitespace-nowrap text-gray-700">{stat.label}</td>
                             {values.map((v, i) => (
-                              <td
-                                key={selected[i].id}
-                                className={`p-2 text-center ${best.includes(i) ? "bg-primary/10 font-semibold text-primary" : ""}`}
-                              >
-                                {formatStat(stat.key, v)}
+                              <td key={selected[i].id} className="p-2.5 text-center tabular-nums">
+                                {best.includes(i) ? (
+                                  <span className="inline-flex min-w-[48px] justify-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 font-extrabold text-emerald-700 dark:text-emerald-300">
+                                    {formatStat(stat.key, v)}
+                                  </span>
+                                ) : (
+                                  <span className="font-semibold text-gray-900">{formatStat(stat.key, v)}</span>
+                                )}
                               </td>
                             ))}
                           </tr>
@@ -557,13 +607,12 @@ export default function Compare() {
                     </tbody>
                   </table>
                 )}
-                <p className="p-3 text-xs text-muted-foreground">
+                <p className="p-4 text-xs text-muted-foreground">
                   Highlighted = best value in the row (lowest for goals conceded, cards, own goals and missed
                   penalties). Past seasons are matched by FPL player code, so a player with no record that season
                   shows “No data”. Expected points come from the same projections as the Points page.
                 </p>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </>
         )}
       </div>
