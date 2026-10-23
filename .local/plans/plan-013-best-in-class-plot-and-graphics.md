@@ -1,6 +1,6 @@
 # Plan 013 — Making Player Plot and Graphics Maker the best available
 
-Status: PROPOSED (2026-10-23), awaiting the user's choice of what to build first. Nothing in this plan is built yet.
+Status: IN PROGRESS (2026-10-23). User approved the whole first tranche in order. Done locally, not pushed: Player Plot items 3/4/5 (my team on the plot, colour/size by, trend line + outliers) and item 1 (link previews). With the Graphics Maker session: 5 more templates, then gameweek pack (11), captions (13) and creator handle (2) (sent as briefs, status unknown).
 Created: 2026-10-23
 
 Goal (user): "the player plots and graphics maker to be the best available among any tools".
@@ -46,3 +46,9 @@ C. Then link previews with short links (1) as its own project, because it adds a
 
 ## Out of scope for now
 Accounts/login for saving designs, video/GIF rendering, and real player photos (licensing).
+
+## Update 2026-10-23 — built
+- **Player Plot** (`shared/player-plot.ts`, `client/src/components/player-plot-chart.tsx`, `client/src/pages/player-plot.tsx`, `tests/player-plot-insights.test.ts`): `?my=<team id>` rings your 15 players in gold (always plotted even if filtered out) with a "Your squad on this chart" list; `?cb=position|price|ownership` colours and `?sz=ownership|price|minutes` sizes dots (legend included); `?tr=1` draws a least-squares trend line (bends correctly on the stretched axis) with R-squared and lists the biggest over/under-performers. The share image mirrors all of it.
+- **Link previews** (`server/shared-graphics.ts`, `server/shared-graphics-routes.ts`, `client/src/lib/share-link.ts`): no new dependency and no server renderer. When the share menu opens, the browser makes a 1200x630 link card of the graphic and POSTs it (image/png) to `/api/shared-graphics`; the server validates it (real PNG, exactly 1200x630, <1.5MB, target must be a path on this site, title cleaned), stores it in the `shared_graphics` table (created on first use, deduplicated by image+page hash, rows older than 180 days pruned) and returns `/g/<id>`. `/g/<id>` is a small HTML page with the og:/twitter: tags and sends people on to the tool at the saved settings; `/g/<id>.png` is the image. Posting to X/Facebook/WhatsApp/Telegram/LinkedIn now uses that short link, so the post shows the graphic. If the upload fails the page link is used and the image is still copied.
+- **Limits and risks:** anonymous uploads are limited to 40 per hour per address (loopback exempt) and 1.5MB each, but anyone can host an image on /g/ on our domain; there is no moderation. Previews only work on the deployed site (X cannot fetch localhost). Set `PUBLIC_ORIGIN=https://fpldilemmas.com` on Railway to pin the origin used in the tags (otherwise it comes from the request host). The table is created at runtime with CREATE TABLE IF NOT EXISTS, like the Copilot tables, so no migration step.
+
