@@ -63,7 +63,7 @@ export default function CaptaincyMatrix() {
               )}
             </div>
             <p className="fpl-page-subtitle">
-              The best captain options from every team, ranked by our expected points. Captain points are 2 × xPts.
+              The best captain options from every team, ranked by our expected points. A captain's points count double, so captaining a player is worth 2 × xPts.
             </p>
           </div>
         </div>
@@ -142,7 +142,6 @@ export default function CaptaincyMatrix() {
                         <tr className="text-xs text-muted-foreground">
                           <th className="py-1 text-left font-medium">Player</th>
                           <th className="py-1 text-right font-medium">xPts</th>
-                          <th className="py-1 text-right font-medium">Captain</th>
                           <th className="py-1 text-right font-medium">Owned</th>
                         </tr>
                       </thead>
@@ -161,7 +160,6 @@ export default function CaptaincyMatrix() {
                               </span>
                             </td>
                             <td className="py-1.5 text-right">{c.xPts.toFixed(1)}</td>
-                            <td className="py-1.5 text-right font-semibold">{c.captainPoints.toFixed(1)}</td>
                             <td className="py-1.5 text-right text-muted-foreground">
                               {c.ownership === null ? "—" : `${c.ownership}%`}
                             </td>
