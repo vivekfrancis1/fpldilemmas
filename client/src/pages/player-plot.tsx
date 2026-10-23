@@ -31,6 +31,8 @@ import {
   type ScaleKind,
 } from "@shared/player-plot";
 import { shareFileName } from "@shared/share-cards";
+import JerseyIcon from "@/components/jersey-icon";
+import { IconTile, PosChip, SectionCard, SegmentedControl, TeamChip, asPos } from "@/components/tool-ui";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -362,39 +364,38 @@ export default function PlayerPlotPage() {
         </div>
 
         {/* position, then that position's quick views (the first is its default graph) */}
-        <div className="flex flex-wrap items-center gap-2 mb-2" role="group" aria-label="Position" data-testid="plot-positions">
-          {(["ALL", ...PLOT_POSITIONS] as Array<PlotPosition | "ALL">).map((pos) => (
-            <button
-              key={pos}
-              type="button"
-              onClick={() => selectPosition(pos === "ALL" ? null : pos)}
-              aria-pressed={activePosition === pos}
-              className={`rounded-lg border px-4 py-1.5 text-sm font-semibold ${activePosition === pos ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}
-              data-testid={`tab-position-${pos}`}
-            >
-              {pos === "ALL" ? "All" : POSITION_LABEL[pos]}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mb-3" data-testid="plot-presets">
-          <span className="text-xs font-medium text-gray-600">Quick views:</span>
-          {presets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => applyPreset(p.id)}
-              aria-pressed={preset?.id === p.id}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium ${preset?.id === p.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}
-              data-testid={`preset-${p.id}`}
-            >
-              {p.label}
-            </button>
-          ))}
-          {!preset && <span className="text-xs text-gray-500">Custom axes</span>}
+        <div className="mb-4 space-y-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-3 shadow-sm sm:p-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="plot-positions">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-gray-500">Position</span>
+            <SegmentedControl
+              ariaLabel="Position"
+              testIdPrefix="tab-position"
+              value={(activePosition ?? "MULTI") as string}
+              onChange={(v) => selectPosition(v === "ALL" ? null : (v as PlotPosition))}
+              options={(["ALL", ...PLOT_POSITIONS] as string[]).map((pos) => ({ value: pos, label: pos === "ALL" ? "All" : POSITION_LABEL[pos as PlotPosition] }))}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2" data-testid="plot-presets">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-gray-500">Quick views</span>
+            {presets.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                aria-pressed={preset?.id === p.id}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition-colors ${
+                  preset?.id === p.id ? "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+                data-testid={`preset-${p.id}`}
+              >
+                {p.label}
+              </button>
+            ))}
+            {!preset && <span className="text-xs text-gray-500">Custom axes</span>}
+          </div>
         </div>
 
-        <Card className="mb-3">
-          <CardContent className="p-3 sm:p-4 space-y-3">
+        <SectionCard icon={SlidersHorizontal} title="Choose what to plot" subtitle="Any stat on each axis, with filters to narrow the players" className="mb-4" bodyClassName="space-y-4 p-4 sm:p-5">
             {/* axes */}
             <div className="flex items-end gap-2">
               <StatSelect label="Horizontal axis (X)" value={state.x} onChange={(x) => update({ x })} testId="select-x" />
@@ -509,19 +510,21 @@ export default function PlayerPlotPage() {
                 data-testid="input-plot-search"
               />
             </div>
-          </CardContent>
-        </Card>
+        </SectionCard>
 
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-semibold" data-testid="text-plot-title">{title}</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="p-3 sm:p-5">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <IconTile icon={ChartScatter} />
+                <div className="min-w-0">
+                <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg" data-testid="text-plot-title">{title}</h2>
+                <p className="mt-0.5 text-xs text-gray-500">
                   {shown.length} players
                   {usesHorizon ? ` · ${horizonLabel}` : ""}
                   {filterSummary.length ? ` · ${filterSummary.join(" · ")}` : ""}
                 </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={copyLink} className="gap-2" data-testid="button-copy-link">
@@ -534,13 +537,16 @@ export default function PlayerPlotPage() {
                   width={1080}
                   height={1350}
                   fileName={shareFileName(["player-plot", state.y, "vs", state.x])}
+                  className="border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 hover:text-white"
                 />
               </div>
             </div>
 
-            {preset && <p className="text-xs text-gray-600 mb-2" data-testid="text-plot-hint">{preset.hint}</p>}
+            {preset && (
+              <p className="mb-3 rounded-xl border-l-4 border-indigo-400 bg-indigo-500/[0.06] px-3 py-2 text-xs leading-snug text-gray-700" data-testid="text-plot-hint">{preset.hint}</p>
+            )}
 
-            <div ref={chartRef} className="w-full" data-testid="plot-chart">
+            <div ref={chartRef} className="w-full rounded-xl bg-gradient-to-b from-indigo-500/[0.03] to-transparent" data-testid="plot-chart">
               {loading || bootstrapError || chartWidth === 0 ? (
                 <div className="py-16 text-center text-sm text-gray-500" role="status">
                   {bootstrapError ? "Couldn't load player data. Please refresh." : "Loading players…"}
@@ -572,27 +578,40 @@ export default function PlayerPlotPage() {
             </p>
 
             {selected && (
-              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3" data-testid="plot-selected">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: teamColor(selected.teamShort) }} />
-                    <span className="font-semibold truncate">{selected.name}</span>
-                    <span className="text-xs text-gray-500">{selected.teamShort} · {selected.position}{selected.available ? "" : " · doubtful / out"}</span>
+              <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-gray-50/80 to-white shadow-sm" style={{ boxShadow: `inset 0 4px 0 0 ${teamColor(selected.teamShort)}` }} data-testid="plot-selected">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 pt-4 sm:p-4 sm:pt-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <JerseyIcon team={selected.teamShort} position={selected.position} className="h-12 w-12 shrink-0 object-contain" />
+                    <div className="min-w-0">
+                      <div className="truncate text-lg font-extrabold leading-tight text-gray-900">{selected.name}</div>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <TeamChip>{selected.teamShort}</TeamChip>
+                        <PosChip pos={asPos(selected.position)} />
+                        {!selected.available && <span className="text-xs font-semibold text-amber-600">doubtful / out</span>}
+                      </div>
+                    </div>
                   </div>
-                  <Link href={compareUrl([selected.id])} className="text-xs font-medium text-indigo-600 hover:underline" data-testid="link-plot-compare">
-                    Compare
+                  <Link href={compareUrl([selected.id])} className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-500/20 dark:text-indigo-300" data-testid="link-plot-compare">
+                    Compare →
                   </Link>
                 </div>
-                <dl className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm">
-                  <div><dt className="text-xs text-gray-500">{xDef?.label}</dt><dd className="font-semibold">{formatStatValue(xDef, selected.values[state.x])}</dd></div>
-                  <div><dt className="text-xs text-gray-500">{yDef?.label}</dt><dd className="font-semibold">{formatStatValue(yDef, selected.values[state.y])}</dd></div>
-                  <div><dt className="text-xs text-gray-500">Price</dt><dd className="font-semibold">£{selected.price.toFixed(1)}m</dd></div>
-                  <div><dt className="text-xs text-gray-500">Ownership</dt><dd className="font-semibold">{selected.ownership.toFixed(1)}%</dd></div>
+                <dl className="grid grid-cols-2 gap-2 px-3 pb-3 sm:grid-cols-4 sm:px-4 sm:pb-4">
+                  {[
+                    [xDef?.label, formatStatValue(xDef, selected.values[state.x])],
+                    [yDef?.label, formatStatValue(yDef, selected.values[state.y])],
+                    ["Price", `£${selected.price.toFixed(1)}m`],
+                    ["Ownership", `${selected.ownership.toFixed(1)}%`],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-xl bg-gray-100/80 px-3 py-2">
+                      <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</dt>
+                      <dd className="text-base font-extrabold tabular-nums text-gray-900">{value}</dd>
+                    </div>
+                  ))}
                 </dl>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
     </div>
   );

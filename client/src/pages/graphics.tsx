@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ImagePlus, Link2, Search, Sparkles, X } from "lucide-react";
+import { CalendarRange, Check, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -58,6 +58,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShareImageButton } from "@/components/share-image-button";
 import { GraphicCanvas, type GraphicData } from "@/components/graphics/graphic-faces";
 import { teamColor } from "@/lib/team-colors";
+import { SectionCard } from "@/components/tool-ui";
+
+const TEMPLATE_ICON: Record<string, LucideIcon> = {
+  "player-card": UserRound,
+  "player-comparison": GitCompareArrows,
+  "fixtures-comparison": CalendarRange,
+  "price-change": TrendingUp,
+  "top-differentials": Sparkles,
+  "predicted-lineup": Shirt,
+  "team-reveal": Users,
+  cover: ImageIcon,
+  "player-news": Newspaper,
+};
+const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
 
 const DEFAULT_WEEKS = 5;
@@ -309,7 +323,7 @@ function SquadBuilder({
   };
 
   const toggleBtn = (active: boolean) =>
-    `rounded-md border px-2 py-1 text-xs font-bold leading-none ${active ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`;
+    `rounded-md border px-2 py-1 text-xs font-bold leading-none ${active ? ACTIVE_CHIP : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`;
 
   return (
     <div className="space-y-4" data-testid="squad-builder">
@@ -638,31 +652,49 @@ export default function GraphicsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-3" role="group" aria-label="Template" data-testid="graphics-templates">
-          {GRAPHIC_TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() =>
-                update({
-                  template: t.id as TemplateId,
-                  // a lineup is one gameweek; do not carry that single gameweek into other templates' ranges (or the reverse)
-                  ...(SINGLE_GAMEWEEK.includes(t.id as TemplateId) || SINGLE_GAMEWEEK.includes(spec.template) ? { from: 0, to: 0 } : {}),
-                })
-              }
-              aria-pressed={spec.template === t.id}
-              className={`rounded-xl border px-3 py-2.5 sm:p-3 text-left ${spec.template === t.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-800 hover:bg-gray-50"}`}
-              data-testid={`template-${t.id}`}
-            >
-              <div className="text-sm font-bold">{t.label}</div>
-              <div className={`mt-0.5 hidden text-xs leading-snug sm:block ${spec.template === t.id ? "text-indigo-100" : "text-gray-500"}`}>{t.description}</div>
-            </button>
-          ))}
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Template" data-testid="graphics-templates">
+          {GRAPHIC_TEMPLATES.map((t) => {
+            const Icon = TEMPLATE_ICON[t.id] ?? ImagePlus;
+            const on = spec.template === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() =>
+                  update({
+                    template: t.id as TemplateId,
+                    // a lineup is one gameweek; do not carry that single gameweek into other templates' ranges (or the reverse)
+                    ...(SINGLE_GAMEWEEK.includes(t.id as TemplateId) || SINGLE_GAMEWEEK.includes(spec.template) ? { from: 0, to: 0 } : {}),
+                  })
+                }
+                aria-pressed={on}
+                className={`group flex items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:flex-col sm:items-start sm:gap-2 sm:p-4 ${
+                  on
+                    ? "border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg ring-2 ring-indigo-300/50"
+                    : "border-gray-200 bg-white text-gray-800 shadow-sm hover:-translate-y-0.5 hover:shadow-md"
+                }`}
+                data-testid={`template-${t.id}`}
+              >
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${on ? "bg-white/20 text-white" : "bg-gradient-to-br from-indigo-500/15 to-violet-500/15 text-indigo-600 dark:text-indigo-300"}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-extrabold leading-tight">{t.label}</span>
+                  <span className={`mt-0.5 hidden text-xs leading-snug sm:block ${on ? "text-indigo-100" : "text-gray-500"}`}>{t.description}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-          <Card>
-            <CardContent className="p-3 sm:p-4 space-y-4">
+          <SectionCard
+            icon={SlidersHorizontal}
+            title="Customise"
+            subtitle="Pick your data, size and colours"
+            className="lg:sticky lg:top-16 lg:self-start"
+            bodyClassName="space-y-4 p-4 sm:p-5"
+          >
               {spec.template === "player-card" && (
                 <Field label="Player">
                   <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={1} onChange={(players) => update({ players })} />
@@ -684,7 +716,7 @@ export default function GraphicsPage() {
                             type="button"
                             onClick={() => toggleStat(s.key)}
                             aria-pressed={on}
-                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
+                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${on ? ACTIVE_CHIP : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
                             data-testid={`stat-${s.key}`}
                           >
                             {s.label}
@@ -783,7 +815,7 @@ export default function GraphicsPage() {
                           onClick={() => toggleTeam(t.id)}
                           aria-pressed={on}
                           disabled={!on && spec.teams.length >= 4}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${on ? ACTIVE_CHIP : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
                           data-testid={`team-${t.short_name}`}
                         >
                           {t.short_name}
@@ -866,12 +898,14 @@ export default function GraphicsPage() {
                   </Field>
                 </div>}
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           <div className="order-first min-w-0 space-y-3 lg:order-none">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-gray-500">Preview. The saved image is {fullWidth}×{fullHeight}px and carries the FPL Dilemmas watermark.</p>
+              <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <span className="rounded-full bg-indigo-500/10 px-2.5 py-1 font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Preview</span>
+                The saved image is {fullWidth}×{fullHeight}px and carries the FPL Dilemmas watermark.
+              </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={copyLink} className="gap-2" data-testid="button-copy-link">
                   {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
@@ -884,11 +918,13 @@ export default function GraphicsPage() {
                     width={fullWidth}
                     height={fullHeight}
                     fileName={graphicFileName(spec, fileParts)}
+                    className="border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 hover:text-white"
                   />
                 )}
               </div>
             </div>
 
+            <div className="rounded-2xl border border-gray-200 bg-gray-100/60 p-3 [background-image:radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.18)_1px,transparent_0)] [background-size:18px_18px] sm:p-5">
             <div ref={previewRef} className="w-full" data-testid="graphics-preview">
               {bootstrapError ? (
                 <div className="py-16 text-center text-sm text-gray-500" role="status">Couldn't load player data. Please refresh.</div>
@@ -901,6 +937,7 @@ export default function GraphicsPage() {
                   <div style={{ width: fullWidth, height: fullHeight, transform: `scale(${scale})`, transformOrigin: "top left" }}>{canvas}</div>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>
