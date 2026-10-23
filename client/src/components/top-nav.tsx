@@ -84,7 +84,6 @@ const navSections: NavSection[] = [
     group: "Projections",
     heading: "Player",
     items: [
-      { path: "/player-total-points", label: "Points", icon: Target },
       { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy },
       { path: "/player-assist-projections", label: "Assists", icon: Zap },
       { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield },

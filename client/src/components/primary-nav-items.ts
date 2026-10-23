@@ -10,7 +10,7 @@ export const PRIMARY_NAV_ITEMS = [
   },
   {
     href: "/player-total-points",
-    label: "Players",
+    label: "Points",
     icon: Trophy,
     match: [
       "/player-total-points",
