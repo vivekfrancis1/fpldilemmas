@@ -32,7 +32,6 @@ function PlayerRow({ p }: { p: BriefPlayer }) {
         />
       </td>
       <td className="py-1.5 text-right">{p.xPts.toFixed(1)}</td>
-      <td className="py-1.5 text-right font-semibold">{p.captainPoints.toFixed(1)}</td>
     </tr>
   );
 }
@@ -119,14 +118,13 @@ export default function DeadlineBriefPage() {
                       <tr className="text-xs text-muted-foreground">
                         <th className="py-1 text-left font-medium">Player</th>
                         <th className="py-1 text-right font-medium">xPts</th>
-                        <th className="py-1 text-right font-medium">Captain</th>
                       </tr>
                     </thead>
                     <tbody>{data.captains.map((p) => <PlayerRow key={p.playerId} p={p} />)}</tbody>
                   </table>
                 )}
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Captain points are 2 × our expected points. <Link href="/captaincy-matrix" className="underline">See every team's options</Link>.
+                  A captain's points count double, so captaining a player is worth 2 × xPts. <Link href="/captaincy-matrix" className="underline">See every team's options</Link>.
                 </p>
               </CardContent>
             </Card>
