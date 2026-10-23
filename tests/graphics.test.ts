@@ -14,6 +14,13 @@ import {
   buildTeamReveal,
   buildCover,
   buildNewsQuote,
+  buildCaptainPicks,
+  buildFixtureTicker,
+  buildTransferTrends,
+  buildTeamOfTheWeek,
+  buildStatLeaders,
+  formatCount,
+  LEADER_STATS,
   formatNewsDate,
   quoteFont,
   coverTitleFont,
@@ -878,5 +885,223 @@ describe("player news quote", () => {
       expect(quoteFont("x".repeat(280), size)).toBeGreaterThanOrEqual(24);
     }
     expect(quoteFont("Back next week", "landscape")).toBeLessThan(quoteFont("Back next week", "square"));
+  });
+});
+
+describe("five more templates: spec", () => {
+  const ids = ["captain-picks", "fixture-ticker", "transfer-trends", "team-of-the-week", "stat-leaders"] as const;
+  it("are templates with their own default headlines", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toEqual(expect.arrayContaining([...ids]));
+    expect(ids.map((t) => resolveHeadline({ ...DEFAULT_SPEC, template: t }))).toEqual(["Captain Picks", "Fixture Ticker", "Transfer Trends", "Team of the Week", "Stat Leaders"]);
+  });
+
+  it("only captain picks uses projections", () => {
+    expect(usesProjections({ ...DEFAULT_SPEC, template: "captain-picks" })).toBe(true);
+    for (const t of ["fixture-ticker", "transfer-trends", "team-of-the-week", "stat-leaders"] as const) expect(usesProjections({ ...DEFAULT_SPEC, template: t })).toBe(false);
+  });
+
+  it("the stat for Stat Leaders lives in the link; unknown stats fall back to the default", () => {
+    expect(DEFAULT_SPEC.stat).toBe("goals_scored");
+    expect(encodeSpec({ ...DEFAULT_SPEC, template: "stat-leaders" })).toBe("t=stat-leaders");
+    expect(encodeSpec({ ...DEFAULT_SPEC, template: "stat-leaders", stat: "assists", pos: "MID", top: 7 })).toBe("t=stat-leaders&pos=MID&top=7&st=assists");
+    expect(decodeSpec("t=stat-leaders&st=assists").stat).toBe("assists");
+    expect(decodeSpec("t=stat-leaders&st=bogus").stat).toBe("goals_scored");
+    expect(LEADER_STATS.map((x) => x.key)).toEqual(expect.arrayContaining(["goals_scored", "assists", "expected_goals", "expected_assists", "bonus", "clean_sheets", "points_per_game"]));
+  });
+});
+
+describe("buildCaptainPicks", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"], [3, "BOU"]]);
+  const mk = (id: number, over: Partial<GraphicElement> = {}) => el({ id, web_name: `P${id}`, team: 1, element_type: 3, now_cost: 100 + id, selected_by_percent: "20.0", status: "a", ...over });
+  const elements = [
+    mk(1), mk(2, { team: 2, element_type: 4 }), mk(3, { team: 3, status: "d" }), mk(4, { status: "i" }), mk(5, { status: "u" }), mk(6), mk(7, { element_type: 2 }),
+  ];
+  const proj = (playerId: number, x: Record<string, number>) => ({ playerId, gameweekProjections: x });
+  const projections = [
+    proj(1, { "9": 6, "10": 99 }), proj(2, { "9": 8.126 }), proj(3, { "9": 7 }), proj(4, { "9": 20 }), proj(5, { "9": 20 }), proj(7, { "9": 5 }),
+  ];
+  const fixtures = [
+    { event: 9, team_h: 1, team_a: 2, team_h_difficulty: 2, team_a_difficulty: 4, finished: false },
+    { event: 9, team_h: 3, team_a: 1, team_h_difficulty: 5, team_a_difficulty: 3, finished: false },
+  ];
+  const run = (over: Record<string, unknown> = {}) => buildCaptainPicks({ elements, projections, teamShortById, fixtures, gameweek: 9, top: 5, pos: null, ...over } as any);
+
+  it("ranks by xPts for the chosen gameweek only", () => {
+    const r = run();
+    expect(r.map((x) => x.name)).toEqual(["P2", "P3", "P1", "P7"]);
+    expect(r.map((x) => x.rank)).toEqual([1, 2, 3, 4]);
+    expect(r.find((x) => x.name === "P1")!.xpts).toBe(6);
+  });
+
+  it("leaves out injured, unavailable and unprojected players; flags doubtful ones", () => {
+    const names = run().map((x) => x.name);
+    expect(names).not.toContain("P4");
+    expect(names).not.toContain("P5");
+    expect(names).not.toContain("P6");
+    expect(run().find((x) => x.name === "P3")!.doubtful).toBe(true);
+    expect(run().find((x) => x.name === "P2")!.doubtful).toBe(false);
+  });
+
+  it("shows price, ownership, captain points (xPts doubled) and the gameweek fixtures", () => {
+    const p2 = run().find((x) => x.name === "P2")!;
+    expect(p2).toMatchObject({ price: "£10.2m", ownership: "20.0%", xpts: 8.13, captainPoints: 16.25, teamShort: "AVL", position: "FWD" });
+    expect(p2.fixtures).toEqual([{ opponent: "ARS", isHome: false, difficulty: 4 }]);
+    expect(run().find((x) => x.name === "P1")!.fixtures).toEqual([
+      { opponent: "AVL", isHome: true, difficulty: 2 },
+      { opponent: "BOU", isHome: false, difficulty: 3 },
+    ]);
+  });
+
+  it("respects the position filter and Top N", () => {
+    expect(run({ pos: "DEF" }).map((x) => x.name)).toEqual(["P7"]);
+    expect(run({ top: 2 }).map((x) => x.name)).toEqual(["P2", "P3"]);
+  });
+});
+
+describe("buildFixtureTicker", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"], [3, "BOU"], [4, "BRE"]]);
+  const teamNameById = new Map([[1, "Arsenal"], [2, "Aston Villa"], [3, "Bournemouth"], [4, "Brentford"]]);
+  const fixtures = [
+    { event: 8, team_h: 1, team_a: 2, team_h_difficulty: 2, team_a_difficulty: 5, finished: false },
+    { event: 8, team_h: 3, team_a: 4, team_h_difficulty: 3, team_a_difficulty: 2, finished: false },
+  ];
+  const t = buildFixtureTicker({ teamIds: [1, 2, 3, 4], gameweeks: [8, 9], fixtures, teamShortById, teamNameById });
+
+  it("sorts teams by average difficulty, easiest first, and puts teams with no fixtures last", () => {
+    // ARS 2, BRE 2, BOU 3, AVL 5; every team has one fixture in GW8 and none in GW9
+    expect(t.rows.map((r) => r.short)).toEqual(["ARS", "BRE", "BOU", "AVL"]);
+    const none = buildFixtureTicker({ teamIds: [1, 2, 3], gameweeks: [20], fixtures: [], teamShortById, teamNameById });
+    expect(none.rows.map((r) => r.short)).toEqual(["ARS", "AVL", "BOU"]);
+    const mixed = buildFixtureTicker({ teamIds: [3, 1], gameweeks: [8], fixtures: [fixtures[0]], teamShortById, teamNameById });
+    expect(mixed.rows.map((r) => r.short)).toEqual(["ARS", "BOU"]);
+  });
+
+  it("keeps the gameweeks and the per-gameweek cells", () => {
+    expect(t.gameweeks).toEqual([8, 9]);
+    expect(t.rows[0].cells.map((c) => c.gameweek)).toEqual([8, 9]);
+    expect(t.rows[0].cells[0].fixtures).toEqual([{ opponent: "AVL", isHome: true, difficulty: 2 }]);
+  });
+});
+
+describe("buildTransferTrends and formatCount", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"]]);
+  const mk = (id: number, inn: number, out: number, over: Partial<GraphicElement> = {}) =>
+    el({ id, web_name: `P${id}`, team: id % 2 ? 1 : 2, element_type: 3, now_cost: 50 + id, selected_by_percent: `${id}.0`, transfers_in_event: inn, transfers_out_event: out, ...over });
+  const elements = [mk(1, 261437, 100), mk(2, 5000, 361762), mk(3, 0, 0), mk(4, 8450, 5), mk(5, 100, 9000, { element_type: 4 }), mk(6, 90, 80)];
+
+  it("lists the most transferred in and the most transferred out, biggest first, without zeros", () => {
+    const r = buildTransferTrends({ elements, teamShortById, pos: null, top: 5 });
+    expect(r.ins.map((x) => x.name)).toEqual(["P1", "P4", "P2", "P5", "P6"]);
+    expect(r.outs.map((x) => x.name)).toEqual(["P2", "P5", "P1", "P6", "P4"]);
+    expect(r.ins.map((x) => x.rank)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("shows price, ownership, position, club and a short count", () => {
+    const r = buildTransferTrends({ elements, teamShortById, pos: null, top: 5 });
+    expect(r.ins[0]).toMatchObject({ name: "P1", teamShort: "ARS", position: "MID", price: "£5.1m", ownership: "1.0%", count: 261437, countLabel: "261k" });
+    expect(r.outs[0].countLabel).toBe("362k");
+  });
+
+  it("respects Top N and the position filter", () => {
+    expect(buildTransferTrends({ elements, teamShortById, pos: null, top: 2 }).ins.length).toBe(2);
+    const f = buildTransferTrends({ elements, teamShortById, pos: "FWD", top: 5 });
+    expect(f.ins.map((x) => x.name)).toEqual(["P5"]);
+  });
+
+  it("formats counts: whole numbers under 1000, k above, M above a million", () => {
+    expect(formatCount(950)).toBe("950");
+    expect(formatCount(1000)).toBe("1.0k");
+    expect(formatCount(8450)).toBe("8.5k");
+    expect(formatCount(12500)).toBe("13k");
+    expect(formatCount(261437)).toBe("261k");
+    expect(formatCount(999999)).toBe("1.00M");
+    expect(formatCount(1250000)).toBe("1.25M");
+  });
+});
+
+describe("buildTeamOfTheWeek", () => {
+  const teamShortById = new Map(Array.from({ length: 20 }, (_, i) => [i + 1, `T${i + 1}`] as [number, string]));
+  // [id, element_type, points]
+  const players: Array<[number, number, number]> = [
+    [1, 1, 9], [2, 1, 3],
+    [11, 2, 8], [12, 2, 7], [13, 2, 6], [14, 2, 5], [15, 2, 4], [16, 2, 3],
+    [21, 3, 12], [22, 3, 10], [23, 3, 9], [24, 3, 2], [25, 3, 1], [26, 3, 1],
+    [31, 4, 11], [32, 4, 6], [33, 4, 2], [34, 4, 1],
+  ];
+  const elements = players.map(([id, type]) => el({ id, element_type: type, team: id, web_name: `N${id}` }));
+  const live = players.map(([id, , pts]) => ({ id, stats: { total_points: pts, minutes: 90 } }));
+  const run = (over: Record<string, unknown> = {}) => buildTeamOfTheWeek({ elements, live, teamShortById, gameweek: 7, ...over } as any);
+
+  it("is the best legal XI by actual points, with the captain as the top scorer", () => {
+    const r = run();
+    expect(r.complete).toBe(true);
+    expect(r.formation).toBe("5-3-2");
+    expect(r.rows.map((x) => x.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
+    expect(r.rows.map((x) => x.players.length)).toEqual([1, 5, 3, 2]);
+    const all = r.rows.flatMap((x) => x.players);
+    expect(all.find((p) => p.isCaptain)!.id).toBe(21);
+    expect(all.find((p) => p.id === 21)!.points).toBe(12);
+    expect(r.gameweek).toBe(7);
+  });
+
+  it("totals the XI's points with the captain counted twice", () => {
+    expect(run().total).toBe(99);
+  });
+
+  it("only picks players who played, and never invents a player", () => {
+    const withGlitch = live.map((l) => (l.id === 34 ? { ...l, stats: { total_points: 20, minutes: 0 } } : l));
+    const r = run({ live: withGlitch });
+    expect(r.rows.flatMap((x) => x.players).map((p) => p.id)).not.toContain(34);
+    const few = run({ live: live.map((l) => (l.id < 20 ? l : { ...l, stats: { total_points: 0, minutes: 0 } })) });
+    expect(few.complete).toBe(false);
+    expect(few.formation).toBeNull();
+  });
+
+  it("players missing from the live data are ignored", () => {
+    expect(run({ live: live.slice(0, 5) }).complete).toBe(false);
+  });
+});
+
+describe("buildStatLeaders", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"]]);
+  const mk = (id: number, over: Partial<GraphicElement> = {}) =>
+    el({ id, web_name: `P${id}`, team: id % 2 ? 1 : 2, element_type: 4, now_cost: 70 + id, minutes: 900, total_points: 50, goals_scored: 0, points_per_game: "0.0", ...over });
+  const elements = [
+    mk(1, { goals_scored: 8 }), mk(2, { goals_scored: 8, total_points: 60 }), mk(3, { goals_scored: 5, element_type: 3 }), mk(4, { goals_scored: 0 }), mk(5, { goals_scored: 2 }),
+    mk(6, { points_per_game: "9.0", minutes: 90 }), mk(7, { points_per_game: "6.5", minutes: 900 }), mk(8, { points_per_game: "5.0", minutes: 900 }),
+    mk(9, { expected_goals: "4.37" }),
+  ];
+  const run = (over: Record<string, unknown> = {}) => buildStatLeaders({ elements, statKey: "goals_scored", pos: null, top: 5, teamShortById, ...over } as any);
+
+  it("ranks by the chosen stat; ties go to more total points; zeros are not leaders", () => {
+    const r = run();
+    expect(r.rows.map((x) => x.name)).toEqual(["P2", "P1", "P3", "P5"]);
+    expect(r.rows.map((x) => x.rank)).toEqual([1, 2, 3, 4]);
+    expect(r.rows[0].valueLabel).toBe("8");
+  });
+
+  it("filters by position, respects Top N, and bar shares are relative to the leader", () => {
+    expect(run({ pos: "MID" }).rows.map((x) => x.name)).toEqual(["P3"]);
+    expect(run({ top: 2 }).rows.length).toBe(2);
+    const r = run();
+    expect(r.rows[0].share).toBe(1);
+    expect(r.rows[2].share).toBeCloseTo(5 / 8, 5);
+  });
+
+  it("rate stats need 180+ minutes so a cameo cannot top the list", () => {
+    const r = run({ statKey: "points_per_game" });
+    expect(r.rows.map((x) => x.name)).toEqual(["P7", "P8"]);
+    expect(r.minutesRule).toBe(true);
+    expect(run().minutesRule).toBe(false);
+  });
+
+  it("formats values and shows source fields: decimals one place, price and club", () => {
+    const r = run({ statKey: "expected_goals" });
+    expect(r.rows[0]).toMatchObject({ name: "P9", valueLabel: "4.4", teamShort: "ARS", price: "£7.9m", position: "FWD" });
+    expect(r.stat).toMatchObject({ key: "expected_goals" });
+  });
+
+  it("an unknown stat gives no rows", () => {
+    expect(run({ statKey: "nonsense" }).rows).toEqual([]);
   });
 });

@@ -9,7 +9,7 @@ import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -21,6 +21,11 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with captain, bench and chip", headline: "Team Reveal" },
   { id: "cover", label: "Cover Generator", description: "A bold cover image with your headline and up to 3 featured players", headline: "Gameweek Preview" },
   { id: "player-news", label: "Player News Quote", description: "A player's official FPL news, or your own quote, as a shareable card", headline: "Player News" },
+  { id: "captain-picks", label: "Captain Picks", description: "Top captain options for a gameweek by our expected points", headline: "Captain Picks" },
+  { id: "fixture-ticker", label: "Fixture Ticker", description: "Every club's next fixtures in one grid, easiest run first", headline: "Fixture Ticker" },
+  { id: "transfer-trends", label: "Transfer Trends", description: "Most transferred in and out this gameweek", headline: "Transfer Trends" },
+  { id: "team-of-the-week", label: "Team of the Week", description: "The best legal XI of a finished gameweek by actual points", headline: "Team of the Week" },
+  { id: "stat-leaders", label: "Stat Leaders", description: "Top players for any stat: goals, assists, xG, bonus and more", headline: "Stat Leaders" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -129,7 +134,7 @@ export function footerHeight(size: SizeId): number {
 export const PRICE_LIST_LIMIT: Record<SizeId, number> = { square: 7, portrait: 10, landscape: 5 };
 
 export function usesProjections(spec: GraphicSpec): boolean {
-  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup") return true;
+  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks") return true;
   if (spec.template === "player-comparison") return (spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS).includes("xpts");
   return false;
 }
@@ -229,6 +234,8 @@ export interface GraphicSpec {
   /** Player News Quote: a typed quote (empty = use the official FPL news) and who it is attributed to. */
   quote: string;
   source: string;
+  /** Stat Leaders: the FPL stat to rank by (a key of LEADER_STATS). */
+  stat: string;
 }
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
@@ -266,9 +273,10 @@ export const DEFAULT_SPEC: GraphicSpec = {
   tag: "",
   quote: "",
   source: "",
+  stat: "goals_scored",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -343,6 +351,7 @@ export function decodeSpec(search: string): GraphicSpec {
     tag: (q.get("tag") ?? "").slice(0, MAX_TAG),
     quote: (q.get("q") ?? "").slice(0, MAX_QUOTE),
     source: (q.get("src") ?? "").slice(0, MAX_SOURCE),
+    stat: LEADER_STATS.some((x) => x.key === q.get("st")) ? (q.get("st") as string) : d.stat,
   };
 }
 
@@ -376,6 +385,7 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.tag) add("tag", spec.tag.slice(0, MAX_TAG));
   if (spec.quote) add("q", spec.quote.slice(0, MAX_QUOTE));
   if (spec.source) add("src", spec.source.slice(0, MAX_SOURCE));
+  if (spec.stat !== d.stat) add("st", spec.stat);
   return parts.join("&");
 }
 
@@ -1110,4 +1120,278 @@ export function quoteFont(text: string, size: SizeId): number {
   const chars = Math.max(1, text.trim().length);
   const factor = chars <= 60 ? 1 : Math.max(0.55, Math.pow(60 / chars, 0.6));
   return Math.round(QUOTE_FONT_BASE[size] * factor);
+}
+
+
+// ---------- Captain Picks ----------
+
+export interface CaptainPickRow {
+  rank: number;
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  price: string;
+  ownership: string;
+  /** Our expected points for the gameweek. */
+  xpts: number;
+  /** What a captain would score on that estimate: xPts doubled. */
+  captainPoints: number;
+  fixtures: Array<{ opponent: string; isHome: boolean; difficulty: number }>;
+  doubtful: boolean;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * The best captain options for one gameweek, ranked by our cached expected points for that gameweek. Injured,
+ * suspended and unavailable players are never listed; doubtful ones are flagged; players with no projection that
+ * gameweek (no fixture, or no data) are left out.
+ */
+export function buildCaptainPicks(input: {
+  elements: GraphicElement[];
+  projections: Array<{ playerId: number; gameweekProjections?: Record<string, number> }>;
+  teamShortById: Map<number, string>;
+  fixtures: CompareFixtureInput[];
+  gameweek: number;
+  top: number;
+  pos: GraphicPosition | null;
+}): CaptainPickRow[] {
+  const { elements, projections, teamShortById, fixtures, gameweek, top, pos } = input;
+  const projectionById = new Map(projections.map((p) => [p.playerId, p.gameweekProjections]));
+  const rows: Array<Omit<CaptainPickRow, "rank"> & { raw: number }> = [];
+  for (const e of elements) {
+    if (EXCLUDED_STATUS.has(e.status ?? "a")) continue;
+    const position = POSITION_BY_TYPE[e.element_type];
+    if (!position || (pos && position !== pos)) continue;
+    const raw = projectionById.get(e.id)?.[String(gameweek)];
+    if (typeof raw !== "number") continue;
+    const own = toNumber(e.selected_by_percent);
+    rows.push({
+      raw,
+      id: e.id,
+      name: e.web_name,
+      teamShort: teamShortById.get(e.team) ?? "",
+      position,
+      price: money(e.now_cost),
+      ownership: own === null ? "—" : `${own.toFixed(1)}%`,
+      xpts: round2(raw),
+      captainPoints: round2(raw * 2),
+      fixtures: fixturesForGameweeks(e.team, fixtures, [gameweek])[0].fixtures.map((f) => ({
+        opponent: teamShortById.get(f.opponentId) ?? "?",
+        isHome: f.isHome,
+        difficulty: f.difficulty,
+      })),
+      doubtful: e.status === "d",
+    });
+  }
+  rows.sort((a, b) => b.raw - a.raw || a.id - b.id);
+  return rows.slice(0, top).map(({ raw: _raw, ...r }, i) => ({ rank: i + 1, ...r }));
+}
+
+// ---------- Fixture Ticker ----------
+
+/** Every team's fixtures over the gameweeks, sorted by average official difficulty (easiest run first; no fixtures last). */
+export function buildFixtureTicker(input: {
+  teamIds: number[];
+  gameweeks: number[];
+  fixtures: CompareFixtureInput[];
+  teamShortById: Map<number, string>;
+  teamNameById: Map<number, string>;
+}): FixtureGridContent {
+  const grid = buildFixturesGrid(input);
+  const rows = [...grid.rows].sort((a, b) => {
+    if (a.avgFdr === null && b.avgFdr === null) return a.name.localeCompare(b.name);
+    if (a.avgFdr === null) return 1;
+    if (b.avgFdr === null) return -1;
+    return a.avgFdr - b.avgFdr || a.name.localeCompare(b.name);
+  });
+  return { gameweeks: grid.gameweeks, rows };
+}
+
+// ---------- Transfer Trends ----------
+
+export interface TransferRow {
+  rank: number;
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  price: string;
+  ownership: string;
+  count: number;
+  countLabel: string;
+}
+
+/** 950 -> "950", 8450 -> "8.5k", 261437 -> "261k", 1250000 -> "1.25M". */
+export function formatCount(n: number): string {
+  if (n < 1000) return String(Math.round(n));
+  if (Math.round(n / 1000) >= 1000) return `${(Math.round(n / 10000) / 100).toFixed(2)}M`;
+  if (n < 10000) return `${(Math.round(n / 100) / 10).toFixed(1)}k`;
+  return `${Math.round(n / 1000)}k`;
+}
+
+/** The most transferred in and out this gameweek, from FPL's own transfers_in_event / transfers_out_event counts. */
+export function buildTransferTrends(input: {
+  elements: GraphicElement[];
+  teamShortById: Map<number, string>;
+  pos: GraphicPosition | null;
+  top: number;
+}): { ins: TransferRow[]; outs: TransferRow[] } {
+  const { elements, teamShortById, pos, top } = input;
+  const make = (key: "transfers_in_event" | "transfers_out_event"): TransferRow[] => {
+    const rows: Array<Omit<TransferRow, "rank">> = [];
+    for (const e of elements) {
+      const position = POSITION_BY_TYPE[e.element_type];
+      const count = toNumber(e[key]);
+      if (!position || (pos && position !== pos) || count === null || count <= 0) continue;
+      const own = toNumber(e.selected_by_percent);
+      rows.push({
+        id: e.id,
+        name: e.web_name,
+        teamShort: teamShortById.get(e.team) ?? "",
+        position,
+        price: money(e.now_cost),
+        ownership: own === null ? "—" : `${own.toFixed(1)}%`,
+        count,
+        countLabel: formatCount(count),
+      });
+    }
+    rows.sort((a, b) => b.count - a.count || a.id - b.id);
+    return rows.slice(0, top).map((r, i) => ({ rank: i + 1, ...r }));
+  };
+  return { ins: make("transfers_in_event"), outs: make("transfers_out_event") };
+}
+
+// ---------- Team of the Week ----------
+
+export interface TotwToken {
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  points: number;
+  isCaptain: boolean;
+}
+
+export interface TeamOfTheWeekContent {
+  gameweek: number;
+  complete: boolean;
+  formation: string | null;
+  rows: Array<{ position: GraphicPosition; players: TotwToken[] }>;
+  /** The XI's points with the captain (the top scorer) counted twice, as in FPL. */
+  total: number;
+}
+
+/**
+ * The best legal XI of a finished gameweek by actual FPL points (same formation search as the FPL lineup helper),
+ * captain = the top scorer. Only players who played (minutes > 0) are considered, and an XI is never padded.
+ */
+export function buildTeamOfTheWeek(input: {
+  elements: GraphicElement[];
+  live: Array<{ id: number; stats: { total_points: number; minutes: number } }>;
+  teamShortById: Map<number, string>;
+  gameweek: number;
+}): TeamOfTheWeekContent {
+  const { elements, live, teamShortById, gameweek } = input;
+  const liveById = new Map(live.map((l) => [l.id, l.stats]));
+  const tokens = new Map<number, TotwToken>();
+  const candidates: LineupPlayer[] = [];
+  for (const e of elements) {
+    const stats = liveById.get(e.id);
+    const position = POSITION_BY_TYPE[e.element_type];
+    if (!stats || !position || !(stats.minutes > 0)) continue;
+    tokens.set(e.id, { id: e.id, name: e.web_name, teamShort: teamShortById.get(e.team) ?? "", position, points: stats.total_points, isCaptain: false });
+    candidates.push({ id: e.id, elementType: TYPE_BY_POSITION[position], xPts: stats.total_points });
+  }
+  const best = bestLineup(candidates);
+  const complete = best.complete && best.starting.length === 11;
+  const starting = complete ? best.starting.map((p) => ({ ...tokens.get(p.id)!, isCaptain: p.id === best.captainId })) : [];
+  const byPoints = (a: TotwToken, b: TotwToken) => b.points - a.points || a.id - b.id;
+  const rows = ROW_ORDER.map((position) => ({ position, players: starting.filter((p) => p.position === position).sort(byPoints) }));
+  const count = (pos: GraphicPosition) => rows.find((r) => r.position === pos)!.players.length;
+  return {
+    gameweek,
+    complete,
+    formation: complete ? `${count("DEF")}-${count("MID")}-${count("FWD")}` : null,
+    rows,
+    total: complete ? best.total : 0,
+  };
+}
+
+// ---------- Stat Leaders ----------
+
+export interface LeaderStat {
+  key: string;
+  label: string;
+  format: "int" | "dec1" | "percent";
+  /** A per-game or form style stat: needs a minimum number of minutes so a cameo cannot top the list. */
+  rate?: boolean;
+}
+
+export const LEADER_STATS: LeaderStat[] = [
+  { key: "goals_scored", label: "Goals", format: "int" },
+  { key: "assists", label: "Assists", format: "int" },
+  { key: "expected_goals", label: "Expected goals (xG)", format: "dec1" },
+  { key: "expected_assists", label: "Expected assists (xA)", format: "dec1" },
+  { key: "expected_goal_involvements", label: "Expected goal involvements (xGI)", format: "dec1" },
+  { key: "total_points", label: "Total points", format: "int" },
+  { key: "points_per_game", label: "Points per game", format: "dec1", rate: true },
+  { key: "form", label: "Form", format: "dec1", rate: true },
+  { key: "bonus", label: "Bonus points", format: "int" },
+  { key: "bps", label: "BPS", format: "int" },
+  { key: "clean_sheets", label: "Clean sheets", format: "int" },
+  { key: "saves", label: "Saves", format: "int" },
+  { key: "defensive_contribution", label: "Defensive contributions", format: "int" },
+  { key: "ict_index", label: "ICT index", format: "dec1" },
+  { key: "minutes", label: "Minutes", format: "int" },
+  { key: "selected_by_percent", label: "Ownership", format: "percent" },
+];
+
+export const MIN_RATE_MINUTES = 180;
+
+export interface LeaderRow {
+  rank: number;
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  price: string;
+  value: number;
+  valueLabel: string;
+  /** value / the leader's value, 0 to 1, for the bar. */
+  share: number;
+}
+
+export function buildStatLeaders(input: {
+  elements: GraphicElement[];
+  statKey: string;
+  pos: GraphicPosition | null;
+  top: number;
+  teamShortById: Map<number, string>;
+}): { stat: LeaderStat | null; rows: LeaderRow[]; minutesRule: boolean } {
+  const { elements, statKey, pos, top, teamShortById } = input;
+  const stat = LEADER_STATS.find((x) => x.key === statKey) ?? null;
+  if (!stat) return { stat: null, rows: [], minutesRule: false };
+  const minutesRule = !!stat.rate;
+  const rows: Array<Omit<LeaderRow, "rank" | "share"> & { totalPoints: number }> = [];
+  for (const e of elements) {
+    const position = POSITION_BY_TYPE[e.element_type];
+    const value = toNumber(e[statKey]);
+    if (!position || (pos && position !== pos) || value === null || value <= 0) continue;
+    if (minutesRule && (toNumber(e.minutes) ?? 0) < MIN_RATE_MINUTES) continue;
+    rows.push({
+      id: e.id,
+      name: e.web_name,
+      teamShort: teamShortById.get(e.team) ?? "",
+      position,
+      price: money(e.now_cost),
+      value,
+      valueLabel: stat.format === "int" ? String(Math.round(value)) : stat.format === "percent" ? `${value.toFixed(1)}%` : value.toFixed(1),
+      totalPoints: toNumber(e.total_points) ?? 0,
+    });
+  }
+  rows.sort((a, b) => b.value - a.value || b.totalPoints - a.totalPoints || a.name.localeCompare(b.name));
+  const lead = rows[0]?.value ?? 1;
+  return { stat, minutesRule, rows: rows.slice(0, top).map(({ totalPoints: _tp, ...r }, i) => ({ rank: i + 1, share: r.value / lead, ...r })) };
 }
