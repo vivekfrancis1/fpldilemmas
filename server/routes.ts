@@ -12242,9 +12242,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Current Standings cache (60 minutes - stores pre-serialized JSON Buffer)
+  // Enhanced Current Standings cache (15 minutes - stores pre-serialized JSON Buffer)
   const currentStandingsCache = new Map<string, { serialized: Buffer; timestamp: number }>();
-  const CURRENT_STANDINGS_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
+  const CURRENT_STANDINGS_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   
   // In-flight request de-duplication to prevent thundering herd
   const currentStandingsInFlight = new Map<string, Promise<any>>();
