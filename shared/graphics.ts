@@ -6,10 +6,11 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
+import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -27,6 +28,10 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "team-of-the-week", label: "Team of the Week", description: "The best legal XI of a finished gameweek by actual points", headline: "Team of the Week" },
   { id: "stat-leaders", label: "Stat Leaders", description: "Top players for any stat: goals, assists, xG, bonus and more", headline: "Stat Leaders" },
   { id: "availability-watch", label: "Availability Watch", description: "Injury, doubt and suspension news for the most-owned players", headline: "Availability Watch" },
+  { id: "match-predictions", label: "Match Predictions", description: "Every fixture of a gameweek: expected goals, win chances and clean-sheet chances", headline: "Match Predictions" },
+  { id: "match-results", label: "Match Results", description: "Every finished score of a gameweek, with the scorers", headline: "Match Results" },
+  { id: "match-preview", label: "Match Preview", description: "One fixture: expected goals, chances, recent form and the best-projected players", headline: "Match Preview" },
+  { id: "match-report", label: "Match Report", description: "One finished match: score, goals, assists, cards and bonus points", headline: "Match Report" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -135,7 +140,7 @@ export function footerHeight(size: SizeId): number {
 export const PRICE_LIST_LIMIT: Record<SizeId, number> = { square: 7, portrait: 10, landscape: 5 };
 
 export function usesProjections(spec: GraphicSpec): boolean {
-  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks") return true;
+  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks" || spec.template === "match-predictions" || spec.template === "match-preview") return true;
   if (spec.template === "player-comparison") return (spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS).includes("xpts");
   return false;
 }
@@ -167,7 +172,7 @@ export function graphicFileName(spec: GraphicSpec, parts: string[] = []): string
 
 export type GraphicPosition = "GKP" | "DEF" | "MID" | "FWD";
 const POSITIONS: GraphicPosition[] = ["GKP", "DEF", "MID", "FWD"];
-const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+export const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 
 export interface GraphicStat {
   key: string;
@@ -240,7 +245,13 @@ export interface GraphicSpec {
   /** Creator brand: an optional @handle (stored without the @) shown on the footer strip next to the watermark, and an accent colour (#rrggbb). */
   handle: string;
   accent: string;
+  /** Match Preview / Match Report: the FPL fixture id (0 = the first fixture that fits). */
+  fixture: number;
+  /** Match Predictions / Match Results: which page of a long gameweek (1-based). */
+  page: number;
 }
+
+export const MAX_PAGE = 20;
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
 export const CHIP_IDS: ChipId[] = ["", "wildcard", "freehit", "bboost", "3xc"];
@@ -280,9 +291,11 @@ export const DEFAULT_SPEC: GraphicSpec = {
   stat: "goals_scored",
   handle: "",
   accent: "",
+  fixture: 0,
+  page: 1,
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -360,6 +373,8 @@ export function decodeSpec(search: string): GraphicSpec {
     stat: LEADER_STATS.some((x) => x.key === q.get("st")) ? (q.get("st") as string) : d.stat,
     handle: normaliseHandle(q.get("handle") ?? ""),
     accent: normaliseAccent(q.get("accent") ?? ""),
+    fixture: intOrNull(q.get("fx")) ?? 0,
+    page: Math.min(MAX_PAGE, Math.max(1, intOrNull(q.get("pg")) ?? 1)),
   };
 }
 
@@ -396,6 +411,8 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.stat !== d.stat) add("st", spec.stat);
   if (spec.handle) add("handle", spec.handle);
   if (spec.accent) add("accent", spec.accent.replace(/^#/, ""));
+  if (spec.fixture) add("fx", String(spec.fixture));
+  if (spec.page > 1) add("pg", String(spec.page));
   return parts.join("&");
 }
 
@@ -412,7 +429,7 @@ export type GraphicElement = {
   [key: string]: unknown;
 };
 
-function toNumber(v: unknown): number | null {
+export function toNumber(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   const n = typeof v === "number" ? v : parseFloat(String(v));
   return Number.isFinite(n) ? n : null;
@@ -439,6 +456,11 @@ export function formatStat(key: string, value: number | null): string {
       return value.toFixed(1);
     default: return String(Math.round(value));
   }
+}
+
+/** Expected goals to one decimal place, e.g. 1.64 -> "1.6". */
+export function formatGoals(n: number): string {
+  return (Math.round(n * 10) / 10).toFixed(1);
 }
 
 const money = (tenths: number) => `£${(tenths / 10).toFixed(1)}m`;
@@ -656,7 +678,7 @@ export interface DifferentialRow {
 }
 
 // Players who cannot be picked are never recommended: injured, suspended, unavailable, not in the squad.
-const EXCLUDED_STATUS = new Set(["i", "s", "u", "n"]);
+export const EXCLUDED_STATUS = new Set(["i", "s", "u", "n"]);
 
 export function buildDifferentials(input: {
   elements: GraphicElement[];
@@ -1151,7 +1173,7 @@ export interface CaptainPickRow {
   doubtful: boolean;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+export const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * The best captain options for one gameweek, ranked by our cached expected points for that gameweek. Injured,
@@ -1458,7 +1480,11 @@ export type GraphicData =
   | { kind: "transfer-trends"; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }
   | { kind: "team-of-the-week"; totw: TeamOfTheWeekContent; gwLabel: string }
   | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string; statLabel: string }
-  | { kind: "availability-watch"; rows: AvailabilityRow[]; gwLabel: string; subtitle: string };
+  | { kind: "availability-watch"; rows: AvailabilityRow[]; gwLabel: string; subtitle: string }
+  | { kind: "match-predictions"; predictions: MatchPredictionsContent; gwLabel: string; subtitle: string }
+  | { kind: "match-results"; results: MatchResultsContent; gwLabel: string; subtitle: string }
+  | { kind: "match-preview"; preview: MatchPreviewContent; gwLabel: string }
+  | { kind: "match-report"; report: MatchReportContent; gwLabel: string };
 
 // ---------- post captions ----------
 
@@ -1477,6 +1503,10 @@ const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
   "predicted-lineup": "#PredictedLineup",
   "player-news": "#FPLNews",
   "availability-watch": "#FPLInjuries",
+  "match-predictions": "#FPLPredictions",
+  "match-results": "#FPLResults",
+  "match-preview": "#MatchPreview",
+  "match-report": "#MatchReport",
 };
 
 function captionGw(label: string | null | undefined): string | null {
@@ -1547,6 +1577,26 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     case "availability-watch": {
       const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.chance !== null ? `${r.chance}%` : r.statusLabel.toLowerCase()}`).join(" · ");
       return done(top ? `Availability watch, most-owned players: ${top}` : "Availability watch: no news on the most-owned players");
+    }
+    case "match-predictions": {
+      const { predictions } = data;
+      const list = predictions.rows.slice(0, 3).map((r) => `${r.home.short} ${r.home.xg === null ? "–" : formatGoals(r.home.xg)}-${r.away.xg === null ? "–" : formatGoals(r.away.xg)} ${r.away.short}`).join(" · ");
+      return done(list ? `${data.gwLabel} match predictions (expected goals): ${list}` : `${data.gwLabel} match predictions`, data.gwLabel);
+    }
+    case "match-results": {
+      const { results } = data;
+      const list = results.rows.slice(0, 4).map((r) => `${r.home.short} ${r.home.score}-${r.away.score} ${r.away.short}`).join(" · ");
+      return done(list ? `${data.gwLabel} results: ${list}${results.total > 4 ? ` · ${plural(results.goals, "goal", "goals")} in ${plural(results.total, "match", "matches")}` : ""}` : `${data.gwLabel} results`, data.gwLabel);
+    }
+    case "match-preview": {
+      const { preview } = data;
+      const xg = preview.home.xg !== null && preview.away.xg !== null ? `: expected goals ${formatGoals(preview.home.xg)}-${formatGoals(preview.away.xg)}` : "";
+      const probs = preview.probs ? `, win chances ${preview.probs.home}/${preview.probs.draw}/${preview.probs.away}%` : "";
+      return done(`${preview.home.short} v ${preview.away.short} ${data.gwLabel} preview${xg}${probs}`, data.gwLabel);
+    }
+    case "match-report": {
+      const { report } = data;
+      return done(`${report.home.short} ${report.home.score}-${report.away.score} ${report.away.short} ${data.gwLabel} report`, data.gwLabel);
     }
     case "cover": {
       const { cover } = data;
@@ -1736,6 +1786,10 @@ export function isEmptyGraphic(data: GraphicData): boolean {
       return !data.prices.date || data.prices.risers.length + data.prices.fallers.length === 0;
     case "team-of-the-week":
       return !data.totw.complete;
+    case "match-predictions":
+      return data.predictions.rows.length === 0;
+    case "match-results":
+      return data.results.rows.length === 0;
     default:
       return false;
   }

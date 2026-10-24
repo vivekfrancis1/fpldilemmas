@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -68,6 +68,7 @@ import {
   type ThemeId,
 } from "@shared/graphics";
 import { projectionWindow } from "@shared/compare-utils";
+import { isFixtureResult, isFixtureUpcoming, predictionGameweeks, resolveMatch, resolvePredictionGameweek, resolveResultsGameweek, resultGameweeks, type MatchFixtureInput, type MatchModelInput } from "@shared/graphics-matches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,12 +95,16 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "team-of-the-week": Trophy,
   "stat-leaders": BarChart3,
   "availability-watch": HeartPulse,
+  "match-predictions": Target,
+  "match-results": ListChecks,
+  "match-preview": Eye,
+  "match-report": FileText,
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
-import { computeGraphicData, longDate, makeGraphicDataContext, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { computeGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 
@@ -108,7 +113,8 @@ const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report"];
+const MATCH_TEMPLATES: TemplateId[] = ["match-predictions", "match-results", "match-preview", "match-report"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
 function useElementWidth<T extends HTMLElement>() {
@@ -486,6 +492,78 @@ function SquadBuilder({
   );
 }
 
+const kickoffShort = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(d);
+};
+
+/** Gameweek, page (long gameweeks) and match pickers for the four match templates. */
+function MatchControls({
+  spec, update, fixtures, teamShortById, pages,
+}: {
+  spec: GraphicSpec;
+  update: (patch: Partial<GraphicSpec>) => void;
+  fixtures: MatchFixtureInput[];
+  teamShortById: Map<number, string>;
+  pages: number;
+}) {
+  const upcoming = spec.template === "match-predictions" || spec.template === "match-preview";
+  const single = spec.template === "match-preview" || spec.template === "match-report";
+  const gameweeks = upcoming ? predictionGameweeks(fixtures) : [...resultGameweeks(fixtures)].reverse();
+  const chosen = single ? resolveMatch(spec, fixtures, upcoming ? "upcoming" : "finished") : null;
+  const gw = chosen?.event ?? (upcoming ? resolvePredictionGameweek(spec.from, fixtures) : resolveResultsGameweek(spec.from, fixtures));
+  const matches = single
+    ? fixtures
+        .filter((f) => f.event === gw && (upcoming ? isFixtureUpcoming(f) : isFixtureResult(f)))
+        .sort((a, b) => (a.kickoff_time ?? "").localeCompare(b.kickoff_time ?? "") || a.id - b.id)
+    : [];
+  const label = (f: MatchFixtureInput) => {
+    const score = !upcoming && typeof f.team_h_score === "number" ? ` ${f.team_h_score}-${f.team_a_score}` : " v";
+    return `${teamShortById.get(f.team_h) ?? "?"}${score} ${teamShortById.get(f.team_a) ?? "?"} · ${kickoffShort(f.kickoff_time)}`;
+  };
+  if (!gameweeks.length) {
+    return <p className="text-xs text-gray-600" data-testid="match-controls-empty">{upcoming ? "There are no fixtures left to play yet." : "No match has finished yet."}</p>;
+  }
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <Field label="Gameweek">
+        <SimpleSelect
+          value={String(gw)}
+          onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10), fixture: 0, page: 1 })}
+          options={gameweeks.map((g) => ({ value: String(g), label: `GW${g}` }))}
+          testId="select-match-gw"
+        />
+      </Field>
+      {single ? (
+        <div className="col-span-2">
+          <Field label="Match">
+            <SimpleSelect
+              value={chosen ? String(chosen.id) : ""}
+              onChange={(v) => update({ fixture: parseInt(v, 10), from: gw, to: gw })}
+              options={matches.map((f) => ({ value: String(f.id), label: label(f) }))}
+              testId="select-match"
+            />
+          </Field>
+        </div>
+      ) : (
+        pages > 1 && (
+          <Field label="Page">
+            <SimpleSelect
+              value={String(Math.min(spec.page, pages))}
+              onChange={(v) => update({ page: parseInt(v, 10) })}
+              options={Array.from({ length: pages }, (_, i) => ({ value: String(i + 1), label: `Page ${i + 1} of ${pages}` }))}
+              testId="select-match-page"
+            />
+          </Field>
+        )
+      )}
+      {upcoming && <p className="col-span-2 text-xs text-gray-500">Expected goals and clean-sheet chances are our projections; win chances are the latest market odds, shown only when a market is open.</p>}
+      {!upcoming && <p className="col-span-2 text-xs text-gray-500">Scores, scorers, cards and bonus points are FPL's official match data. Live matches are not shown until they finish.</p>}
+    </div>
+  );
+}
+
 const BRAND_KEY = "fpld-graphics-brand";
 
 /** The creator's own handle and accent, remembered in this browser. Never overrides a link that carries its own. */
@@ -586,6 +664,17 @@ export default function GraphicsPage() {
     enabled: spec.template === "team-of-the-week" && totwGw > 0,
   });
 
+  // Match Predictions and Match Preview: the team projections and market odds for the one gameweek being drawn
+  const matchGw = matchModelGameweek(spec, fixtures);
+  const needsMatchModel = (spec.template === "match-predictions" || spec.template === "match-preview") && matchGw > 0;
+  const { data: matchGoals } = useQuery<any[]>({ queryKey: [`/api/team-goal-projections?startGameweek=${matchGw}&endGameweek=${matchGw}`], staleTime: 5 * 60 * 1000, enabled: needsMatchModel });
+  const { data: matchCs } = useQuery<any[]>({ queryKey: [`/api/team-cs-projections?startGameweek=${matchGw}&endGameweek=${matchGw}`], staleTime: 5 * 60 * 1000, enabled: needsMatchModel });
+  const { data: matchOdds } = useQuery<{ odds: MatchModelInput["odds"] }>({ queryKey: [`/api/fixture-odds-current`], staleTime: 5 * 60 * 1000, enabled: needsMatchModel });
+  const matchModel = useMemo<MatchModelInput | undefined>(
+    () => (needsMatchModel && matchGoals && matchCs && matchOdds ? { goals: matchGoals, cs: matchCs, odds: matchOdds.odds ?? [] } : undefined),
+    [needsMatchModel, matchGoals, matchCs, matchOdds],
+  );
+
   // Nothing opens empty: a template with nothing chosen gets a sensible default (best projected, trending in, next club...)
   // once the data is in. It never overwrites a choice: it only fills an empty selection, once per template, and a template
   // that already had a selection (a link, or the person's own pick) is marked as decided so clearing it later stays cleared.
@@ -623,12 +712,15 @@ export default function GraphicsPage() {
   }, [elements, spec.players]);
 
   const clubColor = useMemo(() => {
+    const matchFixture = spec.template === "match-preview" ? resolveMatch(spec, (fixtures ?? []) as unknown as MatchFixtureInput[], "upcoming")
+      : spec.template === "match-report" ? resolveMatch(spec, (fixtures ?? []) as unknown as MatchFixtureInput[], "finished") : null;
     const team =
-      spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0]
+      matchFixture ? matchFixture.team_h
+      : spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0]
       : spec.template === "team-reveal" ? elements.find((e) => e.id === spec.captain)?.team
       : selectedElements[0]?.team;
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
-  }, [spec.template, spec.teams, spec.captain, elements, selectedElements, teamShortById]);
+  }, [spec, fixtures, elements, selectedElements, teamShortById]);
   const theme = withAccent(resolveTheme(spec.theme, clubColor), spec.accent);
 
   const officialNews = useMemo(() => {
@@ -651,8 +743,10 @@ export default function GraphicsPage() {
       liveElements: liveData?.elements,
       priceChanges: pricesLoading ? undefined : priceChanges ?? [],
       defaultWeeks: DEFAULT_WEEKS,
+      matchModel,
+      matchModelGw: matchModel ? matchGw : undefined,
     }),
-    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
@@ -783,6 +877,10 @@ export default function GraphicsPage() {
     : spec.template === "fixture-ticker" ? [gwLabel]
     : spec.template === "transfer-trends" ? [`gw${transfersGw}`]
     : spec.template === "team-of-the-week" ? [`gw${totwGw}`]
+    : data?.kind === "match-predictions" ? [`gw${data.predictions.gameweek}`, ...(data.predictions.pages > 1 ? [`p${data.predictions.page}`] : [])]
+    : data?.kind === "match-results" ? [`gw${data.results.gameweek}`, ...(data.results.pages > 1 ? [`p${data.results.page}`] : [])]
+    : data?.kind === "match-preview" ? [data.preview.home.short, data.preview.away.short, `gw${data.preview.gameweek}`]
+    : data?.kind === "match-report" ? [data.report.home.short, data.report.away.short, `gw${data.report.gameweek}`]
     : spec.template === "stat-leaders" ? [spec.stat]
     : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
@@ -812,6 +910,8 @@ export default function GraphicsPage() {
                 onClick={() =>
                   update({
                     template: t.id as TemplateId,
+                    fixture: 0,
+                    page: 1,
                     // a lineup is one gameweek; do not carry that single gameweek into other templates' ranges (or the reverse)
                     ...(SINGLE_GAMEWEEK.includes(t.id as TemplateId) || SINGLE_GAMEWEEK.includes(spec.template) ? { from: 0, to: 0 } : {}),
                   })
@@ -1046,6 +1146,10 @@ export default function GraphicsPage() {
                     })}
                   </div>
                 </Field>
+              )}
+
+              {MATCH_TEMPLATES.includes(spec.template) && (
+                <MatchControls spec={spec} update={update} fixtures={(fixtures ?? []) as unknown as MatchFixtureInput[]} teamShortById={teamShortById} pages={data?.kind === "match-predictions" ? data.predictions.pages : data?.kind === "match-results" ? data.results.pages : 1} />
               )}
 
               {spec.template === "price-change" && (

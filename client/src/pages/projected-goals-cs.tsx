@@ -7,6 +7,8 @@ import { Target, Filter, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, Hist
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
+import { matchGraphicLink } from "@shared/graphics-matches";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
@@ -684,10 +686,18 @@ export default function ProjectedGoalsCS() {
                   </Select>
                 </div>
 
+                <ShareGraphicLink
+                  className="ml-auto"
+                  testId="link-share-image"
+                  href={matchGraphicLink(viewMode === "future"
+                    ? { template: "match-predictions", gameweek: parseInt(startGameweek, 10) }
+                    : { template: "match-results", gameweek: parseInt(endGameweek, 10) })}
+                  label={viewMode === "future" ? "Share predictions" : "Share results"}
+                />
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen((open) => !open)}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-600 px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-600 px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
                   data-testid="button-toggle-filters"
                 >
                   <Filter className="h-3.5 w-3.5" />

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearch } from "wouter";
+import { matchGraphicLink } from "@shared/graphics-matches";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -604,10 +606,20 @@ export default function MatchStats() {
 
   return (
     <div className="w-full py-3 sm:py-6 space-y-3 sm:space-y-5">
-      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 -ml-1" onClick={() => window.history.back()}>
-        <ArrowLeft className="h-4 w-4 mr-1.5" />
-        <span className="text-sm">Back to Results</span>
-      </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 -ml-1" onClick={() => window.history.back()}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
+          <span className="text-sm">Back to Results</span>
+        </Button>
+        {/* a finished match can be shared as a match report, one that has not kicked off as a preview (live matches: neither) */}
+        {!isArchivedEntry && fixture && !isLive && (
+          <ShareGraphicLink
+            testId="link-share-image"
+            href={matchGraphicLink({ template: isFinished ? "match-report" : "match-preview", fixture: fixture.id, gameweek: fixture.event ?? undefined })}
+            label={isFinished ? "Share match report" : "Share match preview"}
+          />
+        )}
+      </div>
 
       {isArchivedEntry ? (
         // Browsing a past season's own schedule — show just that season, no current-season tab.

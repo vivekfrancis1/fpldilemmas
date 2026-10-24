@@ -30,6 +30,8 @@ import {
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
+import { formatGoals } from "@shared/graphics";
+import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
 import { getJerseyUrl } from "@/lib/jersey";
 import badge from "@/assets/fpl-dilemmas-badge.png?inline";
 
@@ -1058,6 +1060,330 @@ function AvailabilityFace({ spec, theme, rows, gwLabel, subtitle }: { spec: Grap
   );
 }
 
+
+// ---------- Match graphics ----------
+
+const MATCH_RED = "#ef4444";
+const MATCH_YELLOW = "#facc15";
+
+function EmptyNote({ theme, land, children }: { theme: GraphicTheme; land: boolean; children: ReactNode }) {
+  return (
+    <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+      {children}
+    </div>
+  );
+}
+
+/** "Sat 24 Oct · 17:30" -> two short lines. */
+function KickoffLabel({ label, theme, font, align = "left" }: { label: string; theme: GraphicTheme; font: number; align?: "left" | "center" | "right" }) {
+  const [day, time] = label.split(" · ");
+  return (
+    <div style={{ textAlign: align, color: theme.muted, fontWeight: 700, fontSize: font, lineHeight: 1.2, flexShrink: 0 }}>
+      <div>{day}</div>
+      {time && <div style={{ color: theme.text, opacity: 0.85 }}>{time}</div>}
+    </div>
+  );
+}
+
+function ProbBar({ probs, theme, label, big }: { probs: { home: number; draw: number; away: number }; theme: GraphicTheme; label: number; big?: boolean }) {
+  const parts = [
+    { key: "home", value: probs.home, color: theme.accent },
+    { key: "draw", value: probs.draw, color: theme.muted },
+    { key: "away", value: probs.away, color: theme.good },
+  ];
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: label, fontWeight: 800, marginBottom: big ? 8 : 3 }}>
+        {parts.map((p) => (
+          <span key={p.key} style={{ color: p.color }}>{p.value}%</span>
+        ))}
+      </div>
+      <div style={{ display: "flex", height: big ? 20 : 10, borderRadius: 999, overflow: "hidden", gap: 2 }}>
+        {parts.map((p) => (
+          <div key={p.key} style={{ flex: Math.max(p.value, 1), background: p.color, opacity: p.key === "draw" ? 0.55 : 1 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PredictionsFace({ spec, theme, predictions, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; predictions: MatchPredictionsContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const teamFont = land ? 24 : tall ? 34 : 32;
+  const jersey = land ? 34 : tall ? 56 : 50;
+  const xgFont = land ? 28 : tall ? 46 : 40;
+  const small = land ? 13 : 17;
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {predictions.rows.length === 0 ? (
+        <EmptyNote theme={theme} land={land}>No fixtures left to predict in {gwLabel}.</EmptyNote>
+      ) : (
+        <>
+          <div style={{ fontSize: land ? 13 : 17, color: theme.muted, fontWeight: 700, marginBottom: land ? 6 : 10, flexShrink: 0 }}>
+            Big number: expected goals · CS: clean-sheet chance · Bar: home win / draw / away win
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: land ? 6 : 10, flex: 1, minHeight: 0 }}>
+            {predictions.rows.map((r) => (
+              <div key={r.id} style={{ ...panel(theme, { borderRadius: 16 }), flex: 1, maxHeight: land ? 80 : tall ? 124 : 110, minHeight: 0, display: "flex", alignItems: "center", gap: land ? 12 : 16, padding: land ? "0 16px" : "0 20px" }} data-testid={`prediction-${r.id}`}>
+                <div style={{ width: land ? 96 : 118, flexShrink: 0 }}>
+                  <KickoffLabel label={r.kickoffLabel} theme={theme} font={small} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: land ? 8 : 10 }}>
+                  <span style={{ fontSize: teamFont, fontWeight: 900, ...ellipsis }}>{r.home.short}</span>
+                  <Jersey team={r.home.short} position="MID" px={jersey} />
+                </div>
+                <div style={{ width: land ? 150 : tall ? 210 : 190, flexShrink: 0, textAlign: "center" }}>
+                  <div style={{ fontSize: xgFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>
+                    {r.home.xg === null ? "–" : formatGoals(r.home.xg)} – {r.away.xg === null ? "–" : formatGoals(r.away.xg)}
+                  </div>
+                  <div style={{ fontSize: small, fontWeight: 700, color: theme.muted, marginTop: land ? 2 : 4, whiteSpace: "nowrap" }}>
+                    CS {r.home.cs === null ? "–" : `${Math.round(r.home.cs)}%`} · {r.away.cs === null ? "–" : `${Math.round(r.away.cs)}%`}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: land ? 8 : 10 }}>
+                  <Jersey team={r.away.short} position="MID" px={jersey} />
+                  <span style={{ fontSize: teamFont, fontWeight: 900, ...ellipsis }}>{r.away.short}</span>
+                </div>
+                <div style={{ width: land ? 190 : tall ? 250 : 220, flexShrink: 0 }}>
+                  {r.probs ? (
+                    <ProbBar probs={r.probs} theme={theme} label={land ? 15 : 19} />
+                  ) : (
+                    <div style={{ fontSize: small, color: theme.muted, fontWeight: 700, textAlign: "center" }}>No market odds yet</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Frame>
+  );
+}
+
+function ResultsFace({ spec, theme, results, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; results: MatchResultsContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const teamFont = land ? 24 : tall ? 34 : 32;
+  const jersey = land ? 34 : tall ? 56 : 50;
+  const scoreFont = land ? 34 : tall ? 52 : 46;
+  const small = land ? 13 : 17;
+  const scorerFont = tall ? 19 : 17;
+  const showScorers = !land;
+  const scorerLine = (names: string[]) => names.join(", ");
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {results.rows.length === 0 ? (
+        <EmptyNote theme={theme} land={land}>No finished matches in {gwLabel} yet.</EmptyNote>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 6 : 10, flex: 1, minHeight: 0 }}>
+          {results.rows.map((r) => {
+            const homeWon = r.outcome === "home";
+            const awayWon = r.outcome === "away";
+            return (
+              <div key={r.id} style={{ ...panel(theme, { borderRadius: 16 }), flex: 1, maxHeight: land ? 80 : tall ? 124 : 110, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: land ? "0 16px" : "0 20px" }} data-testid={`result-${r.id}`}>
+                <div style={{ display: "flex", alignItems: "center", gap: land ? 12 : 16 }}>
+                  <div style={{ width: land ? 96 : 118, flexShrink: 0 }}>
+                    <KickoffLabel label={r.kickoffLabel} theme={theme} font={small} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: land ? 8 : 10, opacity: awayWon ? 0.72 : 1 }}>
+                    <span style={{ fontSize: teamFont, fontWeight: homeWon ? 900 : 700, ...ellipsis }}>{r.home.short}</span>
+                    <Jersey team={r.home.short} position="MID" px={jersey} />
+                  </div>
+                  <div style={{ width: land ? 130 : tall ? 190 : 170, flexShrink: 0, textAlign: "center", fontSize: scoreFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>
+                    {r.home.score} – {r.away.score}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: land ? 8 : 10, opacity: homeWon ? 0.72 : 1 }}>
+                    <Jersey team={r.away.short} position="MID" px={jersey} />
+                    <span style={{ fontSize: teamFont, fontWeight: awayWon ? 900 : 700, ...ellipsis }}>{r.away.short}</span>
+                  </div>
+                  {/* balances the kick-off column so the score sits in the middle */}
+                  <div style={{ width: land ? 96 : 118, flexShrink: 0 }} />
+                </div>
+                {showScorers && (r.homeScorers.length > 0 || r.awayScorers.length > 0) && (
+                  <div style={{ display: "flex", gap: 16, paddingLeft: 134, paddingRight: 134, fontSize: scorerFont, fontWeight: 600, color: theme.muted, lineHeight: 1.2 }}>
+                    <div style={{ flex: 1, textAlign: "right", ...ellipsis }}>{scorerLine(r.homeScorers)}</div>
+                    <div style={{ width: 2, flexShrink: 0 }} />
+                    <div style={{ flex: 1, textAlign: "left", ...ellipsis }}>{scorerLine(r.awayScorers)}</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+function FormChips({ form, theme, size }: { form: MatchFormEntry[]; theme: GraphicTheme; size: number }) {
+  const color = { W: theme.good, D: theme.muted, L: theme.bad } as const;
+  if (!form.length) return <div style={{ fontSize: size * 0.7, color: theme.muted, fontWeight: 700 }}>No results yet</div>;
+  return (
+    <div style={{ display: "flex", gap: size * 0.18 }}>
+      {form.map((f, i) => (
+        <div key={i} title={`${f.score} ${f.isHome ? "v" : "at"} ${f.opponent}`} style={{ width: size, height: size, borderRadius: size * 0.3, background: color[f.result], color: "#0b1020", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.55, fontWeight: 900 }}>
+          {f.result}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PreviewColumn({ side, theme, land, tall }: { side: MatchPreviewSide; theme: GraphicTheme; land: boolean; tall: boolean }) {
+  const last = side.form[side.form.length - 1];
+  return (
+    <div style={{ ...panel(theme), flex: 1, minWidth: 0, padding: land ? "12px 16px" : "20px 22px", display: "flex", flexDirection: "column", gap: land ? 8 : tall ? 18 : 12 }}>
+      <div style={{ fontSize: land ? 14 : 19, fontWeight: 800, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>{side.short} form</div>
+      <FormChips form={side.form} theme={theme} size={land ? 28 : tall ? 50 : 44} />
+      {tall && side.form.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {[...side.form].reverse().map((f, i) => (
+            <div key={i} style={{ fontSize: 19, color: i === 0 ? theme.text : theme.muted, fontWeight: 600 }}>
+              {f.result} · {f.score} {f.isHome ? "v" : "at"} {f.opponent}
+            </div>
+          ))}
+        </div>
+      )}
+      {last && !land && !tall && (
+        <div style={{ fontSize: 17, color: theme.muted, fontWeight: 600, marginTop: -6 }}>Last: {last.score} {last.isHome ? "v" : "at"} {last.opponent}</div>
+      )}
+      <div style={{ fontSize: land ? 14 : 19, fontWeight: 800, color: theme.muted, letterSpacing: 1, textTransform: "uppercase", marginTop: land ? 2 : 6 }}>Top xPts</div>
+      {side.topPlayers.length === 0 ? (
+        <div style={{ fontSize: land ? 14 : 20, color: theme.muted, fontWeight: 700 }}>No projections yet</div>
+      ) : (
+        side.topPlayers.map((p) => (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: land ? 8 : 12 }}>
+            <Jersey team={side.short} position={p.position} px={land ? 28 : tall ? 54 : 46} />
+            <div style={{ flex: 1, minWidth: 0, fontSize: land ? 18 : tall ? 28 : 26, fontWeight: 800, ...ellipsis }}>{p.name}</div>
+            <div style={{ fontSize: land ? 20 : tall ? 32 : 28, fontWeight: 900, color: theme.accent }}>{p.xpts.toFixed(1)}</div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; preview: MatchPreviewContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 84 : tall ? 170 : 130;
+  const nameFont = land ? 28 : tall ? 46 : 38;
+  const xgFont = land ? 56 : tall ? 88 : 72;
+  const xg = (v: number | null) => (v === null ? "–" : formatGoals(v));
+  const cs = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
+  return (
+    <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · ${preview.kickoffLabel}`} gwLabel={gwLabel}>
+      <div style={{ display: "flex", flexDirection: "column", gap: land ? 10 : tall ? 22 : 16, flex: 1, minHeight: 0 }}>
+        <div style={{ ...panel(theme), display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: land ? "10px 20px" : "22px 28px", flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <Jersey team={preview.home.short} position="MID" px={jersey} />
+            <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{preview.home.name}</div>
+          </div>
+          <div style={{ flexShrink: 0, textAlign: "center" }}>
+            <div style={{ fontSize: xgFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>{xg(preview.home.xg)} – {xg(preview.away.xg)}</div>
+            <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: 6 }}>Expected goals</div>
+            <div style={{ fontSize: land ? 14 : 22, fontWeight: 800, marginTop: land ? 4 : 10 }}>Clean sheet {cs(preview.home.cs)} · {cs(preview.away.cs)}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <Jersey team={preview.away.short} position="MID" px={jersey} />
+            <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{preview.away.name}</div>
+          </div>
+        </div>
+        <div style={{ ...panel(theme), padding: land ? "10px 20px" : "18px 28px", flexShrink: 0 }}>
+          {preview.probs ? (
+            <>
+              <div style={{ fontSize: land ? 13 : 18, fontWeight: 800, color: theme.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: land ? 4 : 10 }}>
+                {preview.home.short} win · draw · {preview.away.short} win (market odds)
+              </div>
+              <ProbBar probs={preview.probs} theme={theme} label={land ? 18 : tall ? 30 : 26} big={!land} />
+            </>
+          ) : (
+            <div style={{ fontSize: land ? 16 : 22, fontWeight: 700, color: theme.muted, textAlign: "center" }}>No market odds open for this match yet</div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: land ? 12 : 18, flex: 1, minHeight: 0 }}>
+          <PreviewColumn side={preview.home} theme={theme} land={land} tall={tall} />
+          <PreviewColumn side={preview.away} theme={theme} land={land} tall={tall} />
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
+function ReportList({ title, rows, theme, font, empty }: { title: string; rows: ReactNode[]; theme: GraphicTheme; font: number; empty: string }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: font * 0.72, fontWeight: 800, color: theme.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
+      {rows.length === 0 ? (
+        <div style={{ fontSize: font, color: theme.muted, fontWeight: 600 }}>{empty}</div>
+      ) : (
+        rows.map((r, i) => (
+          <div key={i} style={{ fontSize: font, fontWeight: 700, lineHeight: 1.3, ...ellipsis }}>{r}</div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; report: MatchReportContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 76 : tall ? 150 : 116;
+  const nameFont = land ? 26 : tall ? 42 : 36;
+  const scoreFont = land ? 64 : tall ? 110 : 90;
+  const font = land ? 20 : tall ? 25 : 22;
+  const card = (c: MatchReportContent["cards"][number], i: number) => (
+    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span style={{ width: font * 0.6, height: font * 0.85, borderRadius: 3, background: c.kind === "red" ? MATCH_RED : MATCH_YELLOW, display: "inline-block" }} />
+      {c.name} <span style={{ color: theme.muted }}>· {c.teamShort}</span>
+    </span>
+  );
+  const sideRows = (home: string[], away: string[]) => [...home.map((n) => <span key={`h${n}`}>{n} <span style={{ color: theme.muted }}>· {report.home.short}</span></span>), ...away.map((n) => <span key={`a${n}`}>{n} <span style={{ color: theme.muted }}>· {report.away.short}</span></span>)];
+  const goals = <ReportList title="Goals" rows={sideRows(report.goals.home, report.goals.away)} theme={theme} font={font} empty="No goals" />;
+  const assists = <ReportList title="Assists" rows={sideRows(report.assists.home, report.assists.away)} theme={theme} font={font} empty="No assists" />;
+  const maxCards = land ? 6 : tall ? 10 : 7;
+  const shownCards = report.cards.slice(0, maxCards).map(card);
+  if (report.cards.length > maxCards) shownCards.push(<span key="more" style={{ color: theme.muted }}>+{report.cards.length - maxCards} more</span>);
+  const cards = <ReportList title="Cards" rows={shownCards} theme={theme} font={font} empty="No cards" />;
+  const bonus = (
+    <ReportList
+      title="Bonus points"
+      rows={report.bonus.map((b, i) => (
+        <span key={i}><span style={{ color: theme.accent, fontWeight: 900 }}>{b.points}</span> {b.name} <span style={{ color: theme.muted }}>· {b.teamShort}</span></span>
+      ))}
+      theme={theme}
+      font={font}
+      empty="None awarded"
+    />
+  );
+  const notes = report.notes.length > 0 ? <ReportList title="Penalties" rows={report.notes} theme={theme} font={font} empty="" /> : null;
+  return (
+    <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · ${report.kickoffLabel} · full time`} gwLabel={gwLabel}>
+      <div style={{ display: "flex", flexDirection: "column", gap: land ? 10 : tall ? 22 : 16, flex: 1, minHeight: 0 }}>
+        <div style={{ ...panel(theme), display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: land ? "10px 20px" : "22px 28px", flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <Jersey team={report.home.short} position="MID" px={jersey} />
+            <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{report.home.name}</div>
+          </div>
+          <div style={{ flexShrink: 0, fontSize: scoreFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>{report.home.score} – {report.away.score}</div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <Jersey team={report.away.short} position="MID" px={jersey} />
+            <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{report.away.name}</div>
+          </div>
+        </div>
+        <div style={{ ...panel(theme), flex: 1, minHeight: 0, overflow: "hidden", padding: land ? "12px 20px" : "22px 28px", display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 28, rowGap: land ? 8 : 18, alignContent: "start" }}>
+          {goals}
+          {assists}
+          {cards}
+          {bonus}
+          {notes}
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -1076,6 +1402,10 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "team-of-the-week": return <TotwFace spec={spec} theme={theme} totw={data.totw} gwLabel={data.gwLabel} />;
     case "stat-leaders": return <LeadersFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "availability-watch": return <AvailabilityFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "match-predictions": return <PredictionsFace spec={spec} theme={theme} predictions={data.predictions} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "match-results": return <ResultsFace spec={spec} theme={theme} results={data.results} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "match-preview": return <PreviewFace spec={spec} theme={theme} preview={data.preview} gwLabel={data.gwLabel} />;
+    case "match-report": return <ReportFace spec={spec} theme={theme} report={data.report} gwLabel={data.gwLabel} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }

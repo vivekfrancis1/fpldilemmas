@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { matchGraphicLink } from "@shared/graphics-matches";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -417,6 +419,18 @@ export default function ResultsAndFixtures() {
                 : `Gameweek ${selectedGameweek} (${filteredFixtures.length} matches)`
               }
             </div>
+            {/* the images are made from the live season, and one gameweek at a time */}
+            {!isHistorical && selectedGameweek !== "all" && (
+              <ShareGraphicLink
+                className="ml-auto"
+                testId="link-share-image"
+                href={matchGraphicLink({
+                  template: filteredFixtures.some((f) => f.finished || f.finished_provisional) ? "match-results" : "match-predictions",
+                  gameweek: selectedGameweek,
+                })}
+                label={filteredFixtures.some((f) => f.finished || f.finished_provisional) ? "Share results" : "Share predictions"}
+              />
+            )}
           </div>
           <div className="fpl-card-content">
             {selectedGameweek === "all" ? (

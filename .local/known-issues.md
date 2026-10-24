@@ -9,6 +9,12 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 
 ---
 
+## 2026-10-24 — `price-predictions-official-fields` "hours_to_threshold extrapolates the hourly rate" fails on live data
+
+- **Where:** `tests/price-predictions-official-fields.test.ts` (line ~163), endpoint `GET /api/price-predictions`.
+- **Status:** Open, not investigated (noticed while running the full suite for the Match graphics work; nothing in `server/` was changed, fails the same on repeated runs).
+- **Notes:** `hours_to_threshold` for the player that is "trending toward" a change is 34.4 hours away from the value the test computes from `progress` and the hourly rate (allowed difference: 5). Likely the endpoint and the test use different hourly rates or a different progress for that player on current live data; check whether the endpoint caps/rounds the rate or the test's expectation needs the same inputs.
+
 ## 2026-10-17 — `projection-consistency` "fully available players identical in adjusted vs raw" failed on a long-running dev server
 
 - **Where:** `tests/projection-consistency.test.ts` (adjusted vs raw cached player totals).

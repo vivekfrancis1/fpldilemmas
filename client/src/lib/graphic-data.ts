@@ -27,6 +27,18 @@ import {
   type GraphicSpec,
   type PriceChangeInput,
 } from "@shared/graphics";
+import {
+  MATCH_LIST_LIMIT,
+  buildMatchPredictions,
+  buildMatchPreview,
+  buildMatchReport,
+  buildMatchResults,
+  resolveMatch,
+  resolvePredictionGameweek,
+  resolveResultsGameweek,
+  type MatchFixtureInput,
+  type MatchModelInput,
+} from "@shared/graphics-matches";
 
 // Turns a graphic's settings plus the site's data into what gets drawn. Used by the page (the live preview) and by the
 // Gameweek pack, so a pack image is exactly what the single graphic would be.
@@ -59,6 +71,9 @@ export interface GraphicDataContext {
   liveElements: LiveElement[] | undefined;
   /** Confirmed price changes; undefined while loading. */
   priceChanges: PriceChangeInput[] | undefined;
+  /** Match Predictions / Match Preview: the team projections and odds for ONE gameweek (`matchModelGw`); undefined while loading. */
+  matchModel?: MatchModelInput;
+  matchModelGw?: number;
 }
 
 export interface ResolvedGameweeks {
@@ -79,6 +94,19 @@ export function resolveGameweeks(spec: Pick<GraphicSpec, "from" | "to">, default
 /** Team of the Week's gameweek: the chosen one if it has finished, otherwise the latest finished one (0 if none). */
 export function resolveTotwGw(spec: Pick<GraphicSpec, "from">, finishedGameweeks: number[]): number {
   return spec.from && finishedGameweeks.includes(spec.from) ? spec.from : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
+}
+
+const asMatchFixtures = (fixtures: Fixture[] | undefined): MatchFixtureInput[] => (fixtures ?? []) as unknown as MatchFixtureInput[];
+
+/**
+ * The gameweek whose team projections and odds a match graphic needs (0 = none needed or nothing to show). The page and the
+ * pack fetch exactly that gameweek's data and hand it to computeGraphicData as `matchModel`.
+ */
+export function matchModelGameweek(spec: Pick<GraphicSpec, "template" | "from" | "fixture">, fixtures: Fixture[] | undefined): number {
+  const list = asMatchFixtures(fixtures);
+  if (spec.template === "match-predictions") return resolvePredictionGameweek(spec.from, list);
+  if (spec.template === "match-preview") return resolveMatch(spec, list, "upcoming")?.event ?? 0;
+  return 0;
 }
 
 export function longDate(date: string): string {
@@ -179,6 +207,46 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
       const rows = buildAvailabilityWatch({ elements, teamShortById, pos: spec.pos, top: spec.top });
       return { data: { kind: "availability-watch", rows, gwLabel: "Latest FPL news", subtitle: `Owned by ${MIN_WATCH_OWNERSHIP}%+ · ${spec.pos ?? "All positions"} · latest FPL news` }, problem: null };
     }
+    case "match-predictions": {
+      if (!fixtures) return { data: null, problem: null };
+      const list = asMatchFixtures(fixtures);
+      const gw = resolvePredictionGameweek(spec.from, list);
+      if (gw === 0) return { data: null, problem: "There are no fixtures left to predict right now." };
+      if (!ctx.matchModel || ctx.matchModelGw !== gw) return { data: null, problem: null };
+      const predictions = buildMatchPredictions({ fixtures: list, gameweek: gw, model: ctx.matchModel, teamShortById, teamNameById, page: spec.page, limit: MATCH_LIST_LIMIT[spec.size] });
+      const label = gameweekLabel(gw, gw);
+      const pageText = predictions.pages > 1 ? ` · page ${predictions.page} of ${predictions.pages}` : "";
+      return { data: { kind: "match-predictions", predictions, gwLabel: label, subtitle: `${label} · ${predictions.total === 1 ? "1 match" : `${predictions.total} matches`} · expected goals and chances${pageText}` }, problem: null };
+    }
+    case "match-results": {
+      if (!fixtures) return { data: null, problem: null };
+      const list = asMatchFixtures(fixtures);
+      const gw = resolveResultsGameweek(spec.from, list);
+      if (gw === 0) return { data: null, problem: "No match has finished yet, so there are no results to show." };
+      const results = buildMatchResults({ fixtures: list, gameweek: gw, elements, teamShortById, teamNameById, page: spec.page, limit: MATCH_LIST_LIMIT[spec.size] });
+      const label = gameweekLabel(gw, gw);
+      const pageText = results.pages > 1 ? ` · page ${results.page} of ${results.pages}` : "";
+      return { data: { kind: "match-results", results, gwLabel: label, subtitle: `${label} · ${results.total === 1 ? "1 match" : `${results.total} matches`} · ${results.goals === 1 ? "1 goal" : `${results.goals} goals`}${pageText}` }, problem: null };
+    }
+    case "match-preview": {
+      if (!fixtures || !projections) return { data: null, problem: null };
+      const list = asMatchFixtures(fixtures);
+      const fixture = resolveMatch(spec, list, "upcoming");
+      if (!fixture) return { data: null, problem: "There is no upcoming match to preview right now." };
+      if (!ctx.matchModel || ctx.matchModelGw !== fixture.event) return { data: null, problem: null };
+      const preview = buildMatchPreview({ fixture, fixtures: list, model: ctx.matchModel, elements, projections, teamShortById, teamNameById });
+      if (!preview) return { data: null, problem: "That match has no gameweek yet, so there is nothing to preview." };
+      return { data: { kind: "match-preview", preview, gwLabel: gameweekLabel(preview.gameweek, preview.gameweek) }, problem: null };
+    }
+    case "match-report": {
+      if (!fixtures) return { data: null, problem: null };
+      const list = asMatchFixtures(fixtures);
+      const fixture = resolveMatch(spec, list, "finished");
+      if (!fixture) return { data: null, problem: "No match has finished yet, so there is no match report to show." };
+      const report = buildMatchReport({ fixture, elements, teamShortById, teamNameById });
+      if (!report) return { data: null, problem: "That match has not finished yet." };
+      return { data: { kind: "match-report", report, gwLabel: gameweekLabel(report.gameweek, report.gameweek) }, problem: null };
+    }
     case "top-differentials": {
       const rows = buildDifferentials({ elements, projections: projections ?? [], teamShortById, from, to, pos: spec.pos, maxOwn: spec.maxOwn, top: spec.top });
       const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
@@ -199,6 +267,8 @@ export function makeGraphicDataContext(input: {
   liveElements: LiveElement[] | undefined;
   priceChanges: PriceChangeInput[] | undefined;
   defaultWeeks?: number;
+  matchModel?: MatchModelInput;
+  matchModelGw?: number;
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
@@ -216,5 +286,7 @@ export function makeGraphicDataContext(input: {
     finishedGameweeks: events.filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b),
     liveElements: input.liveElements,
     priceChanges: input.priceChanges,
+    matchModel: input.matchModel,
+    matchModelGw: input.matchModelGw,
   };
 }
