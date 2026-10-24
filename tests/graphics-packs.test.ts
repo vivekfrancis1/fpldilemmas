@@ -14,7 +14,7 @@ import {
 } from "../shared/graphics";
 import { MATCH_LIST_LIMIT, predictionPageCount, resultsPageCount, type MatchFixtureInput } from "../shared/graphics-matches";
 import { formExtremes } from "../shared/graphics-teams";
-import { graphicDataRequests, loadGraphicData, makeGraphicDataContext } from "../client/src/lib/graphic-data";
+import { graphicDataRequests, loadGraphicData, makeGraphicDataContext, resolveGameweeks } from "../client/src/lib/graphic-data";
 
 const base: GraphicSpec = { ...DEFAULT_SPEC, template: "player-card", size: "portrait", theme: "midnight", handle: "steve", accent: "#fbbf24", headline: "mine", players: [1], teams: [2], quote: "q", fixture: 5, page: 3, stat: "assists", pos: "MID", metric: "assists", venue: "away" };
 
@@ -27,16 +27,16 @@ describe("the Preview pack", () => {
       "match-predictions", "team-projections", "team-projections", "player-projections",
     ]);
   });
-  it("match predictions are for the chosen gameweek, the team and player projections for it and the next four", () => {
+  it("match predictions and player projections are for the chosen gameweek, the team projections for it and the next four", () => {
     expect(specs[7].spec).toMatchObject({ template: "match-predictions", from: 9, to: 9, page: 1 });
     expect(specs[8].spec).toMatchObject({ template: "team-projections", metric: "goals-for", from: 9, to: 13 });
     expect(specs[9].spec).toMatchObject({ template: "team-projections", metric: "clean-sheets", from: 9, to: 13 });
-    expect(specs[10].spec).toMatchObject({ template: "player-projections", from: 9, to: 13, pos: null });
+    expect(specs[10].spec).toMatchObject({ template: "player-projections", from: 9, to: 9, pos: null });
   });
   it("never runs past gameweek 38", () => {
     const late = packSpecs(base, 37, { deadline: null });
     expect(late[8].spec).toMatchObject({ from: 37, to: 38 });
-    expect(late[10].spec).toMatchObject({ from: 37, to: 38 });
+    expect(late[10].spec).toMatchObject({ from: 37, to: 37 });
   });
   it("every image keeps only the user's size, theme, handle and accent, and survives the link round trip", () => {
     for (const { spec } of specs) {
@@ -245,5 +245,27 @@ describe("loading the data a graphic needs (so the packs never depend on what th
 
   it("a failed request fails the load (the pack then says it could not load the data)", async () => {
     await expect(loadGraphicData(spec({ template: "league-table" }), ctx, async () => { throw new Error("offline"); })).rejects.toThrow("offline");
+  });
+});
+
+describe("Player Projections default range", () => {
+  const range = { from: 9, to: 13 };
+  it("is one gameweek (the first of the default range) when none is chosen", () => {
+    const r = resolveGameweeks({ template: "player-projections", from: 0, to: 0 }, range);
+    expect([r.from, r.to, r.gameweeks, r.gwLabel]).toEqual([9, 9, [9], "GW9"]);
+  });
+  it("follows a chosen first gameweek, still one gameweek", () => {
+    const r = resolveGameweeks({ template: "player-projections", from: 11, to: 0 }, range);
+    expect([r.from, r.to]).toEqual([11, 11]);
+  });
+  it("still honours a range the user chose", () => {
+    const r = resolveGameweeks({ template: "player-projections", from: 9, to: 12 }, range);
+    expect([r.from, r.to]).toEqual([9, 12]);
+  });
+  it("leaves the other templates on the default range", () => {
+    const r = resolveGameweeks({ template: "team-projections", from: 0, to: 0 }, range);
+    expect([r.from, r.to]).toEqual([9, 13]);
+    const spec = resolveGameweeks({ from: 0, to: 0 }, range);
+    expect([spec.from, spec.to]).toEqual([9, 13]);
   });
 });

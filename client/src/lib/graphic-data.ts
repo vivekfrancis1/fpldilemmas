@@ -110,9 +110,11 @@ export interface ResolvedGameweeks {
   singleGw: number;
 }
 
-export function resolveGameweeks(spec: Pick<GraphicSpec, "from" | "to">, defaultRange: { from: number; to: number }): ResolvedGameweeks {
+export function resolveGameweeks(spec: Pick<GraphicSpec, "from" | "to"> & Partial<Pick<GraphicSpec, "template">>, defaultRange: { from: number; to: number }): ResolvedGameweeks {
   const from = spec.from || defaultRange.from;
-  const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultRange.to));
+  // Player Projections defaults to the one gameweek; a range only when the user picks one
+  const defaultTo = spec.template === "player-projections" ? from : defaultRange.to;
+  const to = Math.min(from + MAX_RANGE_GAMEWEEKS - 1, Math.max(from, spec.to || defaultTo));
   return { from, to, gameweeks: Array.from({ length: to - from + 1 }, (_, i) => from + i), gwLabel: gameweekLabel(from, to), singleGw: from };
 }
 

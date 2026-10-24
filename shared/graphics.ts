@@ -1885,7 +1885,7 @@ export function packSpecs(
     predictions: { from: gameweek, to: gameweek },
     "team-goals": { from: gameweek, to: ahead, metric: "goals-for" },
     "team-cs": { from: gameweek, to: ahead, metric: "clean-sheets" },
-    "player-projections": { from: gameweek, to: ahead },
+    "player-projections": { from: gameweek, to: gameweek },
   };
   return expandPages(GAMEWEEK_PACK, "predictions", options.matchPages, (item) => ({ item, spec: { ...common, template: item.template, ...overrides[item.id] } }));
 }
