@@ -144,7 +144,7 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-3">
                             <h3 className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300"><Sparkles className="h-4 w-4" /> Your differentials</h3>
-                            <p className="text-xs text-gray-500">Owned by under 25% of the league</p>
+                            <p className="text-xs text-gray-500">Owned by under 50% of the league</p>
                             {data.you.differentials.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70">{data.you.differentials.map((p) => <PlayerLine key={p.playerId} p={p} />)}</ul>}
                           </div>
                           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
@@ -155,7 +155,7 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
                         </div>
                         <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-3">
                           <h3 className="flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><ShieldAlert className="h-4 w-4" /> Threats</h3>
-                          <p className="text-xs text-gray-500">Players you don't own that fewer than 25% of the league do, with their points and every rival who holds them. Best-ranked rival first</p>
+                          <p className="text-xs text-gray-500">Owned by more than 25% of the league, but not by you. Most owned first, with their points and every manager who holds them</p>
                           {data.you.threats.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70" data-testid="list-threats">{data.you.threats.map((t) => <ThreatLine key={t.playerId} t={t} />)}</ul>}
                         </div>
                       </>
