@@ -28,7 +28,8 @@ import {
   playerTotalPointsWindows,
   playerTotalPointsSnapshots,
   userActivityLogs,
-  blendEligiblePlayers
+  blendEligiblePlayers,
+  playerDetailedPositions
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -8379,6 +8380,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to reset goal scored settings",
         message: error instanceof Error ? error.message : "Unknown error",
       });
+    }
+  });
+
+  // Detailed positions (Left-back, Defensive midfield, Left winger...) per FPL player, from FotMob (scripts/load-detailed-positions.ts)
+  app.get("/api/player-detailed-positions", async (_req, res) => {
+    try {
+      const rows = await db.select().from(playerDetailedPositions).orderBy(playerDetailedPositions.fplPlayerId);
+      res.set("Cache-Control", "public, max-age=3600");
+      res.json(rows.map((r) => ({
+        fplPlayerId: r.fplPlayerId,
+        fplPosition: r.fplPosition,
+        mainPosition: r.mainPosition,
+        mainPositionLabel: r.mainPositionLabel,
+        otherPositions: r.otherPositions,
+        outOfPosition: r.outOfPosition,
+      })));
+    } catch (error) {
+      console.error("Error fetching detailed positions:", error);
+      res.status(500).json({ error: "Failed to fetch detailed positions" });
     }
   });
 

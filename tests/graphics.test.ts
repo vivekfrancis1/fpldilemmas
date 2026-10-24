@@ -510,6 +510,27 @@ describe("buildPredictedLineup", () => {
     expect(l.rows[3].players.map((p) => p.id)).toEqual([31, 32]);
   });
 
+  it("with detailed positions: players are laid out by their real position, tokens carry it, and the formation follows", () => {
+    // team 1 again, but 11 (FPL DEF) is a left winger and 21 (FPL MID) a left-back; 31/32 are strikers
+    const detailed = new Map<number, string[]>([
+      [1, ["GK"]], [11, ["LW", "LB"]], [12, ["CB"]], [13, ["CB"]], [14, ["RB"]], [15, ["LB"]],
+      [21, ["LB", "LM"]], [22, ["CM"]], [23, ["CM"]], [24, ["RM"]], [25, ["CM"]], [31, ["ST"]], [32, ["ST"]], [33, ["ST"]],
+    ]);
+    const l = run({ detailedPositions: detailed });
+    const flat = l.rows.flatMap((r) => r.players);
+    expect(flat).toHaveLength(11);
+    const keyOf = (id: number) => l.rows.find((r) => r.players.some((p) => p.id === id))?.position;
+    expect(keyOf(11)).toBe("FWD");
+    expect(l.rows.find((r) => r.position === "FWD")!.players.map((p) => p.id)[0]).toBe(11);
+    expect(flat.find((p) => p.id === 11)?.role).toBe("LW");
+    expect(l.formation).toBe(l.rows.filter((r) => r.position !== "GKP").map((r) => r.players.length).join("-"));
+  });
+
+  it("without detailed positions the old FPL-position layout is kept", () => {
+    expect(run().rows.map((r) => r.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
+    expect(run().rows.flatMap((r) => r.players).every((p) => p.role === null)).toBe(true);
+  });
+
   it("only uses the chosen team and the chosen gameweek's expected minutes", () => {
     const l = run();
     expect(l.rows.flatMap((r) => r.players).map((p) => p.id)).not.toContain(99);

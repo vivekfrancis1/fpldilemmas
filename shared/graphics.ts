@@ -6,6 +6,7 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
+import { layoutLineup, type LineKey } from "./lineup-layout";
 import type { TableContent, TeamHistoryContent, TeamProjectionsContent } from "./graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
@@ -764,6 +765,8 @@ export interface LineupToken {
   flag: "injured" | "doubtful" | null;
   /** Chance of playing (0-99) when FPL gives one below 100, otherwise null. */
   chance: number | null;
+  /** Main detailed position (LB, CB, CDM, CAM, LW, ST...) when known, otherwise null. */
+  role: string | null;
 }
 
 export interface PredictedLineupContent {
@@ -774,7 +777,8 @@ export interface PredictedLineupContent {
   /** "4-4-2"; null when no legal XI can be formed from the players with expected minutes. */
   formation: string | null;
   complete: boolean;
-  rows: Array<{ position: GraphicPosition; players: LineupToken[] }>;
+  /** Lines back to front: GKP, DEF, MID, AM (attacking midfield), FWD; empty lines are left out. */
+  rows: Array<{ position: LineKey; players: LineupToken[] }>;
   /** Next players by expected minutes after the XI (at most BENCH_SIZE). */
   bench: LineupToken[];
   fixtures: Array<{ opponent: string; isHome: boolean }>;
@@ -800,8 +804,10 @@ export function buildPredictedLineup(input: {
   teamShortById: Map<number, string>;
   teamNameById: Map<number, string>;
   fixtures: CompareFixtureInput[];
+  /** Detailed position codes by FPL player id, main position first. Players missing from it fall back on their FPL position. */
+  detailedPositions?: Map<number, string[]>;
 }): PredictedLineupContent {
-  const { teamId, gameweek, elements, projections, teamShortById, teamNameById, fixtures } = input;
+  const { teamId, gameweek, elements, projections, teamShortById, teamNameById, fixtures, detailedPositions } = input;
   const teamShort = teamShortById.get(teamId) ?? "";
   const projectionById = new Map(projections.map((p) => [p.playerId, p]));
 
@@ -823,6 +829,7 @@ export function buildPredictedLineup(input: {
       xMins,
       flag: e.status === "i" ? "injured" : e.status === "d" ? "doubtful" : null,
       chance,
+      role: detailedPositions?.get(e.id)?.[0] ?? null,
     });
     // rank on the unrounded minutes so near-ties are decided by the real forecast
     candidates.push({ id: e.id, elementType: TYPE_BY_POSITION[position], xPts: raw });
@@ -840,19 +847,16 @@ export function buildPredictedLineup(input: {
     complete = false;
   }
   const startingIds = new Set(starting.map((p) => p.id));
-  const rows = ROW_ORDER.map((position) => ({
-    position,
-    players: starting.filter((p) => p.position === position).sort(byMinutes),
-  }));
+  const layout = layoutLineup(starting.map((p) => ({ id: p.id, role: p.role, fallback: p.position, xMins: p.xMins })));
+  const rows = layout.rows.map((r) => ({ position: r.key, players: r.ids.map((id) => tokens.get(id)!) }));
   const bench = Array.from(tokens.values()).filter((p) => !startingIds.has(p.id)).sort(byMinutes).slice(0, BENCH_SIZE);
-  const count = (pos: GraphicPosition) => rows.find((r) => r.position === pos)!.players.length;
   const gw = fixturesForGameweeks(teamId, fixtures, [gameweek])[0].fixtures;
   return {
     teamId,
     teamShort,
     teamName: teamNameById.get(teamId) ?? teamShort,
     gameweek,
-    formation: complete ? `${count("DEF")}-${count("MID")}-${count("FWD")}` : null,
+    formation: complete ? layout.formation : null,
     complete,
     rows,
     bench,

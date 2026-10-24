@@ -196,6 +196,7 @@ describe("loading the data a graphic needs (so the packs never depend on what th
     expect(graphicDataRequests(spec({ template: "gw-top-scorers", from: 7, to: 7 }), ctx)).toEqual(["/api/event/7/live"]);
     expect(graphicDataRequests(spec({ template: "team-of-the-week" }), ctx)).toEqual(["/api/event/7/live"]); // defaults to the latest finished gameweek
     expect(graphicDataRequests(spec({ template: "player-history", players: [7] }), ctx)).toEqual(["/api/element-summary/7"]);
+    expect(graphicDataRequests(spec({ template: "predicted-lineup", teams: [1] }), ctx)).toEqual(["/api/player-detailed-positions"]);
   });
 
   it("fetches each of them once and puts the results where the graphic builders look", async () => {
@@ -226,6 +227,11 @@ describe("loading the data a graphic needs (so the packs never depend on what th
     expect(live.liveElements).toHaveLength(1);
     const hist = await loadGraphicData(spec({ template: "player-history", players: [7] }), ctx, async () => ({ history: [{ round: 7 }] }));
     expect(hist.playerHistory).toEqual({ playerId: 7, history: [{ round: 7 }] });
+    const lineup = await loadGraphicData(spec({ template: "predicted-lineup", teams: [1] }), ctx, async () => [
+      { fplPlayerId: 7, mainPosition: "LB", otherPositions: ["CB"] },
+      { fplPlayerId: 8, mainPosition: "ST", otherPositions: [] },
+    ]);
+    expect(lineup.detailedPositions).toEqual(new Map([[7, ["LB", "CB"]], [8, ["ST"]]]));
   });
 
   it("leaves the context as it was when a graphic needs nothing, and does not change the original", async () => {

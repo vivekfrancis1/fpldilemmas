@@ -467,9 +467,11 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
       >
         {warn ? "⚠ " : ""}{p.name}
       </div>
-      <div style={{ fontSize: minFont, fontWeight: 800, color: warn ? AMBER : "#ffffff", textShadow: "0 1px 3px rgba(0,0,0,0.7)", marginTop: 2 }}>
-        {p.xMins}&apos;{p.chance !== null ? ` · ${p.chance}%` : ""}
-      </div>
+      {p.chance !== null && (
+        <div style={{ fontSize: minFont, fontWeight: 800, color: warn ? AMBER : "#ffffff", textShadow: "0 1px 3px rgba(0,0,0,0.7)", marginTop: 2 }}>
+          {p.chance}%
+        </div>
+      )}
     </div>
   );
 }
@@ -529,7 +531,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
         {lineup.bench.map((p) => (
           <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, background: theme.panel, borderRadius: 999, padding: land ? "4px 12px" : "6px 16px", fontSize: land ? 16 : 22, fontWeight: 800 }}>
             <span>{p.flag ? "⚠ " : ""}{p.name}</span>
-            <span style={{ color: p.flag ? AMBER : theme.muted, fontWeight: 700 }}>{p.position} · {p.xMins}&apos;{p.chance !== null ? ` · ${p.chance}%` : ""}</span>
+            <span style={{ color: p.flag ? AMBER : theme.muted, fontWeight: 700 }}>{p.role ?? p.position}{p.chance !== null ? ` · ${p.chance}%` : ""}</span>
           </div>
         ))}
       </div>
@@ -537,7 +539,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
   );
   const note = (
     <div style={{ fontSize: land ? 14 : 18, color: theme.muted, fontWeight: 600, lineHeight: 1.3, flexShrink: 0 }}>
-      Based on our expected minutes, which include injury news. Not official team news. Minutes are capped at 90.
+      Based on our expected minutes, which include injury news. Not official team news. Players sit in their usual position (FotMob).
     </div>
   );
 

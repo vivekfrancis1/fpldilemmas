@@ -97,6 +97,8 @@ export interface GraphicDataContext {
   nextGameweek: number;
   /** Team graphics: the response of the one request `teamGraphicUrl` names for the graphic, with that URL; undefined while loading. */
   teamData?: { url: string; data: any[] };
+  /** Predicted Lineup: detailed position codes by FPL player id, main position first; undefined while loading (empty = none known). */
+  detailedPositions?: Map<number, string[]>;
 }
 
 export interface ResolvedGameweeks {
@@ -177,8 +179,8 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
     }
     case "predicted-lineup": {
       if (spec.teams.length < 1) return { data: null, problem: "Pick a club to predict its lineup." };
-      if (!fixtures || !projections) return { data: null, problem: null };
-      const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any });
+      if (!fixtures || !projections || !ctx.detailedPositions) return { data: null, problem: null };
+      const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any, detailedPositions: ctx.detailedPositions });
       return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
     }
     case "player-news": {
@@ -359,6 +361,7 @@ export function makeGraphicDataContext(input: {
   matchModelGw?: number;
   playerHistory?: { playerId: number; history: HistoryRowInput[] };
   teamData?: { url: string; data: any[] };
+  detailedPositions?: Map<number, string[]>;
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
@@ -381,7 +384,15 @@ export function makeGraphicDataContext(input: {
     playerHistory: input.playerHistory,
     nextGameweek: events.find((e) => e.is_next)?.id ?? 39,
     teamData: input.teamData,
+    detailedPositions: input.detailedPositions,
   };
+}
+
+export const DETAILED_POSITIONS_URL = "/api/player-detailed-positions";
+
+/** The response of DETAILED_POSITIONS_URL as the lineup wants it: FPL player id -> position codes, main position first. */
+export function detailedPositionsFromResponse(rows: Array<{ fplPlayerId: number; mainPosition: string; otherPositions?: string[] }> | null | undefined): Map<number, string[]> {
+  return new Map((rows ?? []).map((r) => [r.fplPlayerId, [r.mainPosition, ...(r.otherPositions ?? [])]]));
 }
 
 // ---------- loading what a graphic needs ----------
@@ -408,6 +419,7 @@ export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext):
     if (gw > 0) urls.push(`/api/event/${gw}/live`);
   }
   if (spec.template === "player-history" && spec.players[0]) urls.push(`/api/element-summary/${spec.players[0]}`);
+  if (spec.template === "predicted-lineup") urls.push(DETAILED_POSITIONS_URL);
   return urls;
 }
 
@@ -440,5 +452,6 @@ export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext
   if (spec.template === "player-history" && spec.players[0]) {
     next.playerHistory = { playerId: spec.players[0], history: byUrl.get(`/api/element-summary/${spec.players[0]}`)?.history ?? [] };
   }
+  if (spec.template === "predicted-lineup") next.detailedPositions = detailedPositionsFromResponse(byUrl.get(DETAILED_POSITIONS_URL));
   return next;
 }

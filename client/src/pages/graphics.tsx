@@ -117,7 +117,7 @@ const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-viol
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
-import { computeGraphicData, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 
@@ -686,6 +686,17 @@ export default function GraphicsPage() {
     staleTime: 5 * 60 * 1000,
     enabled: !!historyPlayerId,
   });
+  // Predicted Lineup: each player's detailed position (FotMob), so the XI is drawn where they actually play. If the request
+  // fails the lineup falls back on FPL's positions rather than waiting forever.
+  const { data: detailedPositionRows, isError: detailedPositionsFailed } = useQuery<Array<{ fplPlayerId: number; mainPosition: string; otherPositions: string[] }>>({
+    queryKey: [DETAILED_POSITIONS_URL],
+    staleTime: 60 * 60 * 1000,
+    enabled: spec.template === "predicted-lineup",
+  });
+  const detailedPositions = useMemo(
+    () => (detailedPositionRows ? detailedPositionsFromResponse(detailedPositionRows) : detailedPositionsFailed ? new Map<number, string[]>() : undefined),
+    [detailedPositionRows, detailedPositionsFailed],
+  );
   // Team graphics: the one request each is built from (the same URL the pack uses)
   const nextGw = useMemo(() => ((bootstrap?.events ?? []) as Array<{ id: number; is_next?: boolean }>).find((e) => e.is_next)?.id ?? 39, [bootstrap?.events]);
   const teamUrl = teamGraphicUrl(spec, defaultRange, nextGw);
@@ -775,8 +786,9 @@ export default function GraphicsPage() {
       matchModelGw: matchModel ? matchGw : undefined,
       playerHistory: historyPlayerId && historyData?.history ? { playerId: historyPlayerId, history: historyData.history } : undefined,
       teamData: teamUrl && teamResponse ? { url: teamUrl, data: teamResponse } : undefined,
+      detailedPositions,
     }),
-    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData, teamUrl, teamResponse],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData, teamUrl, teamResponse, detailedPositions],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
