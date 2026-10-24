@@ -192,3 +192,51 @@ export function deadlineCard(input: { gameweek: number; deadlineLabel: string })
     footer: `${SITE} · Set your team before the deadline`,
   };
 }
+
+// ---------- Rate My Team ----------
+
+type FlagPlayer = { name: string; gameweeks: number[] };
+
+/** The "Things to check" list from Rate My Team: injuries, blanks, TBC fixtures and doubles in the squad. */
+export function thingsToCheckCard(input: {
+  gwLabel: string;
+  flags: {
+    availability: Array<{ name: string; status: string; chanceOfPlayingNextRound: number | null }>;
+    blanks: FlagPlayer[];
+    doubles: FlagPlayer[];
+    tbc: FlagPlayer[];
+  };
+  /** Most rows the card shows before counting the rest (default 10, so it fits the square). */
+  limit?: number;
+}): ShareCard {
+  const { gwLabel, flags, limit = 10 } = input;
+  const gws = (list: number[]) => list.map((g) => `GW${g}`).join(", ");
+  const fixtureRows = (list: FlagPlayer[]): ShareCardRow[] => list.map((p) => ({ left: truncateName(p.name, 22), right: gws(p.gameweeks) }));
+  const kinds: Array<{ heading: string; rows: ShareCardRow[] }> = [
+    {
+      heading: "Injuries and suspensions",
+      rows: flags.availability.map((a) => ({ left: truncateName(a.name, 22), right: statusLabel(a.status, a.chanceOfPlayingNextRound) })),
+    },
+    { heading: "Blank gameweek", rows: fixtureRows(flags.blanks) },
+    { heading: "Fixture TBC", rows: fixtureRows(flags.tbc) },
+    { heading: "Double gameweek", rows: fixtureRows(flags.doubles) },
+  ].filter((k) => k.rows.length > 0);
+
+  const total = kinds.reduce((n, k) => n + k.rows.length, 0);
+  const sections: ShareCardSection[] = [];
+  let left = limit;
+  for (const kind of kinds) {
+    if (left <= 0) break;
+    const rows = kind.rows.slice(0, left);
+    left -= rows.length;
+    sections.push({ heading: kind.heading, rows });
+  }
+  if (total > limit) sections[sections.length - 1].rows.push({ left: `+${total - limit} more`, right: "" });
+
+  return {
+    title: "Things to check",
+    subtitle: `Injuries, blanks and doubles in my squad · ${gwLabel}`,
+    sections: sections.length ? sections : [{ rows: [{ left: "No injury flags, blank or double gameweeks in your squad", right: "" }] }],
+    footer: `${SITE} · FPL's own status and fixture list; it can change before the deadline`,
+  };
+}

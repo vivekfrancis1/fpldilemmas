@@ -9,6 +9,7 @@ import {
   priceWatchCard,
   shareFileName,
   statusLabel,
+  thingsToCheckCard,
   truncateName,
 } from "../shared/share-cards";
 
@@ -210,5 +211,47 @@ describe("deadlineCard", () => {
     expect(c.title).toBe("Gameweek 8 deadline");
     expect(c.sections[0].rows).toContainEqual({ left: "Deadline", right: "Friday 23 Oct, 23:00" });
     expect(c.footer).toContain("fpldilemmas.com");
+  });
+});
+
+describe("thingsToCheckCard", () => {
+  const av = (name: string, status: string, chance: number | null) => ({ playerId: 1, name, status, chanceOfPlayingNextRound: chance, news: "x" });
+  const fx = (name: string, gameweeks: number[]) => ({ playerId: 2, name, gameweeks });
+  const none = { availability: [], blanks: [], doubles: [], tbc: [] };
+
+  it("titles the card Things to check for the horizon, and cites the site and FPL", () => {
+    const c = thingsToCheckCard({ gwLabel: "GW9-14", flags: none });
+    expect(c.title).toBe("Things to check");
+    expect(c.subtitle).toContain("GW9-14");
+    expect(c.footer).toContain("fpldilemmas.com");
+  });
+
+  it("one section per kind of flag, only for kinds that have players, in the order injuries, blanks, TBC, doubles", () => {
+    const c = thingsToCheckCard({
+      gwLabel: "GW9-14",
+      flags: { availability: [av("Salah", "d", 75)], blanks: [fx("Haaland", [10])], doubles: [fx("Saka", [11, 12])], tbc: [fx("Palmer", [13])] },
+    });
+    expect(c.sections.map((s) => s.heading)).toEqual(["Injuries and suspensions", "Blank gameweek", "Fixture TBC", "Double gameweek"]);
+    expect(c.sections[0].rows).toEqual([{ left: "Salah", right: "Doubtful · 75% chance" }]);
+    expect(c.sections[1].rows).toEqual([{ left: "Haaland", right: "GW10" }]);
+    expect(c.sections[3].rows).toEqual([{ left: "Saka", right: "GW11, GW12" }]);
+  });
+
+  it("says so when nothing is flagged, instead of an empty card", () => {
+    const c = thingsToCheckCard({ gwLabel: "GW9-14", flags: none });
+    expect(c.sections).toEqual([{ rows: [{ left: "No injury flags, blank or double gameweeks in your squad", right: "" }] }]);
+  });
+
+  it("shortens long names", () => {
+    const c = thingsToCheckCard({ gwLabel: "GW9", flags: { ...none, availability: [av("Alexander-Arnold-Long-Name-Here", "i", 0)] } });
+    expect(c.sections[0].rows[0].left.length).toBeLessThanOrEqual(22);
+  });
+
+  it("caps the rows so the card fits, counting the rest in the last section shown", () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => av(`P${i}`, "i", 0));
+    const c = thingsToCheckCard({ gwLabel: "GW9", flags: { ...none, availability: many(9), blanks: [fx("A", [9]), fx("B", [9]), fx("C", [9])] }, limit: 10 });
+    const rows = c.sections.flatMap((s) => s.rows);
+    expect(rows).toHaveLength(11);
+    expect(rows[10]).toEqual({ left: "+2 more", right: "" });
   });
 });

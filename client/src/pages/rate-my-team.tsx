@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyNote, HeroPanel, HeroStat, InputPanel, Pill, SectionCard, SegmentedControl, StatusPill, TeamChip, XptsBar } from "@/components/tool-ui";
 import { teamColor } from "@/lib/team-colors";
+import { ShareImageButton } from "@/components/share-image-button";
+import { shareFileName, thingsToCheckCard } from "@shared/share-cards";
 
 interface RmtResponse {
   managerId: number;
@@ -99,7 +101,7 @@ export default function RateMyTeam() {
               <h1 data-testid="text-page-title">Rate My Team</h1>
             </div>
             <p className="fpl-page-subtitle">
-              Your team rating (your points against the best possible team), how you compare with the Top 100 managers, and the best single upgrades.
+              Your team rating (your points against the best possible team), how you compare with the all-time Top 100 managers, and the best single upgrades.
             </p>
           </div>
         </div>
@@ -142,12 +144,12 @@ export default function RateMyTeam() {
                   label={`Team rating · ${gwLabel}`}
                   value={data.rating.percent === null ? "n/a" : `${data.rating.percent}%`}
                   valueTestId="text-rating"
-                  sub={`${data.projectedTotal.toFixed(1)} pts with your best XI, captain and bench order, against ${data.rating.optimalTotal.toFixed(1)} pts for the best possible team`}
+                  sub="Your points as a share of the best possible team's points"
                 />
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Rank among the Top 100 squads</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Rank vs All-time Top 100 Managers' Projected Points</div>
                   {data.rank.rank === null ? (
-                    <div className="mt-2 text-sm text-white/85">No Top 100 squads loaded right now.</div>
+                    <div className="mt-2 text-sm text-white/85">No All-time Top 100 squads loaded right now.</div>
                   ) : (
                     <>
                       <div className="mt-1 text-4xl font-extrabold leading-none tabular-nums sm:text-5xl" data-testid="text-rank">
@@ -159,18 +161,38 @@ export default function RateMyTeam() {
                           <div className="relative h-2.5 rounded-full bg-white/20">
                             <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-300 to-amber-400" style={{ width: `${Math.min(100, (data.projectedTotal / data.rank.best) * 100)}%` }} />
                             {data.rank.average !== null && (
-                              <div className="absolute -top-1 w-0.5 rounded bg-white" style={{ left: `${Math.min(100, (data.rank.average / data.rank.best) * 100)}%`, height: 18 }} title="Top 100 average" />
+                              <div className="absolute -top-1 w-0.5 rounded bg-white" style={{ left: `${Math.min(100, (data.rank.average / data.rank.best) * 100)}%`, height: 18 }} title="All-time Top 100 average" />
                             )}
                           </div>
                           <div className="mt-1.5 text-xs font-medium text-white/75">
-                            Top 100 average {data.rank.average?.toFixed(1)} (marker) · highest {data.rank.best?.toFixed(1)}
+                            Bar: your projected points against the All-time Top 100 highest · marker: their average
                           </div>
                         </div>
                       )}
                     </>
                   )}
                 </div>
-                <HeroStat label={`Bench · ${gwLabel}`} value={data.benchTotal.toFixed(1)} sub="Projected points sitting on your bench" />
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">{`Projected points · ${gwLabel}`}</div>
+                  <dl className="mt-2 space-y-1.5 tabular-nums" data-testid="summary-points">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-sm font-medium text-white/80">Your total</dt>
+                      <dd className="text-2xl font-extrabold leading-none" data-testid="text-total-points">{data.projectedTotal.toFixed(1)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-sm font-medium text-white/80">All-time Top 100 average</dt>
+                      <dd className="text-lg font-bold leading-none" data-testid="text-top100-average">{data.rank.average === null ? "n/a" : data.rank.average.toFixed(1)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-sm font-medium text-white/80">All-time Top 100 highest</dt>
+                      <dd className="text-lg font-bold leading-none" data-testid="text-top100-best">{data.rank.best === null ? "n/a" : data.rank.best.toFixed(1)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-sm font-medium text-white/80">Best possible team</dt>
+                      <dd className="text-lg font-bold leading-none" data-testid="text-optimal-points">{data.rating.optimalTotal.toFixed(1)}</dd>
+                    </div>
+                  </dl>
+                </div>
               </div>
               {data.activeChip && (
                 <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold ring-1 ring-white/25">
@@ -273,7 +295,17 @@ export default function RateMyTeam() {
               </p>
             </SectionCard>
 
-            <SectionCard icon={ShieldAlert} title="Things to check" subtitle={`Injuries, blanks and doubles in your squad over ${gwLabel}`}>
+            <SectionCard
+              icon={ShieldAlert}
+              title="Things to check"
+              subtitle={`Injuries, blanks and doubles in your squad over ${gwLabel}`}
+              action={
+                <ShareImageButton
+                  getCard={() => thingsToCheckCard({ gwLabel, flags: data.flags })}
+                  fileName={shareFileName(["things-to-check", gwLabel])}
+                />
+              }
+            >
               <div className="space-y-2" data-testid="flags">
                 {noFlags && <EmptyNote icon={ShieldCheck}>No injury flags, blank or double gameweeks in your squad over {gwLabel}.</EmptyNote>}
                 {data.flags.availability.map((a) => (
@@ -307,8 +339,8 @@ export default function RateMyTeam() {
             <p className="text-xs text-gray-500">
               Squad as at GW{data.resolvedGameweek}
               {data.activeChip ? ` (${CHIP_LABEL[data.activeChip] ?? data.activeChip} was active; chips are not modelled)` : ""}. Projections are our
-              model's estimates, not guarantees, and are the same ones shown on the Points page. The Top 100 squads are
-              from our fixed all-time list, as at the last completed gameweek, scored with the same method.
+              model's estimates, not guarantees, and are the same ones shown on the Points page. The All-time Top 100 squads are
+              from our fixed list (FPL Research skill rating), as at the last completed gameweek, scored with the same method.
             </p>
           </div>
         )}
