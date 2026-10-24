@@ -116,9 +116,9 @@ export default function LeagueOwnershipPage() {
     },
   });
 
-  // Private and invitational leagues first, then the system ones (Overall, country, club fans)
+  // Only the manager's private (invitational) leagues; system leagues (Overall, country, club fans) are left out
   const leagues = useMemo(
-    () => [...(leagueList ?? [])].sort((a, b) => Number(b.league_type === "x") - Number(a.league_type === "x") || a.name.localeCompare(b.name)),
+    () => (leagueList ?? []).filter((l) => l.league_type === "x").sort((a, b) => a.name.localeCompare(b.name)),
     [leagueList],
   );
 
@@ -126,7 +126,7 @@ export default function LeagueOwnershipPage() {
   useEffect(() => {
     if (!leagueList || restored.current) return;
     restored.current = true;
-    if (selectedLeague && !leagueList.some((l) => String(l.id) === selectedLeague)) {
+    if (selectedLeague && !leagues.some((l) => String(l.id) === selectedLeague)) {
       setCustomMode(true);
       setCustomInput(selectedLeague);
     }
@@ -200,7 +200,7 @@ export default function LeagueOwnershipPage() {
                 <SelectTrigger className="h-11 rounded-xl text-base" data-testid="select-league"><SelectValue placeholder="Choose a league" /></SelectTrigger>
                 <SelectContent>
                   {leagues.map((l) => (
-                    <SelectItem key={l.id} value={String(l.id)}>{l.name} · {l.id}</SelectItem>
+                    <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
                   ))}
                   <SelectItem value="other">Another league (enter its ID)…</SelectItem>
                 </SelectContent>
