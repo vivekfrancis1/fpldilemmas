@@ -1645,11 +1645,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const rows: any[] = league.rows;
 
-      const managers: Array<{ managerId: number; picks: any[] | null }> = [];
+      const managers: Array<{ managerId: number; picks: any[] | null; name?: string; rank?: number }> = [];
       for (let i = 0; i < rows.length; i += 10) {
         const batch = rows.slice(i, i + 10);
         const got = await Promise.all(batch.map((r) => fetchFinishedPicks(r.entry, gameweek)));
-        batch.forEach((r, k) => managers.push({ managerId: r.entry, picks: got[k] }));
+        batch.forEach((r, k) => managers.push({ managerId: r.entry, picks: got[k], name: r.entry_name, rank: r.rank }));
       }
 
       let you: { managerId: number; picks: any[] | null } | undefined;

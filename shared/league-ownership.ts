@@ -7,6 +7,9 @@ import { POSITION_SHORT } from "./captaincy-matrix";
 export interface LeagueManager {
   managerId: number;
   picks: Array<{ element: number; is_captain?: boolean }> | null | undefined;
+  /** Display name and league rank, used to say who holds a threat. Optional. */
+  name?: string;
+  rank?: number;
 }
 
 export interface LeagueElement {
@@ -33,6 +36,18 @@ export interface OwnedPlayer {
   percent: number;
 }
 
+export interface ThreatOwner {
+  managerId: number;
+  name?: string;
+  rank?: number;
+}
+
+/** A player you don't own that only a few of your rivals do. */
+export interface Threat extends OwnedPlayer {
+  /** Managers who hold him, best league rank first. */
+  owners: ThreatOwner[];
+}
+
 export interface LeagueOwnership {
   managersRequested: number;
   managersCounted: number;
@@ -49,6 +64,11 @@ export interface LeagueOwnership {
     differentials: OwnedPlayer[];
     /** Players at least gapMin % of the league own that you don't. Most owned first. */
     gaps: OwnedPlayer[];
+    /**
+     * Players you don't own that at least one but fewer than differentialMax % of the league do (your rivals'
+     * differentials). The player held by the best-ranked rival first, then fewest owners; at most threatsMax.
+     */
+    threats: Threat[];
   };
 }
 
@@ -62,8 +82,10 @@ export function buildLeagueOwnership(input: {
   differentialMax?: number;
   /** A gap is owned by AT LEAST this % of the league (inclusive). Default 50. */
   gapMin?: number;
+  /** How many threats to return. Default 12. */
+  threatsMax?: number;
 }): LeagueOwnership {
-  const { managers, elements, teams, topN = 30, you, differentialMax = 25, gapMin = 50 } = input;
+  const { managers, elements, teams, topN = 30, you, differentialMax = 25, gapMin = 50, threatsMax = 12 } = input;
   const complete = managers.filter((m) => Array.isArray(m.picks) && m.picks.length === 15);
   const counted = complete.length;
 
@@ -71,10 +93,14 @@ export function buildLeagueOwnership(input: {
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
   const owned = new Map<number, number>();
+  const ownersOf = new Map<number, ThreatOwner[]>();
   const captained = new Map<number, number>();
   for (const m of complete) {
     for (const p of m.picks!) {
       owned.set(p.element, (owned.get(p.element) ?? 0) + 1);
+      const list = ownersOf.get(p.element) ?? [];
+      list.push({ managerId: m.managerId, name: m.name, rank: m.rank });
+      ownersOf.set(p.element, list);
       if (p.is_captain) captained.set(p.element, (captained.get(p.element) ?? 0) + 1);
     }
   }
@@ -121,7 +147,7 @@ export function buildLeagueOwnership(input: {
     const hasFullSquad = Array.isArray(you.picks) && you.picks.length === 15;
     const inSample = complete.some((m) => m.managerId === you.managerId);
     if (!hasFullSquad || counted === 0) {
-      youResult = { managerId: you.managerId, hasFullSquad, inSample, differentials: [], gaps: [] };
+      youResult = { managerId: you.managerId, hasFullSquad, inSample, differentials: [], gaps: [], threats: [] };
     } else {
       const yours = new Set(you.picks!.map((p) => p.element));
       // exact comparisons on counts (no rounding): ownedBy/counted < max%  <=>  ownedBy*100 < max*counted
@@ -135,7 +161,24 @@ export function buildLeagueOwnership(input: {
         .map(toOwned)
         .filter((p): p is OwnedPlayer => !!p)
         .sort(byOwnedDesc);
-      youResult = { managerId: you.managerId, hasFullSquad, inSample, differentials, gaps };
+      const byRank = (a: ThreatOwner, b: ThreatOwner) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || a.managerId - b.managerId;
+      const threats: Threat[] = Array.from(owned.keys())
+        .filter((id) => !yours.has(id) && (owned.get(id) ?? 0) * 100 < differentialMax * counted)
+        .map((id) => {
+          const base = toOwned(id);
+          if (!base) return null;
+          const owners = [...(ownersOf.get(id) ?? [])].sort(byRank).map((o) => {
+            const out: ThreatOwner = { managerId: o.managerId };
+            if (o.name !== undefined) out.name = o.name;
+            if (o.rank !== undefined) out.rank = o.rank;
+            return out;
+          });
+          return { ...base, owners };
+        })
+        .filter((t): t is Threat => !!t)
+        .sort((a, b) => byRank(a.owners[0], b.owners[0]) || a.ownedBy - b.ownedBy || a.playerId - b.playerId)
+        .slice(0, threatsMax);
+      youResult = { managerId: you.managerId, hasFullSquad, inSample, differentials, gaps, threats };
     }
   }
 

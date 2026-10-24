@@ -91,6 +91,51 @@ describe("buildLeagueOwnership", () => {
       expect(out.you!.gaps).toEqual([]);
     });
 
+    describe("threats (rivals' differentials)", () => {
+      // m1 (rank 1) holds base15, m4 (rank 4, "Dana") holds 99 and 98 that nobody else has.
+      const named = managers.map((m) => ({ ...m, name: `M${m.managerId}`, rank: m.managerId }));
+      const youM1 = { managerId: 1, picks: managers[0].picks };
+
+      it("threats are players you don't own that fewer than 25% of the league hold, with who holds them (boundary exclusive)", () => {
+        const none = run({ managers: named, you: youM1 });
+        expect(none.you!.threats).toEqual([]); // 99 and 98 sit at exactly 25%
+        const out = run({ managers: named, you: youM1, differentialMax: 30 });
+        expect(out.you!.threats.map((t) => t.playerId).sort((a, b) => a - b)).toEqual([98, 99]);
+        const t99 = out.you!.threats.find((t) => t.playerId === 99)!;
+        expect(t99.ownedBy).toBe(1);
+        expect(t99.owners).toEqual([{ managerId: 4, name: "M4", rank: 4 }]);
+      });
+
+      it("never lists a player you own, or one nobody in the league owns", () => {
+        const out = run({ managers: named, you: { managerId: 4, picks: managers[3].picks }, differentialMax: 30 });
+        expect(out.you!.threats).toEqual([]); // you hold 99 and 98 yourself
+      });
+
+      it("sorts by the best-ranked owner, then fewest owners, and honours threatsMax", () => {
+        const ms = [
+          { managerId: 1, name: "A", rank: 1, picks: squad(base15, 31) },
+          { managerId: 2, name: "B", rank: 2, picks: squad(base15.map((i) => (i === 33 ? 99 : i)), 31) },
+          { managerId: 3, name: "C", rank: 3, picks: squad(base15.map((i) => (i === 33 ? 98 : i)), 31) },
+          { managerId: 4, name: "D", rank: 4, picks: squad(base15.map((i) => (i === 33 ? 98 : i === 25 ? 99 : i)), 31) },
+          { managerId: 5, name: "You", rank: 5, picks: squad(base15, 31) },
+        ];
+        const out = run({ managers: ms, you: { managerId: 5, picks: ms[4].picks }, differentialMax: 60 });
+        // 99 held by B(2) and D(4), 98 held by C(3) and D(4): 99 has the better-ranked owner
+        expect(out.you!.threats.map((t) => t.playerId)).toEqual([99, 98]);
+        expect(out.you!.threats[0].owners.map((o) => o.name)).toEqual(["B", "D"]);
+        expect(run({ managers: ms, you: { managerId: 5, picks: ms[4].picks }, differentialMax: 60, threatsMax: 1 }).you!.threats.map((t) => t.playerId)).toEqual([99]);
+      });
+
+      it("owners without a name or rank are still listed by id, after ranked ones", () => {
+        const out = run({ you: youM1, differentialMax: 30 });
+        expect(out.you!.threats.find((t) => t.playerId === 99)!.owners).toEqual([{ managerId: 4 }]);
+      });
+
+      it("is empty when you have no full squad", () => {
+        expect(run({ managers: named, you: { managerId: 1, picks: [pick(1)] } }).you!.threats).toEqual([]);
+      });
+    });
+
     it("flags whether you are one of the managers counted", () => {
       expect(run({ you: { managerId: 4, picks: managers[3].picks } }).you!.inSample).toBe(true);
     });
@@ -173,6 +218,14 @@ describe("GET /api/league-ownership/:leagueId (against FPL's own data, league 31
     expect(status).toBe(200);
     for (const d of body.you.differentials) expect(d.ownedBy * 100).toBeLessThan(25 * body.managersCounted);
     for (const g of body.you.gaps) expect(g.ownedBy * 100).toBeGreaterThanOrEqual(50 * body.managersCounted);
+    const yours = new Set(body.you.differentials.map((d: any) => d.playerId));
+    expect(body.you.threats.length).toBeLessThanOrEqual(12);
+    for (const t of body.you.threats) {
+      expect(t.ownedBy * 100).toBeLessThan(25 * body.managersCounted);
+      expect(t.owners).toHaveLength(t.ownedBy);
+      expect(t.owners[0].name).toBeTruthy();
+      expect(yours.has(t.playerId)).toBe(false);
+    }
   });
 
   it("rejects bad input: non-numeric league 400, unknown league 404, bad/unfinished gameweek 400, bad manager 400", async () => {
