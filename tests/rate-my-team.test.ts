@@ -4,6 +4,8 @@ import {
   rankAmongField,
   findUpgrades,
   squadFlags,
+  bestSquad,
+  teamRating,
   type RmtPlayer,
 } from "../shared/rate-my-team";
 
@@ -233,6 +235,22 @@ describe("GET /api/rate-my-team/:managerId (consistency with the data it is buil
     expect(rmt.rank.rank).toBeLessThanOrEqual(complete + 1);
   });
 
+  it("rating is your headline total as a percentage of a legal, in-budget best squad that is never below yours", () => {
+    const r = rmt.rating;
+    expect(r.yourTotal).toBeCloseTo(rmt.projectedTotal, 6);
+    expect(r.optimalTotal).toBeGreaterThanOrEqual(r.yourTotal - 1e-9);
+    expect(r.percent).toBe(Math.min(100, Math.round((r.yourTotal / r.optimalTotal) * 100)));
+    expect(r.percent).toBeGreaterThan(0);
+    expect(r.percent).toBeLessThanOrEqual(100);
+    const sq = r.optimalSquad;
+    expect(sq).toHaveLength(15);
+    for (const [pos, n] of [["GKP", 2], ["DEF", 5], ["MID", 5], ["FWD", 3]] as const) expect(sq.filter((p: any) => p.position === pos)).toHaveLength(n);
+    expect(sq.reduce((a: number, p: any) => a + p.price, 0)).toBeLessThanOrEqual(r.budget);
+    const perClub = new Map<string, number>();
+    for (const p of sq) perClub.set(p.teamShort, (perClub.get(p.teamShort) ?? 0) + 1);
+    for (const n of perClub.values()) expect(n).toBeLessThanOrEqual(3);
+  });
+
   it("rejects a non-numeric id with 400 and an unknown manager with 404", async () => {
     expect((await getJson("/api/rate-my-team/abc")).status).toBe(400);
     expect((await getJson("/api/rate-my-team/999999999")).status).toBe(404);
@@ -242,5 +260,92 @@ describe("GET /api/rate-my-team/:managerId (consistency with the data it is buil
     for (const bad of ["0", "-1", "abc", "2.5", "99"]) {
       expect((await getJson(`/api/rate-my-team/${MANAGER}?horizon=${bad}`)).status).toBe(400);
     }
+  });
+});
+
+
+describe("bestSquad (the optimal squad within a budget)", () => {
+  const squadCost = (sq: RmtPlayer[]) => sq.reduce((s, p) => s + p.price, 0);
+  const quota = (sq: RmtPlayer[], t: number) => sq.filter((p) => p.elementType === t).length;
+  const legal = (sq: RmtPlayer[], budget: number) => {
+    expect(sq).toHaveLength(15);
+    expect([1, 2, 3, 4].map((t) => quota(sq, t))).toEqual([2, 5, 5, 3]);
+    expect(new Set(sq.map((p) => p.id)).size).toBe(15);
+    expect(squadCost(sq)).toBeLessThanOrEqual(budget);
+    const perClub = new Map<number, number>();
+    for (const p of sq) perClub.set(p.team, (perClub.get(p.team) ?? 0) + 1);
+    for (const n of perClub.values()) expect(n).toBeLessThanOrEqual(3);
+  };
+
+  const pool: RmtPlayer[] = [
+    ...squadPlayers,
+    mk(101, 3, 2, 105), mk(102, 3, 9, 60), mk(103, 4, 9, 95), mk(104, 3, 1, 60, "i"), mk(105, 2, 10, 50),
+    mk(109, 4, 11, 45), mk(107, 4, 12, 110), mk(108, 3, 13, 40),
+  ];
+  const pts = new Map(xPtsMap);
+  pts.set(101, { "8": 9, "9": 9 });
+  pts.set(102, { "8": 6, "9": 6 });
+  pts.set(103, { "8": 8, "9": 8 });
+  pts.set(104, { "8": 20, "9": 20 }); // injured: never chosen
+  pts.set(105, { "8": 5, "9": 5 });
+  pts.set(109, { "8": 2, "9": 2 }); // cheap FWD filler: no better than the player he would replace
+  pts.set(107, { "8": 12, "9": 12 }); // expensive star FWD
+  pts.set(108, { "8": 6, "9": 6 }); // cheap MID gem
+  const budget = squadCost(squadPlayers);
+  const run = (over: any = {}) => bestSquad({ starts: [squadPlayers], pool, xPtsByPlayer: pts, gameweeks: gws, budget, ...over });
+
+  it("returns a legal squad (2/5/5/3, at most 3 per club, within budget) that is never worse than the manager's own", () => {
+    const out = run();
+    legal(out.squad, budget);
+    expect(out.total).toBeGreaterThanOrEqual(horizonProjection(squadPlayers, pts, gws).total - 1e-9);
+    expect(out.total).toBeCloseTo(horizonProjection(out.squad, pts, gws).total, 8);
+  });
+
+  it("never picks an injured, suspended or unavailable player", () => {
+    expect(run({ budget: budget + 500 }).squad.some((p) => p.id === 104)).toBe(false);
+  });
+
+  it("finds the improvement that needs money freed first: 107 (11.0m, 12 xPts) is unaffordable until a player is sold down", () => {
+    // swapping 31 (9.0m) for 107 costs 2.0m more than the squad has; selling 32 (7.5m) for the 4.5m filler 109 frees 3.0m
+    const out = run();
+    expect(out.squad.some((p) => p.id === 107)).toBe(true);
+  });
+
+  it("with more money the optimal total goes up, and it never exceeds a bigger budget", () => {
+    const small = run();
+    const big = run({ budget: budget + 300 });
+    legal(big.squad, budget + 300);
+    expect(big.total).toBeGreaterThanOrEqual(small.total - 1e-9);
+  });
+
+  it("a squad that is already the best gets itself back", () => {
+    const best = run();
+    const again = bestSquad({ starts: [best.squad], pool, xPtsByPlayer: pts, gameweeks: gws, budget });
+    expect(again.total).toBeCloseTo(best.total, 8);
+  });
+
+  it("tries every start and keeps the best result", () => {
+    const cheapStart = [...squadPlayers];
+    const out = bestSquad({ starts: [cheapStart, run().squad], pool, xPtsByPlayer: pts, gameweeks: gws, budget });
+    expect(out.total).toBeGreaterThanOrEqual(run().total - 1e-9);
+  });
+});
+
+describe("teamRating", () => {
+  it("is your points as a whole percent of the optimal squad's points", () => {
+    expect(teamRating(87, 100)).toBe(87);
+    expect(teamRating(86.6, 100)).toBe(87);
+    expect(teamRating(50, 200)).toBe(25);
+  });
+  it("is 100 for an optimal squad and never above 100", () => {
+    expect(teamRating(100, 100)).toBe(100);
+    expect(teamRating(100.0000001, 100)).toBe(100);
+  });
+  it("is null when there is no optimal total to compare with", () => {
+    expect(teamRating(10, 0)).toBeNull();
+    expect(teamRating(10, -1)).toBeNull();
+  });
+  it("is never below 0", () => {
+    expect(teamRating(-5, 100)).toBe(0);
   });
 });

@@ -49,7 +49,7 @@ import { pushConfigured, saveSubscription, removeSubscription, countSubscription
 import { createRateLimiter, clientIpFromHeaders, isLoopback } from "@shared/rate-limiter";
 import { createTtlCache } from "@shared/ttl-cache";
 import { fetchWithTimeout } from "./http-utils";
-import { horizonProjection, rankAmongField, findUpgrades, squadFlags, type RmtPlayer } from "@shared/rate-my-team";
+import { horizonProjection, rankAmongField, findUpgrades, squadFlags, bestSquad, teamRating, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
@@ -1741,6 +1741,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // blank/double flags). Logic lives in shared/rate-my-team.ts + shared/lineup.ts. No invented score.
   // Top 100 horizon totals are the same for every visitor, so cache them briefly (keyed by the gameweeks scored).
   const fieldTotalsCache = createTtlCache<Array<{ managerId: number; total: number }>>(5 * 60 * 1000, 20);
+  // The optimal squad depends only on the gameweeks scored and the budget, so many visitors share one search
+  const optimalSquadCache = createTtlCache<{ squad: RmtPlayer[]; total: number }>(10 * 60 * 1000, 200);
   app.get("/api/rate-my-team/:managerId", async (req, res) => {
     if (rateMyTeamGuard(req, res)) return;
     try {
@@ -1827,6 +1829,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // A Top 100 manager is not compared with their own squad
       const fieldTotals = field.filter((f) => f.managerId !== Number(managerId)).map((f) => f.total);
 
+      // Team rating: your horizon points as a percentage of the best squad within your budget (squad value + bank)
+      const budget = squad.reduce((sum, p) => sum + p.price, 0) + bank;
+      const optimalKey = `${gameweeks.join(",")}|${budget}|${squad.map((p) => p.id).sort((a, b) => a - b).join("-")}`;
+      let optimal = optimalSquadCache.get(optimalKey);
+      if (!optimal) {
+        const greedy = buildWildcardSquad(
+          pool
+            .filter((p) => !["i", "s", "u", "n"].includes(p.status))
+            .map((p): SquadCandidate => ({
+              id: p.id,
+              webName: p.name ?? "",
+              team: p.team,
+              elementType: p.elementType,
+              price: p.price,
+              projectedPoints: gameweeks.reduce((sum, gw) => sum + (xPtsByPlayer.get(p.id)?.[String(gw)] ?? 0), 0),
+            })),
+          budget,
+        );
+        const starts = [squad, ...(greedy ? [greedy.squad.map((c) => poolById.get(c.id)!).filter(Boolean)] : [])];
+        optimal = bestSquad({ starts, pool, xPtsByPlayer, gameweeks, budget });
+        optimalSquadCache.set(optimalKey, optimal);
+      }
+      const rating = {
+        percent: teamRating(horizonResult.total, optimal.total),
+        yourTotal: horizonResult.total,
+        optimalTotal: optimal.total,
+        budget,
+        optimalSquad: optimal.squad.map((p) => ({
+          id: p.id,
+          name: p.name,
+          position: ["GKP", "DEF", "MID", "FWD"][p.elementType - 1],
+          teamShort: teamById.get(p.team)?.short_name,
+          price: p.price,
+          horizonXPts: gameweeks.reduce((sum, gw) => sum + (xPtsByPlayer.get(p.id)?.[String(gw)] ?? 0), 0),
+          inYourSquad: squad.some((q) => q.id === p.id),
+        })),
+      };
+
       const upgrades = findUpgrades({ squad, pool, xPtsByPlayer, gameweeks, bank, topN: 5 }).map((u) => ({
         ...u,
         outName: poolById.get(u.outId)?.name,
@@ -1845,6 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         availableGameweeks,
         projectedTotal: horizonResult.total,
         benchTotal: horizonResult.benchTotal,
+        rating,
         perGameweek: horizonResult.perGameweek.map((g) => ({ ...g, captainName: nameOf(g.captainId) })),
         rank: rankAmongField(horizonResult.total, fieldTotals),
         upgrades,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { compareUrl } from "@shared/compare-utils";
-import { ArrowRight, CalendarRange, ClipboardCheck, Crown, Search, ShieldAlert, ShieldCheck, TrendingUp } from "lucide-react";
+import { ArrowRight, CalendarRange, ClipboardCheck, Crown, Search, ShieldAlert, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,13 @@ interface RmtResponse {
   gameweeks: number[];
   projectedTotal: number;
   benchTotal: number;
+  rating: {
+    percent: number | null;
+    yourTotal: number;
+    optimalTotal: number;
+    budget: number;
+    optimalSquad: Array<{ id: number; name: string; position: string; teamShort: string; price: number; horizonXPts: number; inYourSquad: boolean }>;
+  };
   perGameweek: Array<{ gameweek: number; total: number; captainName: string | null; benchTotal: number }>;
   rank: { rank: number | null; fieldSize: number; average: number | null; best: number | null };
   upgrades: Array<{
@@ -92,7 +99,7 @@ export default function RateMyTeam() {
               <h1 data-testid="text-page-title">Rate My Team</h1>
             </div>
             <p className="fpl-page-subtitle">
-              Your squad's projected points, how it compares with the Top 100 managers, and the best single upgrades.
+              Your team rating (your points against the best possible team), how you compare with the Top 100 managers, and the best single upgrades.
             </p>
           </div>
         </div>
@@ -132,10 +139,10 @@ export default function RateMyTeam() {
             <HeroPanel testId="summary">
               <div className="grid gap-6 sm:grid-cols-3">
                 <HeroStat
-                  label={`Projected points · ${gwLabel}`}
-                  value={data.projectedTotal.toFixed(1)}
-                  valueTestId="text-projected-total"
-                  sub="Best XI + captain each gameweek"
+                  label={`Team rating · ${gwLabel}`}
+                  value={data.rating.percent === null ? "n/a" : `${data.rating.percent}%`}
+                  valueTestId="text-rating"
+                  sub={`${data.projectedTotal.toFixed(1)} pts with your best XI, captain and bench order, against ${data.rating.optimalTotal.toFixed(1)} pts for the best possible team`}
                 />
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Rank among the Top 100 squads</div>
@@ -185,6 +192,34 @@ export default function RateMyTeam() {
                   </li>
                 ))}
               </ul>
+            </SectionCard>
+
+            <SectionCard
+              icon={Sparkles}
+              title="Best possible team"
+              subtitle={`The highest-scoring squad we can build over ${gwLabel} with your ${money(data.rating.budget)} (squad value plus bank), free to change every player. Your rating is your points as a share of its points.`}
+            >
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="list-optimal-squad">
+                {(["GKP", "DEF", "MID", "FWD"] as const).map((pos) => (
+                  <div key={pos}>
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500">{pos}</div>
+                    <ul className="divide-y divide-gray-100">
+                      {data.rating.optimalSquad
+                        .filter((p) => p.position === pos)
+                        .sort((a, b) => b.horizonXPts - a.horizonXPts)
+                        .map((p) => (
+                          <li key={p.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                            <span className="min-w-0 truncate font-semibold text-gray-900">
+                              {p.name} <span className="text-xs font-normal text-gray-500">{p.teamShort}</span>
+                              {p.inYourSquad && <span className="ml-1.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">yours</span>}
+                            </span>
+                            <span className="shrink-0 text-xs tabular-nums text-gray-500">{money(p.price)} · {p.horizonXPts.toFixed(1)}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </SectionCard>
 
             <SectionCard

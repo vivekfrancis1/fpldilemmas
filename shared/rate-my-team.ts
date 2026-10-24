@@ -1,6 +1,8 @@
 // Rate My Team: measurable facts about a squad, built from the same cached xPts the Points page shows.
-// Deliberately no invented grade and no "best possible squad" benchmark (the squad builder is a heuristic,
-// not an exact optimiser). Everything here is either exact arithmetic on the projections or a fact from FPL.
+// The team rating is your projected points as a percentage of the best squad we can build within your budget
+// (bestSquad). That squad comes from a search, not an exact solver, so the rating is "against the best squad
+// we found" and the search always starts from your own squad, which keeps it at or below 100%.
+// Everything else is exact arithmetic on the projections or a fact from FPL.
 import { bestLineup, type LineupPlayer } from "./lineup";
 import { fixturesForGameweeks, teamsWithUnscheduledFixtures, type CompareFixtureInput } from "./compare-utils";
 
@@ -189,4 +191,139 @@ export function squadFlags(input: { squad: RmtPlayer[]; fixtures: CompareFixture
     if (dbl.length) doubles.push({ playerId: p.id, name: p.name ?? "", gameweeks: dbl });
   }
   return { availability, blanks, doubles, tbc };
+}
+
+
+/** Your projected points as a whole percent of the optimal squad's, 0 to 100. null when there is no optimal total to compare with. */
+export function teamRating(yourTotal: number, optimalTotal: number): number | null {
+  if (!(optimalTotal > 0)) return null;
+  return Math.max(0, Math.min(100, Math.round((yourTotal / optimalTotal) * 100)));
+}
+
+export interface BestSquadResult {
+  squad: RmtPlayer[];
+  /** Horizon total (best XI + captain per gameweek, summed) of that squad. */
+  total: number;
+}
+
+/**
+ * The best legal squad we can find within a budget: 2 GKP, 5 DEF, 5 MID, 3 FWD, at most 3 per club, total price
+ * <= budget, scored by horizonProjection (so the bench and the captain count the way they do for your own squad).
+ * Hill-climbing from each start squad (pass the manager's own squad, plus any other good starting point):
+ * best single swap until none helps, then pair swaps among the most promising candidates (a pair sells one player
+ * down to afford another's upgrade), until neither helps or the time limit passes. Never worse than the best start.
+ * Injured, suspended and unavailable players are never brought in.
+ */
+export function bestSquad(input: {
+  starts: RmtPlayer[][];
+  pool: RmtPlayer[];
+  xPtsByPlayer: XPtsMap;
+  gameweeks: number[];
+  /** Tenths of a million. */
+  budget: number;
+  /** Stop searching for pair swaps after this long (default 3000 ms). Single swaps always finish. */
+  timeLimitMs?: number;
+}): BestSquadResult {
+  const { starts, pool, xPtsByPlayer, gameweeks, budget, timeLimitMs = 3000 } = input;
+  const deadline = Date.now() + timeLimitMs;
+  const total = (sq: RmtPlayer[]) => horizonProjection(sq, xPtsByPlayer, gameweeks).total;
+  const sumOf = (p: RmtPlayer) => horizonSum(xPtsByPlayer, p.id, gameweeks);
+  const eligible = pool.filter((p) => !UNAVAILABLE.has(p.status));
+  const byType = (t: number) => eligible.filter((p) => p.elementType === t);
+
+  const clubsOk = (sq: RmtPlayer[]) => {
+    const n = new Map<number, number>();
+    for (const p of sq) n.set(p.team, (n.get(p.team) ?? 0) + 1);
+    return Array.from(n.values()).every((c) => c <= MAX_PER_CLUB);
+  };
+  const cost = (sq: RmtPlayer[]) => sq.reduce((s, p) => s + p.price, 0);
+
+  // The most promising outsiders per position: best by horizon points, plus best points per £ (the players who free money)
+  const shortlist = (t: number, owned: Set<number>) => {
+    const free = byType(t).filter((p) => !owned.has(p.id));
+    const byPts = [...free].sort((a, b) => sumOf(b) - sumOf(a) || a.id - b.id).slice(0, 12);
+    const byValue = [...free].sort((a, b) => sumOf(b) / Math.max(b.price, 1) - sumOf(a) / Math.max(a.price, 1) || a.id - b.id).slice(0, 12);
+    return Array.from(new Map([...byPts, ...byValue].map((p) => [p.id, p])).values());
+  };
+
+  const climb = (start: RmtPlayer[]): BestSquadResult => {
+    let squad = [...start];
+    let current = total(squad);
+
+    for (;;) {
+      // 1) best single swap (same position, within budget, club cap holds)
+      let bestNext: RmtPlayer[] | null = null;
+      let bestTotal = current + 1e-9;
+      const owned = new Set(squad.map((p) => p.id));
+      const spent = cost(squad);
+      for (let i = 0; i < squad.length; i++) {
+        const out = squad[i];
+        for (const cand of byType(out.elementType)) {
+          if (owned.has(cand.id) || spent - out.price + cand.price > budget) continue;
+          if (!gameweeks.some((gw) => (xPtsFor(xPtsByPlayer, cand.id, gw) ?? 0) > (xPtsFor(xPtsByPlayer, out.id, gw) ?? 0))) continue;
+          const next = squad.map((p, k) => (k === i ? cand : p));
+          if (!clubsOk(next)) continue;
+          const t = total(next);
+          if (t > bestTotal) {
+            bestTotal = t;
+            bestNext = next;
+          }
+        }
+      }
+      if (bestNext) {
+        squad = bestNext;
+        current = bestTotal;
+        continue;
+      }
+
+      // 2) pair swaps: rank every affordable pair by a cheap estimate (change in horizon points), then score the best few for real
+      if (Date.now() >= deadline) break;
+      const ownedNow = new Set(squad.map((p) => p.id));
+      const spentNow = cost(squad);
+      const shortlists = new Map<number, RmtPlayer[]>([1, 2, 3, 4].map((t) => [t, shortlist(t, ownedNow)] as const));
+      const moves: Array<{ est: number; i: number; j: number; a: RmtPlayer; b: RmtPlayer }> = [];
+      for (let i = 0; i < squad.length; i++) {
+        for (let j = i + 1; j < squad.length; j++) {
+          const oi = squad[i];
+          const oj = squad[j];
+          const listA = shortlists.get(oi.elementType)!;
+          const listB = shortlists.get(oj.elementType)!;
+          for (const a of listA) {
+            for (const b of listB) {
+              if (a.id === b.id) continue;
+              if (spentNow - oi.price - oj.price + a.price + b.price > budget) continue;
+              const est = sumOf(a) + sumOf(b) - sumOf(oi) - sumOf(oj);
+              if (est <= 0) continue;
+              moves.push({ est, i, j, a, b });
+            }
+          }
+        }
+      }
+      moves.sort((x, y) => y.est - x.est);
+      let bestPair: RmtPlayer[] | null = null;
+      let bestPairTotal = current + 1e-9;
+      for (const m of moves.slice(0, 250)) {
+        if (Date.now() >= deadline) break;
+        const next = squad.map((p, k) => (k === m.i ? m.a : k === m.j ? m.b : p));
+        if (!clubsOk(next)) continue;
+        const t = total(next);
+        if (t > bestPairTotal) {
+          bestPairTotal = t;
+          bestPair = next;
+        }
+      }
+      if (!bestPair) break;
+      squad = bestPair;
+      current = bestPairTotal;
+    }
+    return { squad, total: current };
+  };
+
+  let best: BestSquadResult | null = null;
+  for (const start of starts) {
+    if (start.length !== 15) continue;
+    const result = climb(start);
+    if (!best || result.total > best.total) best = result;
+  }
+  return best ?? { squad: [], total: 0 };
 }
