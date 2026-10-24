@@ -49,7 +49,7 @@ import { pushConfigured, saveSubscription, removeSubscription, countSubscription
 import { createRateLimiter, clientIpFromHeaders, isLoopback } from "@shared/rate-limiter";
 import { createTtlCache } from "@shared/ttl-cache";
 import { fetchWithTimeout } from "./http-utils";
-import { horizonProjection, rankAmongField, findUpgrades, squadFlags, bestSquad, teamRating, type RmtPlayer } from "@shared/rate-my-team";
+import { horizonProjection, rankAmongField, findUpgrades, squadFlags, bestSquad, teamRating, upcomingGameweeks, type RmtPlayer } from "@shared/rate-my-team";
 import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
@@ -1756,7 +1756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
 
       const horizonParam = req.query.horizon;
-      let horizon = 5;
+      let horizon = 6;
       if (horizonParam !== undefined && horizonParam !== "") {
         const text = String(horizonParam);
         horizon = /^\d+$/.test(text) ? Number(text) : NaN;
@@ -1788,10 +1788,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixtures = await fixturesResponse.json();
       const top = topResponse.ok ? await topResponse.json() : { teams: [] };
 
+      // Only gameweeks that have not started: a gameweek whose deadline has passed can't be planned any more
+      const open = new Set(upcomingGameweeks(bootstrap.events ?? []));
       const availableGameweeks = Array.from(
         new Set<number>(projections.flatMap((p) => Object.keys(p.gameweekProjections ?? {}).map(Number))),
       )
-        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 38)
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 38 && open.has(n))
         .sort((a, b) => a - b);
       if (availableGameweeks.length === 0) return res.status(503).json({ error: "No projections available yet" });
       const gameweeks = availableGameweeks.slice(0, horizon);

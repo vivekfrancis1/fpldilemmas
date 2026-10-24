@@ -6,6 +6,7 @@ import {
   squadFlags,
   bestSquad,
   teamRating,
+  upcomingGameweeks,
   type RmtPlayer,
 } from "../shared/rate-my-team";
 
@@ -27,6 +28,28 @@ const xPtsMap = new Map<number, Record<string, number>>([
   ...squadPlayers.map((p) => [p.id, { "8": 2, "9": 2 }] as const),
   xp(21, 7, 7), xp(31, 6, 6), xp(11, 4, 4), xp(2, 3, 3),
 ]);
+
+describe("upcomingGameweeks (gameweeks whose deadline is still ahead)", () => {
+  const now = new Date("2026-10-24T12:00:00Z");
+  const events = [
+    { id: 7, deadline_time: "2026-10-17T10:00:00Z", finished: true },
+    { id: 8, deadline_time: "2026-10-24T10:00:00Z", finished: false }, // started: deadline passed
+    { id: 9, deadline_time: "2026-10-31T10:00:00Z", finished: false },
+    { id: 10, deadline_time: "2026-11-07T10:00:00Z", finished: false },
+  ];
+  it("leaves out finished gameweeks and the one that has already started", () => {
+    expect(upcomingGameweeks(events, now)).toEqual([9, 10]);
+  });
+  it("a deadline exactly now counts as started", () => {
+    expect(upcomingGameweeks([{ id: 9, deadline_time: "2026-10-24T12:00:00Z", finished: false }], now)).toEqual([]);
+  });
+  it("is ascending whatever order FPL lists them in", () => {
+    expect(upcomingGameweeks([...events].reverse(), now)).toEqual([9, 10]);
+  });
+  it("ignores events with no deadline", () => {
+    expect(upcomingGameweeks([{ id: 9, deadline_time: null, finished: false }], now)).toEqual([]);
+  });
+});
 
 describe("horizonProjection", () => {
   it("total equals the sum of the per-gameweek best-XI totals", () => {
@@ -201,16 +224,22 @@ describe("GET /api/rate-my-team/:managerId (consistency with the data it is buil
   let cached: any[];
   let top: any;
   let rmt: any;
+  let boot: any;
   const MANAGER = 9267; // a Top 100 manager id, so a real squad exists
 
   beforeAll(async () => {
     cached = (await getJson("/api/cached/player-total-points")).body;
     top = (await getJson("/api/top-managers/teams")).body;
+    boot = (await getJson("/api/bootstrap-static")).body;
     rmt = (await getJson(`/api/rate-my-team/${MANAGER}?horizon=5`)).body;
   }, 180000);
 
-  it("uses the first 5 projected gameweeks and a per-gameweek total that sums to the headline", () => {
+  it("uses the first 5 projected gameweeks that have not started, and a per-gameweek total that sums to the headline", () => {
     expect(rmt.gameweeks).toHaveLength(5);
+    const started = boot.events.filter((e: any) => new Date(e.deadline_time) <= new Date()).map((e: any) => e.id);
+    for (const gw of rmt.gameweeks) expect(started).not.toContain(gw);
+    const nextOpen = Math.min(...boot.events.filter((e: any) => new Date(e.deadline_time) > new Date()).map((e: any) => e.id));
+    expect(rmt.gameweeks[0]).toBe(nextOpen);
     const sum = rmt.perGameweek.reduce((a: number, g: any) => a + g.total, 0);
     expect(rmt.projectedTotal).toBeCloseTo(sum, 6);
   });

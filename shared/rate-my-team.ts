@@ -30,6 +30,17 @@ const toLineup = (squad: RmtPlayer[], map: XPtsMap, gw: number): LineupPlayer[] 
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** Gameweeks whose deadline is still ahead (a started or finished gameweek can no longer be planned). Ascending. */
+export function upcomingGameweeks(
+  events: Array<{ id: number; deadline_time?: string | null }>,
+  now: Date = new Date(),
+): number[] {
+  return events
+    .filter((e) => !!e.deadline_time && new Date(e.deadline_time).getTime() > now.getTime())
+    .map((e) => e.id)
+    .sort((a, b) => a - b);
+}
+
 export interface HorizonProjection {
   gameweeks: number[];
   perGameweek: Array<{ gameweek: number; total: number; captainId: number | null; startingIds: number[]; benchTotal: number }>;

@@ -41,7 +41,7 @@ interface RmtResponse {
   sellingPricesApproximate: boolean;
 }
 
-const HORIZONS = [1, 3, 5, 8];
+const HORIZONS = [1, 3, 6, 8];
 const CHIP_LABEL: Record<string, string> = { bboost: "Bench Boost", "3xc": "Triple Captain", freehit: "Free Hit", wildcard: "Wildcard", manager: "Assistant Manager" };
 const money = (tenths: number) => `£${(tenths / 10).toFixed(1)}m`;
 const signedMoney = (tenths: number) => `${tenths > 0 ? "+" : tenths < 0 ? "-" : ""}£${Math.abs(tenths / 10).toFixed(1)}m`;
@@ -49,7 +49,7 @@ const signedMoney = (tenths: number) => `${tenths > 0 ? "+" : tenths < 0 ? "-" :
 export default function RateMyTeam() {
   const [input, setInput] = useState("");
   const [managerId, setManagerId] = useState("");
-  const [horizon, setHorizon] = useState(5);
+  const [horizon, setHorizon] = useState(6);
 
   useEffect(() => {
     const saved = readToolManagerId();
