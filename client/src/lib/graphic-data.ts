@@ -139,7 +139,7 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
     case "cover":
       return { data: { kind: "cover", cover: buildCover({ spec, elements, teamShortById }) }, problem: null };
     case "team-reveal": {
-      if (spec.squad.length === 0) return { data: null, problem: "Add your 15 players below, or load your squad from your FPL team ID." };
+      if (spec.squad.length === 0) return { data: null, problem: "Enter your FPL team ID on the left and your squad is picked for you, or add your 15 players one at a time." };
       if (!fixtures) return { data: null, problem: null };
       const reveal = buildTeamReveal({
         elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,

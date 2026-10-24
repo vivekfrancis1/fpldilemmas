@@ -97,6 +97,8 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
+import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
 import { computeGraphicData, longDate, makeGraphicDataContext, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
@@ -234,8 +236,14 @@ function SquadBuilder({
 }) {
   const [query, setQuery] = useState("");
   const [note, setNote] = useState<string | null>(null);
-  const [idText, setIdText] = useState("");
+  // the team ID is shared with Rate My Team, Hindsight, League Ownership and Player Plot: pre-filled once entered anywhere
+  const [idText, setIdText] = useState(() => readToolManagerId());
   const [load, setLoad] = useState<LoadState>({ busy: false, error: null, info: null });
+  // the ID whose squad is in the builder (or was already tried), so an unchanged ID is never loaded twice; a squad that came
+  // from the link counts as "already chosen" and is not replaced just because an ID is saved
+  const loadedIdRef = useRef<string>(spec.squad.length > 0 ? extractManagerId(readToolManagerId()) : "");
+  // the manager name we filled in ourselves from a loaded team: replaced when another team loads, whereas a name typed by the person stays
+  const autoManagerRef = useRef<string>("");
   const byId = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
   const counts = squadCounts(elements, spec.squad);
 
@@ -296,12 +304,12 @@ function SquadBuilder({
   const setCaptain = (id: number) => update({ captain: spec.captain === id ? 0 : id, vice: spec.vice === id ? 0 : spec.vice });
   const setVice = (id: number) => update({ vice: spec.vice === id ? 0 : id, captain: spec.captain === id ? 0 : spec.captain });
 
-  const loadFromId = async () => {
-    const id = extractManagerId(idText);
+  const loadSquad = async (id: string, auto = false) => {
     if (!id || id === "0") {
       setLoad({ busy: false, error: "Enter your FPL team ID, or paste your team link from the FPL site.", info: null });
       return;
     }
+    loadedIdRef.current = id; // also when it fails, so an automatic load never retries the same ID in a loop
     setLoad({ busy: true, error: null, info: null });
     try {
       const res = await fetch(`/api/manager/${id}/team`);
@@ -321,27 +329,56 @@ function SquadBuilder({
       }
       const loaded = squadFromPicks(picks);
       const patch: Partial<GraphicSpec> = { ...loaded };
-      if (!spec.manager.trim()) {
-        const name = typeof body.manager === "string" && body.manager.trim() ? body.manager.trim() : null;
-        if (name) patch.manager = name.slice(0, MAX_MANAGER_NAME);
-        else {
+      // FPL's own bench and captain are used; if the picks lack them, fall back to our suggestion from expected points
+      if (!loaded.captain || loaded.bench.length !== BENCH_PLAYERS) {
+        const suggested = suggestSquadSetup({ elements, squad: loaded.squad, xptsById });
+        if (suggested.bench.length) Object.assign(patch, { bench: suggested.bench, captain: loaded.captain || suggested.captain, vice: loaded.vice || suggested.vice });
+      }
+      if (!spec.manager.trim() || spec.manager === autoManagerRef.current) {
+        let name = typeof body.manager === "string" && body.manager.trim() ? body.manager.trim() : null;
+        if (!name) {
           try {
             const info = await (await fetch(`/api/manager/${id}`)).json();
-            const full = `${info?.player_first_name ?? ""} ${info?.player_last_name ?? ""}`.trim();
-            if (full) patch.manager = full.slice(0, MAX_MANAGER_NAME);
+            name = `${info?.player_first_name ?? ""} ${info?.player_last_name ?? ""}`.trim() || null;
           } catch {
             /* the name is optional */
           }
         }
+        const managerName = name ? name.slice(0, MAX_MANAGER_NAME) : "";
+        patch.manager = managerName;
+        autoManagerRef.current = managerName;
       }
       update(patch);
+      saveToolManagerId(id); // so Rate My Team, Hindsight, League Ownership and Player Plot open on the same team
       const from = body.resolvedGameweek ?? body.gameweek;
       setNote(null);
-      setLoad({ busy: false, error: null, info: `Loaded the GW${from ?? "?"} squad. Make this week's transfers below, then pick your chip.` });
+      setLoad({
+        busy: false,
+        error: null,
+        info: auto
+          ? `Picked your squad automatically from team ${id} (GW${from ?? "?"}). Make this week's transfers below, then pick your chip.`
+          : `Loaded the GW${from ?? "?"} squad. Make this week's transfers below, then pick your chip.`,
+      });
     } catch {
       setLoad({ busy: false, error: "Couldn't load that team right now. Please try again.", info: null });
     }
   };
+  const loadFromId = () => loadSquad(extractManagerId(idText));
+
+  // Once a team ID is known (saved from another tool, or typed here) its squad is picked automatically; a new ID replaces it
+  // (a short pause after typing, so half-typed IDs are not looked up). Nothing happens without an ID: no random squad.
+  const firstCheckRef = useRef(true);
+  useEffect(() => {
+    if (!elements.length) return;
+    const id = extractManagerId(idText);
+    // the saved ID is used straight away when the template opens; a typed ID after a short pause
+    const delay = firstCheckRef.current ? 0 : 800;
+    firstCheckRef.current = false;
+    if (!id || id === "0" || id === loadedIdRef.current) return;
+    const t = setTimeout(() => void loadSquad(id, true), delay);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idText, elements.length]);
 
   const toggleBtn = (active: boolean) =>
     `rounded-md border px-2 py-1 text-xs font-bold leading-none ${active ? ACTIVE_CHIP : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`;
@@ -353,6 +390,9 @@ function SquadBuilder({
           <Input value={idText} onChange={(e) => setIdText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadFromId(); }} inputMode="numeric" placeholder="Team ID or team link" data-testid="input-fpl-id" />
           <Button type="button" variant="outline" onClick={loadFromId} disabled={load.busy} data-testid="button-load-fpl">{load.busy ? "Loading…" : "Load"}</Button>
         </div>
+        {!extractManagerId(idText) && spec.squad.length === 0 && (
+          <p className="text-xs text-indigo-700" role="status" data-testid="id-prompt">Enter your FPL team ID and your squad is picked for you. It is remembered for the other tools too.</p>
+        )}
         {load.error && <p className="text-xs text-red-600" role="alert" data-testid="load-error">{load.error}</p>}
         {load.info && <p className="text-xs text-emerald-700" role="status" data-testid="load-info">{load.info}</p>}
       </Field>
@@ -546,34 +586,31 @@ export default function GraphicsPage() {
     enabled: spec.template === "team-of-the-week" && totwGw > 0,
   });
 
-  // First visit: start with sensible picks so the preview is never empty (they go into the link too).
+  // Nothing opens empty: a template with nothing chosen gets a sensible default (best projected, trending in, next club...)
+  // once the data is in. It never overwrites a choice: it only fills an empty selection, once per template, and a template
+  // that already had a selection (a link, or the person's own pick) is marked as decided so clearing it later stays cleared.
+  const defaultedRef = useRef<Set<string>>(new Set());
+  const rangeTotals = useMemo(
+    () => new Map<number, number | null>((projections ?? []).map((p) => [p.playerId, projectionWindow(p.gameweekProjections, gameweeks).total])),
+    [projections, gameweeks],
+  );
+  const tickerRows = useMemo(
+    () => (fixtures && teams.length ? buildFixtureTicker({ teamIds: teams.map((t) => t.id), gameweeks, fixtures: fixtures as any, teamShortById, teamNameById }).rows : []),
+    [fixtures, teams, gameweeks, teamShortById, teamNameById],
+  );
   useEffect(() => {
-    if (!elements.length || !projections) return;
-    if ((spec.template === "player-card" || spec.template === "player-comparison") && spec.players.length === 0) {
-      const need = spec.template === "player-card" ? 1 : 2;
-      const ranked = elements
-        .filter((e) => (e.status ?? "a") === "a")
-        .map((e) => ({ id: e.id, xpts: projectionWindow(projectionById.get(e.id), gameweeks).total ?? -1 }))
-        .sort((a, b) => b.xpts - a.xpts)
-        .slice(0, need)
-        .map((x) => x.id);
-      if (ranked.length === need) update({ players: ranked });
+    if (!elements.length) return;
+    if (!needsDefaults(spec)) {
+      defaultedRef.current.add(spec.template);
+      return;
     }
-    if (spec.template === "player-news" && spec.players.length === 0) {
-      const top = elements
-        .filter((e) => typeof e.news === "string" && e.news.trim() !== "")
-        .sort((a, b) => (parseFloat(String(b.selected_by_percent)) || 0) - (parseFloat(String(a.selected_by_percent)) || 0))[0];
-      if (top) update({ players: [top.id] });
-    }
-    if (spec.template === "predicted-lineup" && spec.teams.length === 0 && fixtures) {
-      const next = (fixtures as any[]).find((f) => f.event === lineupGw && !f.finished) ?? (fixtures as any[]).find((f) => f.event !== null && !f.finished);
-      if (next) update({ teams: [next.team_h] });
-    }
-    if (spec.template === "fixtures-comparison" && spec.teams.length === 0 && teams.length) {
-      update({ teams: [...teams].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 3).map((t) => t.id) });
-    }
+    if (defaultedRef.current.has(spec.template)) return;
+    const patch = defaultSelectionPatch(spec, { elements, totals: rangeTotals, fixtures: fixtures as any, gameweek: lineupGw, tickerRows });
+    if (!patch) return; // the data it needs has not loaded yet
+    defaultedRef.current.add(spec.template);
+    update(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements.length, projections, fixtures, spec.template, spec.players.length, spec.teams.length, teams.length]);
+  }, [elements, spec.template, spec.players.length, spec.teams.length, rangeTotals, fixtures, lineupGw, tickerRows]);
 
   const squadXptsById = useMemo(
     () => new Map<number, number | null>((projections ?? []).map((p) => [p.playerId, p.gameweekProjections?.[String(lineupGw)] ?? null])),
@@ -984,6 +1021,7 @@ export default function GraphicsPage() {
                       testId="select-lineup-gw"
                     />
                   </Field>
+                  <p className="col-span-2 text-xs text-gray-500" data-testid="lineup-explainer">Picked automatically: the 11 players with the most expected minutes, one goalkeeper.</p>
                 </div>
               )}
 
