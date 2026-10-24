@@ -529,3 +529,37 @@ describe("the match report caption carries the other point-scoring components", 
     expect(c).not.toContain("clean sheet");
   });
 });
+
+describe("the match report caption carries cards, bonus and defensive contributions", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    { identifier: "yellow_cards", a: [{ value: 1, element: 22 }], h: [{ value: 1, element: 3 }, { value: 1, element: 5 }, { value: 1, element: 1 }, { value: 1, element: 4 }] },
+    { identifier: "red_cards", a: [{ value: 1, element: 21 }], h: [] },
+    { identifier: "bonus", a: [{ value: 1, element: 21 }], h: [{ value: 3, element: 2 }, { value: 2, element: 1 }] },
+    { identifier: "defensive_contribution", h: [{ value: 14, element: 3 }, { value: 11, element: 4 }, { value: 9, element: 5 }, { value: 3, element: 2 }], a: [{ value: 12, element: 21 }] },
+  ];
+  const spec = { ...DEFAULT_SPEC, template: "match-report" as const };
+  const caption = (fixture: MatchFixtureInput) =>
+    buildCaption({ kind: "match-report", report: buildMatchReport({ fixture, elements, teamShortById, teamNameById })!, gwLabel: "GW8" }, spec);
+  const full = caption(done(99, 8, 1, 2, 2, 1, stats));
+
+  it("lists red cards, then yellows (three at most, then how many more)", () => {
+    expect(full).toContain("red: Watkins");
+    expect(full).toContain("yellow: Gabriel, Odegaard, Saka +2");
+  });
+  it("lists the bonus points, highest first", () => {
+    expect(full).toContain("bonus: Havertz 3, Saka 2, Watkins 1");
+  });
+  it("lists the top three defensive contributions, marking who earned the 2 points", () => {
+    expect(full).toContain("defensive: Saliba 14 (+2), Watkins 12 (+2), Odegaard 11");
+    expect(full).not.toContain("Gabriel 9");
+  });
+  it("puts the cards and bonus before the rest, and never passes the post limit", () => {
+    expect(full.indexOf("red:")).toBeLessThan(full.indexOf("bonus:"));
+    expect(full.indexOf("bonus:")).toBeLessThan(full.indexOf("defensive:"));
+    expect(full.length).toBeLessThanOrEqual(256);
+  });
+  it("leaves out cards, bonus and defensive lines when there are none", () => {
+    const c = caption(done(100, 8, 1, 2, 1, 1));
+    expect(c).not.toMatch(/red:|yellow:|bonus:|defensive:/);
+  });
+});

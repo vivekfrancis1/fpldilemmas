@@ -1720,10 +1720,21 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     case "match-report": {
       const { report } = data;
       const head = `${report.home.short} ${report.home.score}-${report.away.score} ${report.away.short} ${data.gwLabel} report`;
+      const names = (kind: "red" | "yellow") => {
+        const list = report.cards.filter((c) => c.kind === kind).map((c) => c.name);
+        return list.length > 3 ? `${list.slice(0, 3).join(", ")} +${list.length - 3}` : list.join(", ");
+      };
+      const red = names("red");
+      const yellow = names("yellow");
+      // most valuable first: the text is cut from the end when it is too long for a post
       const extras = [
+        red ? `red: ${red}` : null,
+        yellow ? `yellow: ${yellow}` : null,
+        report.bonus.length ? `bonus: ${report.bonus.map((b) => `${b.name} ${b.points}`).join(", ")}` : null,
+        report.defensive.length ? `defensive: ${report.defensive.slice(0, 3).map((d) => `${d.name} ${d.value}${d.earned ? " (+2)" : ""}`).join(", ")}` : null,
         report.cleanSheets.length ? `clean ${report.cleanSheets.length === 1 ? "sheet" : "sheets"}: ${report.cleanSheets.join(" & ")}` : null,
-        report.saves.length ? `saves: ${report.saves.slice(0, 2).map((sv) => `${sv.name} ${sv.value}`).join(", ")}` : null,
         ...report.notes,
+        report.saves.length ? `saves: ${report.saves.slice(0, 2).map((sv) => `${sv.name} ${sv.value}`).join(", ")}` : null,
       ].filter((b): b is string => !!b);
       return done(extras.length ? `${head}: ${extras.join(" · ")}` : head, data.gwLabel);
     }
