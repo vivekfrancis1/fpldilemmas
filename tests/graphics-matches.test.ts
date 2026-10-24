@@ -587,3 +587,20 @@ describe("the match report caption keeps saves ahead of the penalty and own-goal
     expect(c).toContain("fpldilemmas.com");
   });
 });
+
+describe("the match report caption follows the image order", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    { identifier: "red_cards", a: [{ value: 1, element: 21 }], h: [] },
+    { identifier: "bonus", a: [], h: [{ value: 3, element: 2 }] },
+    { identifier: "saves", h: [], a: [{ value: 7, element: 22 }] },
+    { identifier: "defensive_contribution", h: [{ value: 14, element: 3 }], a: [] },
+    { identifier: "own_goals", h: [{ value: 1, element: 5 }], a: [] },
+  ];
+  const report = buildMatchReport({ fixture: done(102, 8, 1, 2, 1, 0, stats), elements, teamShortById, teamNameById })!;
+  const caption = buildCaption({ kind: "match-report", report, gwLabel: "GW8" }, { ...DEFAULT_SPEC, template: "match-report" as const });
+  it("goes cards, bonus, saves, defensive, clean sheets, then the penalty and own-goal notes", () => {
+    const at = ["red:", "bonus:", "saves:", "defensive:", "clean sheet:", "own goal"].map((k) => caption.indexOf(k));
+    expect(at.every((i) => i > -1)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+});
