@@ -30,7 +30,7 @@ import {
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
-import { contrastRatio } from "@shared/graphics";
+import { contrastRatio, formatGoals } from "@shared/graphics";
 import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
@@ -1111,11 +1111,6 @@ function sideColors(theme: GraphicTheme): { home: string; away: string } {
   return { home: theme.accent, away: lightBackground ? "#0e7490" : "#38bdf8" };
 }
 
-/** Expected goals to up to 2 decimal places, no trailing zeros: 1.64 -> "1.64", 1.6 -> "1.6", 2 -> "2". */
-function formatGoals2(n: number): string {
-  return String(Math.round(n * 100) / 100);
-}
-
 function ProbBar({ probs, theme, label, big }: { probs: { home: number; draw: number; away: number }; theme: GraphicTheme; label: number; big?: boolean }) {
   const side = sideColors(theme);
   const parts = [
@@ -1148,7 +1143,7 @@ function PredictionsFace({ spec, theme, predictions, gwLabel, subtitle }: { spec
   const csFont = land ? 18 : tall ? 25 : 23;
   const small = land ? 13 : 17;
   const side = sideColors(theme);
-  const xgText = (v: number | null) => (v === null ? "–" : formatGoals2(v));
+  const xgText = (v: number | null) => (v === null ? "–" : formatGoals(v));
   const csText = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
@@ -1306,7 +1301,7 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
   const jersey = land ? 84 : tall ? 170 : 130;
   const nameFont = land ? 28 : tall ? 46 : 38;
   const xgFont = land ? 56 : tall ? 88 : 72;
-  const xg = (v: number | null) => (v === null ? "–" : formatGoals2(v));
+  const xg = (v: number | null) => (v === null ? "–" : formatGoals(v));
   const side = sideColors(theme);
   const cs = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
   return (
@@ -1656,7 +1651,7 @@ function TeamProjectionsFace({ spec, theme, teams, gwLabel, subtitle }: { spec: 
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <div style={{ fontSize: land ? 22 : tall ? 38 : 34, fontWeight: 900, lineHeight: 1 }}>{value(r.perGame)}</div>
                         <div style={{ fontSize: land ? 10 : tall ? 15 : 14, color: theme.muted, fontWeight: 700, whiteSpace: "nowrap" }}>
-                          {r.games} {r.games === 1 ? "game" : "games"} · {r.total.toFixed(1)} {def.totalLabel}
+                          {r.games} {r.games === 1 ? "game" : "games"} · {def.unit === "percent" ? r.total.toFixed(1) : formatGoals(r.total)} {def.totalLabel}
                         </div>
                       </div>
                     </div>

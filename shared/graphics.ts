@@ -511,9 +511,9 @@ export function formatStat(key: string, value: number | null): string {
   }
 }
 
-/** Expected goals to one decimal place, e.g. 1.64 -> "1.6". */
+/** Expected goals to up to 2 decimal places, no trailing zeros: 1.64 -> "1.64", 1.6 -> "1.6", 2 -> "2". */
 export function formatGoals(n: number): string {
-  return (Math.round(n * 10) / 10).toFixed(1);
+  return String(Math.round(n * 100) / 100);
 }
 
 const money = (tenths: number) => `£${(tenths / 10).toFixed(1)}m`;
