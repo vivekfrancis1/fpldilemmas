@@ -563,3 +563,27 @@ describe("the match report caption carries cards, bonus and defensive contributi
     expect(c).not.toMatch(/red:|yellow:|bonus:|defensive:/);
   });
 });
+
+describe("the match report caption keeps saves ahead of the penalty and own-goal notes", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    { identifier: "saves", h: [{ value: 4, element: 14 }], a: [{ value: 7, element: 22 }] },
+    { identifier: "own_goals", h: [{ value: 1, element: 5 }], a: [] },
+    { identifier: "penalties_missed", h: [{ value: 1, element: 1 }], a: [] },
+  ];
+  const spec = { ...DEFAULT_SPEC, template: "match-report" as const };
+  const report = buildMatchReport({ fixture: done(101, 8, 1, 2, 1, 0, stats), elements, teamShortById, teamNameById })!;
+  const caption = buildCaption({ kind: "match-report", report, gwLabel: "GW8" }, spec);
+
+  it("lists saves before the notes", () => {
+    expect(caption.indexOf("saves:")).toBeGreaterThan(-1);
+    expect(caption.indexOf("saves:")).toBeLessThan(caption.indexOf("Saka missed a penalty"));
+    expect(caption.indexOf("saves:")).toBeLessThan(caption.indexOf("own goal"));
+  });
+  it("cuts the notes first when the caption is too long", () => {
+    const long = { ...report, notes: Array.from({ length: 12 }, (_, i) => `Player${i} scored an own goal`) };
+    const c = buildCaption({ kind: "match-report", report: long, gwLabel: "GW8" }, spec);
+    expect(c).toContain("saves: Martinez 7, Alisson 4");
+    expect(c.length).toBeLessThanOrEqual(256);
+    expect(c).toContain("fpldilemmas.com");
+  });
+});

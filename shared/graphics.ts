@@ -1733,8 +1733,8 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
         report.bonus.length ? `bonus: ${report.bonus.map((b) => `${b.name} ${b.points}`).join(", ")}` : null,
         report.defensive.length ? `defensive: ${report.defensive.slice(0, 3).map((d) => `${d.name} ${d.value}${d.earned ? " (+2)" : ""}`).join(", ")}` : null,
         report.cleanSheets.length ? `clean ${report.cleanSheets.length === 1 ? "sheet" : "sheets"}: ${report.cleanSheets.join(" & ")}` : null,
-        ...report.notes,
         report.saves.length ? `saves: ${report.saves.slice(0, 2).map((sv) => `${sv.name} ${sv.value}`).join(", ")}` : null,
+        ...report.notes,
       ].filter((b): b is string => !!b);
       return done(extras.length ? `${head}: ${extras.join(" · ")}` : head, data.gwLabel);
     }
