@@ -35,6 +35,8 @@ import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { projectedResult, resultProbabilities, type ProjectedResult } from "@shared/projected-result";
+import { oddsApiTeamNameToFplId } from "@shared/team-name-crosswalk";
 import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix";
 import { TEMPLATE_GROUPS, buildTemplateTeam, parseTemplateGroup } from "@shared/template-team";
 import { registerSharedGraphicsRoutes } from "./shared-graphics-routes";
@@ -12082,9 +12084,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         predictedMatchResults.set(match.id, {
           homeScore: match.homeTeam.predictedScore,
           awayScore: match.awayTeam.predictedScore,
+          homeExpectedGoals: match.homeTeam.expectedGoals,
+          awayExpectedGoals: match.awayTeam.expectedGoals,
           result: match.predictedResult
         });
       });
+
+      // Latest bookmaker win/draw/away-win % per fixture (only exists for the next gameweek or two);
+      // every other unfinished fixture gets its percentages from the projected goals instead.
+      const oddsByTeams = new Map<string, { homeWinProb: number | null; drawProb: number | null; awayWinProb: number | null }>();
+      try {
+        const { getFixtureOdds } = await import('./odds-service');
+        for (const o of await getFixtureOdds(CURRENT_SEASON)) {
+          const homeId = oddsApiTeamNameToFplId(o.homeTeam);
+          const awayId = oddsApiTeamNameToFplId(o.awayTeam);
+          if (homeId !== null && awayId !== null) oddsByTeams.set(`${homeId}-${awayId}`, o);
+        }
+      } catch (oddsErr) {
+        console.warn('Could not load fixture odds for projected standings, using projected goals only:', oddsErr);
+      }
+
+      // A projected match goes to whichever of home win / draw / away win has the highest percentage.
+      const applyProjectedResult = (homeTeam: any, awayTeam: any, result: ProjectedResult) => {
+        if (result === 'home_win') {
+          homeTeam.wins++;
+          homeTeam.points += 3;
+          awayTeam.losses++;
+        } else if (result === 'away_win') {
+          awayTeam.wins++;
+          awayTeam.points += 3;
+          homeTeam.losses++;
+        } else {
+          homeTeam.draws++;
+          awayTeam.draws++;
+          homeTeam.points += 1;
+          awayTeam.points += 1;
+        }
+      };
       
       // Process all fixtures
       allFixtures.forEach((fixture: any) => {
@@ -12094,19 +12130,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!homeTeam || !awayTeam) return;
         
         let homeGoals, awayGoals;
-        let isActual = false;
-        
+        let result: ProjectedResult;
+
         if (fixture.finished) {
           // Use actual results for finished games
           homeGoals = fixture.team_h_score || 0;
           awayGoals = fixture.team_a_score || 0;
-          isActual = true;
+          result = homeGoals > awayGoals ? 'home_win' : awayGoals > homeGoals ? 'away_win' : 'draw';
           homeTeam.actualGames++;
           awayTeam.actualGames++;
         } else {
-          // Use predicted scores for unfinished games
+          // Use predicted scores for the goals columns, and the win/draw/away-win % for the result
           const predictedMatch = predictedMatchResults.get(fixture.id);
-          
+
           if (predictedMatch) {
             homeGoals = predictedMatch.homeScore;
             awayGoals = predictedMatch.awayScore;
@@ -12114,6 +12150,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             homeGoals = 0;
             awayGoals = 0;
           }
+          result = projectedResult(resultProbabilities({
+            odds: oddsByTeams.get(`${fixture.team_h}-${fixture.team_a}`),
+            homeExpectedGoals: predictedMatch?.homeExpectedGoals ?? 0,
+            awayExpectedGoals: predictedMatch?.awayExpectedGoals ?? 0
+          }));
           homeTeam.projectedGames++;
           awayTeam.projectedGames++;
         }
@@ -12128,24 +12169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         awayTeam.goalsFor += awayGoals;
         awayTeam.goalsAgainst += homeGoals;
         
-        // Determine match result and update points
-        if (homeGoals > awayGoals) {
-          // Home win
-          homeTeam.wins++;
-          homeTeam.points += 3;
-          awayTeam.losses++;
-        } else if (awayGoals > homeGoals) {
-          // Away win
-          awayTeam.wins++;
-          awayTeam.points += 3;
-          homeTeam.losses++;
-        } else {
-          // Draw
-          homeTeam.draws++;
-          awayTeam.draws++;
-          homeTeam.points += 1;
-          awayTeam.points += 1;
-        }
+        applyProjectedResult(homeTeam, awayTeam, result);
       });
       
       // Also process TBC fixtures (event: null) using model projections.
@@ -12175,9 +12199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const homeTeam = teamStandings.get(proj.homeTeamId);
             const awayTeam = teamStandings.get(proj.awayTeamId);
             if (!homeTeam || !awayTeam) return;
-            // Use raw projected goals for stats; round for W/D/L determination
-            const homeRounded = Math.round(proj.homeGoals);
-            const awayRounded = Math.round(proj.awayGoals);
+            // Raw projected goals for the goals columns; the win/draw/away-win % decides the result
             homeTeam.played++;
             awayTeam.played++;
             homeTeam.projectedGames++;
@@ -12186,20 +12208,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             homeTeam.goalsAgainst += proj.awayGoals;
             awayTeam.goalsFor += proj.awayGoals;
             awayTeam.goalsAgainst += proj.homeGoals;
-            if (homeRounded > awayRounded) {
-              homeTeam.wins++;
-              homeTeam.points += 3;
-              awayTeam.losses++;
-            } else if (awayRounded > homeRounded) {
-              awayTeam.wins++;
-              awayTeam.points += 3;
-              homeTeam.losses++;
-            } else {
-              homeTeam.draws++;
-              awayTeam.draws++;
-              homeTeam.points += 1;
-              awayTeam.points += 1;
-            }
+            applyProjectedResult(homeTeam, awayTeam, projectedResult(resultProbabilities({
+              odds: oddsByTeams.get(`${proj.homeTeamId}-${proj.awayTeamId}`),
+              homeExpectedGoals: proj.homeGoals,
+              awayExpectedGoals: proj.awayGoals
+            })));
           });
         } catch (tbcErr) {
           console.warn('Could not include TBC fixtures in projected standings:', tbcErr);
