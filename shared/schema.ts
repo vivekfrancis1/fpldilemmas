@@ -551,6 +551,26 @@ export const playerMappings = pgTable("player_mappings", {
   index("idx_player_mappings_team").on(table.currentTeamId),
 ]);
 
+// Detailed positions (Left-back, Defensive midfield, Left winger...) per FPL player, from FotMob squad pages.
+// Kept next to FPL's own position; out_of_position marks a main position FPL would not file under that position.
+export const playerDetailedPositions = pgTable("player_detailed_positions", {
+  fplPlayerId: integer("fpl_player_id").primaryKey(),
+  fplPosition: varchar("fpl_position", { length: 3 }).notNull(), // GKP / DEF / MID / FWD
+  mainPosition: varchar("main_position", { length: 4 }).notNull(), // GK, CB, LB, RB, LWB, RWB, CDM, CM, CAM, LM, RM, LW, RW, ST
+  mainPositionLabel: varchar("main_position_label", { length: 30 }).notNull(),
+  otherPositions: text("other_positions").array().notNull().default(sql`'{}'::text[]`),
+  outOfPosition: boolean("out_of_position").notNull().default(false),
+  fotmobPlayerId: integer("fotmob_player_id").notNull(),
+  matchMethod: varchar("match_method", { length: 20 }).notNull(),
+  source: varchar("source", { length: 20 }).notNull().default("fotmob"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_player_detailed_positions_main").on(table.mainPosition),
+]);
+
+export type PlayerDetailedPosition = typeof playerDetailedPositions.$inferSelect;
+export type InsertPlayerDetailedPosition = typeof playerDetailedPositions.$inferInsert;
+
 export type PlayerMapping = typeof playerMappings.$inferSelect;
 export type InsertPlayerMapping = typeof playerMappings.$inferInsert;
 
