@@ -547,6 +547,19 @@ describe("buildPredictedLineup", () => {
     expect(startIds).toEqual(expect.arrayContaining([11, 12, 13]));
   });
 
+  it("two strikers where one is a rotation partner: only the likelier starter plays up front", () => {
+    // 31 (90 min) and 32 (60 min) are strikers: both start. With 32 down to 55 minutes he is a rotation partner and drops out.
+    const detailed = new Map<number, string[]>([[31, ["ST"]], [32, ["ST"]], [33, ["ST"]]]);
+    const both = run({ detailedPositions: detailed });
+    expect(both.rows.flatMap((r) => r.players).map((p) => p.id)).toEqual(expect.arrayContaining([31, 32]));
+    const rotation = run({ detailedPositions: detailed, projections: projections.map((p) => (p.playerId === 32 ? { ...p, xMinsPerGW: { "8": 55 } } : p)) });
+    const ids = rotation.rows.flatMap((r) => r.players).map((p) => p.id);
+    expect(ids).toContain(31);
+    expect(ids).not.toContain(32);
+    expect(rotation.complete).toBe(true);
+    expect(rotation.bench.map((p) => p.id)).toContain(32);
+  });
+
   it("without detailed positions the old FPL-position layout is kept", () => {
     expect(run().rows.map((r) => r.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
     expect(run().rows.flatMap((r) => r.players).every((p) => p.role === null)).toBe(true);

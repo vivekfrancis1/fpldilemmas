@@ -73,7 +73,14 @@ export function layoutLineup(players: LayoutPlayer[]): { rows: LayoutRow[]; form
 // (two right-backs), only the one with more expected minutes can start.
 const FLANK_SLOT: Record<string, string> = { LB: "left-back", LWB: "left-back", RB: "right-back", RWB: "right-back", LM: "left-wide", LW: "left-wide", RM: "right-wide", RW: "right-wide" };
 
-/** Ids of the players who lose a flank to a teammate with more expected minutes (ties go to the lower id). */
+/** A striker after the first only starts when he is expected to play at least this long; otherwise he rotates with the first. */
+export const STRIKER_MIN_MINUTES = 60;
+
+/**
+ * Ids of the players who cannot start alongside a teammate in the same role: a flank (left-back, right-back, left wide, right
+ * wide) goes to the player with more expected minutes (ties to the lower id), and only the likeliest striker is certain to
+ * start: another striker needs STRIKER_MIN_MINUTES or he is the first one's rotation partner.
+ */
 export function sharedSlotLosers(players: Array<{ id: number; role: string | null; minutes: number }>): Set<number> {
   const best = new Map<string, { id: number; minutes: number }>();
   const losers = new Set<number>();
@@ -86,5 +93,7 @@ export function sharedSlotLosers(players: Array<{ id: number; role: string | nul
     losers.add(challengerWins ? cur.id : p.id);
     if (challengerWins) best.set(slot, p);
   }
+  const strikers = players.filter((p) => p.role === "ST").sort((a, b) => b.minutes - a.minutes || a.id - b.id);
+  for (const p of strikers.slice(1)) if (p.minutes < STRIKER_MIN_MINUTES) losers.add(p.id);
   return losers;
 }

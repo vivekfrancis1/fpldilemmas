@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { layoutLineup, sharedSlotLosers, type LayoutPlayer } from "../shared/lineup-layout";
+import { STRIKER_MIN_MINUTES, layoutLineup, sharedSlotLosers, type LayoutPlayer } from "../shared/lineup-layout";
 
 const p = (id: number, role: string | null, fallback: LayoutPlayer["fallback"], xMins = 90): LayoutPlayer => ({ id, role, fallback, xMins });
 const ids = (rows: ReturnType<typeof layoutLineup>["rows"], key: string) => rows.find((r) => r.key === key)?.ids ?? [];
@@ -104,8 +104,19 @@ describe("sharedSlotLosers: one player per flank, the one with more expected min
     expect(sharedSlotLosers([q(1, "RM", 60), q(2, "RW", 80)])).toEqual(new Set([1]));
     expect(sharedSlotLosers([q(1, "LWB", 90), q(2, "LW", 60)])).toEqual(new Set());
   });
-  it("centre-backs, central midfielders, attacking midfielders and strikers are never limited", () => {
-    expect(sharedSlotLosers([q(1, "CB", 90), q(2, "CB", 80), q(3, "CB", 70), q(4, "CM", 90), q(5, "CM", 80), q(6, "CDM", 70), q(7, "CAM", 60), q(8, "CAM", 50), q(9, "ST", 90), q(10, "ST", 40)])).toEqual(new Set());
+  it("centre-backs, central midfielders and attacking midfielders are never limited", () => {
+    expect(sharedSlotLosers([q(1, "CB", 90), q(2, "CB", 80), q(3, "CB", 70), q(4, "CM", 90), q(5, "CM", 80), q(6, "CDM", 70), q(7, "CAM", 60), q(8, "CAM", 50), q(9, "ST", 90)])).toEqual(new Set());
+  });
+  it("the first striker always starts; another only with 60+ expected minutes (a rotation partner does not)", () => {
+    expect(STRIKER_MIN_MINUTES).toBe(60);
+    expect(sharedSlotLosers([q(1, "ST", 65), q(2, "ST", 38)])).toEqual(new Set([2])); // Havertz and Gyokeres
+    expect(sharedSlotLosers([q(1, "ST", 71), q(2, "ST", 61)])).toEqual(new Set());
+    expect(sharedSlotLosers([q(1, "ST", 60), q(2, "ST", 59.9)])).toEqual(new Set([2]));
+    expect(sharedSlotLosers([q(1, "ST", 89), q(2, "ST", 60), q(3, "ST", 11)])).toEqual(new Set([3]));
+  });
+  it("a lone striker with few minutes still starts", () => {
+    expect(sharedSlotLosers([q(1, "ST", 34)])).toEqual(new Set());
+    expect(sharedSlotLosers([q(1, "ST", 34), q(2, "ST", 20)])).toEqual(new Set([2]));
   });
   it("ties go to the lower id; players with no detailed position are never dropped", () => {
     expect(sharedSlotLosers([q(5, "RB", 80), q(3, "RB", 80)])).toEqual(new Set([5]));
