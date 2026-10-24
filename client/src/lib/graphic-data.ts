@@ -180,7 +180,7 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
     case "predicted-lineup": {
       if (spec.teams.length < 1) return { data: null, problem: "Pick a club to predict its lineup." };
       if (!fixtures || !projections || !ctx.detailedPositions) return { data: null, problem: null };
-      const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any, detailedPositions: ctx.detailedPositions });
+      const lineup = buildPredictedLineup({ teamId: spec.teams[0], gameweek: lineupGw, elements, projections, teamShortById, teamNameById, fixtures: fixtures as any, detailedPositions: ctx.detailedPositions, formation: spec.formation, xi: spec.xi });
       return { data: { kind: "predicted-lineup", lineup, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
     }
     case "player-news": {

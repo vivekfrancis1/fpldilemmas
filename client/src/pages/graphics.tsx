@@ -65,6 +65,7 @@ import {
   type GraphicElement,
   type GraphicPosition,
   type GraphicSpec,
+  type PredictedLineupContent,
   type PriceChangeInput,
   type SizeId,
   type TemplateId,
@@ -117,6 +118,8 @@ const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-viol
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
+import { FORMATIONS } from "@shared/formations";
+import { arrangeInFormation, rankForSlot, replaceSlot, type EditPlayer } from "@shared/lineup-edit";
 import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
@@ -167,6 +170,79 @@ function SimpleSelect({ value, onChange, options, testId }: { value: string; onC
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/** Predicted Lineup: pick a formation and switch players slot by slot. Anything changed marks the image as user-edited. */
+function LineupEditor({ spec, update, lineup, squad, elementById }: {
+  spec: GraphicSpec;
+  update: (patch: Partial<GraphicSpec>) => void;
+  lineup: PredictedLineupContent | null;
+  squad: EditPlayer[];
+  elementById: Map<number, GraphicElement>;
+}) {
+  const edited = !!spec.formation;
+  const changeFormation = (v: string) => {
+    if (v === "auto") return update({ formation: "", xi: [] });
+    // players already chosen by hand stay (moved to where they fit); otherwise the club's likeliest players are used
+    const xi = spec.xi.length === 11 ? arrangeInFormation(v, spec.xi.filter((id) => id > 0), squad).map((id) => id ?? 0) : [];
+    update({ formation: v, xi });
+  };
+  const changeSlot = (slot: number, v: string) => {
+    if (!lineup) return;
+    const current = lineup.slots.map((x) => x.id);
+    const next = v === "none" ? current.map((id, i) => (i === slot ? null : id)) : replaceSlot(current, slot, parseInt(v, 10));
+    update({ xi: next.map((id) => id ?? 0) });
+  };
+  const optionLabel = (p: EditPlayer) => {
+    const e = elementById.get(p.id);
+    const warn = e?.status === "i" || e?.status === "d" || e?.status === "s" ? " ⚠" : "";
+    return `${e?.web_name ?? p.id} · ${p.codes?.[0] ?? p.fplPosition}${warn}`;
+  };
+  return (
+    <div className="space-y-3" data-testid="lineup-editor">
+      <Field label="Formation">
+        <SimpleSelect
+          value={spec.formation || "auto"}
+          onChange={changeFormation}
+          options={[{ value: "auto", label: `Our prediction${lineup?.modelFormation ? ` (${lineup.modelFormation})` : ""}` }, ...FORMATIONS.map((f) => ({ value: f, label: f }))]}
+          testId="select-lineup-formation"
+        />
+      </Field>
+      {edited && lineup && lineup.slots.length === 11 && (
+        <>
+          <div className="space-y-1.5" data-testid="lineup-slots">
+            {lineup.slots.map((slot, i) => {
+              const options = rankForSlot(slot.role, squad);
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-11 shrink-0 rounded-md bg-gray-100 px-1.5 py-1 text-center text-xs font-semibold text-gray-700">{slot.role}</span>
+                  <div className="min-w-0 flex-1">
+                    <SimpleSelect
+                      value={slot.id === null ? "none" : String(slot.id)}
+                      onChange={(v) => changeSlot(i, v)}
+                      options={[...(slot.id === null ? [{ value: "none", label: "Empty" }] : []), ...options.map((p) => ({ value: String(p.id), label: optionLabel(p) }))]}
+                      testId={`select-lineup-slot-${i}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-500">Choosing a player who is already in the XI swaps the two. The image is marked as user-edited.</p>
+        </>
+      )}
+      {edited && (
+        <button
+          type="button"
+          onClick={() => update({ formation: "", xi: [] })}
+          className="text-xs font-medium text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
+          data-testid="lineup-reset"
+        >
+          Back to our prediction
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -792,6 +868,16 @@ export default function GraphicsPage() {
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
+  // Predicted Lineup editor: the club's FPL squad with detailed positions and expected minutes, to rank who fits each slot
+  const elementById = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
+  const lineupSquad = useMemo<EditPlayer[]>(() => {
+    if (spec.template !== "predicted-lineup" || !spec.teams[0]) return [];
+    const minutesById = new Map((projections ?? []).map((p) => [p.playerId, p.xMinsPerGW?.[String(lineupGw)] ?? 0]));
+    return elements
+      .filter((e) => e.team === spec.teams[0] && e.status !== "u" && POSITION_BY_TYPE[e.element_type])
+      .map((e) => ({ id: e.id, fplPosition: POSITION_BY_TYPE[e.element_type], codes: detailedPositions?.get(e.id) ?? null, minutes: minutesById.get(e.id) ?? 0 }));
+  }, [spec.template, spec.teams, elements, projections, lineupGw, detailedPositions]);
+
   const { width: fullWidth, height: fullHeight } = GRAPHIC_SIZES[spec.size];
   const scale = previewWidth > 0 ? Math.min(1, previewWidth / fullWidth) : 1;
   const canvas = data ? <GraphicCanvas spec={spec} theme={theme} data={data} /> : null;
@@ -1324,7 +1410,7 @@ export default function GraphicsPage() {
                   <Field label="Club">
                     <SimpleSelect
                       value={spec.teams[0] ? String(spec.teams[0]) : ""}
-                      onChange={(v) => update({ teams: [parseInt(v, 10)] })}
+                      onChange={(v) => update({ teams: [parseInt(v, 10)], xi: [] })}
                       options={[...teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => ({ value: String(t.id), label: t.name }))}
                       testId="select-lineup-club"
                     />
@@ -1337,7 +1423,12 @@ export default function GraphicsPage() {
                       testId="select-lineup-gw"
                     />
                   </Field>
-                  <p className="col-span-2 text-xs text-gray-500" data-testid="lineup-explainer">Picked automatically: the 11 players with the most expected minutes, one goalkeeper.</p>
+                  <p className="col-span-2 text-xs text-gray-500" data-testid="lineup-explainer">
+                    {spec.formation ? "Your own lineup: change the formation or any player below." : "Picked automatically: the 11 players with the most expected minutes, one goalkeeper. Pick a formation to make your own."}
+                  </p>
+                  <div className="col-span-2">
+                    <LineupEditor spec={spec} update={update} lineup={data?.kind === "predicted-lineup" ? data.lineup : null} squad={lineupSquad} elementById={elementById} />
+                  </div>
                 </div>
               )}
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arrangeInFormation, assignToFormation, replaceSlot, type EditPlayer } from "../shared/lineup-edit";
+import { arrangeInFormation, assignToFormation, rankForSlot, replaceSlot, type EditPlayer } from "../shared/lineup-edit";
 
 const p = (id: number, fpl: EditPlayer["fplPosition"], codes: string[] | null, minutes = 90): EditPlayer => ({ id, fplPosition: fpl, codes, minutes });
 
@@ -84,5 +84,25 @@ describe("replaceSlot: switching a player", () => {
   it("an empty slot can be filled", () => {
     const withGap: Array<number | null> = [1, 2, 3, null, 5, 6, 7, 9, 8, 10, 11];
     expect(replaceSlot(withGap, 3, 4)[3]).toBe(4);
+  });
+});
+
+describe("rankForSlot: who to offer for a slot, best fit first", () => {
+  it("natural players first, then others he plays, then the same part of the pitch, ties by minutes then id", () => {
+    const ids = rankForSlot("CB", squad).map((x) => x.id);
+    expect(ids.slice(0, 4)).toEqual([3, 4, 14, 2]); // CB mains by minutes (90, 90, 0), then the left-back who also plays CB
+  });
+  it("only goalkeepers for the goalkeeper slot, and no goalkeepers outfield", () => {
+    expect(rankForSlot("GK", squad).map((x) => x.id)).toEqual([1, 13]);
+    expect(rankForSlot("ST", squad).map((x) => x.id)).not.toContain(1);
+    expect(rankForSlot("ST", squad).map((x) => x.id)).not.toContain(13);
+  });
+  it("offers everyone eligible, so any player can be switched in", () => {
+    expect(rankForSlot("RW", squad)).toHaveLength(squad.length - 2);
+  });
+  it("a right winger comes before a striker for the right wing", () => {
+    const ids = rankForSlot("RW", squad).map((x) => x.id);
+    expect(ids[0]).toBe(10);
+    expect(ids.indexOf(9)).toBeLessThan(ids.indexOf(5)); // another attacker/midfielder ahead of a right-back
   });
 });

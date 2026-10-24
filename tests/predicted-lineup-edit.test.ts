@@ -107,6 +107,16 @@ describe("buildPredictedLineup: a chosen formation", () => {
     expect(l.rows[3].players.map((p) => p.id)).toEqual([25, 23, 24]); // LW CAM RW
     expect(l.rows[4].players.map((p) => p.id)).toEqual([31]);
   });
+  it("lists every slot with its role and player, empty slots included", () => {
+    const l = run({ formation: "4-2-3-1" });
+    expect(l.slots.map((x) => x.role)).toEqual(["GK", "LB", "CB", "CB", "RB", "CDM", "CDM", "LW", "CAM", "RW", "ST"]);
+    expect(l.slots.map((x) => x.id)).toEqual([1, 11, 12, 13, 14, 21, 22, 25, 23, 24, 31]);
+    const few = elements.filter((e) => e.team !== 1 || e.id <= 14);
+    expect(run({ elements: few, formation: "4-2-3-1" }).slots.some((x) => x.id === null)).toBe(true);
+  });
+  it("our prediction has no slots", () => {
+    expect(run().slots).toEqual([]);
+  });
   it("has no bench: that belongs to our prediction", () => {
     expect(run({ formation: "4-3-3" }).bench).toEqual([]);
   });
@@ -130,6 +140,17 @@ describe("buildPredictedLineup: a chosen XI", () => {
     expect(l.rows.flatMap((r) => r.players).find((p) => p.id === 31)?.flag).toBe("injured");
     const l2 = run({ elements: els, formation: "4-4-2", xi: [1, 11, 12, 13, 14, 21, 22, 23, 24, 31, 32] });
     expect(l2.rows.flatMap((r) => r.players).find((p) => p.id === 32)?.flag).toBe("doubtful");
+  });
+  it("filling a formation for the user skips injured players and anyone with a 0% chance, but the user can still pick them", () => {
+    const els = elements.map((e) => (e.id === 31 ? { ...e, status: "i" } : e));
+    const filled = run({ elements: els, formation: "4-2-3-1" });
+    expect(ids(filled)).not.toContain(31);
+    expect(ids(filled)).toContain(32); // the next striker
+    const zero = run({ formation: "4-2-3-1", projections: projections.map((p) => (p.playerId === 31 ? { ...p, chanceOfPlayingNextRound: 0 } : p)) });
+    expect(ids(zero)).not.toContain(31);
+    const picked = run({ elements: els, formation: "4-2-3-1", xi: XI });
+    expect(ids(picked)).toContain(31);
+    expect(picked.rows.flatMap((r) => r.players).find((p) => p.id === 31)?.flag).toBe("injured");
   });
   it("a player from another club in the XI is treated as an empty slot and refilled", () => {
     const xi = [1, 11, 12, 13, 14, 21, 22, 25, 23, 24, 99];

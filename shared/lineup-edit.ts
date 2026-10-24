@@ -69,3 +69,12 @@ export function fillGaps(formation: string, xi: Array<number | null>, squad: Edi
   assign(formation, squad.filter((p) => p.minutes <= 0), next);
   return next;
 }
+
+/** Everyone who could fill a slot, best fit first (ties by expected minutes, then id): goalkeepers only for goal, never outfield. */
+export function rankForSlot(role: string, squad: EditPlayer[]): EditPlayer[] {
+  return squad
+    .map((p) => ({ p, fit: slotFit(role, p.codes, p.fplPosition) }))
+    .filter((x) => x.fit >= 0)
+    .sort((a, b) => b.fit - a.fit || b.p.minutes - a.p.minutes || a.p.id - b.p.id)
+    .map((x) => x.p);
+}

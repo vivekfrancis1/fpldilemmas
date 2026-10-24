@@ -809,6 +809,8 @@ export interface PredictedLineupContent {
   edited: boolean;
   /** Our own prediction's formation (null when there is not enough data), also when the lineup has been edited. */
   modelFormation: string | null;
+  /** Edited lineups only: all 11 slots in order (goalkeeper first) with their role and the player in them (null = empty). */
+  slots: Array<{ role: string; id: number | null }>;
   /** Next players by expected minutes after the XI (at most BENCH_SIZE). */
   bench: LineupToken[];
   fixtures: Array<{ opponent: string; isHome: boolean }>;
@@ -914,7 +916,9 @@ export function buildPredictedLineup(input: {
     if (input.xi?.length === 11) {
       xi = input.xi.map((id) => (id > 0 && inSquad.has(id) && !seen.has(id) ? (seen.add(id), id) : null));
     }
-    xi = fillGaps(chosenFormation, xi, editPlayers);
+    // filling for the user never uses an injured player or one with no chance of playing; picking one by hand is allowed
+    const unfit = new Set(squad.filter((e) => e.status === "i" || projectionById.get(e.id)?.chanceOfPlayingNextRound === 0).map((e) => e.id));
+    xi = fillGaps(chosenFormation, xi, editPlayers.filter((p) => !unfit.has(p.id)));
     const tokenOf = (id: number): LineupToken => {
       const e = squad.find((x) => x.id === id)!;
       const proj = projectionById.get(id);
@@ -935,10 +939,10 @@ export function buildPredictedLineup(input: {
       position: String(line),
       players: slots.flatMap((s, i) => (s.line === line && xi[i] !== null ? [tokenOf(xi[i] as number)] : [])),
     }));
-    return { ...base, formation: chosenFormation, complete: xi.every((id) => id !== null), rows: editedRows, bench: [], edited: true, modelFormation };
+    return { ...base, formation: chosenFormation, complete: xi.every((id) => id !== null), rows: editedRows, bench: [], edited: true, modelFormation, slots: slots.map((s, i) => ({ role: s.role, id: xi[i] })) };
   }
 
-  return { ...base, formation: modelFormation, complete, rows, bench, edited: false, modelFormation };
+  return { ...base, formation: modelFormation, complete, rows, bench, edited: false, modelFormation, slots: [] };
 }
 
 

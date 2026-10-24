@@ -524,7 +524,19 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
       : null;
 
   const pitch = <Pitch rows={lineup.rows} renderToken={(p) => <LineupTokenView p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />} />;
-  const bench = lineup.bench.length > 0 && (
+  // An edited lineup is the poster's own view: say so loudly, so nobody takes it for our prediction.
+  const editedBanner = lineup.edited && (
+    <div
+      data-testid="lineup-edited-banner"
+      style={{
+        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, background: AMBER, color: "#1f1300",
+        padding: land ? "8px 14px" : "10px 20px", fontSize: land ? 18 : tall ? 30 : 26, fontWeight: 900, letterSpacing: 1.5, textAlign: "center", lineHeight: 1.15,
+      }}
+    >
+      ✎ USER-EDITED LINEUP · NOT OUR PREDICTION
+    </div>
+  );
+  const bench = !lineup.edited && lineup.bench.length > 0 && (
     <div style={{ ...panel(theme), padding: land ? "12px 16px" : "14px 22px", flexShrink: 0 }}>
       <div style={{ fontSize: land ? 15 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 6 : 10 }}>ALSO IN CONTENTION</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: land ? 6 : 10, flexDirection: land ? "column" : "row" }}>
@@ -539,7 +551,9 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
   );
   const note = (
     <div style={{ fontSize: land ? 14 : 18, color: theme.muted, fontWeight: 600, lineHeight: 1.3, flexShrink: 0 }}>
-      Based on our expected minutes, which include injury news. Not official team news. Players sit in their usual position (FotMob).
+      {lineup.edited
+        ? `Edited by ${spec.handle ? `@${spec.handle}` : "the poster"}: their own view, not our prediction${lineup.modelFormation ? ` (our model's formation: ${lineup.modelFormation})` : ""}. ⚠ marks injury news from FPL.`
+        : "Based on our expected minutes, which include injury news. Not official team news. Players sit in their usual position (FotMob)."}
     </div>
   );
 
@@ -555,9 +569,10 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
             {pitch}
           </div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+            {editedBanner}
             <div style={{ ...panel(theme), padding: "12px 16px", flexShrink: 0 }}>
               <div style={{ fontSize: 34, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{lineup.formation}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: theme.muted, marginTop: 4 }}>{lineup.doubleGameweek ? "Double gameweek: likeliest XI across both matches" : "Most likely formation"}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: theme.muted, marginTop: 4 }}>{lineup.edited ? "Formation chosen by the poster" : lineup.doubleGameweek ? "Double gameweek: likeliest XI across both matches" : "Most likely formation"}</div>
             </div>
             {bench}
             <div style={{ flex: 1 }} />
@@ -566,6 +581,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0 }}>
+          {editedBanner}
           {pitch}
           {bench}
           {note}

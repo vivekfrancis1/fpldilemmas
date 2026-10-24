@@ -1,6 +1,6 @@
 # Plan 015 — Editable Predicted Lineup (formation + player switches), clearly marked as user-edited
 
-Status: IN PROGRESS locally 2026-10-24, not pushed.
+Status: IMPLEMENTED locally 2026-10-24 (all three tranches), not pushed.
 Request (user, 2026-10-24): "Allow users to change formation (all formations listed in Fotmob should be made available) and switch players, so that the user can post what he feels is most likely. But we should make it clear in the shareable image that it is user edited."
 
 ## Decisions (user, 2026-10-24)
