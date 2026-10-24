@@ -61,3 +61,11 @@ export function replaceSlot(xi: Array<number | null>, slot: number, playerId: nu
   next[slot] = playerId;
   return next;
 }
+
+/** Fills the empty (null) slots of an XI with the club's likeliest remaining players, leaving the chosen ones where they are. */
+export function fillGaps(formation: string, xi: Array<number | null>, squad: EditPlayer[]): Array<number | null> {
+  const next = [...xi];
+  assign(formation, squad.filter((p) => p.minutes > 0), next);
+  assign(formation, squad.filter((p) => p.minutes <= 0), next);
+  return next;
+}

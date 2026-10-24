@@ -6,7 +6,9 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
-import { layoutLineup, sharedSlotLosers, type LineKey } from "./lineup-layout";
+import { layoutLineup, sharedSlotLosers } from "./lineup-layout";
+import { formationSlots, isFormation } from "./formations";
+import { fillGaps, type EditPlayer } from "./lineup-edit";
 import type { TableContent, TeamHistoryContent, TeamProjectionsContent } from "./graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
@@ -160,6 +162,8 @@ export function footerNote(spec: GraphicSpec, gwLabel: string | null): string {
   if (spec.template === "cover") return "";
   // Player News Quote: say whose words these are
   if (spec.template === "player-news") return spec.quote.trim() ? "Quote entered by the creator" : "Source: official FPL player news";
+  // an edited lineup is the poster's own view, not our projection
+  if (spec.template === "predicted-lineup" && spec.formation) return [gwLabel, "User-edited lineup"].filter((p): p is string => !!p).join(" · ");
   const parts = [gwLabel, usesProjections(spec) ? "Projections are estimates, not guarantees" : null].filter((p): p is string => !!p);
   return parts.length ? parts.join(" · ") : "Data from the official FPL API";
 }
@@ -263,6 +267,9 @@ export interface GraphicSpec {
   metric: TeamMetricId;
   /** League Table: all matches, home or away. */
   venue: VenueId;
+  /** Predicted Lineup, user-edited: a formation from shared/formations ("" = our prediction) and 11 player ids in slot order (0 = empty slot; none = pick for the formation). */
+  formation: string;
+  xi: number[];
 }
 
 export const MAX_PAGE = 20;
@@ -316,12 +323,23 @@ export const DEFAULT_SPEC: GraphicSpec = {
   page: 1,
   metric: "goals-for",
   venue: "all",
+  formation: "",
+  xi: [],
 };
 
 const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "player-history": 1, "team-projections": 3, "projected-table": 3, "league-table": 3, "team-history": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
+
+/** 11 slots, each a player id or 0 for an empty slot, no player twice; anything else gives []. */
+function slotList(v: string | null): number[] {
+  const parts = (v ?? "").split(",");
+  if (parts.length !== 11 || !parts.every((x) => /^\d+$/.test(x))) return [];
+  const ids = parts.map((x) => parseInt(x, 10));
+  const real = ids.filter((id) => id > 0);
+  return new Set(real).size === real.length ? ids : [];
+}
 
 function idList(v: string | null, max: number): number[] {
   const out: number[] = [];
@@ -368,6 +386,8 @@ export function decodeSpec(search: string): GraphicSpec {
   const viceRaw = intOrNull(q.get("vc")) ?? 0;
   const vice = squad.includes(viceRaw) && viceRaw !== captain ? viceRaw : 0;
   const chipRaw = q.get("chip") ?? "";
+  const formationRaw = q.get("fm") ?? "";
+  const formation = template === "predicted-lineup" && isFormation(formationRaw) ? formationRaw : "";
 
   return {
     template,
@@ -400,6 +420,8 @@ export function decodeSpec(search: string): GraphicSpec {
     page: Math.min(MAX_PAGE, Math.max(1, intOrNull(q.get("pg")) ?? 1)),
     metric: (TEAM_METRIC_IDS as string[]).includes(q.get("mt") ?? "") ? (q.get("mt") as TeamMetricId) : d.metric,
     venue: (VENUE_IDS as string[]).includes(q.get("vn") ?? "") ? (q.get("vn") as VenueId) : d.venue,
+    formation,
+    xi: formation ? slotList(q.get("xi")) : [],
   };
 }
 
@@ -440,6 +462,10 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.page > 1) add("pg", String(spec.page));
   if (spec.metric !== d.metric) add("mt", spec.metric);
   if (spec.venue !== d.venue) add("vn", spec.venue);
+  if (spec.template === "predicted-lineup" && spec.formation) {
+    add("fm", spec.formation);
+    if (spec.xi.length === 11) add("xi", spec.xi.join(","));
+  }
   return parts.join("&");
 }
 
@@ -777,8 +803,12 @@ export interface PredictedLineupContent {
   /** "4-4-2"; null when no legal XI can be formed from the players with expected minutes. */
   formation: string | null;
   complete: boolean;
-  /** Lines back to front: GKP, DEF, MID, AM (attacking midfield), FWD; empty lines are left out. */
-  rows: Array<{ position: LineKey; players: LineupToken[] }>;
+  /** Lines goalkeeper first: our prediction uses GKP, DEF, MID, AM (attacking midfield), FWD (empty lines left out); an edited lineup uses the formation's lines "0", "1", ... */
+  rows: Array<{ position: string; players: LineupToken[] }>;
+  /** The poster changed the formation or the players: it is not our prediction. */
+  edited: boolean;
+  /** Our own prediction's formation (null when there is not enough data), also when the lineup has been edited. */
+  modelFormation: string | null;
   /** Next players by expected minutes after the XI (at most BENCH_SIZE). */
   bench: LineupToken[];
   fixtures: Array<{ opponent: string; isHome: boolean }>;
@@ -806,6 +836,9 @@ export function buildPredictedLineup(input: {
   fixtures: CompareFixtureInput[];
   /** Detailed position codes by FPL player id, main position first. Players missing from it fall back on their FPL position. */
   detailedPositions?: Map<number, string[]>;
+  /** User edit: a formation from shared/formations, and optionally the 11 player ids in slot order (0 = empty slot). */
+  formation?: string;
+  xi?: number[];
 }): PredictedLineupContent {
   const { teamId, gameweek, elements, projections, teamShortById, teamNameById, fixtures, detailedPositions } = input;
   const teamShort = teamShortById.get(teamId) ?? "";
@@ -855,19 +888,57 @@ export function buildPredictedLineup(input: {
   const rows = layout.rows.map((r) => ({ position: r.key, players: r.ids.map((id) => tokens.get(id)!) }));
   const bench = Array.from(tokens.values()).filter((p) => !startingIds.has(p.id)).sort(byMinutes).slice(0, BENCH_SIZE);
   const gw = fixturesForGameweeks(teamId, fixtures, [gameweek])[0].fixtures;
-  return {
+  const base = {
     teamId,
     teamShort,
     teamName: teamNameById.get(teamId) ?? teamShort,
     gameweek,
-    formation: complete ? layout.formation : null,
-    complete,
-    rows,
-    bench,
     fixtures: gw.map((f) => ({ opponent: teamShortById.get(f.opponentId) ?? "?", isHome: f.isHome })),
     doubleGameweek: gw.length > 1,
     blank: gw.length === 0,
   };
+  const modelFormation = complete ? layout.formation : null;
+
+  // The poster's own lineup: a chosen formation, and optionally chosen players, from anyone in the club's FPL squad.
+  const chosenFormation = input.formation && isFormation(input.formation) ? input.formation : null;
+  if (chosenFormation) {
+    const squad = elements.filter((e) => e.team === teamId && e.status !== "u" && POSITION_BY_TYPE[e.element_type]);
+    const minutesOf = (id: number) => {
+      const raw = projectionById.get(id)?.xMinsPerGW?.[String(gameweek)];
+      return typeof raw === "number" && raw > 0 ? raw : 0;
+    };
+    const editPlayers: EditPlayer[] = squad.map((e) => ({ id: e.id, fplPosition: POSITION_BY_TYPE[e.element_type], codes: detailedPositions?.get(e.id) ?? null, minutes: minutesOf(e.id) }));
+    const inSquad = new Set(squad.map((e) => e.id));
+    const seen = new Set<number>();
+    let xi: Array<number | null> = Array(11).fill(null);
+    if (input.xi?.length === 11) {
+      xi = input.xi.map((id) => (id > 0 && inSquad.has(id) && !seen.has(id) ? (seen.add(id), id) : null));
+    }
+    xi = fillGaps(chosenFormation, xi, editPlayers);
+    const tokenOf = (id: number): LineupToken => {
+      const e = squad.find((x) => x.id === id)!;
+      const proj = projectionById.get(id);
+      return {
+        id,
+        name: e.web_name,
+        teamShort,
+        position: POSITION_BY_TYPE[e.element_type],
+        xMins: Math.min(90, Math.round(minutesOf(id))),
+        flag: e.status === "d" ? "doubtful" : e.status === "i" || e.status === "s" ? "injured" : null,
+        chance: typeof proj?.chanceOfPlayingNextRound === "number" && proj.chanceOfPlayingNextRound < 100 ? proj.chanceOfPlayingNextRound : null,
+        role: detailedPositions?.get(id)?.[0] ?? null,
+      };
+    };
+    const slots = formationSlots(chosenFormation);
+    const lineCount = Math.max(...slots.map((s) => s.line)) + 1;
+    const editedRows = Array.from({ length: lineCount }, (_, line) => ({
+      position: String(line),
+      players: slots.flatMap((s, i) => (s.line === line && xi[i] !== null ? [tokenOf(xi[i] as number)] : [])),
+    }));
+    return { ...base, formation: chosenFormation, complete: xi.every((id) => id !== null), rows: editedRows, bench: [], edited: true, modelFormation };
+  }
+
+  return { ...base, formation: modelFormation, complete, rows, bench, edited: false, modelFormation };
 }
 
 
@@ -1722,6 +1793,7 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     case "predicted-lineup": {
       const { lineup } = data;
       if (!lineup.complete) return done(`${lineup.teamName} ${data.gwLabel}: not enough expected-minutes data for a predicted XI yet`, data.gwLabel);
+      if (lineup.edited) return done(`User-edited ${lineup.teamName} XI for ${data.gwLabel}${lineup.formation ? ` (${lineup.formation})` : ""}: my own view, not the FPL Dilemmas prediction`, data.gwLabel);
       return done(`Predicted ${lineup.teamName} XI for ${data.gwLabel}${lineup.formation ? ` (${lineup.formation})` : ""}, from our expected minutes`, data.gwLabel);
     }
     case "player-card": {
