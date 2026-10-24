@@ -1307,6 +1307,7 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
   const nameFont = land ? 28 : tall ? 46 : 38;
   const xgFont = land ? 56 : tall ? 88 : 72;
   const xg = (v: number | null) => (v === null ? "–" : formatGoals(v));
+  const side = sideColors(theme);
   const cs = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
   return (
     <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · ${preview.kickoffLabel}`} gwLabel={gwLabel}>
@@ -1317,7 +1318,9 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
             <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{preview.home.name}</div>
           </div>
           <div style={{ flexShrink: 0, textAlign: "center" }}>
-            <div style={{ fontSize: xgFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>{xg(preview.home.xg)} – {xg(preview.away.xg)}</div>
+            <div style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>
+              <span style={{ color: side.home }}>{xg(preview.home.xg)}</span> – <span style={{ color: side.away }}>{xg(preview.away.xg)}</span>
+            </div>
             <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: 6 }}>Expected goals</div>
             <div style={{ fontSize: land ? 14 : 22, fontWeight: 800, marginTop: land ? 4 : 10 }}>Clean sheet {cs(preview.home.cs)} · {cs(preview.away.cs)}</div>
           </div>
