@@ -6,11 +6,12 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
+import type { PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report" | "player-projections" | "gw-top-scorers" | "player-history";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -32,6 +33,9 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "match-results", label: "Match Results", description: "Every finished score of a gameweek, with the scorers", headline: "Match Results" },
   { id: "match-preview", label: "Match Preview", description: "One fixture: expected goals, chances, recent form and the best-projected players", headline: "Match Preview" },
   { id: "match-report", label: "Match Report", description: "One finished match: score, goals, assists, cards and bonus points", headline: "Match Report" },
+  { id: "player-projections", label: "Player Projections", description: "The best-projected players by position over a gameweek range, with where their points come from", headline: "Player Projections" },
+  { id: "gw-top-scorers", label: "Top Scorers", description: "The highest-scoring players of a finished gameweek, with how they got their points", headline: "Top Scorers" },
+  { id: "player-history", label: "Player History", description: "One player's points in each recent gameweek, with goals, assists and bonus", headline: "Player History" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -140,7 +144,7 @@ export function footerHeight(size: SizeId): number {
 export const PRICE_LIST_LIMIT: Record<SizeId, number> = { square: 7, portrait: 10, landscape: 5 };
 
 export function usesProjections(spec: GraphicSpec): boolean {
-  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks" || spec.template === "match-predictions" || spec.template === "match-preview") return true;
+  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks" || spec.template === "match-predictions" || spec.template === "match-preview" || spec.template === "player-projections") return true;
   if (spec.template === "player-comparison") return (spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS).includes("xpts");
   return false;
 }
@@ -295,7 +299,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   page: 1,
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "player-history": 1 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -1484,7 +1488,10 @@ export type GraphicData =
   | { kind: "match-predictions"; predictions: MatchPredictionsContent; gwLabel: string; subtitle: string }
   | { kind: "match-results"; results: MatchResultsContent; gwLabel: string; subtitle: string }
   | { kind: "match-preview"; preview: MatchPreviewContent; gwLabel: string }
-  | { kind: "match-report"; report: MatchReportContent; gwLabel: string };
+  | { kind: "match-report"; report: MatchReportContent; gwLabel: string }
+  | { kind: "player-projections"; projections: PlayerProjectionsContent; gwLabel: string; subtitle: string }
+  | { kind: "gw-top-scorers"; scorers: TopScorersContent; gwLabel: string; subtitle: string }
+  | { kind: "player-history"; history: PlayerHistoryContent; gwLabel: string };
 
 // ---------- post captions ----------
 
@@ -1507,6 +1514,9 @@ const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
   "match-results": "#FPLResults",
   "match-preview": "#MatchPreview",
   "match-report": "#MatchReport",
+  "player-projections": "#xPts",
+  "gw-top-scorers": "#TopScorers",
+  "player-history": "#PlayerForm",
 };
 
 function captionGw(label: string | null | undefined): string | null {
@@ -1597,6 +1607,30 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     case "match-report": {
       const { report } = data;
       return done(`${report.home.short} ${report.home.score}-${report.away.score} ${report.away.short} ${data.gwLabel} report`, data.gwLabel);
+    }
+    case "player-projections": {
+      const { projections } = data;
+      if (projections.single) {
+        const top = projections.groups[0].rows.slice(0, 3).map((r) => `${r.name} ${r.xpts.toFixed(1)}`).join(" · ");
+        return done(top ? `${data.gwLabel} top ${projections.single} by our xPts: ${top}` : `${data.gwLabel} top ${projections.single} by our xPts`, data.gwLabel);
+      }
+      const best = projections.groups.filter((g) => g.rows.length).map((g) => `${g.position} ${g.rows[0].name} ${g.rows[0].xpts.toFixed(1)}`).join(" · ");
+      return done(best ? `${data.gwLabel} best by position (our xPts): ${best}` : `${data.gwLabel} player projections`, data.gwLabel);
+    }
+    case "gw-top-scorers": {
+      const top = data.scorers.rows.slice(0, 3).map((r) => `${r.name} ${r.points}`).join(" · ");
+      return done(top ? `${data.gwLabel} top scorers: ${top}` : `${data.gwLabel} top scorers`, data.gwLabel);
+    }
+    case "player-history": {
+      const { history } = data;
+      const t = history.totals;
+      const bits = [
+        `${t.points} pts`,
+        t.average === null ? null : `${t.average.toFixed(1)} per appearance`,
+        t.goals ? plural(t.goals, "goal", "goals") : null,
+        t.assists ? plural(t.assists, "assist", "assists") : null,
+      ].filter((b): b is string => !!b);
+      return done(`${history.name} (${history.teamShort}) ${data.gwLabel}: ${bits.join(", ")}`, data.gwLabel);
     }
     case "cover": {
       const { cover } = data;
@@ -1790,6 +1824,12 @@ export function isEmptyGraphic(data: GraphicData): boolean {
       return data.predictions.rows.length === 0;
     case "match-results":
       return data.results.rows.length === 0;
+    case "player-projections":
+      return data.projections.groups.every((g) => g.rows.length === 0);
+    case "gw-top-scorers":
+      return data.scorers.rows.length === 0;
+    case "player-history":
+      return data.history.bars.every((b) => b.points === null);
     default:
       return false;
   }

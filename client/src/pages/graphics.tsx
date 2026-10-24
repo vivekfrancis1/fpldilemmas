@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -68,6 +68,7 @@ import {
   type ThemeId,
 } from "@shared/graphics";
 import { projectionWindow } from "@shared/compare-utils";
+import { resolveHistoryGameweeks, type HistoryRowInput } from "@shared/graphics-players";
 import { isFixtureResult, isFixtureUpcoming, predictionGameweeks, resolveMatch, resolvePredictionGameweek, resolveResultsGameweek, resultGameweeks, type MatchFixtureInput, type MatchModelInput } from "@shared/graphics-matches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,9 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "match-results": ListChecks,
   "match-preview": Eye,
   "match-report": FileText,
+  "player-projections": ListOrdered,
+  "gw-top-scorers": Medal,
+  "player-history": LineChart,
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -113,7 +117,7 @@ const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers"];
 const MATCH_TEMPLATES: TemplateId[] = ["match-predictions", "match-results", "match-preview", "match-report"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -661,8 +665,17 @@ export default function GraphicsPage() {
   const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: LiveElement[] }>({
     queryKey: [`/api/event/${totwGw}/live`],
     staleTime: 5 * 60 * 1000,
-    enabled: spec.template === "team-of-the-week" && totwGw > 0,
+    enabled: (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers") && totwGw > 0,
   });
+
+  // Player History: FPL's match history of the chosen player (the same request the player page makes)
+  const historyPlayerId = spec.template === "player-history" ? spec.players[0] : undefined;
+  const { data: historyData } = useQuery<{ history: HistoryRowInput[] }>({
+    queryKey: ["/api/element-summary", String(historyPlayerId ?? "")],
+    staleTime: 5 * 60 * 1000,
+    enabled: !!historyPlayerId,
+  });
+  const resultGws = useMemo(() => resultGameweeks((fixtures ?? []) as unknown as MatchFixtureInput[]), [fixtures]);
 
   // Match Predictions and Match Preview: the team projections and market odds for the one gameweek being drawn
   const matchGw = matchModelGameweek(spec, fixtures);
@@ -745,8 +758,9 @@ export default function GraphicsPage() {
       defaultWeeks: DEFAULT_WEEKS,
       matchModel,
       matchModelGw: matchModel ? matchGw : undefined,
+      playerHistory: historyPlayerId && historyData?.history ? { playerId: historyPlayerId, history: historyData.history } : undefined,
     }),
-    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
@@ -865,7 +879,7 @@ export default function GraphicsPage() {
     update({ teams: spec.teams.includes(id) ? spec.teams.filter((t) => t !== id) : [...spec.teams, id].slice(0, 4) });
   };
 
-  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials" || spec.template === "fixture-ticker";
+  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials" || spec.template === "fixture-ticker" || spec.template === "player-projections";
   const activeStats = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
   const loading = bootstrapLoading;
   const fileParts =
@@ -881,6 +895,9 @@ export default function GraphicsPage() {
     : data?.kind === "match-results" ? [`gw${data.results.gameweek}`, ...(data.results.pages > 1 ? [`p${data.results.page}`] : [])]
     : data?.kind === "match-preview" ? [data.preview.home.short, data.preview.away.short, `gw${data.preview.gameweek}`]
     : data?.kind === "match-report" ? [data.report.home.short, data.report.away.short, `gw${data.report.gameweek}`]
+    : data?.kind === "player-projections" ? [gwLabel, spec.pos ?? "all"]
+    : data?.kind === "gw-top-scorers" ? [`gw${data.scorers.gameweek}`]
+    : data?.kind === "player-history" ? [data.history.name, data.gwLabel]
     : spec.template === "stat-leaders" ? [spec.stat]
     : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
@@ -1041,6 +1058,77 @@ export default function GraphicsPage() {
                   </Field>
                   <p className="col-span-2 text-xs text-gray-500">The most-owned players (owned by {MIN_WATCH_OWNERSHIP}%+) who are injured, doubtful or suspended, with FPL's own news.</p>
                 </div>
+              )}
+
+              {spec.template === "player-projections" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions (best of each)" : p }))} testId="select-position" />
+                  </Field>
+                  {spec.pos && (
+                    <Field label="How many players">
+                      <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                    </Field>
+                  )}
+                  <p className="col-span-2 text-xs text-gray-500">Expected points are our projections summed over the gameweeks below. Injured and suspended players are left out.{spec.pos ? " The columns show where each player's points come from." : " Pick a position to see where the points come from."}</p>
+                </div>
+              )}
+
+              {spec.template === "gw-top-scorers" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Finished gameweek">
+                    <SimpleSelect
+                      value={String(totwGw || "")}
+                      onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                      options={[...finishedGameweeks].reverse().map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                      testId="select-scorers-gw"
+                    />
+                  </Field>
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))} testId="select-position" />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                  <p className="col-span-2 text-xs text-gray-500">FPL's own points for a finished gameweek, with the scoring that made them.</p>
+                </div>
+              )}
+
+              {spec.template === "player-history" && (
+                <>
+                  <Field label="Player">
+                    <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={1} onChange={(players) => update({ players })} />
+                  </Field>
+                  {resultGws.length > 0 && (() => {
+                    const shown = resolveHistoryGameweeks(spec, resultGws);
+                    const first = shown[0];
+                    const last = shown[shown.length - 1];
+                    return (
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="From gameweek">
+                          <SimpleSelect
+                            value={String(first)}
+                            onChange={(v) => {
+                              const f = parseInt(v, 10);
+                              update({ from: f, to: Math.min(f + MAX_RANGE_GAMEWEEKS - 1, Math.max(f, last)) });
+                            }}
+                            options={resultGws.map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                            testId="select-history-from"
+                          />
+                        </Field>
+                        <Field label="To gameweek">
+                          <SimpleSelect
+                            value={String(last)}
+                            onChange={(v) => update({ from: first, to: parseInt(v, 10) })}
+                            options={resultGws.filter((gw) => gw >= first && gw < first + MAX_RANGE_GAMEWEEKS).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                            testId="select-history-to"
+                          />
+                        </Field>
+                        <p className="col-span-2 text-xs text-gray-500">Up to {MAX_RANGE_GAMEWEEKS} gameweeks, from FPL's match history. Only finished matches count.</p>
+                      </div>
+                    );
+                  })()}
+                </>
               )}
 
               {spec.template === "team-of-the-week" && (

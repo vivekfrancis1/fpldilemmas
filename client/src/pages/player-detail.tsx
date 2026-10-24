@@ -3,6 +3,8 @@ import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
+import { playerGraphicLink } from "@shared/graphics-players";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -770,6 +772,7 @@ export default function PlayerDetail() {
                         {player.selected_by_percent}% owned
                       </Badge>
                     )}
+                    <ShareGraphicLink testId="link-share-image" href={playerGraphicLink({ template: "player-history", player: playerId })} label="Share history" />
                   </div>
                 </div>
               </div>

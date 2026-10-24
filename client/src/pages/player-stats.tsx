@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
+import { playerGraphicLink } from "@shared/graphics-players";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 export default function PlayerStats() {
   const [filters, setFilters] = useState<FilterState>({
@@ -247,6 +249,13 @@ export default function PlayerStats() {
             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-1">
               {currentGameweek === 0 ? "Pre-season" : `GW${startGameweek}-${endGameweek || currentGameweek}`}
             </Badge>
+          )}
+          {/* the images are made from the live season: season-to-date leaders, and the latest finished gameweek's top scorers */}
+          {selectedSeason === "current" && currentGameweek > 0 && (
+            <div className="ml-auto flex flex-wrap gap-2">
+              <ShareGraphicLink testId="link-share-leaders" href={playerGraphicLink({ template: "stat-leaders" })} label="Share leaders" />
+              <ShareGraphicLink testId="link-share-top-scorers" href={playerGraphicLink({ template: "gw-top-scorers" })} label="Share top scorers" />
+            </div>
           )}
         </div>
 

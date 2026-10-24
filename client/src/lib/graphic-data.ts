@@ -2,6 +2,15 @@ import type { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { projectionWindow } from "@shared/compare-utils";
 import {
+  PROJECTION_GROUP_LIMIT,
+  buildPlayerHistory,
+  buildPlayerProjections,
+  buildTopScorers,
+  resolveHistoryGameweeks,
+  type HistoryRowInput,
+  type LiveScorerInput,
+} from "@shared/graphics-players";
+import {
   MAX_RANGE_GAMEWEEKS,
   MIN_RATE_MINUTES,
   PRICE_LIST_LIMIT,
@@ -36,6 +45,8 @@ import {
   resolveMatch,
   resolvePredictionGameweek,
   resolveResultsGameweek,
+  resultGameweeks,
+  isFixtureResult,
   type MatchFixtureInput,
   type MatchModelInput,
 } from "@shared/graphics-matches";
@@ -50,10 +61,7 @@ export interface PlayerProjection {
   chanceOfPlayingNextRound?: number | null;
 }
 
-export interface LiveElement {
-  id: number;
-  stats: { total_points: number; minutes: number };
-}
+export type LiveElement = LiveScorerInput;
 
 export interface GraphicDataContext {
   elements: GraphicElement[];
@@ -74,6 +82,8 @@ export interface GraphicDataContext {
   /** Match Predictions / Match Preview: the team projections and odds for ONE gameweek (`matchModelGw`); undefined while loading. */
   matchModel?: MatchModelInput;
   matchModelGw?: number;
+  /** Player History: FPL's match history of the chosen player; undefined while loading. */
+  playerHistory?: { playerId: number; history: HistoryRowInput[] };
 }
 
 export interface ResolvedGameweeks {
@@ -247,6 +257,35 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
       if (!report) return { data: null, problem: "That match has not finished yet." };
       return { data: { kind: "match-report", report, gwLabel: gameweekLabel(report.gameweek, report.gameweek) }, problem: null };
     }
+    case "player-projections": {
+      if (!projections) return { data: null, problem: null };
+      const content = buildPlayerProjections({ elements, projections: projections as any, teamShortById, gameweeks, pos: spec.pos, top: spec.top, perGroup: PROJECTION_GROUP_LIMIT[spec.size] });
+      return { data: { kind: "player-projections", projections: content, gwLabel, subtitle: `${gwLabel} · ${spec.pos ?? "best of each position"} · ranked by our expected points` }, problem: null };
+    }
+    case "gw-top-scorers": {
+      if (totwGw === 0) return { data: null, problem: "No gameweek has finished yet, so there are no top scorers to show." };
+      if (!ctx.liveElements) return { data: null, problem: null };
+      const scorers = buildTopScorers({ elements, live: ctx.liveElements, teamShortById, gameweek: totwGw, pos: spec.pos, top: spec.top });
+      const label = gameweekLabel(totwGw, totwGw);
+      return { data: { kind: "gw-top-scorers", scorers, gwLabel: label, subtitle: `${label} · ${spec.pos ?? "all positions"} · actual FPL points` }, problem: null };
+    }
+    case "player-history": {
+      const e = selectedElements[0];
+      if (!e) return { data: null, problem: "Search and pick a player to see their history." };
+      if (!fixtures) return { data: null, problem: null };
+      const list = asMatchFixtures(fixtures);
+      const gws = resolveHistoryGameweeks(spec, resultGameweeks(list));
+      if (gws.length === 0) return { data: null, problem: "No match has finished yet, so there is no player history to show." };
+      if (!ctx.playerHistory || ctx.playerHistory.playerId !== e.id) return { data: null, problem: null };
+      const history = buildPlayerHistory({
+        element: e,
+        history: ctx.playerHistory.history,
+        finishedFixtureIds: new Set(list.filter(isFixtureResult).map((f) => f.id)),
+        teamShortById,
+        gameweeks: gws,
+      });
+      return { data: { kind: "player-history", history, gwLabel: gameweekLabel(gws[0], gws[gws.length - 1]) }, problem: null };
+    }
     case "top-differentials": {
       const rows = buildDifferentials({ elements, projections: projections ?? [], teamShortById, from, to, pos: spec.pos, maxOwn: spec.maxOwn, top: spec.top });
       const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
@@ -269,6 +308,7 @@ export function makeGraphicDataContext(input: {
   defaultWeeks?: number;
   matchModel?: MatchModelInput;
   matchModelGw?: number;
+  playerHistory?: { playerId: number; history: HistoryRowInput[] };
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
@@ -288,5 +328,6 @@ export function makeGraphicDataContext(input: {
     priceChanges: input.priceChanges,
     matchModel: input.matchModel,
     matchModelGw: input.matchModelGw,
+    playerHistory: input.playerHistory,
   };
 }

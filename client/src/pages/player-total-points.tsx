@@ -7,6 +7,8 @@ import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDro
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
+import { playerGraphicLink } from "@shared/graphics-players";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 import { useTbcAssignments } from "@/hooks/useTbcAssignments";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2273,10 +2275,24 @@ export default function PlayerTotalPoints() {
                     data-testid="input-search-players"
                   />
                 </div>
+                <ShareGraphicLink
+                  className="ml-auto"
+                  testId="link-share-image"
+                  href={viewMode === "future"
+                    ? playerGraphicLink({
+                        template: "player-projections",
+                        from: startGameweek ?? undefined,
+                        to: endGameweek !== null && endGameweek <= 38 ? endGameweek : undefined,
+                        // one chosen position carries over; several (or none) means the best of each position
+                        pos: selectedPositions.size === 1 ? ({ Goalkeeper: "GKP", Defender: "DEF", Midfielder: "MID", Forward: "FWD" } as const)[Array.from(selectedPositions)[0] as "Goalkeeper"] ?? null : null,
+                      })
+                    : playerGraphicLink({ template: "gw-top-scorers", from: endGameweek ?? undefined, to: endGameweek ?? undefined })}
+                  label={viewMode === "future" ? "Share projections" : "Share top scorers"}
+                />
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen((open) => !open)}
-                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
                   data-testid="button-toggle-filters"
                 >
                   <Filter className="h-4 w-4 text-indigo-600" />

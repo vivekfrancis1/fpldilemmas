@@ -1,6 +1,6 @@
 # Plan 014 — Shareable images for every prediction, projection and past result
 
-Status: IN PROGRESS. Tranche 1 (Matches) IMPLEMENTED locally 2026-10-24, not pushed. Tranches 2-4 not started.
+Status: IN PROGRESS. Tranches 1 (Matches) and 2 (Players) IMPLEMENTED locally 2026-10-24, not pushed. Tranches 3-4 not started.
 Request (user, 2026-10-24): "All match predictions, team and player projections for the upcoming gameweek(s) should be made into shareable images. All match results, team and player history for the past gameweek(s) should be made into shareable images."
 
 ## Decisions (user, 2026-10-24)
@@ -60,3 +60,19 @@ Data sources, no new endpoints or calculations: `/api/fixtures` (scores, scorers
 Deviations from the plan: Match Report is built from FPL's own fixture stats only (goals, assists, cards, bonus, penalties); shots, xG and possession are not on it, since the live-season match data does not carry them. "Predicted score" is shown as expected goals (the site's own figure), not a rounded scoreline.
 Verified in the browser on live data: all four templates at square / portrait / landscape, the page-2 selector, phone width (no horizontal scroll), the three share links, and real PNG exports through the app's own exporter (names fit, shirts, footer and watermark present). In this environment the page's own Share image menu cannot make an image ("Couldn't prepare the image", same on the existing Captain Picks): the local dev page cannot read the Google Fonts stylesheet; exports were checked by running the exporter with Inter's Latin face embedded by hand.
 Not yet: the packs (tranche 4), and the other pages' buttons (tranches 2-3).
+
+## Update 2026-10-24 — Tranche 2 (Players) built
+Approved by the user ("Yes, go ahead with tranche 2").
+Built:
+- `shared/graphics-players.ts` (new; 36 tests in `tests/graphics-players.test.ts`, written first):
+  - **Player Projections** (`buildPlayerProjections`): the best-projected players over a gameweek range, either one position (top 3-10, with three component columns: GKP clean sheet / saves / bonus, DEF clean sheet / attack / defensive contributions, MID and FWD goals / assists / bonus, each summed over exactly the chosen gameweeks) or the best 4-5 of each of the four positions (2x2 grid, four columns on landscape). Injured, suspended, unavailable and not-in-squad players are left out, doubtful ones flagged, players with no projection in the range omitted.
+  - **Top Scorers** (`buildTopScorers`): the highest-scoring players of a finished gameweek from FPL's live points; only players who played and scored above zero; level points go to the bigger goal involvement then the lower id; "chips" show where the points came from (FPL's own `explain`, summed over a double gameweek, biggest first, at most four, minutes only as a fallback).
+  - **Player History** (`buildPlayerHistory`): one player's points in each of up to 8 gameweeks from FPL's match history, finished matches only (a double gameweek is added up and shows both opponents), totals (points, points per appearance, goals, assists, bonus, minutes, best gameweek). Default: the last 8 gameweeks that have finished matches.
+  - `playerGraphicLink` for the Share buttons.
+- `shared/graphics.ts`: three template ids, captions, `isEmptyGraphic`, `usesProjections` (projections carry "Projections are estimates"). `shared/graphic-defaults.ts`: Player History opens on the best-projected player (same rule as Player Card), with a test.
+- Faces (`graphic-faces.tsx`), `graphic-data.ts` (history and live points loaded for the chosen player / gameweek), `/graphics` page controls (position, top N, gameweek range, finished gameweek, player picker and from/to gameweeks).
+- Share buttons: Player Total Points (projections tab: "Share projections" with its range and, when exactly one position is selected, that position; history tab: "Share top scorers"), the player detail page ("Share history"), Player Stats ("Share leaders" opens the existing Stat Leaders, "Share top scorers"), current season only.
+Data sources, no new endpoints or calculations: `/api/cached/player-total-points` (expected points and components), `/api/event/<gw>/live` (points and scoring breakdown), `/api/element-summary/<id>` (match history), `/api/fixtures` (which matches have finished).
+Not done on purpose: the single-component projection pages (goals, assists, clean sheets, minutes, bonus, saves, cards, defensive contributions) have no button of their own; Player Projections already shows those components when a position is chosen. Say if you want a button on each, opening Player Projections for that position.
+Verified in the browser on live data: all three templates at square / portrait / landscape through the app's real exporter (Inter embedded by hand, as in tranche 1), default player, controls, phone width (no horizontal scroll) and the share links on four pages. Full suite: 1238 passed.
+Not yet: Team Projections / League Table / Team History (tranche 3), packs (tranche 4).

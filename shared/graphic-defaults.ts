@@ -2,7 +2,7 @@
 // themselves live in shared/default-picks.ts (trending in, best projected, next club, newsworthy); this module maps them
 // onto the templates. Pure: the page applies the patch once, and only when the link and the person have chosen nothing.
 //
-//   Player Card            the best projected player
+//   Player Card            the best projected player (also Player History)
 //   Player Comparison      the 3 most transferred in this gameweek (topped up from the best projected)
 //   Cover Generator        the 3 best projected players
 //   Player News Quote      the most newsworthy player, else the most transferred in
@@ -26,7 +26,7 @@ export interface GraphicDefaultsContext {
   tickerRows: FixtureGridContent["rows"];
 }
 
-const PLAYER_TEMPLATES = new Set(["player-card", "player-comparison", "cover", "player-news"]);
+const PLAYER_TEMPLATES = new Set(["player-card", "player-comparison", "cover", "player-news", "player-history"]);
 const TEAM_TEMPLATES = new Set(["predicted-lineup", "fixtures-comparison"]);
 
 /** True when this template has nothing chosen and has a default to offer. */
@@ -55,6 +55,7 @@ export function defaultSelectionPatch(spec: GraphicSpec, ctx: GraphicDefaultsCon
   const players = (ids: number[]) => (ids.length ? { players: ids } : null);
   switch (spec.template) {
     case "player-card":
+    case "player-history":
       return players(topByProjection(elements, ctx.totals, 1));
     case "cover":
       return players(topByProjection(elements, ctx.totals, DEFAULT_COMPARISON_SIZE));
