@@ -312,6 +312,13 @@ describe("captions and empty graphics", () => {
     expect(c).toContain("17 pts");
     expect(c.length).toBeLessThanOrEqual(256);
   });
+  it("a history over several gameweeks is tagged with the latest one, not the first", () => {
+    const row = (round: number, fixture: number) => ({ round, fixture, opponent_team: 2, was_home: true, total_points: 6, minutes: 90, goals_scored: 0, assists: 0, clean_sheets: 0, bonus: 0, team_h_score: 1, team_a_score: 0 });
+    const long = buildPlayerHistory({ element: elements.find((e) => e.id === 10)!, history: [row(3, 1), row(4, 2), row(5, 3)], finishedFixtureIds: new Set([1, 2, 3]), teamShortById, gameweeks: [3, 4, 5, 6] });
+    const c = buildCaption({ kind: "player-history", history: long, gwLabel: "GW3-6" }, specFor("player-history"));
+    expect(c).toContain("#GW5"); // GW6 has no finished match for him
+    expect(c).not.toContain("#GW3 ");
+  });
   it("empty graphics are detected", () => {
     expect(isEmptyGraphic({ kind: "player-projections", projections: mid, gwLabel: "GW9-10", subtitle: "" })).toBe(false);
     const none = buildPlayerProjections({ ...base, gameweeks: [30], pos: "MID", top: 3 });

@@ -314,6 +314,8 @@ describe("captions and empty graphics", () => {
     const c = buildCaption({ kind: "team-history", history: h, gwLabel: "GW1-3" }, spec("team-history"));
     expect(c).toContain("Arsenal");
     expect(c).toContain("WDW");
+    expect(c).toContain("#GW3"); // the latest gameweek shown, not the first of the range
+    expect(c).not.toContain("#GW1 ");
     expect(c.length).toBeLessThanOrEqual(256);
   });
   it("empty graphics are detected", () => {

@@ -44,6 +44,9 @@ import {
   MAX_MANAGER_NAME,
   type ChipId,
   GAMEWEEK_PACK,
+  REVIEW_PACK,
+  reviewPackSpecs,
+  reviewZipName,
   isEmptyGraphic,
   MIN_WATCH_OWNERSHIP,
   buildCaption,
@@ -69,7 +72,8 @@ import {
 } from "@shared/graphics";
 import { projectionWindow } from "@shared/compare-utils";
 import { resolveHistoryGameweeks, type HistoryRowInput } from "@shared/graphics-players";
-import { TEAM_METRICS, resolveProjectedEndGameweek, teamGraphicUrl } from "@shared/graphics-teams";
+import { MATCH_LIST_LIMIT, predictionPageCount, resultsPageCount } from "@shared/graphics-matches";
+import { TEAM_METRICS, formExtremes, resolveProjectedEndGameweek, teamGraphicUrl } from "@shared/graphics-teams";
 import { isFixtureResult, isFixtureUpcoming, predictionGameweeks, resolveMatch, resolvePredictionGameweek, resolveResultsGameweek, resultGameweeks, type MatchFixtureInput, type MatchModelInput } from "@shared/graphics-matches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,7 +117,7 @@ const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-viol
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
-import { computeGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { computeGraphicData, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 
@@ -594,7 +598,8 @@ function saveBrand(brand: { handle: string; accent: string }) {
   }
 }
 
-type PackState = { busy: boolean; done: number; total: number; message: string | null; ok: boolean };
+type PackKind = "preview" | "review";
+type PackState = { busy: boolean; kind: PackKind | null; done: number; total: number; message: string | null; ok: boolean; messageKind: PackKind | null };
 
 export default function GraphicsPage() {
   const [spec, setSpec] = useState<GraphicSpec>(() => {
@@ -606,7 +611,8 @@ export default function GraphicsPage() {
   const [copied, setCopied] = useState(false);
   const [captionCopied, setCaptionCopied] = useState(false);
   const [packGw, setPackGw] = useState<number | null>(null);
-  const [pack, setPack] = useState<PackState>({ busy: false, done: 0, total: GAMEWEEK_PACK.length, message: null, ok: true });
+  const [reviewGw, setReviewGw] = useState<number | null>(null);
+  const [pack, setPack] = useState<PackState>({ busy: false, kind: null, done: 0, total: GAMEWEEK_PACK.length, message: null, ok: true, messageKind: null });
   const queryClient = useQueryClient();
   const [previewRef, previewWidth] = useElementWidth<HTMLDivElement>();
 
@@ -813,29 +819,52 @@ export default function GraphicsPage() {
   };
 
   const selectedPackGw = packGw ?? defaultRange.from;
-  const runPack = async () => {
+  const selectedReviewGw = reviewGw && finishedGameweeks.includes(reviewGw) ? reviewGw : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
+
+  // Both packs work the same way: plan the images, load each one's own data (cached, so shared data is fetched once), draw
+  // them with the fonts embedded once, and zip them with a captions.txt. A graphic with nothing to show is left out and named.
+  const runPack = async (kind: PackKind) => {
     if (pack.busy) return;
-    const total = GAMEWEEK_PACK.length;
-    setPack({ busy: true, done: 0, total, message: null, ok: true });
-    let packContext: ReturnType<typeof makeGraphicDataContext>;
+    const gameweek = kind === "preview" ? selectedPackGw : selectedReviewGw;
+    const zipLabel = kind === "preview" ? "GW pack" : "review pack";
+    const fail = (message: string) => setPack((p) => ({ ...p, busy: false, kind, ok: false, message, messageKind: kind }));
+    if (!gameweek) {
+      fail("There is no finished gameweek to review yet.");
+      return;
+    }
+    setPack({ busy: true, kind, done: 0, total: kind === "preview" ? GAMEWEEK_PACK.length : REVIEW_PACK.length, message: null, ok: true, messageKind: kind });
+    const fresh = { staleTime: 5 * 60 * 1000 };
+    const fetchJson = (url: string) => queryClient.fetchQuery<any>({ queryKey: [url], ...fresh });
+    let baseContext: ReturnType<typeof makeGraphicDataContext>;
+    let fixtureList: Fixture[];
     try {
       // the pack loads its own data (so it never depends on what the page happened to have loaded)
-      const fresh = { staleTime: 5 * 60 * 1000 };
       const [bs, projs, fx, changes] = await Promise.all([
         queryClient.fetchQuery<BootstrapData>({ queryKey: ["/api/bootstrap-static"], ...fresh }),
         queryClient.fetchQuery<PlayerProjection[]>({ queryKey: ["/api/cached/player-total-points"], ...fresh }),
         queryClient.fetchQuery<Fixture[]>({ queryKey: ["/api/fixtures"], ...fresh }),
-        queryClient.fetchQuery<PriceChangeInput[]>({ queryKey: ["/api/price-changes/recent"], ...fresh }),
+        kind === "preview" ? queryClient.fetchQuery<PriceChangeInput[]>({ queryKey: ["/api/price-changes/recent"], ...fresh }) : Promise.resolve([] as PriceChangeInput[]),
       ]);
-      packContext = makeGraphicDataContext({ bootstrap: bs, projections: projs, fixtures: fx, liveElements: undefined, priceChanges: changes ?? [], defaultWeeks: DEFAULT_WEEKS });
+      fixtureList = fx;
+      baseContext = makeGraphicDataContext({ bootstrap: bs, projections: projs, fixtures: fx, liveElements: undefined, priceChanges: changes ?? [], defaultWeeks: DEFAULT_WEEKS });
     } catch {
-      setPack({ busy: false, done: 0, total, ok: false, message: "Couldn't load the data for the pack. Please try again." });
+      fail("Couldn't load the data for the pack. Please try again.");
       return;
     }
     try {
-      const events = (bootstrap?.events ?? []) as Array<{ id: number; deadline_time?: string }>;
-      const deadline = events.find((e) => e.id === selectedPackGw)?.deadline_time ?? null;
-      const planned = packSpecs(spec, selectedPackGw, { deadline });
+      const matches = fixtureList as unknown as import("@shared/graphics-matches").MatchFixtureInput[];
+      const limit = MATCH_LIST_LIMIT[spec.size];
+      let planned: ReturnType<typeof packSpecs>;
+      if (kind === "preview") {
+        const events = (bootstrap?.events ?? []) as Array<{ id: number; deadline_time?: string }>;
+        const deadline = events.find((e) => e.id === gameweek)?.deadline_time ?? null;
+        planned = packSpecs(spec, gameweek, { deadline, matchPages: predictionPageCount(matches, gameweek, limit) });
+      } else {
+        const form = formExtremes(matches, gameweek, baseContext.teams.map((t) => t.id));
+        planned = reviewPackSpecs(spec, gameweek, { resultsPages: resultsPageCount(matches, gameweek, limit), bestForm: form.best, worstForm: form.worst });
+      }
+      const total = planned.length;
+      setPack((p) => ({ ...p, total }));
       // fonts are embedded once for the whole pack, and shirt images are fetched once and reused: far faster than per image
       const fontEmbedCSS = await prepareFontEmbedCSS();
       const files: Array<{ name: string; data: Uint8Array }> = [];
@@ -844,20 +873,27 @@ export default function GraphicsPage() {
       for (let i = 0; i < planned.length; i++) {
         const { item, spec: s } = planned[i];
         setPack((p) => ({ ...p, done: i }));
-        const { data: graphic } = computeGraphicData(s, packContext);
+        const itemContext = await loadGraphicData(s, baseContext, fetchJson);
+        const { data: graphic } = computeGraphicData(s, itemContext);
         // nothing to show yet (e.g. no projections for that gameweek, or no price changes today): skip it rather than draw a blank card
         if (!graphic || isEmptyGraphic(graphic)) {
           skipped.push(item.label);
           continue;
         }
         const size = GRAPHIC_SIZES[s.size];
-        const blob = await renderToPng(<GraphicCanvas spec={s} theme={withAccent(resolveTheme(s.theme, null), s.accent)} data={graphic} />, size.width, size.height, { fontEmbedCSS, cacheBust: false });
+        const clubForTheme = s.template === "team-history" ? itemContext.teams.find((t) => t.id === s.teams[0]) : undefined;
+        const blob = await renderToPng(
+          <GraphicCanvas spec={s} theme={withAccent(resolveTheme(s.theme, clubForTheme ? teamColor(itemContext.teamShortById.get(clubForTheme.id)) : null), s.accent)} data={graphic} />,
+          size.width,
+          size.height,
+          { fontEmbedCSS, cacheBust: false },
+        );
         const fileName = packFileName(i, s.template);
         files.push({ name: fileName, data: new Uint8Array(await blob.arrayBuffer()) });
         captions.push({ fileName, caption: buildCaption(graphic, s) });
       }
       if (files.length === 0) {
-        setPack({ busy: false, done: total, total, ok: false, message: `Nothing to put in a GW${selectedPackGw} pack yet: ${skipped.join(", ")} have no data. Try again closer to the deadline.` });
+        setPack({ busy: false, kind, done: total, total, ok: false, messageKind: kind, message: `Nothing to put in a GW${gameweek} ${zipLabel} yet: ${skipped.join(", ")} have no data. ${kind === "preview" ? "Try again closer to the deadline." : "Try again once matches have finished."}` });
         return;
       }
       files.push({ name: "captions.txt", data: new TextEncoder().encode(buildCaptionsFile(captions)) });
@@ -865,18 +901,20 @@ export default function GraphicsPage() {
       const url = URL.createObjectURL(new Blob([zip.buffer as ArrayBuffer], { type: "application/zip" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = packZipName(selectedPackGw);
+      a.download = kind === "preview" ? packZipName(gameweek) : reviewZipName(gameweek);
       a.click();
       URL.revokeObjectURL(url);
       setPack({
         busy: false,
+        kind,
         done: total,
         total,
         ok: true,
+        messageKind: kind,
         message: `Downloaded ${captions.length} image${captions.length === 1 ? "" : "s"} and captions.txt${skipped.length ? `. Left out because there is nothing to show yet: ${skipped.join(", ")}.` : "."}`,
       });
     } catch {
-      setPack({ busy: false, done: 0, total, ok: false, message: "Couldn't build the pack. Please try again." });
+      fail("Couldn't build the pack. Please try again.");
     }
   };
 
@@ -1416,29 +1454,60 @@ export default function GraphicsPage() {
                 <p className="col-span-2 text-xs text-gray-500">Your handle sits next to the FPL Dilemmas watermark on the footer strip, and goes in the post caption. Saved in this browser.</p>
               </div>
 
-              <div className="space-y-3 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3" data-testid="gameweek-pack">
+              <div className="space-y-4 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3" data-testid="gameweek-pack">
                 <div className="flex items-center gap-2 text-sm font-extrabold">
                   <Package className="h-4 w-4 text-indigo-600" />
-                  Gameweek pack
+                  Gameweek packs
                 </div>
-                <p className="text-xs text-gray-600">One download with the standard set for a gameweek ({GAMEWEEK_PACK.map((x) => x.label.toLowerCase()).join(", ")}) plus a captions.txt with a ready-to-post caption for each image. Uses your size, colours and handle.</p>
-                <div className="flex items-end gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Field label="Gameweek">
-                      <SimpleSelect
-                        value={String(selectedPackGw)}
-                        onChange={(v) => setPackGw(parseInt(v, 10))}
-                        options={(openGameweeks.includes(selectedPackGw) ? openGameweeks : [...openGameweeks, selectedPackGw].sort((a, b) => a - b)).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
-                        testId="select-pack-gw"
-                      />
-                    </Field>
+                <p className="text-xs text-gray-600">One download per pack: the images plus a captions.txt with a ready-to-post caption for each. Uses your size, colours and handle.</p>
+
+                <div className="space-y-2" data-testid="preview-pack">
+                  <div className="text-xs font-extrabold uppercase tracking-wide text-indigo-700">Preview pack</div>
+                  <p className="text-xs text-gray-600">For an upcoming gameweek: {GAMEWEEK_PACK.map((x) => x.label.toLowerCase()).join(", ")}.</p>
+                  <div className="flex items-end gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Field label="Gameweek">
+                        <SimpleSelect
+                          value={String(selectedPackGw)}
+                          onChange={(v) => setPackGw(parseInt(v, 10))}
+                          options={(openGameweeks.includes(selectedPackGw) ? openGameweeks : [...openGameweeks, selectedPackGw].sort((a, b) => a - b)).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                          testId="select-pack-gw"
+                        />
+                      </Field>
+                    </div>
+                    <Button type="button" onClick={() => void runPack("preview")} disabled={pack.busy || !elements.length} className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-pack">
+                      <Download className="h-4 w-4" />
+                      {pack.busy && pack.kind === "preview" ? `Making ${Math.min(pack.done + 1, pack.total)} of ${pack.total}…` : "Download preview pack"}
+                    </Button>
                   </div>
-                  <Button type="button" onClick={runPack} disabled={pack.busy || !elements.length} className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-pack">
-                    <Download className="h-4 w-4" />
-                    {pack.busy ? `Making ${Math.min(pack.done + 1, pack.total)} of ${pack.total}…` : "Download pack"}
-                  </Button>
+                  {pack.message && pack.messageKind === "preview" && <p className={`text-xs ${pack.ok ? "text-emerald-700" : "text-red-600"}`} role="status" data-testid="pack-message">{pack.message}</p>}
                 </div>
-                {pack.message && <p className={`text-xs ${pack.ok ? "text-emerald-700" : "text-red-600"}`} role="status" data-testid="pack-message">{pack.message}</p>}
+
+                <div className="space-y-2 border-t border-indigo-200/60 pt-3" data-testid="review-pack">
+                  <div className="text-xs font-extrabold uppercase tracking-wide text-indigo-700">Review pack</div>
+                  <p className="text-xs text-gray-600">For a finished gameweek: {REVIEW_PACK.map((x) => x.label.toLowerCase()).join(", ")}. The two form images are the clubs in the best and worst form over their last five results. The league table is the live table now.</p>
+                  {finishedGameweeks.length === 0 ? (
+                    <p className="text-xs text-gray-500" data-testid="review-pack-empty">No gameweek has finished yet.</p>
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <div className="min-w-0 flex-1">
+                        <Field label="Finished gameweek">
+                          <SimpleSelect
+                            value={String(selectedReviewGw)}
+                            onChange={(v) => setReviewGw(parseInt(v, 10))}
+                            options={[...finishedGameweeks].reverse().map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                            testId="select-review-gw"
+                          />
+                        </Field>
+                      </div>
+                      <Button type="button" onClick={() => void runPack("review")} disabled={pack.busy || !elements.length} className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-review-pack">
+                        <Download className="h-4 w-4" />
+                        {pack.busy && pack.kind === "review" ? `Making ${Math.min(pack.done + 1, pack.total)} of ${pack.total}…` : "Download review pack"}
+                      </Button>
+                    </div>
+                  )}
+                  {pack.message && pack.messageKind === "review" && <p className={`text-xs ${pack.ok ? "text-emerald-700" : "text-red-600"}`} role="status" data-testid="review-pack-message">{pack.message}</p>}
+                </div>
               </div>
           </SectionCard>
 

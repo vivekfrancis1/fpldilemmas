@@ -1,6 +1,6 @@
 # Plan 014 — Shareable images for every prediction, projection and past result
 
-Status: IN PROGRESS. Tranches 1 (Matches), 2 (Players) and 3 (Teams) IMPLEMENTED locally 2026-10-24, not pushed. Tranche 4 (packs) not started.
+Status: IMPLEMENTED locally 2026-10-24 (all four tranches), not pushed.
 Request (user, 2026-10-24): "All match predictions, team and player projections for the upcoming gameweek(s) should be made into shareable images. All match results, team and player history for the past gameweek(s) should be made into shareable images."
 
 ## Decisions (user, 2026-10-24)
@@ -93,3 +93,17 @@ Built:
 Deviations: team rankings use the per-game average (fair across double and blank gameweeks) with the total shown beside it, rather than ranking by range totals; the league table's footer gameweek is the latest gameweek that has a finished match, and its subtitle says how many matches have been played, since a gameweek can be half played.
 Verified in the browser on live data: all four templates at square / portrait / landscape through the app's real exporter (Inter embedded by hand), default club, controls, phone width (no horizontal scroll), and all eight share links. Full suite: 1277 passed, plus the known intermittent price-predictions test.
 Not yet: the packs (tranche 4).
+
+## Update 2026-10-24 — Tranche 4 (packs) built
+Approved by the user ("Yes, go ahead with tranche 4").
+Built:
+- **Preview pack** (the old "Gameweek pack", `GAMEWEEK_PACK`): the original seven images keep their order and numbers (deadline card, captain picks, top differentials, availability watch, fixture ticker, transfer trends, price changes), then Match predictions (one image per page: 10 fixtures per image on square and portrait, 6 on landscape), Team goal projections and Team clean-sheet projections (the gameweek and the next four, capped at 38) and Player projections (best of each position, same range). Zip name unchanged (`fpl-dilemmas-gw<N>-pack.zip`).
+- **Review pack** (new, `REVIEW_PACK`, `reviewPackSpecs`): "GW<N> Review" cover, Match results (paged), Team of the week, Top scorers, League table, and Team history for the club in the best and for the club in the worst form (`formExtremes`: points over each club's last five finished results up to the gameweek, level points by goal difference then lower id, clubs with fewer than three results ignored, never the same club twice; an image with no club is left out). For finished gameweeks (default the latest). Zip `fpl-dilemmas-gw<N>-review-pack.zip`. The "user picks the clubs" option from the plan was not built: the two form clubs are chosen automatically.
+- `loadGraphicData` / `graphicDataRequests` (`client/src/lib/graphic-data.ts`, 5 tests): each pack image loads exactly the data it needs (match model and odds for its gameweek, the team table or projection, live points, player history) through the query cache, so shared data is fetched once and a pack never depends on what the page had loaded. The page's Gameweek pack panel is now "Gameweek packs" with a Preview pack and a Review pack section and one progress line ("Making 4 of 11…").
+- `predictionPageCount` / `resultsPageCount` (how many images a gameweek needs).
+- Caption fix found while verifying: a history graphic over a range ("GW1-7") is tagged with its latest gameweek (#GW7), not the first (#GW1), for Team History and Player History; the other range captions (projections) still tag the first.
+Verified in the browser on live data: both packs run end to end with the page's own button (fonts embedded by inlining Inter in the page, ZIP captured in memory and read back with the shared reader): Preview pack 11 PNGs + captions.txt; Review pack 7 PNGs + captions.txt; Review pack on landscape 8 PNGs (two results pages, each with its own matches) + captions.txt; every image viewed, captions read. Full suite: 1306 passed, plus the known intermittent price-predictions test.
+Limits: the Review pack's league table is the live table now, so it can include matches from a newer gameweek than the one reviewed (its caption names the latest gameweek with a finished match; the panel says so); the Preview pack skips an image with nothing to show yet (for example match predictions once every fixture has started) and says which.
+
+## Plan 014 summary
+Everything asked for 2026-10-24 now exists as a shareable image: upcoming match predictions (Match Predictions, Match Preview), team projections (Team Projections, Projected Table) and player projections (Player Projections); past match results (Match Results, Match Report), team history (League Table, Team History) and player history (Top Scorers, Player History); each reachable from the Graphics Maker and from a Share image button on the page that shows the same data; and two gameweek packs (Preview, Review) with captions.

@@ -112,6 +112,16 @@ export function matchGraphicLink(input: { template: "match-predictions" | "match
   return `/graphics?${qs}`;
 }
 
+/** How many images a gameweek's fixtures still to play need at this many per image (never fewer than one). */
+export function predictionPageCount(fixtures: MatchFixtureInput[], gameweek: number, limit: number): number {
+  return Math.max(1, Math.ceil(fixtures.filter((f) => isFixtureUpcoming(f) && f.event === gameweek).length / limit));
+}
+
+/** How many images a gameweek's finished matches need at this many per image (never fewer than one). */
+export function resultsPageCount(fixtures: MatchFixtureInput[], gameweek: number, limit: number): number {
+  return Math.max(1, Math.ceil(fixtures.filter((f) => isFixtureResult(f) && f.event === gameweek).length / limit));
+}
+
 // ---------- shared pieces ----------
 
 function paginate<T>(items: T[], page: number, limit: number): { rows: T[]; page: number; pages: number; total: number } {

@@ -1660,7 +1660,9 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
         t.goals ? plural(t.goals, "goal", "goals") : null,
         t.assists ? plural(t.assists, "assist", "assists") : null,
       ].filter((b): b is string => !!b);
-      return done(`${history.name} (${history.teamShort}) ${data.gwLabel}: ${bits.join(", ")}`, data.gwLabel);
+      // tag the latest gameweek the player has a finished match in: "#GW1" on a GW1-7 history would be misleading
+      const latest = [...history.bars].reverse().find((b) => b.points !== null)?.gameweek;
+      return done(`${history.name} (${history.teamShort}) ${data.gwLabel}: ${bits.join(", ")}`, latest ? `GW${latest}` : data.gwLabel);
     }
     case "team-projections": {
       const { teams } = data;
@@ -1683,7 +1685,8 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       const form = history.results.map((r) => r.result).join("");
       const suffix = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
       const place = history.position === null ? "" : `, ${history.position}${suffix(history.position)} in the table`;
-      return done(`${history.name} ${data.gwLabel}: ${form || "no results yet"}${place}`, data.gwLabel);
+      const latest = history.results[history.results.length - 1]?.gameweek;
+      return done(`${history.name} ${data.gwLabel}: ${form || "no results yet"}${place}`, latest ? `GW${latest}` : data.gwLabel);
     }
     case "cover": {
       const { cover } = data;
@@ -1733,7 +1736,14 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
 
 // ---------- the gameweek pack ----------
 
-export const GAMEWEEK_PACK: Array<{ id: string; template: TemplateId; label: string }> = [
+export interface PackItem {
+  id: string;
+  template: TemplateId;
+  label: string;
+}
+
+/** The Preview pack: the standard set for an upcoming gameweek (the first seven are the original pack, in their original order). */
+export const GAMEWEEK_PACK: PackItem[] = [
   { id: "deadline", template: "cover", label: "Deadline card" },
   { id: "captains", template: "captain-picks", label: "Captain picks" },
   { id: "differentials", template: "top-differentials", label: "Top differentials" },
@@ -1741,6 +1751,21 @@ export const GAMEWEEK_PACK: Array<{ id: string; template: TemplateId; label: str
   { id: "fixtures", template: "fixture-ticker", label: "Fixture ticker" },
   { id: "transfers", template: "transfer-trends", label: "Transfer trends" },
   { id: "prices", template: "price-change", label: "Price changes" },
+  { id: "predictions", template: "match-predictions", label: "Match predictions" },
+  { id: "team-goals", template: "team-projections", label: "Team goal projections" },
+  { id: "team-cs", template: "team-projections", label: "Team clean-sheet projections" },
+  { id: "player-projections", template: "player-projections", label: "Player projections" },
+];
+
+/** The Review pack: the standard set for a finished gameweek. */
+export const REVIEW_PACK: PackItem[] = [
+  { id: "cover", template: "cover", label: "Review cover" },
+  { id: "results", template: "match-results", label: "Match results" },
+  { id: "totw", template: "team-of-the-week", label: "Team of the week" },
+  { id: "scorers", template: "gw-top-scorers", label: "Top scorers" },
+  { id: "table", template: "league-table", label: "League table" },
+  { id: "form-best", template: "team-history", label: "Best form" },
+  { id: "form-worst", template: "team-history", label: "Worst form" },
 ];
 
 /** The deadline as UK time, e.g. "Sat 24 Oct · 17:30"; null when it is not a date. */
@@ -1760,10 +1785,11 @@ export function formatDeadline(iso: string | null | undefined): string | null {
 export function packSpecs(
   base: GraphicSpec,
   gameweek: number,
-  options: { deadline: string | null },
-): Array<{ item: (typeof GAMEWEEK_PACK)[number]; spec: GraphicSpec }> {
+  options: { deadline: string | null; /** how many images the gameweek's fixtures need (10 per image); default 1 */ matchPages?: number },
+): Array<{ item: PackItem; spec: GraphicSpec }> {
   const common: GraphicSpec = { ...DEFAULT_SPEC, size: base.size, theme: base.theme, handle: base.handle, accent: base.accent };
   const deadline = formatDeadline(options.deadline);
+  const ahead = Math.min(38, gameweek + 4);
   const overrides: Record<string, Partial<GraphicSpec>> = {
     deadline: { headline: `GW${gameweek} Deadline`, subtitle: "Captains, differentials, fixtures and price moves", tag: deadline ?? "" },
     captains: { from: gameweek, to: gameweek },
@@ -1772,8 +1798,57 @@ export function packSpecs(
     fixtures: { from: gameweek, to: gameweek + 4 },
     transfers: {},
     prices: {},
+    predictions: { from: gameweek, to: gameweek },
+    "team-goals": { from: gameweek, to: ahead, metric: "goals-for" },
+    "team-cs": { from: gameweek, to: ahead, metric: "clean-sheets" },
+    "player-projections": { from: gameweek, to: ahead },
   };
-  return GAMEWEEK_PACK.map((item) => ({ item, spec: { ...common, template: item.template, ...overrides[item.id] } }));
+  return expandPages(GAMEWEEK_PACK, "predictions", options.matchPages, (item) => ({ item, spec: { ...common, template: item.template, ...overrides[item.id] } }));
+}
+
+/** One image per page for the item that can run to several (match predictions / match results); everything else once. */
+function expandPages(
+  items: PackItem[],
+  pagedId: string,
+  pages: number | undefined,
+  make: (item: PackItem) => { item: PackItem; spec: GraphicSpec },
+): Array<{ item: PackItem; spec: GraphicSpec }> {
+  const count = Math.max(1, Math.floor(pages ?? 1));
+  const out: Array<{ item: PackItem; spec: GraphicSpec }> = [];
+  for (const item of items) {
+    const made = make(item);
+    if (item.id !== pagedId || count === 1) {
+      out.push(made);
+      continue;
+    }
+    for (let page = 1; page <= count; page++) {
+      out.push({ item: { ...item, id: `${item.id}-${page}`, label: `${item.label} (page ${page} of ${count})` }, spec: { ...made.spec, page } });
+    }
+  }
+  return out;
+}
+
+/**
+ * The graphics of the Review pack for a finished gameweek: the same rules as `packSpecs`. The two form images are for the
+ * clubs given (see `formExtremes`); an image with no club is left out.
+ */
+export function reviewPackSpecs(
+  base: GraphicSpec,
+  gameweek: number,
+  options: { resultsPages?: number; bestForm: number | null; worstForm: number | null },
+): Array<{ item: PackItem; spec: GraphicSpec }> {
+  const common: GraphicSpec = { ...DEFAULT_SPEC, size: base.size, theme: base.theme, handle: base.handle, accent: base.accent };
+  const overrides: Record<string, Partial<GraphicSpec>> = {
+    cover: { headline: `GW${gameweek} Review`, subtitle: "Results, team of the week, top scorers and the table" },
+    results: { from: gameweek, to: gameweek },
+    totw: { from: gameweek, to: gameweek },
+    scorers: { from: gameweek, to: gameweek },
+    table: {},
+    "form-best": options.bestForm ? { teams: [options.bestForm] } : {},
+    "form-worst": options.worstForm ? { teams: [options.worstForm] } : {},
+  };
+  const items = REVIEW_PACK.filter((i) => (i.id === "form-best" ? !!options.bestForm : i.id === "form-worst" ? !!options.worstForm : true));
+  return expandPages(items, "results", options.resultsPages, (item) => ({ item, spec: { ...common, template: item.template, ...overrides[item.id] } }));
 }
 
 export function packFileName(index: number, template: TemplateId): string {
@@ -1782,6 +1857,10 @@ export function packFileName(index: number, template: TemplateId): string {
 
 export function packZipName(gameweek: number): string {
   return `fpl-dilemmas-gw${gameweek}-pack.zip`;
+}
+
+export function reviewZipName(gameweek: number): string {
+  return `fpl-dilemmas-gw${gameweek}-review-pack.zip`;
 }
 
 /** captions.txt for the pack: each image's file name followed by its caption. */

@@ -383,3 +383,62 @@ export function makeGraphicDataContext(input: {
     teamData: input.teamData,
   };
 }
+
+// ---------- loading what a graphic needs ----------
+
+export type JsonFetcher = (url: string) => Promise<any>;
+
+/**
+ * The requests a graphic needs beyond the base data (bootstrap, projections, fixtures): the team projections and odds of
+ * one gameweek for a match graphic, the team table or projection a team graphic is built from, a finished gameweek's live
+ * points, a player's match history. Empty for graphics built from the base data alone.
+ */
+export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext): string[] {
+  const urls: string[] = [];
+  const modelGw = matchModelGameweek(spec, ctx.fixtures);
+  if (modelGw > 0) {
+    urls.push(`/api/team-goal-projections?startGameweek=${modelGw}&endGameweek=${modelGw}`);
+    urls.push(`/api/team-cs-projections?startGameweek=${modelGw}&endGameweek=${modelGw}`);
+    urls.push("/api/fixture-odds-current");
+  }
+  const team = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+  if (team) urls.push(team);
+  if (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers") {
+    const gw = resolveTotwGw(spec, ctx.finishedGameweeks);
+    if (gw > 0) urls.push(`/api/event/${gw}/live`);
+  }
+  if (spec.template === "player-history" && spec.players[0]) urls.push(`/api/element-summary/${spec.players[0]}`);
+  return urls;
+}
+
+/**
+ * The context with everything the graphic needs fetched and in place, so the Gameweek packs build each image from its own
+ * data and never depend on what the page happened to have loaded. The original context is not changed; a failed request fails
+ * the whole load.
+ */
+export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext, fetchJson: JsonFetcher): Promise<GraphicDataContext> {
+  const urls = graphicDataRequests(spec, ctx);
+  if (urls.length === 0) return ctx;
+  const bodies = await Promise.all(urls.map((u) => fetchJson(u)));
+  const byUrl = new Map(urls.map((u, i) => [u, bodies[i]]));
+  const next: GraphicDataContext = { ...ctx };
+  const modelGw = matchModelGameweek(spec, ctx.fixtures);
+  if (modelGw > 0) {
+    next.matchModel = {
+      goals: byUrl.get(`/api/team-goal-projections?startGameweek=${modelGw}&endGameweek=${modelGw}`) ?? [],
+      cs: byUrl.get(`/api/team-cs-projections?startGameweek=${modelGw}&endGameweek=${modelGw}`) ?? [],
+      odds: byUrl.get("/api/fixture-odds-current")?.odds ?? [],
+    };
+    next.matchModelGw = modelGw;
+  }
+  const team = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+  if (team) next.teamData = { url: team, data: byUrl.get(team) ?? [] };
+  if (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers") {
+    const gw = resolveTotwGw(spec, ctx.finishedGameweeks);
+    if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
+  }
+  if (spec.template === "player-history" && spec.players[0]) {
+    next.playerHistory = { playerId: spec.players[0], history: byUrl.get(`/api/element-summary/${spec.players[0]}`)?.history ?? [] };
+  }
+  return next;
+}

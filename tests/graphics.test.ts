@@ -1174,7 +1174,8 @@ describe("deadline text and the gameweek pack plan", () => {
   it("the pack is the standard set for a gameweek, in order, keeping the user's size, theme, handle and accent", () => {
     const base = { ...DEFAULT_SPEC, template: "player-card" as const, size: "portrait" as const, theme: "midnight" as const, handle: "steve", accent: "#fbbf24", headline: "mine", players: [1], teams: [2], quote: "q" };
     const specs = packSpecs(base, 9, { deadline: "2026-10-24T16:30:00Z" });
-    expect(specs.map((x) => x.spec.template)).toEqual(["cover", "captain-picks", "top-differentials", "availability-watch", "fixture-ticker", "transfer-trends", "price-change"]);
+    // the original seven, in order, then the projection images added in plan 014 (covered in tests/graphics-packs.test.ts)
+    expect(specs.map((x) => x.spec.template).slice(0, 7)).toEqual(["cover", "captain-picks", "top-differentials", "availability-watch", "fixture-ticker", "transfer-trends", "price-change"]);
     expect(GAMEWEEK_PACK.map((x) => x.template)).toEqual(specs.map((x) => x.spec.template));
     for (const { spec } of specs) {
       expect(spec).toMatchObject({ size: "portrait", theme: "midnight", handle: "steve", accent: "#fbbf24" });
@@ -1394,7 +1395,7 @@ describe("availability watch as a template, caption and pack item", () => {
   });
 
   it("the pack includes it after the differentials", () => {
-    expect(GAMEWEEK_PACK.map((x) => x.id)).toEqual(["deadline", "captains", "differentials", "availability", "fixtures", "transfers", "prices"]);
+    expect(GAMEWEEK_PACK.map((x) => x.id).slice(0, 7)).toEqual(["deadline", "captains", "differentials", "availability", "fixtures", "transfers", "prices"]);
   });
 
   it("caption: the first three with their chance or status, from the real news", () => {

@@ -306,6 +306,42 @@ export function buildTeamHistory(input: {
   };
 }
 
+// ---------- who is in form ----------
+
+export const FORM_WINDOW = 5;
+export const MIN_FORM_RESULTS = 3;
+
+/**
+ * The club in the best and the club in the worst form after a gameweek: points over each club's last five finished results
+ * up to and including that gameweek (3 for a win, 1 for a draw). Level points go to the better goal difference over those
+ * results, then the lower club id. Clubs with fewer than three results are not considered, and the worst is null when it
+ * would be the same club as the best.
+ */
+export function formExtremes(fixtures: MatchFixtureInput[], gameweek: number, teamIds: number[]): { best: number | null; worst: number | null } {
+  const results = fixtures
+    .filter((f) => isFixtureResult(f) && (f.event as number) <= gameweek)
+    .sort((a, b) => (a.event as number) - (b.event as number) || (a.kickoff_time ?? "").localeCompare(b.kickoff_time ?? "") || a.id - b.id);
+  const table: Array<{ id: number; points: number; goalDifference: number }> = [];
+  for (const id of teamIds) {
+    const mine = results.filter((f) => f.team_h === id || f.team_a === id).slice(-FORM_WINDOW);
+    if (mine.length < MIN_FORM_RESULTS) continue;
+    let points = 0;
+    let goalDifference = 0;
+    for (const f of mine) {
+      const scored = (f.team_h === id ? f.team_h_score : f.team_a_score) as number;
+      const conceded = (f.team_h === id ? f.team_a_score : f.team_h_score) as number;
+      points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
+      goalDifference += scored - conceded;
+    }
+    table.push({ id, points, goalDifference });
+  }
+  if (!table.length) return { best: null, worst: null };
+  const ranked = [...table].sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || a.id - b.id);
+  const best = ranked[0].id;
+  const worst = [...table].sort((a, b) => a.points - b.points || a.goalDifference - b.goalDifference || a.id - b.id)[0].id;
+  return { best, worst: worst === best ? null : worst };
+}
+
 // ---------- which data a team graphic needs ----------
 
 /**
