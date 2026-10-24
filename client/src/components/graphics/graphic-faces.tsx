@@ -1344,7 +1344,8 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
   const sideRows = (home: string[], away: string[]) => [...home.map((n) => <span key={`h${n}`}>{n} <span style={{ color: theme.muted }}>· {report.home.short}</span></span>), ...away.map((n) => <span key={`a${n}`}>{n} <span style={{ color: theme.muted }}>· {report.away.short}</span></span>)];
   const goals = <ReportList title="Goals" rows={sideRows(report.goals.home, report.goals.away)} theme={theme} font={font} empty="No goals" />;
   const assists = <ReportList title="Assists" rows={sideRows(report.assists.home, report.assists.away)} theme={theme} font={font} empty="No assists" />;
-  const maxCards = land ? 6 : tall ? 10 : 7;
+  const maxCards = land ? 4 : tall ? 10 : 6;
+  const maxDefensive = land ? 3 : tall ? 6 : 5;
   const shownCards = report.cards.slice(0, maxCards).map(card);
   if (report.cards.length > maxCards) shownCards.push(<span key="more" style={{ color: theme.muted }}>+{report.cards.length - maxCards} more</span>);
   const cards = <ReportList title="Cards" rows={shownCards} theme={theme} font={font} empty="No cards" />;
@@ -1358,6 +1359,25 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
       font={font}
       empty="None awarded"
     />
+  );
+  const shownDefensive = report.defensive.slice(0, maxDefensive);
+  const defensive = (
+    <div style={{ minWidth: 0 }}>
+      <ReportList
+        title="Defensive contributions"
+        rows={shownDefensive.map((d, i) => (
+          <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: theme.accent, fontWeight: 900, minWidth: font * 1.2 }}>{d.value}</span>
+            <span>{d.name} <span style={{ color: theme.muted }}>· {d.teamShort}</span></span>
+            {d.earned && <span style={{ background: theme.good, color: "#0b1020", borderRadius: 999, padding: `0 ${font * 0.4}px`, fontSize: font * 0.75, fontWeight: 900 }}>+2</span>}
+          </span>
+        ))}
+        theme={theme}
+        font={font}
+        empty="None recorded"
+      />
+      {shownDefensive.some((d) => d.earned) && <div style={{ fontSize: font * 0.72, color: theme.muted, fontWeight: 600, marginTop: 4 }}>+2 = earned the points</div>}
+    </div>
   );
   const notes = report.notes.length > 0 ? <ReportList title="Penalties" rows={report.notes} theme={theme} font={font} empty="" /> : null;
   return (
@@ -1374,11 +1394,12 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
             <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{report.away.name}</div>
           </div>
         </div>
-        <div style={{ ...panel(theme), flex: 1, minHeight: 0, overflow: "hidden", padding: land ? "12px 20px" : "22px 28px", display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 28, rowGap: land ? 8 : 18, alignContent: "start" }}>
+        <div style={{ ...panel(theme), flex: 1, minHeight: 0, overflow: "hidden", padding: land ? "12px 20px" : "22px 28px", display: "grid", gridTemplateColumns: land ? "1fr 1fr 1fr" : "1fr 1fr", columnGap: 28, rowGap: land ? 8 : 18, alignContent: "start" }}>
           {goals}
           {assists}
           {cards}
           {bonus}
+          {defensive}
           {notes}
         </div>
       </div>

@@ -251,6 +251,11 @@ function entries(stats: StatList | undefined, identifier: string, which: "h" | "
 
 const nameOf = (elements: Map<number, GraphicElement>, id: number): string => elements.get(id)?.web_name ?? "Unknown";
 
+const positionOf = (elements: Map<number, GraphicElement>, id: number): GraphicPosition | null => {
+  const e = elements.get(id);
+  return e ? POSITION_BY_TYPE[e.element_type] ?? null : null;
+};
+
 /** "Name" or "Name (2)": most first, then by name. */
 function countedNames(list: MatchStatEntry[], elements: Map<number, GraphicElement>): string[] {
   return list
@@ -444,6 +449,27 @@ export interface MatchReportBonus {
   points: number;
 }
 
+/** A player's defensive contribution count in the match (FPL's own number) and whether it earned the 2 points. */
+export interface MatchReportDefender {
+  name: string;
+  teamShort: string;
+  value: number;
+  earned: boolean;
+}
+
+/** How many contributors the report lists (the face shows fewer on small sizes). */
+export const DEFENSIVE_LIST_LIMIT = 6;
+
+/**
+ * FPL's rule for the 2 defensive contribution points: 10 or more for defenders, 12 or more for midfielders and forwards,
+ * never for goalkeepers. The same rule the site's CBIT points use (computeCbitPoints in the scoring cache service).
+ */
+export function earnsDefensivePoints(value: number, position: GraphicPosition | null): boolean {
+  if (position === "DEF") return value >= 10;
+  if (position === "MID" || position === "FWD") return value >= 12;
+  return false;
+}
+
 export interface MatchReportContent {
   fixtureId: number;
   gameweek: number;
@@ -454,6 +480,8 @@ export interface MatchReportContent {
   assists: { home: string[]; away: string[] };
   cards: MatchReportCard[];
   bonus: MatchReportBonus[];
+  /** The biggest defensive contributors of both sides, most first (up to DEFENSIVE_LIST_LIMIT). */
+  defensive: MatchReportDefender[];
   notes: string[];
 }
 
@@ -492,6 +520,17 @@ export function buildMatchReport(input: {
     .sort((a, b) => b.points - a.points || a.sideIndex - b.sideIndex || a.name.localeCompare(b.name))
     .map(({ name, teamShort, points }): MatchReportBonus => ({ name, teamShort, points }));
 
+  // most first; level counts: home side first, then by name
+  const defensive = sides
+    .flatMap(([which, teamShort], sideIndex) =>
+      entries(f.stats, "defensive_contribution", which)
+        .filter((e) => e.value > 0)
+        .map((e) => ({ name: nameOf(elements, e.element), teamShort, value: e.value, earned: earnsDefensivePoints(e.value, positionOf(elements, e.element)), sideIndex })),
+    )
+    .sort((a, b) => b.value - a.value || a.sideIndex - b.sideIndex || a.name.localeCompare(b.name))
+    .slice(0, DEFENSIVE_LIST_LIMIT)
+    .map(({ sideIndex: _s, ...d }): MatchReportDefender => d);
+
   const notes: string[] = [];
   for (const [identifier, one, many] of [["penalties_missed", "missed a penalty", "missed {n} penalties"], ["penalties_saved", "saved a penalty", "saved {n} penalties"]] as const) {
     for (const [which] of sides) {
@@ -511,6 +550,7 @@ export function buildMatchReport(input: {
     assists: { home: countedNames(entries(f.stats, "assists", "h"), elements), away: countedNames(entries(f.stats, "assists", "a"), elements) },
     cards,
     bonus,
+    defensive,
     notes,
   };
 }

@@ -107,3 +107,10 @@ Limits: the Review pack's league table is the live table now, so it can include 
 
 ## Plan 014 summary
 Everything asked for 2026-10-24 now exists as a shareable image: upcoming match predictions (Match Predictions, Match Preview), team projections (Team Projections, Projected Table) and player projections (Player Projections); past match results (Match Results, Match Report), team history (League Table, Team History) and player history (Top Scorers, Player History); each reachable from the Graphics Maker and from a Share image button on the page that shows the same data; and two gameweek packs (Preview, Review) with captions.
+
+## Update 2026-10-24 — Match Report shows defensive contributions
+Asked by the user ("Match report in shareable graphics should also show defensive contributions").
+- `buildMatchReport` now returns `defensive`: the biggest defensive contributors of both sides from FPL's own `defensive_contribution` fixture stat, most first (level counts: home side, then name), at most 6 (`DEFENSIVE_LIST_LIMIT`); players with none are left out. Each entry says whether it earned the 2 points (`earnsDefensivePoints`: defenders 10+, midfielders and forwards 12+, goalkeepers never: the same rule as the site's CBIT points, `computeCbitPoints`).
+- Face: a "Defensive contributions" section with the count, name and club, a green "+2" marker for players who earned the points and a "+2 = earned the points" note; shows 5 on square, 6 on portrait, 3 on landscape (landscape now uses three columns; cards are capped at 6 square / 4 landscape with "+N more").
+- 6 new tests in `tests/graphics-matches.test.ts` (written first). Verified on a real finished match at square / portrait / landscape.
+Deploy check for the earlier push (2026-10-24): the production site served the new client first, and the production server switched to the new code about four minutes after the push (an invalid `group` on `/api/template-team` returned 400, `/g/<id>` returned its own 404).

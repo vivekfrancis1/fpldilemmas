@@ -20,6 +20,8 @@ import {
   buildMatchReport,
   buildMatchResults,
   completedGameweeks,
+  DEFENSIVE_LIST_LIMIT,
+  earnsDefensivePoints,
   matchGraphicLink,
   normaliseProbabilities,
   predictionGameweeks,
@@ -297,6 +299,9 @@ describe("buildMatchReport", () => {
   it("notes missed penalties", () => {
     expect(report.notes).toEqual(["Saka missed a penalty"]);
   });
+  it("has no defensive contributions when FPL gives none", () => {
+    expect(report.defensive).toEqual([]);
+  });
   it("is null for a match that has not finished", () => {
     expect(buildMatchReport({ fixture: fx(71, 9, 1, 2), elements, teamShortById, teamNameById })).toBeNull();
     expect(buildMatchReport({ fixture: fx(72, 9, 1, 2, { started: true, team_h_score: 1, team_a_score: 0 }), elements, teamShortById, teamNameById })).toBeNull();
@@ -416,5 +421,45 @@ describe("matchGraphicLink (the Share image buttons on the other pages)", () => 
   });
   it("always points at the Graphics Maker page", () => {
     expect(matchGraphicLink({ template: "match-preview", fixture: 3 }).startsWith("/graphics?")).toBe(true);
+  });
+});
+
+describe("defensive contributions in the match report", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    {
+      identifier: "defensive_contribution",
+      h: [{ value: 14, element: 3 }, { value: 9, element: 5 }, { value: 12, element: 1 }, { value: 11, element: 4 }, { value: 3, element: 2 }, { value: 0, element: 7 }],
+      a: [{ value: 12, element: 22 }, { value: 12, element: 21 }],
+    },
+  ];
+  const report = buildMatchReport({ fixture: done(80, 8, 1, 2, 2, 1, stats), elements, teamShortById, teamNameById })!;
+
+  it("lists the biggest contributors of both sides, most first; level counts go to the home side, then by name", () => {
+    expect(report.defensive.map((d) => `${d.name} ${d.value}`)).toEqual(["Saliba 14", "Saka 12", "Martinez 12", "Watkins 12", "Odegaard 11", "Gabriel 9"]);
+    expect(report.defensive.map((d) => d.teamShort)).toEqual(["ARS", "ARS", "AVL", "AVL", "ARS", "ARS"]);
+  });
+  it("shows at most the list limit and never a player with none", () => {
+    expect(report.defensive).toHaveLength(DEFENSIVE_LIST_LIMIT);
+    expect(report.defensive.map((d) => d.name)).not.toContain("Havertz"); // 3, cut by the limit
+    const noZero = buildMatchReport({ fixture: done(81, 8, 1, 2, 0, 0, [{ identifier: "defensive_contribution", h: [{ value: 0, element: 3 }], a: [] }]), elements, teamShortById, teamNameById })!;
+    expect(noZero.defensive).toEqual([]);
+  });
+  it("marks who earned the 2 points: defenders from 10, midfielders and forwards from 12, goalkeepers never", () => {
+    const earned = Object.fromEntries(report.defensive.map((d) => [d.name, d.earned]));
+    expect(earned).toMatchObject({ Saliba: true, Saka: true, Watkins: true, Martinez: false, Odegaard: false, Gabriel: false });
+  });
+  it("earnsDefensivePoints follows the same rule the site's CBIT points use", () => {
+    expect(earnsDefensivePoints(9, "DEF")).toBe(false);
+    expect(earnsDefensivePoints(10, "DEF")).toBe(true);
+    expect(earnsDefensivePoints(11, "MID")).toBe(false);
+    expect(earnsDefensivePoints(12, "MID")).toBe(true);
+    expect(earnsDefensivePoints(11, "FWD")).toBe(false);
+    expect(earnsDefensivePoints(12, "FWD")).toBe(true);
+    expect(earnsDefensivePoints(40, "GKP")).toBe(false);
+    expect(earnsDefensivePoints(40, null)).toBe(false);
+  });
+  it("copes with a player who is not in the player list", () => {
+    const r = buildMatchReport({ fixture: done(82, 8, 1, 2, 1, 0, [{ identifier: "defensive_contribution", h: [{ value: 20, element: 99999 }], a: [] }]), elements, teamShortById, teamNameById })!;
+    expect(r.defensive).toEqual([{ name: "Unknown", teamShort: "ARS", value: 20, earned: false }]);
   });
 });
