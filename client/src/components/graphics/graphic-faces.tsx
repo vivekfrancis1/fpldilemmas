@@ -553,7 +553,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
     <div style={{ fontSize: land ? 14 : 18, color: theme.muted, fontWeight: 600, lineHeight: 1.3, flexShrink: 0 }}>
       {lineup.edited
         ? `Edited by ${spec.handle ? `@${spec.handle}` : "the poster"}: their own view, not our prediction${lineup.modelFormation ? ` (our model's formation: ${lineup.modelFormation})` : ""}. ⚠ marks injury news from FPL.`
-        : "Based on our expected minutes, which include injury news. Not official team news. Players sit in their usual position (FotMob)."}
+        : "Based on our expected minutes, which include injury news. Not official team news. Players sit in their usual position."}
     </div>
   );
 
