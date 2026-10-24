@@ -30,7 +30,7 @@ import {
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
-import { formatGoals } from "@shared/graphics";
+import { contrastRatio, formatGoals } from "@shared/graphics";
 import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
@@ -1105,11 +1105,23 @@ function KickoffLabel({ label, theme, font, align = "left" }: { label: string; t
   );
 }
 
+/** One colour per side, used for that team's goals and win %: the theme accent for home, sky blue (darker on the light theme) for away. Never green. */
+function sideColors(theme: GraphicTheme): { home: string; away: string } {
+  const lightBackground = contrastRatio(theme.bg, "#ffffff") < 2;
+  return { home: theme.accent, away: lightBackground ? "#0e7490" : "#38bdf8" };
+}
+
+/** Expected goals to up to 2 decimal places, no trailing zeros: 1.64 -> "1.64", 1.6 -> "1.6", 2 -> "2". */
+function formatGoals2(n: number): string {
+  return String(Math.round(n * 100) / 100);
+}
+
 function ProbBar({ probs, theme, label, big }: { probs: { home: number; draw: number; away: number }; theme: GraphicTheme; label: number; big?: boolean }) {
+  const side = sideColors(theme);
   const parts = [
-    { key: "home", value: probs.home, color: theme.accent },
+    { key: "home", value: probs.home, color: side.home },
     { key: "draw", value: probs.draw, color: theme.muted },
-    { key: "away", value: probs.away, color: theme.good },
+    { key: "away", value: probs.away, color: side.away },
   ];
   return (
     <div style={{ width: "100%" }}>
@@ -1132,8 +1144,12 @@ function PredictionsFace({ spec, theme, predictions, gwLabel, subtitle }: { spec
   const tall = spec.size === "portrait";
   const teamFont = land ? 24 : tall ? 34 : 32;
   const jersey = land ? 34 : tall ? 56 : 50;
-  const xgFont = land ? 28 : tall ? 46 : 40;
+  const xgFont = land ? 28 : tall ? 44 : 38;
+  const csFont = land ? 18 : tall ? 25 : 23;
   const small = land ? 13 : 17;
+  const side = sideColors(theme);
+  const xgText = (v: number | null) => (v === null ? "–" : formatGoals2(v));
+  const csText = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
       {predictions.rows.length === 0 ? (
@@ -1153,12 +1169,12 @@ function PredictionsFace({ spec, theme, predictions, gwLabel, subtitle }: { spec
                   <span style={{ fontSize: teamFont, fontWeight: 900, ...ellipsis }}>{r.home.short}</span>
                   <Jersey team={r.home.short} position="MID" px={jersey} />
                 </div>
-                <div style={{ width: land ? 150 : tall ? 210 : 190, flexShrink: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: xgFont, fontWeight: 900, color: theme.accent, lineHeight: 1, whiteSpace: "nowrap" }}>
-                    {r.home.xg === null ? "–" : formatGoals(r.home.xg)} – {r.away.xg === null ? "–" : formatGoals(r.away.xg)}
+                <div style={{ width: land ? 190 : tall ? 270 : 240, flexShrink: 0, textAlign: "center" }}>
+                  <div style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>
+                    <span style={{ color: side.home }}>{xgText(r.home.xg)}</span> – <span style={{ color: side.away }}>{xgText(r.away.xg)}</span>
                   </div>
-                  <div style={{ fontSize: small, fontWeight: 700, color: theme.muted, marginTop: land ? 2 : 4, whiteSpace: "nowrap" }}>
-                    CS {r.home.cs === null ? "–" : `${Math.round(r.home.cs)}%`} · {r.away.cs === null ? "–" : `${Math.round(r.away.cs)}%`}
+                  <div style={{ fontSize: csFont, fontWeight: 800, color: theme.muted, marginTop: land ? 2 : 4, whiteSpace: "nowrap" }}>
+                    CS {csText(r.home.cs)} · {csText(r.away.cs)}
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: land ? 8 : 10 }}>
