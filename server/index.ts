@@ -205,6 +205,13 @@ app.use((req, res, next) => {
       }).catch((error) => {
         console.error("Failed to start odds refresh scheduler:", error);
       });
+
+      // Start detailed positions scheduler (weekly refresh from the clubs' squad pages; production only)
+      import('./detailed-positions-scheduler').then(({ detailedPositionsScheduler }) => {
+        detailedPositionsScheduler.start();
+      }).catch((error) => {
+        console.error("Failed to start detailed positions scheduler:", error);
+      });
     });
 
     // Handle server startup errors

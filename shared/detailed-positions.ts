@@ -174,3 +174,21 @@ export function buildPositionRecord(player: FplPlayerInput, member: FotmobMember
     outOfPosition: !allowedFplPositions(main).includes(fplPosition),
   };
 }
+
+// ---------- weekly refresh ----------
+
+export const REFRESH_INTERVAL_DAYS = 7;
+
+/** True when the table has never been loaded or was last loaded REFRESH_INTERVAL_DAYS or more ago. */
+export function isRefreshDue(lastLoaded: Date | null, now: Date): boolean {
+  if (!lastLoaded) return true;
+  return now.getTime() - lastLoaded.getTime() >= REFRESH_INTERVAL_DAYS * 24 * 3600 * 1000;
+}
+
+/**
+ * A load is only written when it did not lose a fifth or more of the players the table already holds: a much smaller load
+ * means the source changed shape or blocked us, and the table is better left as it is. A first load is always written.
+ */
+export function isSafeToApply(newCount: number, existingCount: number): boolean {
+  return existingCount === 0 || newCount > existingCount * 0.8;
+}

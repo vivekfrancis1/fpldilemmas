@@ -4,6 +4,9 @@ import {
   allowedFplPositions,
   buildPositionRecord,
   fplPositionFromType,
+  isRefreshDue,
+  isSafeToApply,
+  REFRESH_INTERVAL_DAYS,
   matchFplToFotmob,
   normalizeName,
   parsePositionCodes,
@@ -130,5 +133,39 @@ describe("buildPositionRecord", () => {
   });
   it("returns null when FotMob gives no position", () => {
     expect(buildPositionRecord(fpl(23, "A", "B", "B"), fm(33, "A B", ""), "name")).toBeNull();
+  });
+});
+
+describe("weekly refresh of the detailed positions", () => {
+  const now = new Date("2026-10-30T12:00:00Z");
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 3600 * 1000);
+
+  it("refreshes every 7 days", () => {
+    expect(REFRESH_INTERVAL_DAYS).toBe(7);
+  });
+  it("is due when the table has never been loaded", () => {
+    expect(isRefreshDue(null, now)).toBe(true);
+  });
+  it("is not due until a full 7 days after the last load", () => {
+    expect(isRefreshDue(daysAgo(0), now)).toBe(false);
+    expect(isRefreshDue(daysAgo(6.9), now)).toBe(false);
+    expect(isRefreshDue(daysAgo(7), now)).toBe(true);
+    expect(isRefreshDue(daysAgo(30), now)).toBe(true);
+  });
+  it("treats a last-load time in the future (clock skew) as not due", () => {
+    expect(isRefreshDue(new Date(now.getTime() + 3600 * 1000), now)).toBe(false);
+  });
+
+  it("writes a first load of any size", () => {
+    expect(isSafeToApply(400, 0)).toBe(true);
+  });
+  it("writes a load that matched about as many players as the table already holds", () => {
+    expect(isSafeToApply(560, 560)).toBe(true);
+    expect(isSafeToApply(520, 560)).toBe(true);
+    expect(isSafeToApply(700, 560)).toBe(true);
+  });
+  it("refuses a load that lost a fifth or more of the table (the source changed or blocked us)", () => {
+    expect(isSafeToApply(447, 560)).toBe(false);
+    expect(isSafeToApply(0, 560)).toBe(false);
   });
 });
