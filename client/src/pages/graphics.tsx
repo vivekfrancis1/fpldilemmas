@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, Table2, Activity, BarChart2, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, Table2, Activity, BarChart2, ClipboardList, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -41,6 +41,7 @@ import {
   SQUAD_QUOTA,
   SQUAD_SIZE,
   BENCH_PLAYERS,
+  MAX_GW_POINTS_PLAYERS,
   MAX_MANAGER_NAME,
   type ChipId,
   GAMEWEEK_PACK,
@@ -108,6 +109,7 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "match-report": FileText,
   "player-projections": ListOrdered,
   "gw-top-scorers": Medal,
+  "gw-points": ClipboardList,
   "player-history": LineChart,
   "team-projections": BarChart2,
   "projected-table": Table2,
@@ -120,16 +122,17 @@ import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
 import { FORMATIONS } from "@shared/formations";
 import { arrangeInFormation, rankForSlot, replaceSlot, type EditPlayer } from "@shared/lineup-edit";
-import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveStartedGw, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
+import { selectableGameweeks } from "@shared/league-ownership";
 
 const DEFAULT_WEEKS = 5;
 const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "FWD"];
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers", "projected-table"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers", "gw-points", "projected-table"];
 const MATCH_TEMPLATES: TemplateId[] = ["match-predictions", "match-results", "match-preview", "match-report"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -749,10 +752,14 @@ export default function GraphicsPage() {
     const events = (bootstrap?.events ?? []) as Array<{ id: number; is_next?: boolean; is_current?: boolean }>;
     return events.find((e) => e.is_next)?.id ?? events.find((e) => e.is_current)?.id ?? 0;
   }, [bootstrap?.events]);
+  // Player Points works for any gameweek that has started, the live one included
+  const startedGameweeks = useMemo(() => selectableGameweeks((bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean; deadline_time?: string | null }>), [bootstrap?.events]);
+  const pointsGw = resolveStartedGw(spec, startedGameweeks);
+  const liveGw = spec.template === "gw-points" ? pointsGw : totwGw;
   const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: LiveElement[] }>({
-    queryKey: [`/api/event/${totwGw}/live`],
-    staleTime: 5 * 60 * 1000,
-    enabled: (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers") && totwGw > 0,
+    queryKey: [`/api/event/${liveGw}/live`],
+    staleTime: spec.template === "gw-points" && !finishedGameweeks.includes(liveGw) ? 60 * 1000 : 5 * 60 * 1000,
+    enabled: (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers" || spec.template === "gw-points") && liveGw > 0,
   });
 
   // Player History: FPL's match history of the chosen player (the same request the player page makes)
@@ -1043,6 +1050,7 @@ export default function GraphicsPage() {
     : data?.kind === "match-report" ? [data.report.home.short, data.report.away.short, `gw${data.report.gameweek}`]
     : data?.kind === "player-projections" ? [gwLabel, spec.pos ?? "all"]
     : data?.kind === "gw-top-scorers" ? [`gw${data.scorers.gameweek}`]
+    : data?.kind === "gw-points" ? [`gw${data.points.gameweek}`, ...data.points.rows.slice(0, 3).map((r) => r.name)]
     : data?.kind === "player-history" ? [data.history.name, data.gwLabel]
     : data?.kind === "team-projections" ? [gwLabel, spec.metric]
     : data?.kind === "projected-table" ? [`gw${resolveProjectedEndGameweek(spec.to, nextGw)}`]
@@ -1241,6 +1249,60 @@ export default function GraphicsPage() {
                     <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
                   </Field>
                   <p className="col-span-2 text-xs text-gray-500">FPL's own points for a finished gameweek, with the scoring that made them.</p>
+                </div>
+              )}
+
+              {spec.template === "gw-points" && (
+                <div className="space-y-3">
+                  <Field label="Gameweek">
+                    <SimpleSelect
+                      value={String(pointsGw || "")}
+                      onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                      options={[...startedGameweeks].reverse().map((gw) => ({ value: String(gw), label: finishedGameweeks.includes(gw) ? `GW${gw}` : `GW${gw} (live)` }))}
+                      testId="select-points-gw"
+                    />
+                  </Field>
+                  <Field label={`Players (up to ${MAX_GW_POINTS_PLAYERS})`}>
+                    <PlayerPicker elements={elements} teamShortById={teamShortById} selected={spec.players} max={MAX_GW_POINTS_PLAYERS} onChange={(players) => update({ players, bench: spec.bench.filter((id) => players.includes(id)), captain: players.includes(spec.captain) ? spec.captain : 0 })} />
+                  </Field>
+                  {spec.players.length > 0 && (
+                    <div className="space-y-1.5" data-testid="points-roles">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Captain and bench</div>
+                      {spec.players.map((id) => {
+                        const e = elements.find((x) => x.id === id);
+                        if (!e) return null;
+                        const isBench = spec.bench.includes(id);
+                        const benchFull = !isBench && spec.bench.length >= BENCH_PLAYERS;
+                        return (
+                          <div key={id} className="flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm" data-testid={`points-role-${id}`}>
+                            <span className="font-medium">{e.web_name} <span className="text-xs text-gray-500">{teamShortById.get(e.team)}</span></span>
+                            <span className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => update({ captain: spec.captain === id ? 0 : id })}
+                                className={`rounded-full border px-3 py-0.5 text-xs font-bold ${spec.captain === id ? ACTIVE_CHIP : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                                data-testid={`button-captain-${id}`}
+                                aria-pressed={spec.captain === id}
+                              >
+                                Captain
+                              </button>
+                              <button
+                                type="button"
+                                disabled={benchFull}
+                                onClick={() => update({ bench: isBench ? spec.bench.filter((x) => x !== id) : [...spec.bench, id] })}
+                                className={`rounded-full border px-3 py-0.5 text-xs font-bold disabled:opacity-40 ${isBench ? ACTIVE_CHIP : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                                data-testid={`button-bench-${id}`}
+                                aria-pressed={isBench}
+                              >
+                                Bench
+                              </button>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500">FPL's own points for the gameweek, with the scoring that made them. A live gameweek's points can still change (bonus is confirmed after the last match). The captain is marked; points are not doubled. Up to {BENCH_PLAYERS} players can go on the bench.</p>
                 </div>
               )}
 

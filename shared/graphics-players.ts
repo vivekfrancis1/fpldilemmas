@@ -232,6 +232,70 @@ export function buildTopScorers(input: {
   return { gameweek, rows: rows.slice(0, top).map(({ involvement: _i, ...r }, i) => ({ rank: i + 1, ...r })) };
 }
 
+// ---------- Player Points (chosen players, one gameweek) ----------
+
+export interface GwPointsRow {
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  /** FPL's points for the gameweek (can be negative); null when FPL has no entry for the player. */
+  points: number | null;
+  minutes: number | null;
+  isCaptain: boolean;
+  /** On the bench rather than in the starting XI. */
+  isBench: boolean;
+  /** Where the points came from (FPL's own breakdown), worst first when the score is negative. */
+  chips: ScorerChip[];
+}
+
+export interface GwPointsContent {
+  gameweek: number;
+  rows: GwPointsRow[];
+}
+
+/**
+ * The points FPL gave the chosen players in one gameweek, in the order chosen. Nothing is filtered by score: a negative score
+ * and a 0 for someone who did not play are shown as they are. A player FPL has no entry for gets null, never a made-up 0.
+ * The captain is only marked if they are one of the chosen players; points are the player's own, not doubled.
+ */
+export function buildGwPoints(input: {
+  elements: GraphicElement[];
+  live: LiveScorerInput[];
+  teamShortById: Map<number, string>;
+  gameweek: number;
+  playerIds: number[];
+  /** Which of the chosen players are on the bench (ids that are not chosen players are ignored). */
+  benchIds?: number[];
+  captainId: number;
+}): GwPointsContent {
+  const { elements, live, teamShortById, gameweek, playerIds, captainId } = input;
+  const bench = new Set(input.benchIds ?? []);
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const liveById = new Map(live.map((l) => [l.id, l]));
+  const seen = new Set<number>();
+  const rows: GwPointsRow[] = [];
+  for (const id of playerIds) {
+    const e = byId.get(id);
+    const position = e ? POSITION_BY_TYPE[e.element_type] : undefined;
+    if (!e || !position || seen.has(id)) continue;
+    seen.add(id);
+    const l = liveById.get(id);
+    rows.push({
+      id,
+      name: e.web_name,
+      teamShort: teamShortById.get(e.team) ?? "",
+      position,
+      points: l ? l.stats.total_points : null,
+      minutes: l ? l.stats.minutes : null,
+      isCaptain: captainId > 0 && id === captainId,
+      isBench: bench.has(id),
+      chips: l ? scorerChips(l.explain) : [],
+    });
+  }
+  return { gameweek, rows };
+}
+
 // ---------- Player History ----------
 
 /** One row of FPL's element-summary `history` (one finished or live match of the player). */

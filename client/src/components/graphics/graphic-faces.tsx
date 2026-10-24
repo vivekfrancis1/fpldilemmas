@@ -32,7 +32,7 @@ import {
 } from "@shared/graphics";
 import { contrastRatio, formatGoals } from "@shared/graphics";
 import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
-import type { PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
+import type { GwPointsContent, GwPointsRow, PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
 import { getJerseyUrl } from "@/lib/jersey";
 import badge from "@/assets/fpl-dilemmas-badge.png?inline";
@@ -1576,6 +1576,71 @@ function ScorersFace({ spec, theme, scorers, gwLabel, subtitle }: { spec: Graphi
   );
 }
 
+function PointsFace({ spec, theme, points, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; points: GwPointsContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const starters = points.rows.filter((r) => !r.isBench);
+  const bench = points.rows.filter((r) => r.isBench);
+  const total = points.rows.length;
+  // Fewer players get big rows with their scoring breakdown; a full squad gets compact rows in two columns
+  const roomy = total <= 5;
+  const twoCol = total > (land ? 5 : 8);
+  const nameFont = twoCol ? (land ? 18 : 28) : roomy ? (land ? 26 : 40) : land ? 22 : 34;
+  const pointsFont = twoCol ? (land ? 26 : 42) : roomy ? (land ? 38 : 66) : land ? 30 : 52;
+  const jersey = twoCol ? (land ? 30 : 52) : roomy ? (land ? 46 : 80) : land ? 38 : 62;
+  const showChips = roomy && !twoCol;
+
+  const pointsColor = (v: number | null) => (v === null ? theme.muted : v < 0 ? theme.bad : v === 0 ? theme.muted : theme.good);
+  const row = (r: GwPointsRow) => (
+    <div key={r.id} style={{ ...panel(theme), flex: 1, maxHeight: roomy ? (land ? 90 : 170) : 130, minHeight: 0, display: "flex", alignItems: "center", gap: twoCol ? 10 : land ? 12 : 20, padding: twoCol ? "0 12px" : land ? "0 16px" : "0 26px" }} data-testid={`points-row-${r.id}`}>
+      <Jersey team={r.teamShort} position={r.position} px={jersey} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}</div>
+          {r.isCaptain && (
+            <span style={{ flexShrink: 0, width: nameFont * 0.95, height: nameFont * 0.95, borderRadius: "50%", background: theme.accent, color: theme.bg, fontSize: nameFont * 0.6, fontWeight: 900, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>C</span>
+          )}
+        </div>
+        <div style={{ fontSize: twoCol ? (land ? 11 : 16) : land ? 14 : 21, color: theme.muted, fontWeight: 700, ...ellipsis }}>
+          {r.teamShort} · {r.position}{r.minutes === null ? "" : r.minutes > 0 ? ` · ${r.minutes}'` : " · did not play"}
+        </div>
+        {showChips && r.chips.length > 0 && (
+          <div style={{ display: "flex", gap: land ? 6 : 10, marginTop: land ? 3 : 8, overflow: "hidden" }}>
+            {r.chips.map((c) => (
+              <span key={c.label} style={{ background: theme.panel, border: `1px solid ${theme.panelBorder}`, borderRadius: 999, padding: land ? "1px 8px" : "3px 14px", fontSize: land ? 12 : 19, fontWeight: 800, color: c.points < 0 ? theme.bad : theme.text, whiteSpace: "nowrap" }}>
+                {c.label} {c.points > 0 ? "+" : ""}{c.points}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div style={{ fontSize: pointsFont, fontWeight: 900, color: pointsColor(r.points), lineHeight: 1 }} data-testid={`points-value-${r.id}`}>{r.points === null ? "–" : r.points}</div>
+        {!twoCol && <div style={{ fontSize: land ? 12 : 18, color: theme.muted, fontWeight: 700 }}>{r.points === 1 || r.points === -1 ? "point" : "points"}</div>}
+      </div>
+    </div>
+  );
+  const section = (rows: GwPointsRow[], label: string | null, grow: number) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: land ? 6 : 10, flex: grow, minHeight: 0 }}>
+      {label && <div style={{ fontSize: land ? 13 : 20, fontWeight: 900, letterSpacing: 3, color: theme.muted, textTransform: "uppercase" }}>{label}</div>}
+      <div style={twoCol ? { display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: "1fr", gap: land ? 6 : 10, flex: 1, minHeight: 0 } : { display: "flex", flexDirection: "column", gap: land ? 6 : 10, flex: 1, minHeight: 0 }}>
+        {rows.map(row)}
+      </div>
+    </div>
+  );
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {total === 0 ? (
+        <EmptyNote theme={theme} land={land}>Pick players to show their points.</EmptyNote>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 16, flex: 1, minHeight: 0 }} data-testid="points-face">
+          {starters.length > 0 && section(starters, bench.length > 0 ? "Starting XI" : null, Math.max(starters.length, 1))}
+          {bench.length > 0 && section(bench, "Bench", Math.max(bench.length, 1))}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
 function HistoryFace({ spec, theme, history, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; history: PlayerHistoryContent; gwLabel: string }) {
   const land = spec.size === "landscape";
   const tall = spec.size === "portrait";
@@ -1833,6 +1898,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "match-preview": return <PreviewFace spec={spec} theme={theme} preview={data.preview} gwLabel={data.gwLabel} />;
     case "player-projections": return <ProjectionsFace spec={spec} theme={theme} projections={data.projections} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "gw-top-scorers": return <ScorersFace spec={spec} theme={theme} scorers={data.scorers} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "gw-points": return <PointsFace spec={spec} theme={theme} points={data.points} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "player-history": return <HistoryFace spec={spec} theme={theme} history={data.history} gwLabel={data.gwLabel} />;
     case "team-projections": return <TeamProjectionsFace spec={spec} theme={theme} teams={data.teams} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "projected-table":

@@ -1,6 +1,7 @@
 import type { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { projectionWindow } from "@shared/compare-utils";
+import { selectableGameweeks } from "@shared/league-ownership";
 import {
   TEAM_METRICS,
   buildLeagueTable,
@@ -15,6 +16,7 @@ import {
   buildPlayerHistory,
   buildPlayerProjections,
   buildTopScorers,
+  buildGwPoints,
   resolveHistoryGameweeks,
   type HistoryRowInput,
   type LiveScorerInput,
@@ -84,6 +86,8 @@ export interface GraphicDataContext {
   /** The gameweek FPL's transfer counts are for right now. */
   transfersGw: number;
   finishedGameweeks: number[];
+  /** Gameweeks that have started (finished, or the live one past its deadline), ascending. */
+  startedGameweeks: number[];
   /** Live points for the Team of the Week's gameweek; undefined while loading. */
   liveElements: LiveElement[] | undefined;
   /** Confirmed price changes; undefined while loading. */
@@ -123,6 +127,11 @@ export function resolveTotwGw(spec: Pick<GraphicSpec, "from">, finishedGameweeks
   return spec.from && finishedGameweeks.includes(spec.from) ? spec.from : finishedGameweeks[finishedGameweeks.length - 1] ?? 0;
 }
 
+/** Player Points' gameweek: the chosen one if it has started (a live gameweek counts), otherwise the latest started one (0 if none). */
+export function resolveStartedGw(spec: Pick<GraphicSpec, "from">, startedGameweeks: number[]): number {
+  return spec.from && startedGameweeks.includes(spec.from) ? spec.from : startedGameweeks[startedGameweeks.length - 1] ?? 0;
+}
+
 const asMatchFixtures = (fixtures: Fixture[] | undefined): MatchFixtureInput[] => (fixtures ?? []) as unknown as MatchFixtureInput[];
 
 /**
@@ -146,6 +155,7 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
   if (!elements.length) return { data: null, problem: null };
   const { from, to, gameweeks, gwLabel, singleGw: lineupGw } = resolveGameweeks(spec, ctx.defaultRange);
   const totwGw = resolveTotwGw(spec, ctx.finishedGameweeks);
+  const pointsGw = resolveStartedGw(spec, ctx.startedGameweeks);
   const projectionById = new Map((projections ?? []).map((p) => [p.playerId, p.gameweekProjections]));
   const byId = new Map(elements.map((e) => [e.id, e]));
   const selectedElements = spec.players.map((id) => byId.get(id)).filter((e): e is GraphicElement => !!e);
@@ -286,6 +296,15 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
       const label = gameweekLabel(totwGw, totwGw);
       return { data: { kind: "gw-top-scorers", scorers, gwLabel: label, subtitle: `${label} · ${spec.pos ?? "all positions"} · actual FPL points` }, problem: null };
     }
+    case "gw-points": {
+      if (selectedElements.length === 0) return { data: null, problem: "Search and pick the players to show their points." };
+      if (pointsGw === 0) return { data: null, problem: "No gameweek has started yet, so there are no points to show." };
+      if (!ctx.liveElements) return { data: null, problem: null };
+      const points = buildGwPoints({ elements, live: ctx.liveElements, teamShortById, gameweek: pointsGw, playerIds: spec.players, benchIds: spec.bench, captainId: spec.captain });
+      const label = gameweekLabel(pointsGw, pointsGw);
+      const isLive = !ctx.finishedGameweeks.includes(pointsGw);
+      return { data: { kind: "gw-points", points, gwLabel: label, subtitle: `${label} · ${isLive ? "live FPL points, bonus not yet confirmed" : "actual FPL points"}` }, problem: null };
+    }
     case "player-history": {
       const e = selectedElements[0];
       if (!e) return { data: null, problem: "Search and pick a player to see their history." };
@@ -367,7 +386,7 @@ export function makeGraphicDataContext(input: {
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
-  const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean; is_next?: boolean; is_current?: boolean }>;
+  const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean; is_next?: boolean; is_current?: boolean; deadline_time?: string | null }>;
   const range = bootstrap?.events ? getDefaultGameweekRange(bootstrap.events as any, input.defaultWeeks ?? 5) : null;
   return {
     elements: (bootstrap?.elements ?? []) as unknown as GraphicElement[],
@@ -379,6 +398,7 @@ export function makeGraphicDataContext(input: {
     defaultRange: range ? { from: parseInt(range.startGameweek, 10), to: parseInt(range.endGameweek, 10) } : { from: 1, to: input.defaultWeeks ?? 5 },
     transfersGw: events.find((e) => e.is_next)?.id ?? events.find((e) => e.is_current)?.id ?? 0,
     finishedGameweeks: events.filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b),
+    startedGameweeks: selectableGameweeks(events),
     liveElements: input.liveElements,
     priceChanges: input.priceChanges,
     matchModel: input.matchModel,
@@ -420,6 +440,10 @@ export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext):
     const gw = resolveTotwGw(spec, ctx.finishedGameweeks);
     if (gw > 0) urls.push(`/api/event/${gw}/live`);
   }
+  if (spec.template === "gw-points") {
+    const gw = resolveStartedGw(spec, ctx.startedGameweeks);
+    if (gw > 0) urls.push(`/api/event/${gw}/live`);
+  }
   if (spec.template === "player-history" && spec.players[0]) urls.push(`/api/element-summary/${spec.players[0]}`);
   if (spec.template === "predicted-lineup") urls.push(DETAILED_POSITIONS_URL);
   return urls;
@@ -449,6 +473,10 @@ export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext
   if (team) next.teamData = { url: team, data: byUrl.get(team) ?? [] };
   if (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers") {
     const gw = resolveTotwGw(spec, ctx.finishedGameweeks);
+    if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
+  }
+  if (spec.template === "gw-points") {
+    const gw = resolveStartedGw(spec, ctx.startedGameweeks);
     if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
   }
   if (spec.template === "player-history" && spec.players[0]) {
