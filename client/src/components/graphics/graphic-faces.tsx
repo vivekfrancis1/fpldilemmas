@@ -1455,8 +1455,8 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
           {assists}
           {cards}
           {bonus}
-          {defensive}
           {saves}
+          {defensive}
           {cleanSheets}
           {notes}
         </div>
