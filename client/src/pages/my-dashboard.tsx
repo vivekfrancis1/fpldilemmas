@@ -786,6 +786,12 @@ export default function MyDashboard() {
     return map;
   }, [multiGwBasePicks, cachedPlayerProjections, multiGwOptimizerGWs]);
 
+  // The next gameweek's optimized lineup shows by default; tapping another gameweek switches to it
+  const shownMultiGwGW =
+    selectedMultiGwOptimizerGW !== null && multiGwOptimizerGWs.includes(selectedMultiGwOptimizerGW)
+      ? selectedMultiGwOptimizerGW
+      : (multiGwOptimizerGWs[0] ?? null);
+
   const getFormation = (picks: TeamPick[]): string => {
     const counts = { 2: 0, 3: 0, 4: 0 };
     picks.filter(p => p.position <= 11).forEach(p => {
@@ -2311,21 +2317,21 @@ export default function MyDashboard() {
                   <Card>
                     <CardHeader className="pb-3 sm:pb-4">
                       <CardTitle className="text-sm sm:text-base md:text-lg">Projected Points by Gameweek</CardTitle>
-                      <CardDescription>Tap a gameweek to see its optimized lineup</CardDescription>
+                      <CardDescription>Tap a gameweek to switch its optimized lineup</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                         {multiGwOptimizerGWs.map(gw => {
                           const gwResult = multiGwOptimized.get(gw);
                           const formation = gwResult ? getFormation(gwResult.picks) : '';
-                          const isSelected = selectedMultiGwOptimizerGW === gw;
+                          const isSelected = shownMultiGwGW === gw;
                           return (
                             <Card
                               key={gw}
                               className={`min-h-[90px] sm:min-h-[100px] cursor-pointer transition-colors ${
                                 isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : 'hover:bg-gray-50'
                               }`}
-                              onClick={() => setSelectedMultiGwOptimizerGW(isSelected ? null : gw)}
+                              onClick={() => setSelectedMultiGwOptimizerGW(gw)}
                             >
                               <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
                                 <div className="text-[10px] sm:text-xs font-medium text-gray-600 mb-0.5 sm:mb-1">GW{gw}</div>
@@ -2345,26 +2351,26 @@ export default function MyDashboard() {
                     </CardContent>
                   </Card>
 
-                  {selectedMultiGwOptimizerGW && multiGwOptimized.get(selectedMultiGwOptimizerGW) && (
+                  {shownMultiGwGW !== null && multiGwOptimized.get(shownMultiGwGW) && (
                     <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
                       <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                         <CardTitle className="text-lg sm:text-xl text-purple-900">
-                          GW {selectedMultiGwOptimizerGW} Optimized Lineup
+                          GW {shownMultiGwGW} Optimized Lineup
                         </CardTitle>
                         <CardDescription className="text-purple-700 mt-1">
-                          Best XI for GW {selectedMultiGwOptimizerGW} based on projected points, using your current squad.
+                          Best XI for GW {shownMultiGwGW} based on projected points, using your current squad.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
                         <PitchView
-                          players={multiGwOptimized.get(selectedMultiGwOptimizerGW)!.picks
+                          players={multiGwOptimized.get(shownMultiGwGW)!.picks
                             .filter(pick => pick.position <= 11)
                             .map(pick => {
                               const player = getPlayerById(pick.element);
                               if (!player) return null;
                               const playerTeam = getPlayerTeam(player);
                               const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                              const projected = getProjectedPoints(pick.element, selectedMultiGwOptimizerGW);
+                              const projected = getProjectedPoints(pick.element, shownMultiGwGW);
                               const multiplier = pick.is_captain ? 2 : 1;
                               const displayPts = projected * multiplier;
                               return {
@@ -2386,7 +2392,7 @@ export default function MyDashboard() {
                                 news: player.news,
                               };
                             }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={multiGwOptimized.get(selectedMultiGwOptimizerGW)!.picks
+                          benchPlayers={multiGwOptimized.get(shownMultiGwGW)!.picks
                             .filter(pick => pick.position > 11)
                             .sort((a, b) => a.position - b.position)
                             .map(pick => {
@@ -2394,7 +2400,7 @@ export default function MyDashboard() {
                               if (!player) return null;
                               const playerTeam = getPlayerTeam(player);
                               const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                              const projected = getProjectedPoints(pick.element, selectedMultiGwOptimizerGW);
+                              const projected = getProjectedPoints(pick.element, shownMultiGwGW);
                               return {
                                 element: pick.element,
                                 element_type: player.element_type,
