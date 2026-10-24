@@ -32,6 +32,7 @@ import {
   playerDetailedPositions
 } from "@shared/schema";
 import { db, pool } from "./db";
+import { isFixtureActuallyOver } from "@shared/fixture-status";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
@@ -86,13 +87,6 @@ const PREVIOUS_SEASON = "2025/26";
 // expect to already be on a season scale, not a bare per-90 rate.
 const SEASON_GAMES = 38;
 
-/** True once a fixture's 90 minutes are over, even before FPL confirms bonus points. FPL's own
- * `finished` flag stays false for a while after full time (often ~1hr+) while bonus is being
- * finalized; `finished_provisional` flips the moment the match itself ends and is what "has this
- * team/player actually played" should key off, not the bureaucratic bonus-confirmation delay. */
-function isFixtureActuallyOver(fixture: any): boolean {
-  return !!(fixture.finished || fixture.finished_provisional);
-}
 
 /**
  * The highest gameweek that has at least one fixture that's actually been played (see
@@ -12195,7 +12189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!homeTeam || !awayTeam) return;
         
-        if (fixture.finished) {
+        // a match that has just ended counts as played even before FPL confirms bonus points (`finished` lags behind)
+        if (isFixtureActuallyOver(fixture)) {
           tallyActual(homeTeam, awayTeam, fixture.team_h_score || 0, fixture.team_a_score || 0);
         } else {
           const predictedMatch = predictedMatchResults.get(fixture.id);
