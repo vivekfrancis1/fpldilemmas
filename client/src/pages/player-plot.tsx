@@ -717,6 +717,20 @@ export default function PlayerPlotPage() {
               <p className="mb-3 rounded-xl border-l-4 border-indigo-400 bg-indigo-500/[0.06] px-3 py-2 text-xs leading-snug text-gray-700" data-testid="text-plot-hint">{preset.hint}</p>
             )}
 
+            {plotted.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-semibold text-gray-700" data-testid="plot-colour-legend">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{state.color === "club" ? "Clubs" : `Colour = ${state.color}`}</span>
+                {(state.color === "club"
+                  ? Array.from(new Set(plotted.map((p) => p.teamShort))).sort().map((t) => ({ key: t, label: t, color: teamColor(t) }))
+                  : colorLegend(state.color)
+                ).map((l) => (
+                  <span key={l.key} className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-3 rounded-full ring-2 ring-white shadow-sm dark:ring-white/80" style={{ background: l.color }} /> {l.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div ref={chartRef} className="w-full rounded-xl bg-gradient-to-b from-indigo-500/[0.03] to-transparent" data-testid="plot-chart">
               {loading || bootstrapError || chartWidth === 0 ? (
                 <div className="py-16 text-center text-sm text-gray-500" role="status">
@@ -747,13 +761,8 @@ export default function PlayerPlotPage() {
               )}
             </div>
 
-            {(state.color !== "club" || state.size !== "none" || mineIds.size > 0 || trendLine) && (
+            {(state.size !== "none" || mineIds.size > 0 || trendLine) && (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-gray-600" data-testid="plot-legend">
-                {colorLegend(state.color).map((l) => (
-                  <span key={l.key} className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: l.color }} /> {l.label}
-                  </span>
-                ))}
                 {state.size !== "none" && (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
@@ -762,7 +771,7 @@ export default function PlayerPlotPage() {
                 )}
                 {mineIds.size > 0 && (
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-3.5 w-3.5 rounded-full border-[3px] border-amber-500" /> Your team
+                    <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-amber-500" /> ★ Your team
                   </span>
                 )}
                 {trendLine && (
@@ -774,7 +783,7 @@ export default function PlayerPlotPage() {
             )}
 
             <p className="mt-1 text-[11px] text-gray-500">
-              Dot colour = {state.color === "club" ? "club" : state.color}. Faded dashed dots are doubtful or unavailable players. Tap a dot for details.
+              Faded dashed dots are doubtful or unavailable players. Hover a dot for its numbers; click or tap it to pin the details below.
               {state.xScale === "sqrt" || state.yScale === "sqrt" ? " Stretched scale spreads out the crowded low end, so distances are not proportional." : ""}
             </p>
 

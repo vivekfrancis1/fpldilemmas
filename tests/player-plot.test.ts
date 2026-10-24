@@ -12,6 +12,7 @@ import {
   niceDomain,
   niceTicks,
   declutterLabels,
+  labelRect,
   quadrantPicks,
   presetsForPositions,
   presetBaseline,
@@ -274,15 +275,7 @@ describe("scales and ticks", () => {
 describe("declutterLabels", () => {
   const bounds = { width: 400, height: 300 };
   const pt = (id: number, x: number, y: number, priority = id) => ({ id, x, y, w: 60, h: 14, priority, r: 5 });
-  const rect = (p: { x: number; y: number; w: number; h: number }, side: string) => {
-    const gap = 8;
-    switch (side) {
-      case "right": return { x: p.x + gap, y: p.y - p.h / 2, w: p.w, h: p.h };
-      case "left": return { x: p.x - gap - p.w, y: p.y - p.h / 2, w: p.w, h: p.h };
-      case "above": return { x: p.x - p.w / 2, y: p.y - gap - p.h, w: p.w, h: p.h };
-      default: return { x: p.x - p.w / 2, y: p.y + gap, w: p.w, h: p.h };
-    }
-  };
+  const rect = (p: { id: number; x: number; y: number; w: number; h: number; priority: number; r: number }, side: any) => labelRect(p, side);
   const overlap = (a: any, b: any) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
   it("labels an isolated point on its preferred side (right)", () => {
@@ -323,6 +316,25 @@ describe("declutterLabels", () => {
     const res = declutterLabels([pt(1, 100, 100, 1), pt(2, 300, 200, 9)], bounds, blockedAll, 1);
     expect(res.get(1)).not.toBeNull(); // top priority overrides the blocked area
     expect(res.get(2)).toBeNull(); // the rest still respect it
+  });
+  it("falls back to a diagonal spot (label lifted off the dot) when the four straight sides are taken", () => {
+    const blockers = [
+      { x: 108, y: 93, w: 60, h: 14 }, // right
+      { x: 32, y: 93, w: 60, h: 14 }, // left
+      { x: 95, y: 79, w: 10, h: 14 }, // above
+      { x: 95, y: 107, w: 10, h: 14 }, // below
+    ];
+    const res = declutterLabels([pt(1, 100, 100)], bounds, blockers);
+    const side = res.get(1);
+    expect(["aboveRight", "belowRight", "aboveLeft", "belowLeft"]).toContain(side);
+    const r = labelRect(pt(1, 100, 100), side as any);
+    // clear of the dot (radius 5) and of every blocker
+    expect(overlap(r, { x: 95, y: 95, w: 10, h: 10 })).toBe(false);
+    blockers.forEach((b) => expect(overlap(r, b)).toBe(false));
+  });
+  it("keeps the four straight sides as first choice (diagonals only when they are all unavailable)", () => {
+    expect(declutterLabels([pt(1, 100, 100)], bounds).get(1)).toBe("right");
+    expect(declutterLabels([pt(1, 380, 100)], bounds).get(1)).toBe("left");
   });
   it("hides labels that have no free space", () => {
     const crowded = Array.from({ length: 40 }, (_, i) => pt(i + 1, 200, 150));

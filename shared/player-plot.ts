@@ -477,7 +477,10 @@ export function niceTicks(lo: number, hi: number, count: number): number[] {
 // Label placement
 // ---------------------------------------------------------------------------------------------
 
-export type LabelSide = "right" | "left" | "above" | "below";
+/** The four straight sides come first; the diagonals sit lifted off the dot (drawn with a short leader line). */
+export type LabelSide = "right" | "left" | "above" | "below" | "aboveRight" | "belowRight" | "aboveLeft" | "belowLeft";
+
+const LABEL_LIFT = 8;
 
 export interface LabelPoint {
   id: number;
@@ -503,14 +506,20 @@ function labelRect(p: LabelPoint, side: LabelSide): Rect {
     case "right": return { x: p.x + gap, y: p.y - p.h / 2, w: p.w, h: p.h };
     case "left": return { x: p.x - gap - p.w, y: p.y - p.h / 2, w: p.w, h: p.h };
     case "above": return { x: p.x - p.w / 2, y: p.y - gap - p.h, w: p.w, h: p.h };
+    case "aboveRight": return { x: p.x + gap, y: p.y - gap - LABEL_LIFT - p.h, w: p.w, h: p.h };
+    case "belowRight": return { x: p.x + gap, y: p.y + gap + LABEL_LIFT, w: p.w, h: p.h };
+    case "aboveLeft": return { x: p.x - gap - p.w, y: p.y - gap - LABEL_LIFT - p.h, w: p.w, h: p.h };
+    case "belowLeft": return { x: p.x - gap - p.w, y: p.y + gap + LABEL_LIFT, w: p.w, h: p.h };
     default: return { x: p.x - p.w / 2, y: p.y + gap, w: p.w, h: p.h };
   }
 }
 
+const LABEL_SIDE_ORDER: LabelSide[] = ["right", "left", "above", "below", "aboveRight", "belowRight", "aboveLeft", "belowLeft"];
+
 /**
  * Greedy label placement: points are visited in priority order; each takes the first of right / left /
- * above / below whose box stays inside the chart and overlaps neither a dot, an already placed label nor a
- * blocked area (e.g. a corner caption).
+ * above / below (then the four lifted diagonals) whose box stays inside the chart and overlaps neither a dot,
+ * an already placed label nor a blocked area (e.g. a corner caption).
  * A point with no free side gets null (no label; it shows on hover or tap instead).
  */
 export function declutterLabels(
@@ -525,7 +534,7 @@ export function declutterLabels(
   const dots: Array<Rect & { id: number }> = points.map((p) => ({ id: p.id, x: p.x - p.r, y: p.y - p.r, w: p.r * 2, h: p.r * 2 }));
   const order = [...points].sort((a, b) => a.priority - b.priority || a.id - b.id);
   const tryPlace = (p: LabelPoint, avoid: Rect[]): LabelSide | null => {
-    for (const side of ["right", "left", "above", "below"] as LabelSide[]) {
+    for (const side of LABEL_SIDE_ORDER) {
       const r = labelRect(p, side);
       if (r.x < 0 || r.y < 0 || r.x + r.w > bounds.width || r.y + r.h > bounds.height) continue;
       if (avoid.some((q) => overlaps(r, q))) continue;
