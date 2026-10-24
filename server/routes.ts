@@ -43,7 +43,7 @@ import { TEMPLATE_GROUPS, buildTemplateTeam, parseTemplateGroup } from "@shared/
 import { registerSharedGraphicsRoutes } from "./shared-graphics-routes";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { bestPossible } from "@shared/hindsight";
-import { buildLeagueOwnership } from "@shared/league-ownership";
+import { buildLeagueOwnership, selectableGameweeks } from "@shared/league-ownership";
 import { parseSubscription } from "@shared/deadline-reminders";
 import { pushConfigured, saveSubscription, removeSubscription, countSubscriptions, MAX_SUBSCRIPTIONS } from "./push-reminders";
 import { createRateLimiter, clientIpFromHeaders, isLoopback } from "@shared/rate-limiter";
@@ -1579,7 +1579,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mini-league ownership: exact counts over the first standings page (up to 50 managers) of a classic league for a
   // finished gameweek, plus captains, the league's template XI and (optionally) your differentials and gaps.
-  // Logic: shared/league-ownership.ts. Picks for a finished gameweek never change, so they are cached in memory.
+  // Logic: shared/league-ownership.ts. Picks never change once a gameweek's deadline has passed (finished or live), so
+  // they are cached in memory; points are cached only for finished gameweeks.
   const leaguePicksCache = new Map<string, Array<{ element: number; is_captain?: boolean }>>();
   const fetchFinishedPicks = async (entryId: number, gw: number) => {
     const key = `${entryId}:${gw}`;
@@ -1619,16 +1620,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) return res.status(503).json({ error: "FPL data is not available yet" });
       const bootstrap = await bootstrapResponse.json();
-      const finished: number[] = (bootstrap.events as any[]).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b);
-      if (finished.length === 0) return res.status(400).json({ error: "No gameweek has finished yet", finishedGameweeks: [] });
+      const selectable = selectableGameweeks(bootstrap.events);
+      if (selectable.length === 0) return res.status(400).json({ error: "No gameweek has started yet", gameweeks: [] });
+      const finishedSet = new Set<number>((bootstrap.events as any[]).filter((e) => e.finished).map((e) => e.id));
 
-      let gameweek = finished[finished.length - 1];
+      let gameweek = selectable[selectable.length - 1];
       const gwParam = req.query.gw;
       if (gwParam !== undefined && gwParam !== "") {
         const text = String(gwParam);
         gameweek = /^\d+$/.test(text) ? Number(text) : NaN;
-        if (!Number.isInteger(gameweek) || !finished.includes(gameweek)) {
-          return res.status(400).json({ error: "Choose a finished gameweek", finishedGameweeks: finished });
+        if (!Number.isInteger(gameweek) || !selectable.includes(gameweek)) {
+          return res.status(400).json({ error: "Choose a gameweek that has started", gameweeks: selectable });
         }
       }
 
@@ -1659,14 +1661,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         you = { managerId: youId, picks: inLeague ? inLeague.picks : await fetchFinishedPicks(youId, gameweek) };
       }
 
-      // Points each player scored in this gameweek (a finished gameweek never changes). Left out if FPL's live feed fails.
-      let points = leaguePointsCache.get(gameweek);
+      // Points each player scored in this gameweek. A finished gameweek never changes, so it is cached; a live one is
+      // fetched fresh every time. Left out if FPL's live feed fails.
+      const live = !finishedSet.has(gameweek);
+      let points = live ? undefined : leaguePointsCache.get(gameweek);
       if (!points) {
         try {
           const liveResponse = await internalFetch(`api/event/${gameweek}/live`);
           if (liveResponse.ok) {
             points = Object.fromEntries(((await liveResponse.json()).elements as any[]).map((e) => [e.id, e.stats?.total_points ?? 0]));
-            leaguePointsCache.set(gameweek, points!);
+            if (!live) leaguePointsCache.set(gameweek, points!);
           }
         } catch {
           /* no points shown */
@@ -1677,7 +1681,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         league: { id: Number(leagueId), name: league.name },
         gameweek,
-        finishedGameweeks: finished,
+        gameweeks: selectable,
+        live,
+        liveGameweek: selectable.find((g) => !finishedSet.has(g)) ?? null,
         hasMore: league.hasMore,
         ...result,
       });

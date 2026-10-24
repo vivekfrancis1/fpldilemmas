@@ -4,6 +4,20 @@
 import { buildTemplateTeam, type TemplateTeam } from "./template-team";
 import { POSITION_SHORT } from "./captaincy-matrix";
 
+/**
+ * Gameweeks whose squads are locked: finished ones, plus the live one once its deadline has passed.
+ * Ascending. A deadline exactly at `now` counts as passed.
+ */
+export function selectableGameweeks(
+  events: Array<{ id: number; deadline_time?: string | null; finished?: boolean }>,
+  now: Date = new Date(),
+): number[] {
+  return events
+    .filter((e) => e.finished || (!!e.deadline_time && new Date(e.deadline_time).getTime() <= now.getTime()))
+    .map((e) => e.id)
+    .sort((a, b) => a - b);
+}
+
 export interface LeagueManager {
   managerId: number;
   picks: Array<{ element: number; is_captain?: boolean; position?: number }> | null | undefined;

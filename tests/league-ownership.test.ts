@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { buildLeagueOwnership } from "../shared/league-ownership";
+import { buildLeagueOwnership, selectableGameweeks } from "../shared/league-ownership";
 
 // 8 clubs, players spread by id so the 3-per-club rule never binds in the template team
 const teams = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `Club ${i + 1}`, short_name: `C${i + 1}` }));
@@ -22,6 +22,32 @@ const managers = [
   { managerId: 4, picks: squad(base15.map((i) => (i === 33 ? 99 : i === 25 ? 98 : i)), 21) },
 ];
 const run = (over: any = {}) => buildLeagueOwnership({ managers, elements, teams, ...over });
+
+describe("selectableGameweeks (squads are locked once the deadline has passed)", () => {
+  const now = new Date("2026-10-24T12:00:00Z");
+  const ev = (id: number, deadline: string, finished = false) => ({ id, deadline_time: deadline, finished });
+  const events = [
+    ev(7, "2026-10-17T10:00:00Z", true),
+    ev(8, "2026-10-24T10:00:00Z"), // current gameweek: deadline passed, not finished
+    ev(9, "2026-10-31T10:00:00Z"), // next: deadline still ahead
+  ];
+
+  it("includes finished gameweeks and the live one whose deadline has passed, excludes upcoming ones", () => {
+    expect(selectableGameweeks(events, now)).toEqual([7, 8]);
+  });
+  it("is sorted ascending whatever order FPL lists them in", () => {
+    expect(selectableGameweeks([...events].reverse(), now)).toEqual([7, 8]);
+  });
+  it("a deadline exactly now counts as passed", () => {
+    expect(selectableGameweeks([ev(9, "2026-10-24T12:00:00Z")], now)).toEqual([9]);
+  });
+  it("a finished gameweek is always selectable, even with a missing deadline", () => {
+    expect(selectableGameweeks([{ id: 3, deadline_time: null, finished: true }], now)).toEqual([3]);
+  });
+  it("is empty when nothing has started", () => {
+    expect(selectableGameweeks([ev(1, "2026-12-01T10:00:00Z")], now)).toEqual([]);
+  });
+});
 
 describe("buildLeagueOwnership", () => {
   it("counts how many managers hold each player (bench included) and the percentage of managers counted", () => {
@@ -275,12 +301,25 @@ describe("GET /api/league-ownership/:leagueId (against FPL's own data, league 31
     }
   });
 
+  it("offers the live gameweek once its deadline has passed, and flags it as live", async () => {
+    const live = boot.events.find((e: any) => !e.finished && new Date(e.deadline_time) <= new Date());
+    expect(out.gameweeks).toContain(latest);
+    if (!live) return; // between gameweeks: nothing is live right now
+    expect(out.gameweeks).toContain(live.id);
+    const { status, body } = await getJson(`/api/league-ownership/314?gw=${live.id}`);
+    expect(status).toBe(200);
+    expect(body.gameweek).toBe(live.id);
+    expect(body.live).toBe(true);
+    expect(body.liveGameweek).toBe(live.id);
+    expect((await getJson("/api/league-ownership/314")).body.gameweek).toBe(live.id); // the live gameweek is the default
+  });
+
   it("rejects bad input: non-numeric league 400, unknown league 404, bad/unfinished gameweek 400, bad manager 400", async () => {
     expect((await getJson("/api/league-ownership/abc")).status).toBe(400);
     expect((await getJson(`/api/league-ownership/999999999?gw=${latest}`)).status).toBe(404);
     for (const bad of ["0", "39", "abc", "2.5"]) expect((await getJson(`/api/league-ownership/314?gw=${bad}`)).status).toBe(400);
-    const unfinished = boot.events.find((e: any) => !e.finished).id;
-    expect((await getJson(`/api/league-ownership/314?gw=${unfinished}`)).status).toBe(400);
+    const upcoming = boot.events.find((e: any) => new Date(e.deadline_time) > new Date()).id;
+    expect((await getJson(`/api/league-ownership/314?gw=${upcoming}`)).status).toBe(400);
     expect((await getJson(`/api/league-ownership/314?gw=${latest}&managerId=abc`)).status).toBe(400);
   });
 });

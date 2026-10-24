@@ -10,7 +10,9 @@ import { HeroPanel, PercentBar, Pill, PosChip, RankBadge, SectionCard, TeamChip,
 type Response = LeagueOwnership & {
   league: { id: number; name: string };
   gameweek: number;
-  finishedGameweeks: number[];
+  gameweeks: number[];
+  live: boolean;
+  liveGameweek: number | null;
   hasMore: boolean;
 };
 
@@ -96,8 +98,8 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
           <Select value={String(data.gameweek)} onValueChange={(v) => setGameweek(Number(v))}>
             <SelectTrigger className="h-10 w-[170px] rounded-xl" data-testid="select-gameweek"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[...data.finishedGameweeks].reverse().map((gw) => (
-                <SelectItem key={gw} value={String(gw)}>Gameweek {gw}</SelectItem>
+              {[...data.gameweeks].reverse().map((gw) => (
+                <SelectItem key={gw} value={String(gw)}>Gameweek {gw}{gw === data.liveGameweek ? " (live)" : ""}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -114,7 +116,7 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">Mini-league</div>
               <h2 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">{data.league.name}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
-                <span className="rounded-full bg-white/15 px-3 py-1 ring-1 ring-white/25">GW{data.gameweek} squads</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 ring-1 ring-white/25">GW{data.gameweek} squads{data.live ? " · live points" : ""}</span>
                 <span className="rounded-full bg-white/15 px-3 py-1 ring-1 ring-white/25">
                   {data.hasMore ? `Top ${data.managersRequested} managers by rank` : `All ${data.managersRequested} managers`}
                 </span>
