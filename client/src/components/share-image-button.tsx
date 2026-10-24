@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toPng } from "html-to-image";
+import { prepareFontEmbedCSS } from "@/lib/render-png";
 import { ChevronDown, Copy, Download, Facebook, Instagram, Link2, Linkedin, MessageCircle, Send, Share2, type LucideIcon } from "lucide-react";
 import type { ShareCard } from "@shared/share-cards";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,12 @@ export function ShareImageButton({
   const linkRef = useRef<Promise<string | null> | null>(null);
   const [shortUrl, setShortUrl] = useState<string | null>(null);
 
+  // work out the font embedding in the background, so the first image does not have to wait for it
+  useEffect(() => {
+    const t = setTimeout(() => void prepareFontEmbedCSS().catch(() => undefined), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   // notes ("Image copied...") fade after a few seconds
   useEffect(() => {
     if (!message?.ok) return;
@@ -130,7 +137,9 @@ export function ShareImageButton({
       // wait for the offscreen card to be laid out
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!ref.current) throw new Error("card not rendered");
-      const dataUrl = await toPng(ref.current, { width, height, pixelRatio: 1, cacheBust: true });
+      // fonts are embedded from a trimmed, cached copy (worked out once): re-embedding the site's whole font stylesheet took ~4 s per image
+      const fontEmbedCSS = await prepareFontEmbedCSS().catch(() => undefined);
+      const dataUrl = await toPng(ref.current, { width, height, pixelRatio: 1, cacheBust: true, ...(fontEmbedCSS !== undefined ? { fontEmbedCSS } : {}) });
       const blob = await (await fetch(dataUrl)).blob();
       setImage({ blob, title: built.title });
       // Link preview: a 1200x630 card of the graphic is saved on the server and gets a short link (/g/<id>). Posts that use

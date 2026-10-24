@@ -7,6 +7,7 @@ import {
   resolveHeadline,
   watermarkText,
   type ComparisonContent,
+  type AvailabilityRow,
   type CaptainPickRow,
   type GraphicData,
   type CoverContent,
@@ -1019,6 +1020,44 @@ function LeadersFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSp
   );
 }
 
+// ---------- Availability Watch ----------
+
+function AvailabilityFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; rows: AvailabilityRow[]; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const nameFont = land ? 26 : spec.size === "portrait" ? 42 : 38;
+  const jersey = land ? 44 : 76;
+  const tone = (t: AvailabilityRow["tone"]) => (t === "ok" ? theme.good : t === "warn" ? "#fbbf24" : theme.bad);
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {rows.length === 0 ? (
+        <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
+          No injury or suspension news on the most-owned players right now.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 12, flex: 1, minHeight: 0 }}>
+          {rows.map((r) => (
+            <div key={r.id} style={{ ...panel(theme), flex: 1, maxHeight: land ? 84 : 150, display: "flex", alignItems: "center", gap: land ? 12 : 20, padding: land ? "0 16px" : "0 26px", minHeight: 0 }}>
+              <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, width: land ? 34 : 54, flexShrink: 0 }}>{r.rank}</div>
+              <Jersey team={r.teamShort} position={r.position} px={jersey} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}</div>
+                <div style={{ fontSize: land ? 14 : 21, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.ownership} owned</div>
+                {r.news && <div style={{ fontSize: land ? 13 : 20, color: theme.text, opacity: 0.85, fontWeight: 600, marginTop: land ? 1 : 4, ...ellipsis }}>{r.news}</div>}
+              </div>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <div style={{ background: tone(r.tone), color: "#0b1020", borderRadius: 999, padding: land ? "3px 14px" : "6px 22px", fontSize: land ? 15 : 24, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                  {r.statusLabel}{r.chance !== null ? ` · ${r.chance}%` : ""}
+                </div>
+                {r.added && <div style={{ fontSize: land ? 11 : 16, color: theme.muted, fontWeight: 600, marginTop: land ? 2 : 4 }}>{r.added}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -1036,6 +1075,7 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "transfer-trends": return <TrendsFace spec={spec} theme={theme} trends={data.trends} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "team-of-the-week": return <TotwFace spec={spec} theme={theme} totw={data.totw} gwLabel={data.gwLabel} />;
     case "stat-leaders": return <LeadersFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "availability-watch": return <AvailabilityFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }
 }

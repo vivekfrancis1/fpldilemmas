@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -44,6 +44,8 @@ import {
   MAX_MANAGER_NAME,
   type ChipId,
   GAMEWEEK_PACK,
+  isEmptyGraphic,
+  MIN_WATCH_OWNERSHIP,
   buildCaption,
   buildCaptionsFile,
   normaliseAccent,
@@ -91,11 +93,12 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "transfer-trends": ArrowLeftRight,
   "team-of-the-week": Trophy,
   "stat-leaders": BarChart3,
+  "availability-watch": HeartPulse,
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
-import { computeGraphicData, longDate, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
-import { renderToPng } from "@/lib/render-png";
+import { computeGraphicData, longDate, makeGraphicDataContext, resolveGameweeks, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 
 const DEFAULT_WEEKS = 5;
@@ -491,6 +494,12 @@ export default function GraphicsPage() {
 
   const update = (patch: Partial<GraphicSpec>) => setSpec((s) => ({ ...s, ...patch }));
 
+  // work out the font embedding in the background, so the first image (Share or pack) does not have to wait for it
+  useEffect(() => {
+    const t = setTimeout(() => void prepareFontEmbedCSS().catch(() => undefined), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   // on a phone the template cards scroll sideways: keep the chosen one in view
   useEffect(() => {
     document.querySelector(`[data-testid="template-${spec.template}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
@@ -596,14 +605,17 @@ export default function GraphicsPage() {
     [priceChanges, spec.date, spec.size],
   );
 
-  // everything the graphics are built from; the Gameweek pack builds each of its images from the same pieces
+  // everything the graphics are built from; the Gameweek pack builds each of its images from the same kind of context
   const dataContext = useMemo(
-    () => ({
-      elements, teams, teamShortById, teamNameById, projections, fixtures, defaultRange, transfersGw, finishedGameweeks,
+    () => makeGraphicDataContext({
+      bootstrap,
+      projections,
+      fixtures,
       liveElements: liveData?.elements,
       priceChanges: pricesLoading ? undefined : priceChanges ?? [],
+      defaultWeeks: DEFAULT_WEEKS,
     }),
-    [elements, teams, teamShortById, teamNameById, projections, fixtures, defaultRange, transfersGw, finishedGameweeks, liveData, pricesLoading, priceChanges],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
@@ -650,29 +662,49 @@ export default function GraphicsPage() {
     if (pack.busy) return;
     const total = GAMEWEEK_PACK.length;
     setPack({ busy: true, done: 0, total, message: null, ok: true });
+    let packContext: ReturnType<typeof makeGraphicDataContext>;
     try {
-      const changes = await queryClient.fetchQuery<PriceChangeInput[]>({ queryKey: ["/api/price-changes/recent"], staleTime: 5 * 60 * 1000 });
+      // the pack loads its own data (so it never depends on what the page happened to have loaded)
+      const fresh = { staleTime: 5 * 60 * 1000 };
+      const [bs, projs, fx, changes] = await Promise.all([
+        queryClient.fetchQuery<BootstrapData>({ queryKey: ["/api/bootstrap-static"], ...fresh }),
+        queryClient.fetchQuery<PlayerProjection[]>({ queryKey: ["/api/cached/player-total-points"], ...fresh }),
+        queryClient.fetchQuery<Fixture[]>({ queryKey: ["/api/fixtures"], ...fresh }),
+        queryClient.fetchQuery<PriceChangeInput[]>({ queryKey: ["/api/price-changes/recent"], ...fresh }),
+      ]);
+      packContext = makeGraphicDataContext({ bootstrap: bs, projections: projs, fixtures: fx, liveElements: undefined, priceChanges: changes ?? [], defaultWeeks: DEFAULT_WEEKS });
+    } catch {
+      setPack({ busy: false, done: 0, total, ok: false, message: "Couldn't load the data for the pack. Please try again." });
+      return;
+    }
+    try {
       const events = (bootstrap?.events ?? []) as Array<{ id: number; deadline_time?: string }>;
       const deadline = events.find((e) => e.id === selectedPackGw)?.deadline_time ?? null;
       const planned = packSpecs(spec, selectedPackGw, { deadline });
+      // fonts are embedded once for the whole pack, and shirt images are fetched once and reused: far faster than per image
+      const fontEmbedCSS = await prepareFontEmbedCSS();
       const files: Array<{ name: string; data: Uint8Array }> = [];
       const captions: Array<{ fileName: string; caption: string }> = [];
       const skipped: string[] = [];
       for (let i = 0; i < planned.length; i++) {
         const { item, spec: s } = planned[i];
         setPack((p) => ({ ...p, done: i }));
-        const { data: graphic } = computeGraphicData(s, { ...dataContext, priceChanges: changes ?? [] });
-        if (!graphic) {
+        const { data: graphic } = computeGraphicData(s, packContext);
+        // nothing to show yet (e.g. no projections for that gameweek, or no price changes today): skip it rather than draw a blank card
+        if (!graphic || isEmptyGraphic(graphic)) {
           skipped.push(item.label);
           continue;
         }
         const size = GRAPHIC_SIZES[s.size];
-        const blob = await renderToPng(<GraphicCanvas spec={s} theme={withAccent(resolveTheme(s.theme, null), s.accent)} data={graphic} />, size.width, size.height);
+        const blob = await renderToPng(<GraphicCanvas spec={s} theme={withAccent(resolveTheme(s.theme, null), s.accent)} data={graphic} />, size.width, size.height, { fontEmbedCSS, cacheBust: false });
         const fileName = packFileName(i, s.template);
         files.push({ name: fileName, data: new Uint8Array(await blob.arrayBuffer()) });
         captions.push({ fileName, caption: buildCaption(graphic, s) });
       }
-      if (files.length === 0) throw new Error("nothing to build");
+      if (files.length === 0) {
+        setPack({ busy: false, done: total, total, ok: false, message: `Nothing to put in a GW${selectedPackGw} pack yet: ${skipped.join(", ")} have no data. Try again closer to the deadline.` });
+        return;
+      }
       files.push({ name: "captions.txt", data: new TextEncoder().encode(buildCaptionsFile(captions)) });
       const zip = createZip(files);
       const url = URL.createObjectURL(new Blob([zip.buffer as ArrayBuffer], { type: "application/zip" }));
@@ -681,7 +713,13 @@ export default function GraphicsPage() {
       a.download = packZipName(selectedPackGw);
       a.click();
       URL.revokeObjectURL(url);
-      setPack({ busy: false, done: total, total, ok: true, message: `Downloaded ${captions.length} images and captions.txt${skipped.length ? `. Skipped (no data yet): ${skipped.join(", ")}.` : "."}` });
+      setPack({
+        busy: false,
+        done: total,
+        total,
+        ok: true,
+        message: `Downloaded ${captions.length} image${captions.length === 1 ? "" : "s"} and captions.txt${skipped.length ? `. Left out because there is nothing to show yet: ${skipped.join(", ")}.` : "."}`,
+      });
     } catch {
       setPack({ busy: false, done: 0, total, ok: false, message: "Couldn't build the pack. Please try again." });
     }
@@ -853,6 +891,18 @@ export default function GraphicsPage() {
                     <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
                   </Field>
                   <p className="col-span-2 text-xs text-gray-500">Counts are FPL's own transfers for GW{transfersGw || "?"} so far. They reset at each deadline.</p>
+                </div>
+              )}
+
+              {spec.template === "availability-watch" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Position">
+                    <SimpleSelect value={spec.pos ?? "ALL"} onChange={(v) => update({ pos: v === "ALL" ? null : (v as GraphicPosition) })} options={POSITIONS.map((p) => ({ value: p, label: p === "ALL" ? "All positions" : p }))} testId="select-position" />
+                  </Field>
+                  <Field label="How many players">
+                    <SimpleSelect value={String(spec.top)} onChange={(v) => update({ top: parseInt(v, 10) })} options={TOP_OPTIONS.map((n) => ({ value: String(n), label: `Top ${n}` }))} testId="select-top" />
+                  </Field>
+                  <p className="col-span-2 text-xs text-gray-500">The most-owned players (owned by {MIN_WATCH_OWNERSHIP}%+) who are injured, doubtful or suspended, with FPL's own news.</p>
                 </div>
               )}
 

@@ -1,9 +1,12 @@
-import type { Fixture } from "@shared/schema";
+import type { BootstrapData, Fixture } from "@shared/schema";
+import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { projectionWindow } from "@shared/compare-utils";
 import {
   MAX_RANGE_GAMEWEEKS,
   MIN_RATE_MINUTES,
   PRICE_LIST_LIMIT,
+  MIN_WATCH_OWNERSHIP,
+  buildAvailabilityWatch,
   buildCaptainPicks,
   buildComparison,
   buildCover,
@@ -172,10 +175,46 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
       const statLabel = result.stat?.label ?? spec.stat;
       return { data: { kind: "stat-leaders", rows: result.rows, gwLabel: label, statLabel, subtitle: `${statLabel}${spec.pos ? ` · ${spec.pos}` : ""} · season to date` }, problem: null };
     }
+    case "availability-watch": {
+      const rows = buildAvailabilityWatch({ elements, teamShortById, pos: spec.pos, top: spec.top });
+      return { data: { kind: "availability-watch", rows, gwLabel: "Latest FPL news", subtitle: `Owned by ${MIN_WATCH_OWNERSHIP}%+ · ${spec.pos ?? "All positions"} · latest FPL news` }, problem: null };
+    }
     case "top-differentials": {
       const rows = buildDifferentials({ elements, projections: projections ?? [], teamShortById, from, to, pos: spec.pos, maxOwn: spec.maxOwn, top: spec.top });
       const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
       return { data: { kind: "top-differentials", rows, gwLabel, subtitle }, problem: null };
     }
   }
+}
+
+
+/**
+ * Everything the graphics are built from, derived from the site's raw data. The page uses it for the live preview and the
+ * Gameweek pack uses it with data it fetched itself, so both build from exactly the same pieces.
+ */
+export function makeGraphicDataContext(input: {
+  bootstrap: BootstrapData | undefined;
+  projections: PlayerProjection[] | undefined;
+  fixtures: Fixture[] | undefined;
+  liveElements: LiveElement[] | undefined;
+  priceChanges: PriceChangeInput[] | undefined;
+  defaultWeeks?: number;
+}): GraphicDataContext {
+  const { bootstrap } = input;
+  const teams = bootstrap?.teams ?? [];
+  const events = (bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean; is_next?: boolean; is_current?: boolean }>;
+  const range = bootstrap?.events ? getDefaultGameweekRange(bootstrap.events as any, input.defaultWeeks ?? 5) : null;
+  return {
+    elements: (bootstrap?.elements ?? []) as unknown as GraphicElement[],
+    teams,
+    teamShortById: new Map(teams.map((t) => [t.id, t.short_name])),
+    teamNameById: new Map(teams.map((t) => [t.id, t.name])),
+    projections: input.projections,
+    fixtures: input.fixtures,
+    defaultRange: range ? { from: parseInt(range.startGameweek, 10), to: parseInt(range.endGameweek, 10) } : { from: 1, to: input.defaultWeeks ?? 5 },
+    transfersGw: events.find((e) => e.is_next)?.id ?? events.find((e) => e.is_current)?.id ?? 0,
+    finishedGameweeks: events.filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b),
+    liveElements: input.liveElements,
+    priceChanges: input.priceChanges,
+  };
 }
