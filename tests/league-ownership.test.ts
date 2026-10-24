@@ -136,6 +136,53 @@ describe("buildLeagueOwnership", () => {
       });
     });
 
+    describe("points and starting XI / bench", () => {
+      const withPos = (ids: number[]) => ids.map((element, i) => ({ element, is_captain: false, position: i + 1 }));
+      const points = { 99: 7, 98: 2, 33: 5, 31: 9 };
+      const you4 = { managerId: 4, picks: withPos(base15.map((i) => (i === 33 ? 99 : i === 25 ? 98 : i))) };
+      const ms = [
+        { managerId: 1, name: "A", rank: 1, picks: withPos(base15) },
+        { managerId: 2, name: "B", rank: 2, picks: withPos(base15.map((i) => (i === 33 ? 99 : i))) },
+        { managerId: 3, name: "C", rank: 3, picks: withPos(base15) },
+        { managerId: 4, name: "You", rank: 4, picks: you4.picks },
+      ];
+
+      it("your differentials say whether the player is in your starting XI (position 1-11) or on the bench, and carry his points", () => {
+        const out = run({ managers: ms, you: you4, points, differentialMax: 60 });
+        const d98 = out.you!.differentials.find((d) => d.playerId === 98)!;
+        const d99 = out.you!.differentials.find((d) => d.playerId === 99)!;
+        // base15 index: 98 replaced 25 (index 11 -> position 12, bench); 99 replaced 33 (index 14 -> position 15, bench)
+        expect(d98).toMatchObject({ starting: false, points: 2 });
+        expect(d99).toMatchObject({ starting: false, points: 7, ownedBy: 2 });
+      });
+
+      it("a player in picks 1-11 is starting", () => {
+        const you = { managerId: 4, picks: withPos([99, ...base15.filter((i) => i !== 33 && i !== 1)].concat([1, 2]).slice(0, 15)) };
+        const out = run({ managers: ms, you, points, differentialMax: 60 });
+        expect(out.you!.differentials.find((d) => d.playerId === 99)!.starting).toBe(true);
+      });
+
+      it("threats carry points, and each owner says whether he starts the player", () => {
+        const you = { managerId: 3, picks: withPos(base15) };
+        const out = run({ managers: ms, you, points, differentialMax: 60 });
+        const t99 = out.you!.threats.find((t) => t.playerId === 99)!;
+        expect(t99.points).toBe(7);
+        expect(t99.ownedBy).toBe(2);
+        expect(t99.owners.map((o) => [o.name, o.starting])).toEqual([["B", false], ["You", false]]);
+      });
+
+      it("points are left out when none are supplied, and a player missing from the points map scores 0", () => {
+        expect(run({ managers: ms, you: you4, differentialMax: 60 }).you!.differentials[0].points).toBeUndefined();
+        const out = run({ managers: ms, you: you4, points: {}, differentialMax: 60 });
+        expect(out.you!.differentials[0].points).toBe(0);
+      });
+
+      it("gaps carry points too", () => {
+        const out = run({ managers: ms, you: you4, points });
+        expect(out.you!.gaps.find((g) => g.playerId === 33)!.points).toBe(5);
+      });
+    });
+
     it("flags whether you are one of the managers counted", () => {
       expect(run({ you: { managerId: 4, picks: managers[3].picks } }).you!.inSample).toBe(true);
     });

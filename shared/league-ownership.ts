@@ -6,7 +6,7 @@ import { POSITION_SHORT } from "./captaincy-matrix";
 
 export interface LeagueManager {
   managerId: number;
-  picks: Array<{ element: number; is_captain?: boolean }> | null | undefined;
+  picks: Array<{ element: number; is_captain?: boolean; position?: number }> | null | undefined;
   /** Display name and league rank, used to say who holds a threat. Optional. */
   name?: string;
   rank?: number;
@@ -34,12 +34,22 @@ export interface OwnedPlayer {
   ownedBy: number;
   /** ownedBy / managersCounted, whole percent. */
   percent: number;
+  /** Points the player scored in the gameweek (0 if he is missing from the points supplied); absent when no points were supplied. */
+  points?: number;
+}
+
+/** A player you own: whether he is in your starting XI (pick position 1-11) or on the bench. */
+export interface YourPlayer extends OwnedPlayer {
+  /** Absent when the pick positions are unknown. */
+  starting?: boolean;
 }
 
 export interface ThreatOwner {
   managerId: number;
   name?: string;
   rank?: number;
+  /** Whether this manager has him in the starting XI (false = bench); absent when pick positions are unknown. */
+  starting?: boolean;
 }
 
 /** A player you don't own that only a few of your rivals do. */
@@ -61,7 +71,7 @@ export interface LeagueOwnership {
     /** true when you are one of the managers counted. */
     inSample: boolean;
     /** Players you own that fewer than differentialMax % of the league own. Most distinctive first. */
-    differentials: OwnedPlayer[];
+    differentials: YourPlayer[];
     /** Players at least gapMin % of the league own that you don't. Most owned first. */
     gaps: OwnedPlayer[];
     /**
@@ -84,8 +94,10 @@ export function buildLeagueOwnership(input: {
   gapMin?: number;
   /** How many threats to return. Default 12. */
   threatsMax?: number;
+  /** Points scored in the gameweek by player id. */
+  points?: Record<number, number>;
 }): LeagueOwnership {
-  const { managers, elements, teams, topN = 30, you, differentialMax = 25, gapMin = 50, threatsMax = 12 } = input;
+  const { managers, elements, teams, topN = 30, you, differentialMax = 25, gapMin = 50, threatsMax = 12, points } = input;
   const complete = managers.filter((m) => Array.isArray(m.picks) && m.picks.length === 15);
   const counted = complete.length;
 
@@ -99,7 +111,7 @@ export function buildLeagueOwnership(input: {
     for (const p of m.picks!) {
       owned.set(p.element, (owned.get(p.element) ?? 0) + 1);
       const list = ownersOf.get(p.element) ?? [];
-      list.push({ managerId: m.managerId, name: m.name, rank: m.rank });
+      list.push({ managerId: m.managerId, name: m.name, rank: m.rank, starting: p.position === undefined ? undefined : p.position <= 11 });
       ownersOf.set(p.element, list);
       if (p.is_captain) captained.set(p.element, (captained.get(p.element) ?? 0) + 1);
     }
@@ -116,6 +128,7 @@ export function buildLeagueOwnership(input: {
       teamShort: teamById.get(e.team)?.short_name ?? "",
       ownedBy,
       percent: Math.round((ownedBy / counted) * 100),
+      ...(points ? { points: points[id] ?? 0 } : {}),
     };
   };
   const byOwnedDesc = (a: OwnedPlayer, b: OwnedPlayer) => b.ownedBy - a.ownedBy || a.playerId - b.playerId;
@@ -150,11 +163,16 @@ export function buildLeagueOwnership(input: {
       youResult = { managerId: you.managerId, hasFullSquad, inSample, differentials: [], gaps: [], threats: [] };
     } else {
       const yours = new Set(you.picks!.map((p) => p.element));
+      const yourPick = new Map(you.picks!.map((p) => [p.element, p]));
       // exact comparisons on counts (no rounding): ownedBy/counted < max%  <=>  ownedBy*100 < max*counted
-      const differentials = Array.from(yours)
+      const differentials: YourPlayer[] = Array.from(yours)
         .filter((id) => (owned.get(id) ?? 0) * 100 < differentialMax * counted)
-        .map(toOwned)
-        .filter((p): p is OwnedPlayer => !!p)
+        .map((id) => {
+          const base = toOwned(id);
+          const position = yourPick.get(id)?.position;
+          return base && position !== undefined ? { ...base, starting: position <= 11 } : base;
+        })
+        .filter((p): p is YourPlayer => !!p)
         .sort((a, b) => a.ownedBy - b.ownedBy || a.playerId - b.playerId);
       const gaps = Array.from(owned.keys())
         .filter((id) => !yours.has(id) && (owned.get(id) ?? 0) * 100 >= gapMin * counted)
@@ -171,6 +189,7 @@ export function buildLeagueOwnership(input: {
             const out: ThreatOwner = { managerId: o.managerId };
             if (o.name !== undefined) out.name = o.name;
             if (o.rank !== undefined) out.rank = o.rank;
+            if (o.starting !== undefined) out.starting = o.starting;
             return out;
           });
           return { ...base, owners };

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Crown, Flame, Search, ShieldAlert, Shirt, Sparkles, Star, Target, Users } from "lucide-react";
-import type { LeagueOwnership, OwnedPlayer, Threat } from "@shared/league-ownership";
+import type { LeagueOwnership, OwnedPlayer, Threat, YourPlayer } from "@shared/league-ownership";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,32 +36,49 @@ const write = (k: string, v: string) => {
   }
 };
 
-function PlayerLine({ p }: { p: OwnedPlayer }) {
+const pts = (p?: number) => (p === undefined ? null : <Pill tone="green">{p} pt{p === 1 ? "" : "s"}</Pill>);
+
+function PlayerLine({ p }: { p: OwnedPlayer | YourPlayer }) {
+  const starting = "starting" in p ? p.starting : undefined;
   return (
-    <li className="flex items-center gap-2.5 py-2" data-testid={`line-${p.playerId}`}>
+    <li className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 py-2" data-testid={`line-${p.playerId}`}>
       <JerseyIcon team={p.teamShort} position={p.position} className="h-7 w-7 shrink-0 object-contain" />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[110px] flex-1">
         <div className="truncate text-sm font-bold text-gray-900">{p.name}</div>
         <div className="mt-0.5 flex items-center gap-1"><TeamChip>{p.teamShort}</TeamChip><PosChip pos={asPos(p.position)} /></div>
       </div>
-      <Pill tone="indigo">{p.ownedBy} manager{p.ownedBy === 1 ? "" : "s"} · {p.percent}%</Pill>
+      <div className="flex flex-wrap items-center justify-end gap-1">
+        {starting !== undefined && <Pill tone={starting ? "indigo" : "gray"}>{starting ? "Starting XI" : "Bench"}</Pill>}
+        {pts(p.points)}
+        <Pill tone="indigo">{p.ownedBy} manager{p.ownedBy === 1 ? "" : "s"} · {p.percent}%</Pill>
+      </div>
     </li>
   );
 }
 
 function ThreatLine({ t }: { t: Threat }) {
-  const shown = t.owners.slice(0, 3).map((o) => (o.rank ? `${o.name ?? `Team ${o.managerId}`} (#${o.rank})` : o.name ?? `Team ${o.managerId}`));
-  const more = t.owners.length - shown.length;
   return (
-    <li className="flex items-center gap-2.5 py-2" data-testid={`threat-${t.playerId}`}>
-      <JerseyIcon team={t.teamShort} position={t.position} className="h-7 w-7 shrink-0 object-contain" />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-bold text-gray-900">{t.name}</div>
-        <div className="mt-0.5 flex items-center gap-1"><TeamChip>{t.teamShort}</TeamChip><PosChip pos={asPos(t.position)} /></div>
+    <li className="py-2" data-testid={`threat-${t.playerId}`}>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <JerseyIcon team={t.teamShort} position={t.position} className="h-7 w-7 shrink-0 object-contain" />
+        <div className="min-w-[110px] flex-1">
+          <div className="truncate text-sm font-bold text-gray-900">{t.name}</div>
+          <div className="mt-0.5 flex items-center gap-1"><TeamChip>{t.teamShort}</TeamChip><PosChip pos={asPos(t.position)} /></div>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {pts(t.points)}
+          <Pill tone="indigo">{t.ownedBy} manager{t.ownedBy === 1 ? "" : "s"} · {t.percent}%</Pill>
+        </div>
       </div>
-      <div className="max-w-[55%] text-right text-xs text-gray-500">
-        <span className="font-semibold text-gray-700">{shown.join(", ")}{more > 0 ? ` +${more}` : ""}</span>
-      </div>
+      <p className="mt-1 pl-[38px] text-xs text-gray-500" data-testid={`owners-${t.playerId}`}>
+        <span className="font-semibold text-gray-700">Owned by: </span>
+        {t.owners.map((o, i) => (
+          <span key={o.managerId}>
+            {i > 0 && ", "}
+            {o.name ?? `Team ${o.managerId}`}{o.rank || o.starting === false ? ` (${[o.rank ? `#${o.rank}` : "", o.starting === false ? "bench" : ""].filter(Boolean).join(", ")})` : ""}
+          </span>
+        ))}
+      </p>
     </li>
   );
 }
@@ -290,7 +307,7 @@ export default function LeagueOwnershipPage() {
                         </div>
                         <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-3">
                           <h3 className="flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><ShieldAlert className="h-4 w-4" /> Threats</h3>
-                          <p className="text-xs text-gray-500">Players you don't own that fewer than 25% of the league do, with the rivals who hold them. Best-ranked rival first</p>
+                          <p className="text-xs text-gray-500">Players you don't own that fewer than 25% of the league do, with their points and every rival who holds them. Best-ranked rival first</p>
                           {data.you.threats.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70" data-testid="list-threats">{data.you.threats.map((t) => <ThreatLine key={t.playerId} t={t} />)}</ul>}
                         </div>
                       </>

@@ -1600,6 +1600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  const leaguePointsCache = new Map<number, Record<number, number>>();
   const leagueStandingsCache = createTtlCache<{ name: string; hasMore: boolean; rows: any[] }>(5 * 60 * 1000, 200);
   app.get("/api/league-ownership/:leagueId", async (req, res) => {
     if (leagueGuard(req, res)) return;
@@ -1658,7 +1659,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         you = { managerId: youId, picks: inLeague ? inLeague.picks : await fetchFinishedPicks(youId, gameweek) };
       }
 
-      const result = buildLeagueOwnership({ managers, elements: bootstrap.elements, teams: bootstrap.teams, you });
+      // Points each player scored in this gameweek (a finished gameweek never changes). Left out if FPL's live feed fails.
+      let points = leaguePointsCache.get(gameweek);
+      if (!points) {
+        try {
+          const liveResponse = await internalFetch(`api/event/${gameweek}/live`);
+          if (liveResponse.ok) {
+            points = Object.fromEntries(((await liveResponse.json()).elements as any[]).map((e) => [e.id, e.stats?.total_points ?? 0]));
+            leaguePointsCache.set(gameweek, points!);
+          }
+        } catch {
+          /* no points shown */
+        }
+      }
+
+      const result = buildLeagueOwnership({ managers, elements: bootstrap.elements, teams: bootstrap.teams, you, points });
       res.json({
         league: { id: Number(leagueId), name: league.name },
         gameweek,
