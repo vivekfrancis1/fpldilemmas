@@ -19,6 +19,9 @@ import {
   buildTransferTrends,
   buildTeamOfTheWeek,
   buildStatLeaders,
+  buildAvailabilityWatch,
+  isEmptyGraphic,
+  MIN_WATCH_OWNERSHIP,
   buildCaption,
   buildCaptionsFile,
   formatDeadline,
@@ -1171,7 +1174,7 @@ describe("deadline text and the gameweek pack plan", () => {
   it("the pack is the standard set for a gameweek, in order, keeping the user's size, theme, handle and accent", () => {
     const base = { ...DEFAULT_SPEC, template: "player-card" as const, size: "portrait" as const, theme: "midnight" as const, handle: "steve", accent: "#fbbf24", headline: "mine", players: [1], teams: [2], quote: "q" };
     const specs = packSpecs(base, 9, { deadline: "2026-10-24T16:30:00Z" });
-    expect(specs.map((x) => x.spec.template)).toEqual(["cover", "captain-picks", "top-differentials", "fixture-ticker", "transfer-trends", "price-change"]);
+    expect(specs.map((x) => x.spec.template)).toEqual(["cover", "captain-picks", "top-differentials", "availability-watch", "fixture-ticker", "transfer-trends", "price-change"]);
     expect(GAMEWEEK_PACK.map((x) => x.template)).toEqual(specs.map((x) => x.spec.template));
     for (const { spec } of specs) {
       expect(spec).toMatchObject({ size: "portrait", theme: "midnight", handle: "steve", accent: "#fbbf24" });
@@ -1184,7 +1187,8 @@ describe("deadline text and the gameweek pack plan", () => {
     expect(specs[0].spec.subtitle.length).toBeGreaterThan(0);
     expect(specs[1].spec).toMatchObject({ from: 9, to: 9, headline: "" });
     expect(specs[2].spec).toMatchObject({ from: 9, to: 12 });
-    expect(specs[3].spec).toMatchObject({ from: 9, to: 13 });
+    expect(specs[3].spec.template).toBe("availability-watch");
+    expect(specs[4].spec).toMatchObject({ from: 9, to: 13 });
   });
 
   it("the cover has no tag when the deadline is unknown", () => {
@@ -1333,5 +1337,106 @@ describe("post captions from the real numbers", () => {
     expect(c).toContain("4-4-2");
     expect(c).toContain("Haaland");
     expect(c).toContain("Triple Captain");
+  });
+});
+
+describe("buildAvailabilityWatch", () => {
+  const teamShortById = new Map([[1, "ARS"], [2, "AVL"]]);
+  const mk = (id: number, over: Partial<GraphicElement> = {}) =>
+    el({ id, web_name: `P${id}`, team: id % 2 ? 1 : 2, element_type: 3, now_cost: 60 + id, selected_by_percent: "20.0", status: "d", news: "Knock - 75% chance of playing", news_added: "2026-10-21T20:30:09Z", chance_of_playing_next_round: 75, ...over });
+  const elements = [
+    mk(1, { selected_by_percent: "10.0" }),
+    mk(2, { selected_by_percent: "40.0", status: "i", chance_of_playing_next_round: 0, news: "Hamstring injury - Unknown return date" }),
+    mk(3, { selected_by_percent: "30.0", status: "s", chance_of_playing_next_round: null, news: "Suspended for 1 match" }),
+    mk(4, { selected_by_percent: "50.0", status: "a", news: "", chance_of_playing_next_round: null }),
+    mk(5, { selected_by_percent: "4.9" }),
+    mk(6, { selected_by_percent: "60.0", status: "u", news: "Has left the club" }),
+    mk(7, { selected_by_percent: "25.0", element_type: 4 }),
+    mk(8, { selected_by_percent: "5.0", news: "x".repeat(200) }),
+  ];
+  const run = (over: Record<string, unknown> = {}) => buildAvailabilityWatch({ elements, teamShortById, pos: null, top: 8, ...over } as any);
+
+  it("lists injured, doubtful and suspended players owned by at least the floor, most owned first", () => {
+    expect(MIN_WATCH_OWNERSHIP).toBe(5);
+    expect(run().map((r) => r.name)).toEqual(["P2", "P3", "P7", "P1", "P8"]);
+    expect(run().map((r) => r.rank)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("leaves out fit players, players below the floor, and players who have left (unavailable)", () => {
+    const names = run().map((r) => r.name);
+    for (const gone of ["P4", "P5", "P6"]) expect(names).not.toContain(gone);
+  });
+
+  it("shows status, tone, chance of playing (a real number below 100, 0 included) and the FPL news with its date", () => {
+    const [p2, p3] = run();
+    expect(p2).toMatchObject({ statusLabel: "Injured", tone: "bad", chance: 0, news: "Hamstring injury - Unknown return date", added: "21 Oct 2026", teamShort: "AVL", price: "£6.2m", ownership: "40.0%", position: "MID" });
+    expect(p3).toMatchObject({ statusLabel: "Suspended", tone: "bad", chance: null });
+    expect(run().find((r) => r.name === "P1")).toMatchObject({ statusLabel: "Doubtful", tone: "warn", chance: 75 });
+  });
+
+  it("cuts very long news with an ellipsis", () => {
+    const long = run().find((r) => r.name === "P8")!;
+    expect(long.news.length).toBeLessThanOrEqual(90);
+    expect(long.news.endsWith("…")).toBe(true);
+  });
+
+  it("respects the position filter and Top N", () => {
+    expect(run({ pos: "FWD" }).map((r) => r.name)).toEqual(["P7"]);
+    expect(run({ top: 2 }).map((r) => r.name)).toEqual(["P2", "P3"]);
+  });
+});
+
+describe("availability watch as a template, caption and pack item", () => {
+  it("is a template with its own headline; no projections", () => {
+    expect(GRAPHIC_TEMPLATES.map((t) => t.id)).toContain("availability-watch");
+    expect(resolveHeadline({ ...DEFAULT_SPEC, template: "availability-watch" })).toBe("Availability Watch");
+    expect(usesProjections({ ...DEFAULT_SPEC, template: "availability-watch" })).toBe(false);
+  });
+
+  it("the pack includes it after the differentials", () => {
+    expect(GAMEWEEK_PACK.map((x) => x.id)).toEqual(["deadline", "captains", "differentials", "availability", "fixtures", "transfers", "prices"]);
+  });
+
+  it("caption: the first three with their chance or status, from the real news", () => {
+    const data = {
+      kind: "availability-watch", gwLabel: "Latest FPL news", subtitle: "",
+      rows: [
+        { name: "Saka", statusLabel: "Doubtful", chance: 50, news: "Thigh injury" },
+        { name: "Semenyo", statusLabel: "Injured", chance: 0, news: "Knee injury" },
+        { name: "Szoboszlai", statusLabel: "Injured", chance: null, news: "Hamstring" },
+        { name: "Fourth", statusLabel: "Injured", chance: null, news: "x" },
+      ],
+    } as unknown as GraphicData;
+    const c = buildCaption(data, { ...DEFAULT_SPEC, template: "availability-watch" });
+    expect(c).toContain("Saka 50%");
+    expect(c).toContain("Semenyo 0%");
+    expect(c).toContain("Szoboszlai injured");
+    expect(c).not.toContain("Fourth");
+    expect(c).toContain("#FPLInjuries");
+  });
+});
+
+describe("isEmptyGraphic (what the pack skips instead of drawing a blank card)", () => {
+  const spec = DEFAULT_SPEC;
+  it("is true for lists with nothing in them and false when there is something to show", () => {
+    const empties = [
+      { kind: "captain-picks", rows: [] },
+      { kind: "top-differentials", rows: [] },
+      { kind: "availability-watch", rows: [] },
+      { kind: "stat-leaders", rows: [] },
+      { kind: "fixture-ticker", grid: { rows: [] } },
+      { kind: "transfer-trends", trends: { ins: [], outs: [] } },
+      { kind: "price-change", prices: { date: null, risers: [], fallers: [] } },
+    ];
+    for (const e of empties) expect(isEmptyGraphic(e as unknown as GraphicData)).toBe(true);
+    const full = [
+      { kind: "captain-picks", rows: [{}] },
+      { kind: "transfer-trends", trends: { ins: [{}], outs: [] } },
+      { kind: "price-change", prices: { date: "2026-10-22", risers: [{}], fallers: [] } },
+      { kind: "cover", cover: {} },
+      { kind: "fixture-ticker", grid: { rows: [{}] } },
+    ];
+    for (const f of full) expect(isEmptyGraphic(f as unknown as GraphicData)).toBe(false);
+    expect(spec).toBe(DEFAULT_SPEC);
   });
 });

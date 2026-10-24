@@ -9,7 +9,7 @@ import { bestLineup, type LineupPlayer } from "./lineup";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -26,6 +26,7 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "transfer-trends", label: "Transfer Trends", description: "Most transferred in and out this gameweek", headline: "Transfer Trends" },
   { id: "team-of-the-week", label: "Team of the Week", description: "The best legal XI of a finished gameweek by actual points", headline: "Team of the Week" },
   { id: "stat-leaders", label: "Stat Leaders", description: "Top players for any stat: goals, assists, xG, bonus and more", headline: "Stat Leaders" },
+  { id: "availability-watch", label: "Availability Watch", description: "Injury, doubt and suspension news for the most-owned players", headline: "Availability Watch" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -281,7 +282,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   accent: "",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -1456,7 +1457,8 @@ export type GraphicData =
   | { kind: "fixture-ticker"; grid: FixtureGridContent; gwLabel: string }
   | { kind: "transfer-trends"; trends: { ins: TransferRow[]; outs: TransferRow[] }; gwLabel: string; subtitle: string }
   | { kind: "team-of-the-week"; totw: TeamOfTheWeekContent; gwLabel: string }
-  | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string; statLabel: string };
+  | { kind: "stat-leaders"; rows: LeaderRow[]; gwLabel: string; subtitle: string; statLabel: string }
+  | { kind: "availability-watch"; rows: AvailabilityRow[]; gwLabel: string; subtitle: string };
 
 // ---------- post captions ----------
 
@@ -1474,6 +1476,7 @@ const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
   "team-reveal": "#TeamReveal",
   "predicted-lineup": "#PredictedLineup",
   "player-news": "#FPLNews",
+  "availability-watch": "#FPLInjuries",
 };
 
 function captionGw(label: string | null | undefined): string | null {
@@ -1541,6 +1544,10 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.valueLabel}`).join(" · ");
       return done(`${data.statLabel} leaders: ${top || "no one yet"} (season to date)`);
     }
+    case "availability-watch": {
+      const top = data.rows.slice(0, 3).map((r) => `${r.name} ${r.chance !== null ? `${r.chance}%` : r.statusLabel.toLowerCase()}`).join(" · ");
+      return done(top ? `Availability watch, most-owned players: ${top}` : "Availability watch: no news on the most-owned players");
+    }
     case "cover": {
       const { cover } = data;
       return done(`${cover.headline}${cover.tag ? ` · ${cover.tag}` : ""}${cover.subtitle ? ` – ${cover.subtitle}` : ""}`, cover.headline);
@@ -1593,6 +1600,7 @@ export const GAMEWEEK_PACK: Array<{ id: string; template: TemplateId; label: str
   { id: "deadline", template: "cover", label: "Deadline card" },
   { id: "captains", template: "captain-picks", label: "Captain picks" },
   { id: "differentials", template: "top-differentials", label: "Top differentials" },
+  { id: "availability", template: "availability-watch", label: "Availability watch" },
   { id: "fixtures", template: "fixture-ticker", label: "Fixture ticker" },
   { id: "transfers", template: "transfer-trends", label: "Transfer trends" },
   { id: "prices", template: "price-change", label: "Price changes" },
@@ -1623,6 +1631,7 @@ export function packSpecs(
     deadline: { headline: `GW${gameweek} Deadline`, subtitle: "Captains, differentials, fixtures and price moves", tag: deadline ?? "" },
     captains: { from: gameweek, to: gameweek },
     differentials: { from: gameweek, to: gameweek + 3 },
+    availability: {},
     fixtures: { from: gameweek, to: gameweek + 4 },
     transfers: {},
     prices: {},
@@ -1641,4 +1650,93 @@ export function packZipName(gameweek: number): string {
 /** captions.txt for the pack: each image's file name followed by its caption. */
 export function buildCaptionsFile(items: Array<{ fileName: string; caption: string }>): string {
   return `${items.map((i) => `${i.fileName}\n${i.caption}\n`).join("\n")}`;
+}
+
+
+// ---------- Availability Watch ----------
+
+/** Only players owned by at least this % are listed: news on a player almost nobody owns is not what people are looking for. */
+export const MIN_WATCH_OWNERSHIP = 5;
+const WATCH_STATUS = new Set(["d", "i", "s"]);
+const MAX_NEWS_CHARS = 90;
+
+export interface AvailabilityRow {
+  rank: number;
+  id: number;
+  name: string;
+  teamShort: string;
+  position: GraphicPosition;
+  price: string;
+  ownership: string;
+  statusLabel: string;
+  tone: "ok" | "warn" | "bad";
+  /** Chance of playing next round (0-99) when FPL gives one below 100, otherwise null. */
+  chance: number | null;
+  /** FPL's own news text, cut to 90 characters. */
+  news: string;
+  /** When FPL added that news, e.g. "21 Oct 2026". */
+  added: string | null;
+}
+
+/**
+ * The most-owned players who are injured, doubtful or suspended, with FPL's own news and chance of playing. Fit
+ * players, players who have left (unavailable) and players owned by less than the floor are never listed.
+ */
+export function buildAvailabilityWatch(input: {
+  elements: GraphicElement[];
+  teamShortById: Map<number, string>;
+  pos: GraphicPosition | null;
+  top: number;
+}): AvailabilityRow[] {
+  const { elements, teamShortById, pos, top } = input;
+  const rows: Array<Omit<AvailabilityRow, "rank"> & { own: number }> = [];
+  for (const e of elements) {
+    if (!WATCH_STATUS.has(e.status ?? "a")) continue;
+    const position = POSITION_BY_TYPE[e.element_type];
+    const own = toNumber(e.selected_by_percent);
+    if (!position || (pos && position !== pos) || own === null || own < MIN_WATCH_OWNERSHIP) continue;
+    const status = STATUS_LABEL[e.status as string];
+    const chance = toNumber(e.chance_of_playing_next_round);
+    const news = typeof e.news === "string" ? e.news.trim() : "";
+    rows.push({
+      id: e.id,
+      name: e.web_name,
+      teamShort: teamShortById.get(e.team) ?? "",
+      position,
+      price: money(e.now_cost),
+      ownership: `${own.toFixed(1)}%`,
+      statusLabel: status.label,
+      tone: status.tone,
+      chance: chance !== null && chance < 100 ? chance : null,
+      news: news.length > MAX_NEWS_CHARS ? `${news.slice(0, MAX_NEWS_CHARS - 1)}…` : news,
+      added: formatNewsDate(typeof e.news_added === "string" ? e.news_added : null),
+      own,
+    });
+  }
+  rows.sort((a, b) => b.own - a.own || a.id - b.id);
+  return rows.slice(0, top).map(({ own: _own, ...r }, i) => ({ rank: i + 1, ...r }));
+}
+
+// ---------- empty graphics ----------
+
+/** True when a graphic would be a blank card (no rows, no changes...): the pack skips these instead of drawing them. */
+export function isEmptyGraphic(data: GraphicData): boolean {
+  switch (data.kind) {
+    case "captain-picks":
+    case "top-differentials":
+    case "availability-watch":
+    case "stat-leaders":
+      return data.rows.length === 0;
+    case "fixture-ticker":
+    case "fixtures-comparison":
+      return data.grid.rows.length === 0;
+    case "transfer-trends":
+      return data.trends.ins.length + data.trends.outs.length === 0;
+    case "price-change":
+      return !data.prices.date || data.prices.risers.length + data.prices.fallers.length === 0;
+    case "team-of-the-week":
+      return !data.totw.complete;
+    default:
+      return false;
+  }
 }
