@@ -30,7 +30,7 @@ import {
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
-import { contrastRatio, formatGoals } from "@shared/graphics";
+import { contrastRatio } from "@shared/graphics";
 import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
@@ -1306,7 +1306,7 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
   const jersey = land ? 84 : tall ? 170 : 130;
   const nameFont = land ? 28 : tall ? 46 : 38;
   const xgFont = land ? 56 : tall ? 88 : 72;
-  const xg = (v: number | null) => (v === null ? "–" : formatGoals(v));
+  const xg = (v: number | null) => (v === null ? "–" : formatGoals2(v));
   const side = sideColors(theme);
   const cs = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
   return (
