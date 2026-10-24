@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { GitCompareArrows, Search, X, Link2, Check, CalendarRange, Radar, ListChecks, UserPlus } from "lucide-react";
@@ -22,6 +22,7 @@ import {
   parseRadarAxes,
 } from "@shared/compare-radar";
 import { shareFileName } from "@shared/share-cards";
+import { DEFAULT_COMPARISON_SIZE, trendingIn, type PickElement } from "@shared/default-picks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,6 +159,17 @@ export default function Compare() {
       .sort((a, b) => b.total_points - a.total_points)
       .slice(0, 8);
   }, [bootstrap, query, ids]);
+
+  // With nothing chosen, open on the three most transferred-in players this gameweek, so the page is never an empty form.
+  // Only on arrival: once the person adds or removes anyone, their choice stands (even an empty one).
+  const defaulted = useRef(false);
+  useEffect(() => {
+    if (defaulted.current || !bootstrap) return;
+    defaulted.current = true;
+    if (ids.length > 0) return;
+    const picks = trendingIn(bootstrap.elements as unknown as PickElement[], DEFAULT_COMPARISON_SIZE);
+    if (picks.length >= 2) navigate(`/compare?p=${picks.join(",")}`, { replace: true });
+  }, [bootstrap, ids.length, navigate]);
 
   const addPlayer = (id: number) => {
     if (ids.length >= MAX_COMPARE_PLAYERS) return;
