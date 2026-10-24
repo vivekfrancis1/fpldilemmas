@@ -242,3 +242,9 @@ Newest entries at top. Each entry: date noticed, what/where, status, notes.
 - **Fix:** `poolOptions()` in `server/db-config.ts`: TCP keep-alive (first probe 10 s), connect timeout 10 s (pg's default is none), query timeout 120 s (`PG_CONNECTION_TIMEOUT_MS` / `PG_QUERY_TIMEOUT_MS` override; `PG_QUERY_TIMEOUT_MS=0` turns the query timeout off for a one-off script), and a pool `error` listener so a dropped idle connection is logged and discarded instead of being an uncaught exception. Tests in `tests/db-config.test.ts`; checked for real: unreachable host rejects at the connect timeout, `pg_sleep(3)` rejects at a 0.7 s query timeout.
 - **Notes:** the two one-off scripts that build their own `Pool` (`scripts/populate-historical-data.js`, `scripts/update-player-names.ts`) were left as they are.
 
+
+## 2026-10-24 — `tests/player-minutes-promoted-fallback.test.ts` fails for Rudoni (OPEN, not investigated)
+
+- **Where:** "promoted-team MID with real current-season minutes (Rudoni, Coventry) reflects his actual games played" on a fresh dev server (local Postgres, GW8).
+- **Symptom:** projected `expectedMinutesPerGame` 66.4 against an expected 79.29 (his actual minutes share); fails the same way when run alone. All other 1484 tests pass.
+- **Status:** found during the pre-push run for the Mini-league Ownership commits, which don't touch minutes code. Pushed anyway at the user's request. Could be data drift in the local DB copy or a real minutes-projection regression; check before relying on it.
