@@ -7,11 +7,12 @@
 //   Cover Generator        the 3 best projected players
 //   Player News Quote      the most newsworthy player, else the most transferred in
 //   Predicted Lineups      the club whose match kicks off next (also Team History)
-//   Fixtures Comparison    the 3 clubs with the easiest run (lowest average official difficulty)
+//   Fixtures Comparison    the 4 clubs with the easiest run (lowest average official difficulty)
+// A comparison needs two to draw, so a single player or club carried over from another template is kept and topped up.
 // Team Reveal loads the saved FPL team ID's squad instead (the page does that), and the other templates are driven by
 // data (captain picks, ticker, trends, team of the week, leaders...) so they never open empty.
 
-import { DEFAULT_COMPARISON_SIZE, mostNewsworthy, nextFixtureClub, topByProjection, trendingIn, type PickElement, type PickFixture } from "./default-picks";
+import { DEFAULT_COMPARISON_SIZE, DEFAULT_FIXTURE_COMPARISON_SIZE, mostNewsworthy, nextFixtureClub, topByProjection, trendingIn, type PickElement, type PickFixture } from "./default-picks";
 import type { FixtureGridContent, GraphicElement, GraphicSpec } from "./graphics";
 
 export interface GraphicDefaultsContext {
@@ -29,8 +30,10 @@ export interface GraphicDefaultsContext {
 const PLAYER_TEMPLATES = new Set(["player-card", "player-comparison", "cover", "player-news", "player-history"]);
 const TEAM_TEMPLATES = new Set(["predicted-lineup", "fixtures-comparison", "team-history"]);
 
-/** True when this template has nothing chosen and has a default to offer. */
+/** True when this template has nothing (usable) chosen and has a default to offer. */
 export function needsDefaults(spec: GraphicSpec): boolean {
+  if (spec.template === "player-comparison") return spec.players.length < 2;
+  if (spec.template === "fixtures-comparison") return spec.teams.length < 2;
   if (PLAYER_TEMPLATES.has(spec.template)) return spec.players.length === 0;
   if (TEAM_TEMPLATES.has(spec.template)) return spec.teams.length === 0;
   return false;
@@ -60,10 +63,11 @@ export function defaultSelectionPatch(spec: GraphicSpec, ctx: GraphicDefaultsCon
     case "cover":
       return players(topByProjection(elements, ctx.totals, DEFAULT_COMPARISON_SIZE));
     case "player-comparison": {
-      const trending = trendingIn(elements, DEFAULT_COMPARISON_SIZE);
-      if (trending.length >= DEFAULT_COMPARISON_SIZE) return players(trending);
-      const topUp = topByProjection(elements, ctx.totals, DEFAULT_COMPARISON_SIZE + trending.length).filter((id) => !trending.includes(id));
-      return players([...trending, ...topUp].slice(0, DEFAULT_COMPARISON_SIZE));
+      const kept = spec.players;
+      const fresh = (ids: number[]) => ids.filter((id) => !kept.includes(id));
+      const trending = fresh(trendingIn(elements, DEFAULT_COMPARISON_SIZE + kept.length));
+      const topUp = fresh(topByProjection(elements, ctx.totals, DEFAULT_COMPARISON_SIZE + kept.length + trending.length)).filter((id) => !trending.includes(id));
+      return players([...kept, ...trending, ...topUp].slice(0, DEFAULT_COMPARISON_SIZE));
     }
     case "player-news": {
       const id = mostNewsworthy(elements) ?? trendingIn(elements, 1)[0];
@@ -76,8 +80,10 @@ export function defaultSelectionPatch(spec: GraphicSpec, ctx: GraphicDefaultsCon
       return club === null ? null : { teams: [club] };
     }
     case "fixtures-comparison": {
-      const ids = easiestRunClubs(ctx.tickerRows, 3);
-      return ids.length ? { teams: ids } : null;
+      const kept = spec.teams;
+      const easiest = easiestRunClubs(ctx.tickerRows, DEFAULT_FIXTURE_COMPARISON_SIZE + kept.length).filter((id) => !kept.includes(id));
+      const ids = [...kept, ...easiest].slice(0, DEFAULT_FIXTURE_COMPARISON_SIZE);
+      return ids.length > kept.length ? { teams: ids } : null;
     }
     default:
       return null;

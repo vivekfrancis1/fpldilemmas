@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_COMPARISON_SIZE,
+  DEFAULT_FIXTURE_COMPARISON_SIZE,
   isPickable,
   mostNewsworthy,
   nextFixtureClub,
@@ -46,6 +47,7 @@ describe("trendingIn (the most transferred in this gameweek)", () => {
 
   it("the comparison default is three players", () => {
     expect(DEFAULT_COMPARISON_SIZE).toBe(3);
+    expect(DEFAULT_FIXTURE_COMPARISON_SIZE).toBe(4);
   });
 });
 

@@ -7,6 +7,8 @@
 //   saved squad   the 15 players of a team ID the person has entered once
 
 export const DEFAULT_COMPARISON_SIZE = 3;
+/** Fixtures Comparison opens on this many clubs (the ones with the easiest runs). */
+export const DEFAULT_FIXTURE_COMPARISON_SIZE = 4;
 
 export interface PickElement {
   id: number;

@@ -18,16 +18,24 @@ const baseCtx = (over: Partial<GraphicDefaultsContext> = {}): GraphicDefaultsCon
 
 describe("needsDefaults: only templates with an empty selection get defaults", () => {
   it("players templates: empty players", () => {
-    for (const t of ["player-card", "player-comparison", "cover", "player-news"] as const) {
+    for (const t of ["player-card", "cover", "player-news"] as const) {
       expect(needsDefaults(spec({ template: t }))).toBe(true);
       expect(needsDefaults(spec({ template: t, players: [5] }))).toBe(false);
     }
   });
   it("team templates: empty teams", () => {
-    for (const t of ["predicted-lineup", "fixtures-comparison"] as const) {
+    for (const t of ["predicted-lineup"] as const) {
       expect(needsDefaults(spec({ template: t }))).toBe(true);
       expect(needsDefaults(spec({ template: t, teams: [3] }))).toBe(false);
     }
+  });
+  it("comparisons need two to draw: one carried over from another template is not enough", () => {
+    expect(needsDefaults(spec({ template: "player-comparison" }))).toBe(true);
+    expect(needsDefaults(spec({ template: "player-comparison", players: [5] }))).toBe(true);
+    expect(needsDefaults(spec({ template: "player-comparison", players: [5, 6] }))).toBe(false);
+    expect(needsDefaults(spec({ template: "fixtures-comparison" }))).toBe(true);
+    expect(needsDefaults(spec({ template: "fixtures-comparison", teams: [3] }))).toBe(true);
+    expect(needsDefaults(spec({ template: "fixtures-comparison", teams: [3, 4] }))).toBe(false);
   });
   it("the others have nothing to default (they are data-driven, or Team Reveal loads the saved squad itself)", () => {
     for (const t of ["team-reveal", "captain-picks", "fixture-ticker", "transfer-trends", "team-of-the-week", "stat-leaders", "price-change", "top-differentials", "availability-watch"] as const) {
@@ -60,8 +68,13 @@ describe("Player Comparison: the three most transferred in this gameweek", () =>
     expect(r?.players).toEqual([1, 6]);
   });
 
-  it("does nothing when the person already chose players", () => {
-    expect(defaultSelectionPatch(spec({ template: "player-comparison", players: [9] }), baseCtx({ elements, totals }))).toBeNull();
+  it("does nothing when the person already chose two or three players", () => {
+    expect(defaultSelectionPatch(spec({ template: "player-comparison", players: [9, 8] }), baseCtx({ elements, totals }))).toBeNull();
+  });
+
+  it("keeps a single player carried over from another template and adds the trending ones up to three", () => {
+    expect(defaultSelectionPatch(spec({ template: "player-comparison", players: [4] }), baseCtx({ elements, totals }))).toEqual({ players: [4, 2, 1] });
+    expect(defaultSelectionPatch(spec({ template: "player-comparison", players: [2] }), baseCtx({ elements, totals }))).toEqual({ players: [2, 1, 3] });
   });
 
   it("does nothing until there is data", () => {
@@ -109,7 +122,7 @@ describe("Predicted Lineups: the club whose match is next", () => {
   });
 });
 
-describe("Fixtures Comparison: the three clubs with the easiest runs", () => {
+describe("Fixtures Comparison: the four clubs with the easiest runs", () => {
   const rows = [
     { teamId: 1, short: "AAA", name: "Aaa", avgFdr: 3.4, cells: [] },
     { teamId: 2, short: "BBB", name: "Bbb", avgFdr: 2.6, cells: [] },
@@ -124,8 +137,15 @@ describe("Fixtures Comparison: the three clubs with the easiest runs", () => {
     expect(easiestRunClubs([], 3)).toEqual([]);
   });
   it("is the default for an empty selection, and waits for the grid", () => {
-    expect(defaultSelectionPatch(spec({ template: "fixtures-comparison" }), baseCtx({ tickerRows: rows as any }))).toEqual({ teams: [2, 4, 5] });
+    expect(defaultSelectionPatch(spec({ template: "fixtures-comparison" }), baseCtx({ tickerRows: rows as any }))).toEqual({ teams: [2, 4, 5, 1] });
     expect(defaultSelectionPatch(spec({ template: "fixtures-comparison" }), baseCtx({ tickerRows: [] }))).toBeNull();
+  });
+  it("keeps a single club carried over from another template and adds the easiest runs up to four", () => {
+    expect(defaultSelectionPatch(spec({ template: "fixtures-comparison", teams: [6] }), baseCtx({ tickerRows: rows as any }))).toEqual({ teams: [6, 2, 4, 5] });
+    expect(defaultSelectionPatch(spec({ template: "fixtures-comparison", teams: [2] }), baseCtx({ tickerRows: rows as any }))).toEqual({ teams: [2, 4, 5, 1] });
+  });
+  it("does nothing when two or more clubs are chosen", () => {
+    expect(defaultSelectionPatch(spec({ template: "fixtures-comparison", teams: [1, 6] }), baseCtx({ tickerRows: rows as any }))).toBeNull();
   });
 });
 
