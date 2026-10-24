@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Crown, Shirt, Users } from "lucide-react";
-import { TEMPLATE_GROUPS, type TemplateGroup, type TemplateTeam, type TemplatePlayer } from "@shared/template-team";
+import { TEMPLATE_GROUPS, parseTemplateGroup, type TemplateGroup, type TemplateTeam, type TemplatePlayer } from "@shared/template-team";
 import { Card, CardContent } from "@/components/ui/card";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ShareImageButton } from "@/components/share-image-button";
@@ -11,6 +11,14 @@ import { TemplateTeamShareCard, TEMPLATE_CARD_WIDTH, TEMPLATE_CARD_HEIGHT } from
 import { HeroPanel, HeroStat, SectionCard, SegmentedControl } from "@/components/tool-ui";
 
 type TemplateResponse = TemplateTeam & { group?: TemplateGroup; gameweek: number | null; fetchedAt: string | null };
+
+// Where each group's page is, how the subtitle names it, and what the footnote says about where its managers come from.
+const GROUP_PAGE: Record<TemplateGroup, { href: string; text: string; source: string }> = {
+  top100: { href: "/top-managers", text: "All time Top 100 managers", source: ", from our fixed Top 100 list, not the current-season Top 100 by rank" },
+  creators: { href: "/content-creators", text: "content creators", source: ", from our list of FPL content creators" },
+  "elite-64": { href: "/elite-64", text: "Elite 64 managers", source: ", from this season's #Elite64 league" },
+  "analytics-elite-64": { href: "/analytics-elite-64", text: "Analytics Elite 64 managers", source: ", from this season's Analytics Elite 64 league" },
+};
 
 const ELEMENT_TYPE: Record<TemplatePlayer["position"], number> = { GKP: 1, DEF: 2, MID: 3, FWD: 4 };
 
@@ -33,7 +41,7 @@ function toPitchPlayer(p: TemplatePlayer, position: number, captainId?: number):
 export default function TemplateTeamPage() {
   const [group, setGroup] = useState<TemplateGroup>(() => {
     const g = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("group") : null;
-    return g === "creators" ? "creators" : "top100";
+    return parseTemplateGroup(g) ?? "top100";
   });
   const chooseGroup = (g: TemplateGroup) => {
     setGroup(g);
@@ -67,8 +75,8 @@ export default function TemplateTeamPage() {
               <h1 data-testid="text-page-title">Template Team{data?.gameweek ? ` - GW${data.gameweek}` : ""}</h1>
             </div>
             <p className="fpl-page-subtitle">
-              The most-owned squad among our{" "}
-              {group === "top100" ? <Link href="/top-managers" className="underline">Top 100 managers</Link> : <Link href="/content-creators" className="underline">content creators</Link>}.
+              The most-owned squad among {group === "creators" ? "our" : "the"}{" "}
+              <Link href={GROUP_PAGE[group].href} className="underline">{GROUP_PAGE[group].text}</Link>.
             </p>
           </div>
         </div>
@@ -155,7 +163,7 @@ export default function TemplateTeamPage() {
               squad is the most-owned players in each position (2 GKP, 5 DEF, 5 MID, 3 FWD), with no more than 3
               from one club; the XI is the most-owned legal formation from those 15. It is the squads as they stood in
               GW{data.gameweek}
-              {group === "top100" ? ", from our fixed Top 100 list, not the current-season Top 100 by rank" : ", from our list of FPL content creators"}.
+              {GROUP_PAGE[group].source}.
               Prices are today's.
             </p>
           </div>

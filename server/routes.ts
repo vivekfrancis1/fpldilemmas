@@ -1858,12 +1858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Template Team: the most-owned squad among a group of managers: the Top 100 we already load for /top-managers
-  // (default) or the Content Creators (?group=creators), each with its own cached picks and gameweek. Counting and
+  // (default), the Content Creators (?group=creators), Elite 64 (?group=elite-64) or Analytics Elite 64 (?group=analytics-elite-64), each with its own cached picks and gameweek. Counting and
   // selection live in shared/template-team.ts.
   app.get("/api/template-team", async (req, res) => {
     try {
       const group = parseTemplateGroup(req.query.group);
-      if (!group) return res.status(400).json({ error: "Invalid group. Use top100 or creators" });
+      if (!group) return res.status(400).json({ error: "Invalid group. Use top100, creators, elite-64 or analytics-elite-64" });
       const [topResponse, bootstrapResponse] = await Promise.all([
         internalFetch(TEMPLATE_GROUPS[group].source),
         internalFetch("api/bootstrap-static"),

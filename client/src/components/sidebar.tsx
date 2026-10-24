@@ -114,8 +114,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/top-managers", label: "All Time Top 100", icon: Crown, description: "Elite Fantasy Premier League managers and their performance", popular: false },
         { path: "/elite-64", label: "Elite 64", icon: Crown, description: "The #Elite64 invitational league: 64 of the best FPL managers", popular: false },
         { path: "/analytics-elite-64", label: "Analytics Elite 64", icon: Crown, description: "The analytics-picked league of 64 managers", popular: false },
-        { path: "/template-team", label: "Template Team", icon: Users, description: "The most-owned squad among the Top 100 managers", popular: false },
-        { path: "/content-creators", label: "Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false }
+        { path: "/content-creators", label: "Content Creators", icon: Users, description: "Track top FPL content creators and influencers", popular: false },
+        { path: "/template-team", label: "Template Team", icon: Users, description: "The most-owned squad among the Top 100, Elite 64, Analytics Elite 64 or content creators", popular: false }
       ]
     },
     {

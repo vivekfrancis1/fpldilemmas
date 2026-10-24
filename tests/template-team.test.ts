@@ -167,7 +167,7 @@ describe("GET /api/template-team (consistency with the Top 100 squads we already
   });
 });
 
-// ---- Template Team for two groups: Top 100 managers and Content Creators ----
+// ---- Template Team for four groups: All time Top 100, Content Creators, Elite 64 and Analytics Elite 64 ----
 import { TEMPLATE_GROUPS, parseTemplateGroup } from "../shared/template-team";
 
 describe("template team groups", () => {
@@ -176,21 +176,30 @@ describe("template team groups", () => {
     expect(parseTemplateGroup("")).toBe("top100");
   });
 
-  it("accepts the two groups", () => {
+  it("accepts the four groups", () => {
     expect(parseTemplateGroup("top100")).toBe("top100");
     expect(parseTemplateGroup("creators")).toBe("creators");
+    expect(parseTemplateGroup("elite-64")).toBe("elite-64");
+    expect(parseTemplateGroup("analytics-elite-64")).toBe("analytics-elite-64");
   });
 
   it("rejects anything else instead of guessing", () => {
-    for (const bad of ["Top100", "creator", "all", "1", "top100,creators", ["creators"], 5, null]) {
+    for (const bad of ["Top100", "creator", "all", "1", "top100,creators", ["creators"], 5, null, "elite64", "Elite-64", "analytics-elite", "elite-64,top100"]) {
       expect(parseTemplateGroup(bad as unknown), String(bad)).toBeNull();
     }
   });
 
   it("each group names its own people and data source", () => {
-    expect(TEMPLATE_GROUPS.top100.label).toBe("Top 100 managers");
+    expect(TEMPLATE_GROUPS.top100.label).toBe("All time Top 100");
     expect(TEMPLATE_GROUPS.creators.label).toBe("Content creators");
     expect(TEMPLATE_GROUPS.top100.source).toBe("api/top-managers/teams");
     expect(TEMPLATE_GROUPS.creators.source).toBe("api/content-creators/teams");
+    expect(TEMPLATE_GROUPS["elite-64"].label).toBe("Elite 64");
+    expect(TEMPLATE_GROUPS["analytics-elite-64"].label).toBe("Analytics Elite 64");
+    expect(TEMPLATE_GROUPS["elite-64"].source).toBe("api/elite-groups/elite-64/teams");
+    expect(TEMPLATE_GROUPS["analytics-elite-64"].source).toBe("api/elite-groups/analytics-elite-64/teams");
+  });
+  it("lists the groups in tab order: Top 100, Content Creators, Elite 64, Analytics Elite 64", () => {
+    expect(Object.keys(TEMPLATE_GROUPS)).toEqual(["top100", "creators", "elite-64", "analytics-elite-64"]);
   });
 });

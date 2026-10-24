@@ -115,11 +115,11 @@ const navSections: NavSection[] = [
   {
     section: "Top Managers",
     items: [
-      { path: "/top-managers", label: "Top 100 Managers", icon: Crown },
+      { path: "/top-managers", label: "All Time Top 100", icon: Crown },
       { path: "/elite-64", label: "Elite 64", icon: Crown },
       { path: "/analytics-elite-64", label: "Analytics Elite 64", icon: Crown },
-      { path: "/template-team", label: "Template Team", icon: Users },
       { path: "/content-creators", label: "Content Creators", icon: Users },
+      { path: "/template-team", label: "Template Team", icon: Users },
     ],
   },
   {

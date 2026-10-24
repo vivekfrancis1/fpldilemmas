@@ -180,17 +180,19 @@ export function buildTemplateTeam(input: {
 
 // ---- Which group of managers the template is built from ----
 
-export type TemplateGroup = "top100" | "creators";
+export type TemplateGroup = "top100" | "creators" | "elite-64" | "analytics-elite-64";
 
-/** The two groups the Template Team tool can show, and the internal endpoint that returns each group's squads. */
+/** The groups the Template Team tool can show, in tab order, and the internal endpoint that returns each group's squads. */
 export const TEMPLATE_GROUPS: Record<TemplateGroup, { label: string; source: string }> = {
-  top100: { label: "Top 100 managers", source: "api/top-managers/teams" },
+  top100: { label: "All time Top 100", source: "api/top-managers/teams" },
   creators: { label: "Content creators", source: "api/content-creators/teams" },
+  "elite-64": { label: "Elite 64", source: "api/elite-groups/elite-64/teams" },
+  "analytics-elite-64": { label: "Analytics Elite 64", source: "api/elite-groups/analytics-elite-64/teams" },
 };
 
 /** The `group` query value: missing/empty means the Top 100 (the original behaviour); anything unknown is null (rejected). */
 export function parseTemplateGroup(value: unknown): TemplateGroup | null {
   if (value === undefined || value === "") return "top100";
-  return value === "top100" || value === "creators" ? value : null;
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(TEMPLATE_GROUPS, value) ? (value as TemplateGroup) : null;
 }
 

@@ -28,6 +28,17 @@ describe("GET /api/template-team", () => {
     }
   });
 
+  it.each([["elite-64"], ["analytics-elite-64"]])("serves the %s template from the league's 64 managers", async (group) => {
+    const res = await get(`/api/template-team?group=${group}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.group).toBe(group);
+    expect(body.managersRequested).toBe(64);
+    expect(body.managersCounted).toBeGreaterThan(50);
+    expect(body.startingXI).toHaveLength(11);
+    expect(body.bench).toHaveLength(4);
+  }, 60000);
+
   it("rejects an unknown group", async () => {
     const res = await get("/api/template-team?group=everyone");
     expect(res.status).toBe(400);
