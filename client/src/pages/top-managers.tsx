@@ -36,6 +36,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
 import { TOP_MANAGERS as TOP_MANAGERS_BASE } from "@shared/top-managers";
 import { CURRENT_SEASON } from "@shared/schema";
+import { ELITE_GROUPS, type EliteGroupId } from "@shared/elite-groups";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 
@@ -162,8 +163,11 @@ interface CachedManagersResponse {
   fromCache: boolean;
 }
 
-export default function TopManagers() {
-  const [managersWithData, setManagersWithData] = useState<TopManagerRow[]>(TOP_MANAGERS);
+// With a `group` the page shows that invitational league (Elite 64, Analytics Elite 64) read live; without one, the All Time Top 100.
+export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
+  const eliteGroup = group ? ELITE_GROUPS[group] : null;
+  const dataUrl = group ? `/api/cached/elite-group-data/${group}` : '/api/cached/top-managers-data';
+  const [managersWithData, setManagersWithData] = useState<TopManagerRow[]>(group ? [] : TOP_MANAGERS);
   const [sortField, setSortField] = useState<string>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedSeason, setSelectedSeason] = useState<string>('');
@@ -185,6 +189,7 @@ export default function TopManagers() {
     managers: { rank: number; name: string; managerId: number; confirmed: boolean; totalPoints: number | null; fplRank: number | null; rankPercentage: string | null }[];
   }>({
     queryKey: ["/api/top-managers/season-standings", PREVIOUS_SEASON],
+    enabled: !group,
     queryFn: async () => {
       const res = await fetch(`/api/top-managers/season-standings?season=${encodeURIComponent(PREVIOUS_SEASON)}`);
       if (!res.ok) throw new Error("Failed to fetch season standings");
@@ -217,7 +222,7 @@ export default function TopManagers() {
 
   // Fetch cached Top Managers data (30-minute cache)
   const { data: cachedData, isLoading: isLoadingCached, refetch: refetchCached, isFetching: isRefreshing } = useQuery<CachedManagersResponse>({
-    queryKey: ['/api/cached/top-managers-data'],
+    queryKey: [dataUrl],
     staleTime: 25 * 60 * 1000, // Consider stale after 25 minutes (cache is 30 min)
     gcTime: 35 * 60 * 1000, // Keep in memory for 35 minutes
     refetchOnWindowFocus: false,
@@ -227,8 +232,8 @@ export default function TopManagers() {
     if (cachedData?.managers) {
       return cachedData.managers.map(m => m.managerId);
     }
-    return TOP_MANAGERS.map(m => m.managerId);
-  }, [cachedData]);
+    return group ? [] : TOP_MANAGERS.map(m => m.managerId);
+  }, [cachedData, group]);
 
   const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
     queryKey: ['/api/managers/gw-transfers', managerIds.join(',')],
@@ -279,7 +284,8 @@ export default function TopManagers() {
         // A manager whose 2026/27 id hasn't been confirmed post-renumbering may still
         // return a 200 (from an unrelated stranger who now holds that old id) or a stale
         // DB-cached fallback — never show live-derived stats for them until confirmed.
-        if (!confirmedManagerIds.has(m.managerId)) {
+        // (a group's members come straight from this season's league, so they are always current)
+        if (!group && !confirmedManagerIds.has(m.managerId)) {
           return {
             rank: m.rank,
             name: m.name,
@@ -333,12 +339,12 @@ export default function TopManagers() {
       });
       setManagersWithData(transformedManagers);
     }
-  }, [cachedData, projectedPointsMap, confirmedManagerIds]);
+  }, [cachedData, projectedPointsMap, confirmedManagerIds, group]);
 
   // Force refresh function (clears cache and refetches)
   const forceRefresh = async () => {
     try {
-      await fetch('/api/cached/top-managers-data/refresh', { method: 'POST' });
+      await fetch(`${dataUrl}/refresh`, { method: 'POST' });
       refetchCached();
     } catch (error) {
       console.error('Failed to force refresh:', error);
@@ -366,15 +372,17 @@ export default function TopManagers() {
     return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
   }, [managersWithData, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
+  const pastSeasonList: { managerId: number; name: string }[] = group ? (cachedData?.managers ?? []) : TOP_MANAGERS;
   const { data: pastSeasonsData, isLoading: isPastSeasonsLoading } = useQuery<{ seasons: string[]; managers: any[] }>({
-    queryKey: ['/api/managers/past-seasons', 'top-managers'],
+    queryKey: ['/api/managers/past-seasons', group ?? 'top-managers', pastSeasonList.length],
+    enabled: pastSeasonList.length > 0,
     queryFn: async () => {
       const res = await fetch('/api/managers/past-seasons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          managerIds: TOP_MANAGERS.map(m => m.managerId),
-          managerNames: TOP_MANAGERS.map(m => ({ managerId: m.managerId, playerName: m.name, entryName: '' })),
+          managerIds: pastSeasonList.map(m => m.managerId),
+          managerNames: pastSeasonList.map(m => ({ managerId: m.managerId, playerName: m.name, entryName: '' })),
         }),
       });
       if (!res.ok) throw new Error('Failed to fetch past seasons');
@@ -431,8 +439,8 @@ export default function TopManagers() {
     return (
       <LoadingExperience
         variant="table"
-        title="Loading Top 100 Managers"
-        description="Fetching live data for all 100 elite FPL managers..."
+        title={eliteGroup ? `Loading ${eliteGroup.name}` : "Loading Top 100 Managers"}
+        description={eliteGroup ? `Fetching live data for all ${eliteGroup.name} managers...` : "Fetching live data for all 100 elite FPL managers..."}
         steps={[
           { text: "Retrieving manager profiles", delay: "0s" },
           { text: "Fetching current rankings and points", delay: "0.2s" },
@@ -450,18 +458,20 @@ export default function TopManagers() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
-              <h1>Top FPL Managers (All Time)</h1>
+              <h1>{eliteGroup ? eliteGroup.name : "Top FPL Managers (All Time)"}</h1>
               <SeasonBadge season={viewSeason} />
             </div>
             <p className="fpl-page-subtitle">
-              Elite Fantasy Premier League managers and their current standings
+              {eliteGroup ? `${eliteGroup.description}. The ${eliteGroup.season} league, read live from FPL.` : "Elite Fantasy Premier League managers and their current standings"}
             </p>
           </div>
         </div>
 
-        <div className="mb-4">
-          <SeasonSelector value={viewSeason} onChange={setViewSeason} />
-        </div>
+        {!group && (
+          <div className="mb-4">
+            <SeasonSelector value={viewSeason} onChange={setViewSeason} />
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-3 sm:space-y-4">
           <TabsList className="grid w-full grid-cols-2">
@@ -506,7 +516,7 @@ export default function TopManagers() {
                       loading={isRefreshing}
                       emptyMessage="No manager data available"
                       onRowClick={(manager) => {
-                        navigate(`/top-managers/${manager.rank}/team`);
+                        navigate(group ? `/manager-team/${manager.managerId}` : `/top-managers/${manager.rank}/team`);
                       }}
                       onSort={handleSort}
                       sortField={sortField}
@@ -706,6 +716,11 @@ export default function TopManagers() {
 
             {/* Footer */}
             <div className="text-center py-4 border-t border-gray-200">
+              {eliteGroup ? (
+                <p className="text-sm text-gray-600">
+                  Members of the {eliteGroup.season} {eliteGroup.name} classic league on the official FPL site, read live
+                </p>
+              ) : (
               <p className="text-sm text-gray-600">
                 Data based on{' '}
                 <a 
@@ -718,11 +733,12 @@ export default function TopManagers() {
                 </a>{' '}
                 as on January 20, 2026
               </p>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="team-analysis">
-            <TopTeamAnalysis />
+            <TopTeamAnalysis group={group} />
           </TabsContent>
         </Tabs>
       </div>

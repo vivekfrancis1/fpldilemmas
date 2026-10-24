@@ -1,0 +1,329 @@
+{
+ "group": "Elite 64",
+ "season": "2026/27",
+ "league_id": 38543,
+ "league_created": "2026-07-23T13:51:10.104690Z",
+ "fetched": "2026-10-24",
+ "managers": [
+  {
+   "entry_id": 26575,
+   "manager": "The Magician",
+   "team_name": "TorresMagic™"
+  },
+  {
+   "entry_id": 428067,
+   "manager": "Alex Ball",
+   "team_name": "Owls Rule"
+  },
+  {
+   "entry_id": 881,
+   "manager": "Markku Ojala",
+   "team_name": "100% AI rating"
+  },
+  {
+   "entry_id": 6799,
+   "manager": "Paul .",
+   "team_name": "SkyPlayerInFPL"
+  },
+  {
+   "entry_id": 54425,
+   "manager": "-- Chabs --",
+   "team_name": "Chabsea FC"
+  },
+  {
+   "entry_id": 41,
+   "manager": "Andy LTFPL",
+   "team_name": "Let's Talk FPL"
+  },
+  {
+   "entry_id": 13758,
+   "manager": "Conor's Team",
+   "team_name": "Conor's Team"
+  },
+  {
+   "entry_id": 13036,
+   "manager": "Tom Stephenson",
+   "team_name": "Badgers9"
+  },
+  {
+   "entry_id": 174,
+   "manager": "Jonas Sand Låbakk",
+   "team_name": "Onkel Blaa"
+  },
+  {
+   "entry_id": 62125,
+   "manager": "Garry Murray",
+   "team_name": "Sharkys Machine"
+  },
+  {
+   "entry_id": 3315,
+   "manager": "Pras United",
+   "team_name": "Pras United"
+  },
+  {
+   "entry_id": 18124,
+   "manager": "-FPL Matthew",
+   "team_name": "Trigger Happy AFC"
+  },
+  {
+   "entry_id": 35633,
+   "manager": "Erik Ibsen",
+   "team_name": "Ibsen"
+  },
+  {
+   "entry_id": 10719,
+   "manager": "Joe Lepper",
+   "team_name": "Joe's Team"
+  },
+  {
+   "entry_id": 5133,
+   "manager": "BigMan Bakar",
+   "team_name": "The Malouda Triangle"
+  },
+  {
+   "entry_id": 2177,
+   "manager": "Utkarsh D",
+   "team_name": "Z"
+  },
+  {
+   "entry_id": 9804,
+   "manager": "Adam Hopcroft",
+   "team_name": "Adam's Team"
+  },
+  {
+   "entry_id": 11844,
+   "manager": "Abdullah Bin Mosaad",
+   "team_name": "Saudi49ers"
+  },
+  {
+   "entry_id": 22728,
+   "manager": "Tom Freeman",
+   "team_name": "Cruyff74"
+  },
+  {
+   "entry_id": 16499,
+   "manager": "Michael Giovanni",
+   "team_name": "Andoni’s Wirtzdom"
+  },
+  {
+   "entry_id": 5439,
+   "manager": "Alex Merchant",
+   "team_name": "I predict a Fryatt"
+  },
+  {
+   "entry_id": 3096757,
+   "manager": "Jon Ballantyne",
+   "team_name": "Mad Moose FC"
+  },
+  {
+   "entry_id": 1125366,
+   "manager": "Simon Barrett",
+   "team_name": "Koaste’s Kings"
+  },
+  {
+   "entry_id": 4666,
+   "manager": "Dan Bennett",
+   "team_name": "Bend It Like Bennett"
+  },
+  {
+   "entry_id": 2547650,
+   "manager": "Stephen Lennon",
+   "team_name": "Unbalebable Jeff!"
+  },
+  {
+   "entry_id": 179777,
+   "manager": "Tom Dollimore",
+   "team_name": "@FPL_Barbossa"
+  },
+  {
+   "entry_id": 183717,
+   "manager": "Adam Hubbard",
+   "team_name": "DEFCON Artists"
+  },
+  {
+   "entry_id": 134817,
+   "manager": "Grey Head",
+   "team_name": "Great and Good"
+  },
+  {
+   "entry_id": 2076855,
+   "manager": "- elevenify.com",
+   "team_name": "Team"
+  },
+  {
+   "entry_id": 42,
+   "manager": "Sean Jackson",
+   "team_name": "Bloemfontein Celtic"
+  },
+  {
+   "entry_id": 5782,
+   "manager": "Babis Kokkinis",
+   "team_name": "The Candidates"
+  },
+  {
+   "entry_id": 2057,
+   "manager": "Andrew Ferguson",
+   "team_name": "Fergi Time"
+  },
+  {
+   "entry_id": 4693,
+   "manager": "Dimi Papamichael",
+   "team_name": "xGonnaGiveItYa"
+  },
+  {
+   "entry_id": 74675,
+   "manager": "Craig Johnson",
+   "team_name": "Bouncebackability"
+  },
+  {
+   "entry_id": 136634,
+   "manager": "Richard Jenkins",
+   "team_name": "Full Of Flair"
+  },
+  {
+   "entry_id": 6613138,
+   "manager": "Phil Gill",
+   "team_name": "Gill's Galacticos"
+  },
+  {
+   "entry_id": 6173,
+   "manager": "Niall Parker",
+   "team_name": "Parkour the Bus"
+  },
+  {
+   "entry_id": 1519295,
+   "manager": "John Walsh",
+   "team_name": "@DinhoFPL"
+  },
+  {
+   "entry_id": 20896,
+   "manager": "Harry Vernon",
+   "team_name": "Horse FC"
+  },
+  {
+   "entry_id": 3801,
+   "manager": "Kevin Kehoe",
+   "team_name": "Bag of CANStona"
+  },
+  {
+   "entry_id": 519,
+   "manager": "Adnan Hajrulahovič",
+   "team_name": "KDBinho"
+  },
+  {
+   "entry_id": 53517,
+   "manager": "Ben Crellin",
+   "team_name": "ƃuᴉʞuᴉɥʇuʍopǝpᴉsdn"
+  },
+  {
+   "entry_id": 19062,
+   "manager": "Mark Mansfield",
+   "team_name": "Yaomi"
+  },
+  {
+   "entry_id": 1527,
+   "manager": "FPLtips (YouTube)",
+   "team_name": "@_FPLtips"
+  },
+  {
+   "entry_id": 9355,
+   "manager": "Dan Sherwood",
+   "team_name": "ZSL United"
+  },
+  {
+   "entry_id": 3054,
+   "manager": "Harry Daniels",
+   "team_name": "DANIELS XI"
+  },
+  {
+   "entry_id": 124,
+   "manager": "Jonny Currie",
+   "team_name": "JC Milan"
+  },
+  {
+   "entry_id": 209763,
+   "manager": "Richard Clarke",
+   "team_name": "Corsano United"
+  },
+  {
+   "entry_id": 21958,
+   "manager": "Jonny Small",
+   "team_name": "STÜSSY ALL✮STARS"
+  },
+  {
+   "entry_id": 29938,
+   "manager": "Tom Bullingham",
+   "team_name": "Klopps and Robbos"
+  },
+  {
+   "entry_id": 581168,
+   "manager": "Kevin Ryan",
+   "team_name": "I Should Be Tzolakis"
+  },
+  {
+   "entry_id": 28376,
+   "manager": "Dan Wright",
+   "team_name": "Amad Fer It"
+  },
+  {
+   "entry_id": 12477,
+   "manager": "Sagar Chowdhry",
+   "team_name": "Goaldies"
+  },
+  {
+   "entry_id": 1572,
+   "manager": "Tom Kirkup",
+   "team_name": "Dedić Wood"
+  },
+  {
+   "entry_id": 19222,
+   "manager": "Alberto Mendonca",
+   "team_name": "Celtinha"
+  },
+  {
+   "entry_id": 4818,
+   "manager": "Aleksander Våge Nilsen",
+   "team_name": "Ei Saa Peittää"
+  },
+  {
+   "entry_id": 252,
+   "manager": "Mark Sutherns",
+   "team_name": "Sutherns Comfort"
+  },
+  {
+   "entry_id": 6141765,
+   "manager": "Runar Andersen",
+   "team_name": "Rui7"
+  },
+  {
+   "entry_id": 1187,
+   "manager": "Elliot Wright",
+   "team_name": "Champagne Khusanova"
+  },
+  {
+   "entry_id": 15288,
+   "manager": "Rory Cartwright",
+   "team_name": "Quantum of Tzolis"
+  },
+  {
+   "entry_id": 240530,
+   "manager": "Jamie Pigott",
+   "team_name": "futbolislife;)"
+  },
+  {
+   "entry_id": 333842,
+   "manager": "Sophie Cohen",
+   "team_name": "Blanky FC"
+  },
+  {
+   "entry_id": 6774,
+   "manager": "Will Thomas",
+   "team_name": "Good Will Punting"
+  },
+  {
+   "entry_id": 3718868,
+   "manager": "Fábio Borges",
+   "team_name": "Mount Eberechi"
+  }
+ ]
+}

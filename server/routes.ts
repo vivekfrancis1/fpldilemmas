@@ -53,6 +53,7 @@ import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
 import { TOP_MANAGERS } from "@shared/top-managers";
+import { ELITE_GROUPS, isEliteGroupId, membersFromStandings, type EliteGroupId, type EliteMember } from "@shared/elite-groups";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -6677,6 +6678,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     contentCreatorsCache.clear();
     console.log("🔄 Content Creators cache cleared - next request will fetch fresh data");
     res.json({ success: true, message: "Content Creators cache cleared" });
+  });
+
+  // ---------- Elite 64 and Analytics Elite 64: invitational classic leagues, members read live from the league ----------
+  const eliteGroupDataCache = new EnhancedCache(4, 30 * 60 * 1000); // 30min TTL
+  const eliteGroupTeamsCache = new Map<string, { data: any; timestamp: number; gameweek: number }>();
+  const eliteGroupLastMembers = new Map<EliteGroupId, EliteMember[]>(); // kept if FPL is briefly unreachable
+
+  async function fetchEliteMembers(groupId: EliteGroupId): Promise<EliteMember[]> {
+    const { leagueId } = ELITE_GROUPS[groupId];
+    try {
+      const pages: any[][] = [];
+      for (let page = 1; page <= 10; page++) {
+        const response = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=${page}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const body = await response.json();
+        pages.push(body?.standings?.results ?? []);
+        if (!body?.standings?.has_next) break;
+      }
+      const members = membersFromStandings(pages);
+      if (members.length > 0) eliteGroupLastMembers.set(groupId, members);
+      return members.length > 0 ? members : eliteGroupLastMembers.get(groupId) ?? [];
+    } catch (error) {
+      console.error(`Failed to read league ${leagueId} for ${groupId}:`, error);
+      return eliteGroupLastMembers.get(groupId) ?? [];
+    }
+  }
+
+  // Same shape as /api/cached/top-managers-data
+  app.get("/api/cached/elite-group-data/:group", async (req, res) => {
+    const groupId = req.params.group;
+    if (!isEliteGroupId(groupId)) return res.status(404).json({ error: "Unknown group" });
+    if (eliteGroupDataCache.has(groupId)) return res.json({ ...eliteGroupDataCache.get(groupId), fromCache: true });
+    try {
+      const members = await fetchEliteMembers(groupId);
+      const managers = await Promise.all(
+        members.map((m) => fetchManagerDataWithHistory(m.managerId).then((data) => ({ rank: m.rank, name: m.name, teamName: m.teamName, ...data }))),
+      );
+      const responseData = {
+        group: ELITE_GROUPS[groupId],
+        managers,
+        metadata: {
+          totalManagers: members.length,
+          successfulFetches: managers.filter((m: any) => m.success).length,
+          fetchedAt: new Date().toISOString(),
+          cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+      };
+      if (members.length > 0) eliteGroupDataCache.set(groupId, responseData);
+      res.json({ ...responseData, fromCache: false });
+    } catch (error) {
+      console.error(`Error fetching ${groupId} data:`, error);
+      res.status(500).json({ error: "Failed to fetch group data" });
+    }
+  });
+
+  app.post("/api/cached/elite-group-data/:group/refresh", async (req, res) => {
+    const groupId = req.params.group;
+    if (!isEliteGroupId(groupId)) return res.status(404).json({ error: "Unknown group" });
+    eliteGroupDataCache.delete(groupId);
+    res.json({ success: true });
+  });
+
+  // Same shape as /api/top-managers/teams: each member's current squad
+  app.get("/api/elite-groups/:group/teams", async (req, res) => {
+    const groupId = req.params.group;
+    if (!isEliteGroupId(groupId)) return res.status(404).json({ error: "Unknown group" });
+    try {
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      let currentGameweek = 1;
+      if (bootstrapResponse.ok) currentGameweek = computeCurrentGameweek((await bootstrapResponse.json()).events);
+      const now = Date.now();
+      const cached = eliteGroupTeamsCache.get(groupId);
+      if (cached && now - cached.timestamp < 2 * 60 * 1000 && cached.gameweek === currentGameweek) return res.json(cached.data);
+
+      const members = await fetchEliteMembers(groupId);
+      const teams = await Promise.all(members.map(async (m) => {
+        try {
+          const response = await fetch(`https://fantasy.premierleague.com/api/entry/${m.managerId}/event/${currentGameweek}/picks/`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return { managerId: m.managerId, name: m.name, rank: m.rank, teamData: await response.json(), success: true, error: null };
+        } catch (error) {
+          return { managerId: m.managerId, name: m.name, rank: m.rank, teamData: null, success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        }
+      }));
+      const successful = teams.filter((t) => t.success).length;
+      const data = {
+        teams,
+        metadata: { totalRequested: members.length, totalSuccessful: successful, totalFailed: teams.length - successful, gameweek: currentGameweek, fetchedAt: new Date().toISOString(), cacheExpiresAt: new Date(now + 2 * 60 * 1000).toISOString() },
+      };
+      if (members.length > 0) eliteGroupTeamsCache.set(groupId, { data, timestamp: now, gameweek: currentGameweek });
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching ${groupId} teams:`, error);
+      res.status(500).json({ error: "Failed to fetch group teams" });
+    }
   });
 
   app.get("/api/managers/gw-transfers", async (req, res) => {

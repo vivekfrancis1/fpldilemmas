@@ -1,0 +1,329 @@
+{
+ "group": "Analytics Elite 64",
+ "season": "2026/27",
+ "league_id": 1291919,
+ "league_created": "2026-08-18T22:21:55.644776Z",
+ "fetched": "2026-10-24",
+ "managers": [
+  {
+   "entry_id": 292518,
+   "manager": "McWigan Athletic",
+   "team_name": "McWigan Athletic"
+  },
+  {
+   "entry_id": 258817,
+   "manager": "Matthew Main",
+   "team_name": "Tchaouna & Sweetcorn"
+  },
+  {
+   "entry_id": 429,
+   "manager": "Dan Furneaux",
+   "team_name": "Bruno Furnandes"
+  },
+  {
+   "entry_id": 36581,
+   "manager": "Stefan Breen",
+   "team_name": "DCL Soundsystem"
+  },
+  {
+   "entry_id": 390,
+   "manager": "Sigurd Jorem",
+   "team_name": "Kjøttkaker&Chambolle"
+  },
+  {
+   "entry_id": 92223,
+   "manager": "George Roscoe",
+   "team_name": "JurrienFruit"
+  },
+  {
+   "entry_id": 881,
+   "manager": "Markku Ojala",
+   "team_name": "100% AI rating"
+  },
+  {
+   "entry_id": 60046,
+   "manager": "Callum Gill",
+   "team_name": "Tekker Time"
+  },
+  {
+   "entry_id": 248527,
+   "manager": "- fplresearch",
+   "team_name": "Bomskudd IL"
+  },
+  {
+   "entry_id": 2461965,
+   "manager": "Daniel Cleghorn",
+   "team_name": "How Dalot Can You Go"
+  },
+  {
+   "entry_id": 389,
+   "manager": "Adam English",
+   "team_name": "Real English CF"
+  },
+  {
+   "entry_id": 300,
+   "manager": "Matthew Richmond",
+   "team_name": "M3Richarlison"
+  },
+  {
+   "entry_id": 36493,
+   "manager": "Adam Barrdahl",
+   "team_name": "Zizou"
+  },
+  {
+   "entry_id": 12736,
+   "manager": "Alasdair Pearce",
+   "team_name": "Wirtz in P. Groß"
+  },
+  {
+   "entry_id": 14650,
+   "manager": "Ryan Killen",
+   "team_name": "VAR is actually good"
+  },
+  {
+   "entry_id": 49156,
+   "manager": "Anders H. Gundersen",
+   "team_name": "Babbene"
+  },
+  {
+   "entry_id": 5133,
+   "manager": "BigMan Bakar",
+   "team_name": "The Malouda Triangle"
+  },
+  {
+   "entry_id": 148,
+   "manager": "Rich D",
+   "team_name": "It’s Kolarov Time"
+  },
+  {
+   "entry_id": 11307,
+   "manager": "Rory P",
+   "team_name": "Wirtz Reformed"
+  },
+  {
+   "entry_id": 86942,
+   "manager": "Sigurd Eskeland",
+   "team_name": "FK Uflaks"
+  },
+  {
+   "entry_id": 2421,
+   "manager": "Ahmed Shahin",
+   "team_name": "Revlio Optimal"
+  },
+  {
+   "entry_id": 32058,
+   "manager": "Thomas O'Brien",
+   "team_name": "Roll the Dyche"
+  },
+  {
+   "entry_id": 25452,
+   "manager": "Tom N",
+   "team_name": "The duke's army"
+  },
+  {
+   "entry_id": 121,
+   "manager": "Seamus Kerlin",
+   "team_name": "Team of Gary Breens"
+  },
+  {
+   "entry_id": 62520,
+   "manager": "Henri Lahtinen",
+   "team_name": "Team Henkka"
+  },
+  {
+   "entry_id": 100660,
+   "manager": "Jamie Rafferty",
+   "team_name": "Jamie's Team"
+  },
+  {
+   "entry_id": 19797,
+   "manager": "Anthony Brown",
+   "team_name": "DubraLocoMoSonWijMee"
+  },
+  {
+   "entry_id": 497,
+   "manager": "Ferg H",
+   "team_name": "Waldeinsamkeit"
+  },
+  {
+   "entry_id": 77918,
+   "manager": "Rob T",
+   "team_name": "ABC"
+  },
+  {
+   "entry_id": 249818,
+   "manager": "FPL Flair",
+   "team_name": "FPL's Team"
+  },
+  {
+   "entry_id": 4156,
+   "manager": "Thomas Daines",
+   "team_name": "Devoted Foden Hater"
+  },
+  {
+   "entry_id": 711,
+   "manager": "Andy W",
+   "team_name": "Sporting Stochastic"
+  },
+  {
+   "entry_id": 5811,
+   "manager": "Ivar Mehl Olsen",
+   "team_name": "Døso"
+  },
+  {
+   "entry_id": 6778,
+   "manager": "Jan Kępski",
+   "team_name": "Gakpocalypse Now"
+  },
+  {
+   "entry_id": 179777,
+   "manager": "Tom Dollimore",
+   "team_name": "@FPL_Barbossa"
+  },
+  {
+   "entry_id": 4210,
+   "manager": "Preben Hast Sørli",
+   "team_name": "babyfaced assassins"
+  },
+  {
+   "entry_id": 2442,
+   "manager": "Adam Campbell",
+   "team_name": "Adam's Team"
+  },
+  {
+   "entry_id": 79074,
+   "manager": "Jash Shah",
+   "team_name": "Balebers XI"
+  },
+  {
+   "entry_id": 103,
+   "manager": "Anthony Ede",
+   "team_name": "Milpool Fc"
+  },
+  {
+   "entry_id": 175,
+   "manager": "Joe Kelleher",
+   "team_name": "Berries"
+  },
+  {
+   "entry_id": 125316,
+   "manager": "Marcel Churý",
+   "team_name": "It's Hamer time"
+  },
+  {
+   "entry_id": 987,
+   "manager": "Jack B",
+   "team_name": "Jacko Bonito"
+  },
+  {
+   "entry_id": 46496,
+   "manager": "Martin Mikalsen",
+   "team_name": "Gruppo Anti"
+  },
+  {
+   "entry_id": 1540613,
+   "manager": "Łukasz Woźniak",
+   "team_name": "I'm tired"
+  },
+  {
+   "entry_id": 9267,
+   "manager": "Cameron Scott",
+   "team_name": "Stach to the Future"
+  },
+  {
+   "entry_id": 7189,
+   "manager": "Sam Currie",
+   "team_name": "Jacquet Potato"
+  },
+  {
+   "entry_id": 2744,
+   "manager": "Raïsh Ganpat",
+   "team_name": "Xabi Daaby Doo"
+  },
+  {
+   "entry_id": 53517,
+   "manager": "Ben Crellin",
+   "team_name": "ƃuᴉʞuᴉɥʇuʍopǝpᴉsdn"
+  },
+  {
+   "entry_id": 50624,
+   "manager": "Roddy More",
+   "team_name": "Wanyama DabLahm"
+  },
+  {
+   "entry_id": 57,
+   "manager": "Justeata banana",
+   "team_name": "Justeata's Team"
+  },
+  {
+   "entry_id": 195,
+   "manager": "Stephen Courtney",
+   "team_name": "Touch of Grass"
+  },
+  {
+   "entry_id": 28,
+   "manager": "Lorcan OC",
+   "team_name": "Lorcan's Team"
+  },
+  {
+   "entry_id": 2302418,
+   "manager": "Kieran K",
+   "team_name": "Maed it"
+  },
+  {
+   "entry_id": 5174,
+   "manager": "Matthew Lambert",
+   "team_name": "Matthew's Team"
+  },
+  {
+   "entry_id": 141,
+   "manager": "Jack Vamplew",
+   "team_name": "Vampdoria"
+  },
+  {
+   "entry_id": 2086,
+   "manager": "Pro -",
+   "team_name": "The Prodigious Ones"
+  },
+  {
+   "entry_id": 222160,
+   "manager": "FPL Brandon",
+   "team_name": "Szoboptimal"
+  },
+  {
+   "entry_id": 3961,
+   "manager": "Jack Watton",
+   "team_name": "Jack's Team"
+  },
+  {
+   "entry_id": 263,
+   "manager": "Tom K",
+   "team_name": "Random Rules"
+  },
+  {
+   "entry_id": 67185,
+   "manager": "Onur Ersoy",
+   "team_name": "Beylikduzu Kirev"
+  },
+  {
+   "entry_id": 679476,
+   "manager": "Matthew D",
+   "team_name": "Hakuna Mateta"
+  },
+  {
+   "entry_id": 651,
+   "manager": "Erki Lomp",
+   "team_name": "Hogg Calling Contest"
+  },
+  {
+   "entry_id": 322,
+   "manager": "Adam M",
+   "team_name": "Adam's Team"
+  },
+  {
+   "entry_id": 85874,
+   "manager": "Rasmus Majborn",
+   "team_name": "WhiteHart"
+  }
+ ]
+}

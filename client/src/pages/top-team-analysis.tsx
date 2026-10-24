@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { TOP_MANAGERS } from "@shared/top-managers";
+import { TOP_MANAGERS as TOP_100 } from "@shared/top-managers";
+import { ELITE_GROUPS, type EliteGroupId } from "@shared/elite-groups";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import {
   Card,
@@ -169,7 +170,11 @@ function formatPrice(price: number): string {
   return `£${(price / 10).toFixed(1)}m`;
 }
 
-export default function TopTeamAnalysis() {
+// With a `group` it analyses that invitational league (Elite 64, Analytics Elite 64); without one, the All Time Top 100.
+export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}) {
+  const TOP_MANAGERS = group ? [] : TOP_100;
+  const groupSize = group ? 64 : TOP_100.length;
+  const groupLabel = group ? ELITE_GROUPS[group].name : "Top 100";
   const [activeSubTab, setActiveSubTab] = useViewModeParam<
     "overview" | "players" | "captains" | "formations" | "budget"
   >("subtab", "overview", ["overview", "players", "captains", "formations", "budget"]);
@@ -188,7 +193,7 @@ export default function TopTeamAnalysis() {
     refetch: refetchTeams,
     isFetching: isRefreshing
   } = useQuery<TopManagersBatchResponse>({
-    queryKey: ["/api/top-managers/teams"],
+    queryKey: [group ? `/api/elite-groups/${group}/teams` : "/api/top-managers/teams"],
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime in v5)
     retry: 2,
@@ -382,7 +387,7 @@ export default function TopTeamAnalysis() {
 
   const validTeamsCount = validTeams.length;
   const errorTeamsCount = managersData.filter((m: ManagerTeamData) => !m.success).length;
-  const loadingTeamsCount = teamsLoading ? TOP_MANAGERS.length - validTeamsCount - errorTeamsCount : 0;
+  const loadingTeamsCount = teamsLoading ? groupSize - validTeamsCount - errorTeamsCount : 0;
 
   if (bootstrapLoading) {
     return (
@@ -405,7 +410,7 @@ export default function TopTeamAnalysis() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <BarChart3 />
-              <h1>Top Managers Team Analysis</h1>
+              <h1>{group ? `${groupLabel} Team Analysis` : "Top Managers Team Analysis"}</h1>
             </div>
             <div className="fpl-page-actions">
               <Button
@@ -430,7 +435,7 @@ export default function TopTeamAnalysis() {
               <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold mb-2">Loading Team Data...</h3>
               <p className="text-gray-600 mb-4">
-                Fetching team information for all {TOP_MANAGERS.length} managers. This may take a moment.
+                Fetching team information for all {groupSize} managers. This may take a moment.
               </p>
               <Button onClick={refreshAllData} variant="outline" disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -463,7 +468,7 @@ export default function TopTeamAnalysis() {
                       Most Popular Players
                     </CardTitle>
                     <CardDescription>
-                      Players owned by the most Top 100 managers
+                      Players owned by the most {groupLabel} managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -499,7 +504,7 @@ export default function TopTeamAnalysis() {
                       Popular Formations
                     </CardTitle>
                     <CardDescription>
-                      Formation preferences among Top 100 managers
+                      Formation preferences among {groupLabel} managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -622,7 +627,7 @@ export default function TopTeamAnalysis() {
                 <CardHeader>
                   <CardTitle>Player Ownership Analysis</CardTitle>
                   <CardDescription>
-                    All players owned by Top 100 managers, sorted by popularity
+                    All players owned by {groupLabel} managers, sorted by popularity
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -682,7 +687,7 @@ export default function TopTeamAnalysis() {
                 <CardHeader>
                   <CardTitle>Captaincy Analysis</CardTitle>
                   <CardDescription>
-                    Captain and vice-captain choices among Top 100 managers
+                    Captain and vice-captain choices among {groupLabel} managers
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -749,7 +754,7 @@ export default function TopTeamAnalysis() {
                   <CardHeader>
                     <CardTitle>Formation Distribution</CardTitle>
                     <CardDescription>
-                      Tactical setups preferred by Top 100 managers
+                      Tactical setups preferred by {groupLabel} managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -821,7 +826,7 @@ export default function TopTeamAnalysis() {
                           <div className="space-y-2">
                             <h4 className="font-semibold">Formation Diversity</h4>
                             <div className="text-sm text-gray-600">
-                              Top 100 managers are using {diversity} different formations, 
+                              {groupLabel} managers are using {diversity} different formations, 
                               showing {diversity > 5 ? 'high' : diversity > 3 ? 'moderate' : 'low'} tactical diversity.
                             </div>
                           </div>
@@ -840,7 +845,7 @@ export default function TopTeamAnalysis() {
                   <CardHeader>
                     <CardTitle>Team Values</CardTitle>
                     <CardDescription>
-                      Squad value distribution among Top 100 managers
+                      Squad value distribution among {groupLabel} managers
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

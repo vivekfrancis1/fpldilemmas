@@ -237,6 +237,16 @@ function Router() {
             <TopManagers />
           </Suspense>
         </Route>
+        <Route path="/elite-64">
+          <Suspense fallback={<PageLoader />}>
+            <TopManagers group="elite-64" />
+          </Suspense>
+        </Route>
+        <Route path="/analytics-elite-64">
+          <Suspense fallback={<PageLoader />}>
+            <TopManagers group="analytics-elite-64" />
+          </Suspense>
+        </Route>
         <Route path="/top-managers/:rank/team">
           <Suspense fallback={<PageLoader />}>
             <TopManagerTeam />
