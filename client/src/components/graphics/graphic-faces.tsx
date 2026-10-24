@@ -478,7 +478,8 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
 
 function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode }) {
   const line = "rgba(255,255,255,0.45)";
-  // goalkeeper at the top, then defenders, midfielders and the attack at the bottom (rows come in that order)
+  // goalkeeper at the top, then defenders, midfielders and the attack at the bottom (rows come in that order). The team now
+  // faces down the page, so its left is the viewer's right: each row comes in left-to-right order and is drawn mirrored.
   const ordered = rows;
   return (
     <div
@@ -494,7 +495,7 @@ function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ 
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "8px 14px" }}>
         {ordered.map((r) => (
           <div key={r.position} style={{ display: "flex", justifyContent: "space-evenly", alignItems: "flex-start", gap: 6 }}>
-            {r.players.map((p) => (
+            {[...r.players].reverse().map((p) => (
               <Fragment key={p.id}>{renderToken(p)}</Fragment>
             ))}
           </div>
