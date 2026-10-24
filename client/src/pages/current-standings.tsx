@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/tooltip";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { SeasonBadge } from "@/components/season-badge";
+import { teamGraphicLink } from "@shared/graphics-teams";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 interface CurrentTeamStanding {
   id: number;
@@ -373,6 +375,10 @@ export default function CurrentStandings() {
                   </SelectContent>
                 </Select>
               </div>
+              {/* the image is made from the live season's table */}
+              {selectedSeason === CURRENT_SEASON && (
+                <ShareGraphicLink className="ml-auto" testId="link-share-image" href={teamGraphicLink({ template: "league-table", venue })} label="Share table" />
+              )}
               <div className="flex items-center gap-3">
                 <label className="text-sm font-semibold text-gray-700">Statistics View:</label>
                 <Select value={statsView} onValueChange={(value: 'totals' | 'per-game') => setStatsView(value)}>

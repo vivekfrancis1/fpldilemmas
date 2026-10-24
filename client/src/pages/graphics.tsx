@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, Table2, Activity, BarChart2, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -69,6 +69,7 @@ import {
 } from "@shared/graphics";
 import { projectionWindow } from "@shared/compare-utils";
 import { resolveHistoryGameweeks, type HistoryRowInput } from "@shared/graphics-players";
+import { TEAM_METRICS, resolveProjectedEndGameweek, teamGraphicUrl } from "@shared/graphics-teams";
 import { isFixtureResult, isFixtureUpcoming, predictionGameweeks, resolveMatch, resolvePredictionGameweek, resolveResultsGameweek, resultGameweeks, type MatchFixtureInput, type MatchModelInput } from "@shared/graphics-matches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,10 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "player-projections": ListOrdered,
   "gw-top-scorers": Medal,
   "player-history": LineChart,
+  "team-projections": BarChart2,
+  "projected-table": Table2,
+  "league-table": ListOrdered,
+  "team-history": Activity,
 };
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -117,7 +122,7 @@ const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers", "projected-table"];
 const MATCH_TEMPLATES: TemplateId[] = ["match-predictions", "match-results", "match-preview", "match-report"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -675,6 +680,10 @@ export default function GraphicsPage() {
     staleTime: 5 * 60 * 1000,
     enabled: !!historyPlayerId,
   });
+  // Team graphics: the one request each is built from (the same URL the pack uses)
+  const nextGw = useMemo(() => ((bootstrap?.events ?? []) as Array<{ id: number; is_next?: boolean }>).find((e) => e.is_next)?.id ?? 39, [bootstrap?.events]);
+  const teamUrl = teamGraphicUrl(spec, defaultRange, nextGw);
+  const { data: teamResponse } = useQuery<any[]>({ queryKey: [teamUrl ?? ""], staleTime: 5 * 60 * 1000, enabled: !!teamUrl });
   const resultGws = useMemo(() => resultGameweeks((fixtures ?? []) as unknown as MatchFixtureInput[]), [fixtures]);
 
   // Match Predictions and Match Preview: the team projections and market odds for the one gameweek being drawn
@@ -729,7 +738,7 @@ export default function GraphicsPage() {
       : spec.template === "match-report" ? resolveMatch(spec, (fixtures ?? []) as unknown as MatchFixtureInput[], "finished") : null;
     const team =
       matchFixture ? matchFixture.team_h
-      : spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" ? spec.teams[0]
+      : spec.template === "fixtures-comparison" || spec.template === "predicted-lineup" || spec.template === "team-history" ? spec.teams[0]
       : spec.template === "team-reveal" ? elements.find((e) => e.id === spec.captain)?.team
       : selectedElements[0]?.team;
     return team !== undefined ? teamColor(teamShortById.get(team)) : null;
@@ -759,8 +768,9 @@ export default function GraphicsPage() {
       matchModel,
       matchModelGw: matchModel ? matchGw : undefined,
       playerHistory: historyPlayerId && historyData?.history ? { playerId: historyPlayerId, history: historyData.history } : undefined,
+      teamData: teamUrl && teamResponse ? { url: teamUrl, data: teamResponse } : undefined,
     }),
-    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData, teamUrl, teamResponse],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
@@ -879,7 +889,7 @@ export default function GraphicsPage() {
     update({ teams: spec.teams.includes(id) ? spec.teams.filter((t) => t !== id) : [...spec.teams, id].slice(0, 4) });
   };
 
-  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials" || spec.template === "fixture-ticker" || spec.template === "player-projections";
+  const usesRange = spec.template === "player-card" || spec.template === "player-comparison" || spec.template === "fixtures-comparison" || spec.template === "top-differentials" || spec.template === "fixture-ticker" || spec.template === "player-projections" || spec.template === "team-projections";
   const activeStats = spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS;
   const loading = bootstrapLoading;
   const fileParts =
@@ -898,6 +908,10 @@ export default function GraphicsPage() {
     : data?.kind === "player-projections" ? [gwLabel, spec.pos ?? "all"]
     : data?.kind === "gw-top-scorers" ? [`gw${data.scorers.gameweek}`]
     : data?.kind === "player-history" ? [data.history.name, data.gwLabel]
+    : data?.kind === "team-projections" ? [gwLabel, spec.metric]
+    : data?.kind === "projected-table" ? [`gw${resolveProjectedEndGameweek(spec.to, nextGw)}`]
+    : data?.kind === "league-table" ? [spec.venue]
+    : data?.kind === "team-history" ? [data.history.short]
     : spec.template === "stat-leaders" ? [spec.stat]
     : spec.template === "cover" ? [spec.headline.slice(0, 30), ...selectedElements.map((e) => e.web_name)]
     : selectedElements.map((e) => e.web_name);
@@ -1092,6 +1106,70 @@ export default function GraphicsPage() {
                   </Field>
                   <p className="col-span-2 text-xs text-gray-500">FPL's own points for a finished gameweek, with the scoring that made them.</p>
                 </div>
+              )}
+
+              {spec.template === "team-projections" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Field label="Measure">
+                      <SimpleSelect value={spec.metric} onChange={(v) => update({ metric: v as GraphicSpec["metric"] })} options={Object.values(TEAM_METRICS).map((m) => ({ value: m.id, label: m.label }))} testId="select-team-metric" />
+                    </Field>
+                  </div>
+                  <p className="col-span-2 text-xs text-gray-500">All clubs with a fixture in the range, ranked by our projection per game ({TEAM_METRICS[spec.metric].better === "lower" ? "fewest first" : "best first"}). A double gameweek counts as two games.</p>
+                </div>
+              )}
+
+              {spec.template === "projected-table" && (
+                <Field label="Projected to">
+                  <SimpleSelect
+                    value={String(resolveProjectedEndGameweek(spec.to, nextGw))}
+                    onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+                    options={Array.from({ length: Math.max(0, 38 - Math.min(nextGw, 38) + 1) }, (_, i) => Math.min(nextGw, 38) + i).map((gw) => ({ value: String(gw), label: gw === 38 ? "GW38 (final table)" : `After GW${gw}` }))}
+                    testId="select-projected-end"
+                  />
+                </Field>
+              )}
+
+              {spec.template === "league-table" && (
+                <Field label="Matches">
+                  <SimpleSelect value={spec.venue} onChange={(v) => update({ venue: v as GraphicSpec["venue"] })} options={[{ value: "all", label: "All matches" }, { value: "home", label: "Home matches only" }, { value: "away", label: "Away matches only" }]} testId="select-venue" />
+                </Field>
+              )}
+
+              {spec.template === "team-history" && (
+                <>
+                  <Field label="Club">
+                    <SimpleSelect
+                      value={spec.teams[0] ? String(spec.teams[0]) : ""}
+                      onChange={(v) => update({ teams: [parseInt(v, 10)] })}
+                      options={[...teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => ({ value: String(t.id), label: t.name }))}
+                      testId="select-history-club"
+                    />
+                  </Field>
+                  {resultGws.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="From gameweek">
+                        <SimpleSelect
+                          value={spec.from > 0 ? String(spec.from) : "auto"}
+                          onChange={(v) => (v === "auto" ? update({ from: 0, to: 0 }) : update({ from: parseInt(v, 10), to: Math.min(parseInt(v, 10) + MAX_RANGE_GAMEWEEKS - 1, Math.max(parseInt(v, 10), spec.to || resultGws[resultGws.length - 1])) }))}
+                          options={[{ value: "auto", label: "Last 8 matches" }, ...resultGws.map((gw) => ({ value: String(gw), label: `GW${gw}` }))]}
+                          testId="select-team-history-from"
+                        />
+                      </Field>
+                      {spec.from > 0 && (
+                        <Field label="To gameweek">
+                          <SimpleSelect
+                            value={String(spec.to || spec.from)}
+                            onChange={(v) => update({ to: parseInt(v, 10) })}
+                            options={resultGws.filter((gw) => gw >= spec.from && gw < spec.from + MAX_RANGE_GAMEWEEKS).map((gw) => ({ value: String(gw), label: `GW${gw}` }))}
+                            testId="select-team-history-to"
+                          />
+                        </Field>
+                      )}
+                      <p className="col-span-2 text-xs text-gray-500">The results are finished matches only. Position and season figures come from the live table.</p>
+                    </div>
+                  )}
+                </>
               )}
 
               {spec.template === "player-history" && (

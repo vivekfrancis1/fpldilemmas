@@ -1,6 +1,6 @@
 # Plan 014 — Shareable images for every prediction, projection and past result
 
-Status: IN PROGRESS. Tranches 1 (Matches) and 2 (Players) IMPLEMENTED locally 2026-10-24, not pushed. Tranches 3-4 not started.
+Status: IN PROGRESS. Tranches 1 (Matches), 2 (Players) and 3 (Teams) IMPLEMENTED locally 2026-10-24, not pushed. Tranche 4 (packs) not started.
 Request (user, 2026-10-24): "All match predictions, team and player projections for the upcoming gameweek(s) should be made into shareable images. All match results, team and player history for the past gameweek(s) should be made into shareable images."
 
 ## Decisions (user, 2026-10-24)
@@ -76,3 +76,20 @@ Data sources, no new endpoints or calculations: `/api/cached/player-total-points
 Not done on purpose: the single-component projection pages (goals, assists, clean sheets, minutes, bonus, saves, cards, defensive contributions) have no button of their own; Player Projections already shows those components when a position is chosen. Say if you want a button on each, opening Player Projections for that position.
 Verified in the browser on live data: all three templates at square / portrait / landscape through the app's real exporter (Inter embedded by hand, as in tranche 1), default player, controls, phone width (no horizontal scroll) and the share links on four pages. Full suite: 1238 passed.
 Not yet: Team Projections / League Table / Team History (tranche 3), packs (tranche 4).
+
+## Update 2026-10-24 — Tranche 3 (Teams) built
+Approved by the user ("Yes, go ahead with tranche 3").
+Built:
+- `shared/graphics-teams.ts` (new; 39 tests in `tests/graphics-teams.test.ts`, written first):
+  - **Team Projections** (`buildTeamProjections`): all clubs with a fixture in the chosen gameweek range, ranked by the site's projected average per game for one measure (goals scored, goals conceded, clean-sheet chance, assists; fewest first for goals conceded). Each row also shows the games and the total over the range (clean sheets: the expected number). A double gameweek counts as two games; clubs with no fixture in the range are left out. Averages and totals come from the existing `fixtureDetails` of `/api/team-goal-projections`, `/api/team-goals-against-projections`, `/api/team-cs-projections` and `/api/team-assist-projections`.
+  - **Projected Table** (`buildProjectedTable`): `/api/projected-standings` to any end gameweek from the next one to 38 (final table by default), in the order the site gives, top four and bottom three marked, with how many matches are played and projected.
+  - **League Table** (`buildLeagueTable`): `/api/current-standings` for all, home or away matches; a table where nobody has played is reported as "season not started", not drawn.
+  - **Team History** (`buildTeamHistory`): a club's last eight finished results (or a chosen gameweek range), W/D/L chips, record and goals over exactly those results, plus its position, points, goals, xG and clean sheets from the live table (a missing figure is a dash). Live and unplayed matches are never results.
+  - `teamGraphicUrl` names the one request a team graphic is built from (the page and, in tranche 4, the pack fetch exactly that), `teamGraphicLink` for the Share buttons.
+- `shared/graphics.ts`: four template ids, spec fields `metric` (`mt`) and `venue` (`vn`) with validated links, captions, `isEmptyGraphic`, `usesProjections` (projections and the projected table carry "Projections are estimates"). `shared/graphic-defaults.ts`: Team History opens on the club whose match kicks off next (same rule as Predicted Lineups), with a test.
+- Faces (`graphic-faces.tsx`): two-column ranking with bars, a table shared by the projected and league tables (20 rows at every size, zone markers and legend), a club form card with results list.
+- `/graphics` page: measure, projected-to gameweek, venue and club / gameweek pickers.
+- Share buttons: Team Stats ("Share table", current season, keeps the venue), Projected Standings ("Share projected table" with the selected end gameweek, or "Share table" on the current tab), team detail page ("Share form"), and the four team projection pages (goals, goals conceded, assists, clean sheets: "Share image" with that page's measure and gameweek range, future view only).
+Deviations: team rankings use the per-game average (fair across double and blank gameweeks) with the total shown beside it, rather than ranking by range totals; the league table's footer gameweek is the latest gameweek that has a finished match, and its subtitle says how many matches have been played, since a gameweek can be half played.
+Verified in the browser on live data: all four templates at square / portrait / landscape through the app's real exporter (Inter embedded by hand), default club, controls, phone width (no horizontal scroll), and all eight share links. Full suite: 1277 passed, plus the known intermittent price-predictions test.
+Not yet: the packs (tranche 4).

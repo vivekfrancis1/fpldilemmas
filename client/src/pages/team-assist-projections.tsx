@@ -17,6 +17,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
+import { teamGraphicLink } from "@shared/graphics-teams";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 interface FixtureDetail {
   opponent: string;
@@ -856,6 +858,12 @@ export default function TeamAssistProjections() {
                 </Select>
               </div>
                 
+                {viewMode === "future" && (
+                <ShareGraphicLink
+                  testId="link-share-image"
+                  href={teamGraphicLink({ template: "team-projections", metric: "assists", from: parseInt(startGameweek, 10), to: parseInt(endGameweek, 10) <= 38 ? parseInt(endGameweek, 10) : undefined })}
+                />
+                )}
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen((open) => !open)}

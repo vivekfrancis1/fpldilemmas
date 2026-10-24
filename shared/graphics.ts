@@ -6,12 +6,13 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
+import type { TableContent, TeamHistoryContent, TeamProjectionsContent } from "./graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report" | "player-projections" | "gw-top-scorers" | "player-history";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report" | "player-projections" | "gw-top-scorers" | "player-history" | "team-projections" | "projected-table" | "league-table" | "team-history";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -36,6 +37,10 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "player-projections", label: "Player Projections", description: "The best-projected players by position over a gameweek range, with where their points come from", headline: "Player Projections" },
   { id: "gw-top-scorers", label: "Top Scorers", description: "The highest-scoring players of a finished gameweek, with how they got their points", headline: "Top Scorers" },
   { id: "player-history", label: "Player History", description: "One player's points in each recent gameweek, with goals, assists and bonus", headline: "Player History" },
+  { id: "team-projections", label: "Team Projections", description: "All 20 clubs ranked by projected goals, goals conceded, clean sheets or assists", headline: "Team Projections" },
+  { id: "projected-table", label: "Projected Table", description: "The projected league table, to the end of the season or an earlier gameweek", headline: "Projected Table" },
+  { id: "league-table", label: "League Table", description: "The live Premier League table: all matches, home or away", headline: "League Table" },
+  { id: "team-history", label: "Team History", description: "One club's recent results, form and season figures", headline: "Team History" },
 ];
 
 export type SizeId = "square" | "portrait" | "landscape";
@@ -144,7 +149,7 @@ export function footerHeight(size: SizeId): number {
 export const PRICE_LIST_LIMIT: Record<SizeId, number> = { square: 7, portrait: 10, landscape: 5 };
 
 export function usesProjections(spec: GraphicSpec): boolean {
-  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks" || spec.template === "match-predictions" || spec.template === "match-preview" || spec.template === "player-projections") return true;
+  if (spec.template === "player-card" || spec.template === "top-differentials" || spec.template === "predicted-lineup" || spec.template === "captain-picks" || spec.template === "match-predictions" || spec.template === "match-preview" || spec.template === "player-projections" || spec.template === "team-projections" || spec.template === "projected-table") return true;
   if (spec.template === "player-comparison") return (spec.stats.length ? spec.stats : DEFAULT_COMPARE_STATS).includes("xpts");
   return false;
 }
@@ -253,9 +258,20 @@ export interface GraphicSpec {
   fixture: number;
   /** Match Predictions / Match Results: which page of a long gameweek (1-based). */
   page: number;
+  /** Team Projections: the measure the clubs are ranked by. */
+  metric: TeamMetricId;
+  /** League Table: all matches, home or away. */
+  venue: VenueId;
 }
 
 export const MAX_PAGE = 20;
+
+/** Team Projections: which projected measure the clubs are ranked by. */
+export type TeamMetricId = "goals-for" | "goals-against" | "clean-sheets" | "assists";
+export const TEAM_METRIC_IDS: TeamMetricId[] = ["goals-for", "goals-against", "clean-sheets", "assists"];
+/** League Table: all matches, or only home or away matches. */
+export type VenueId = "all" | "home" | "away";
+export const VENUE_IDS: VenueId[] = ["all", "home", "away"];
 
 export type ChipId = "" | "wildcard" | "freehit" | "bboost" | "3xc";
 export const CHIP_IDS: ChipId[] = ["", "wildcard", "freehit", "bboost", "3xc"];
@@ -297,9 +313,11 @@ export const DEFAULT_SPEC: GraphicSpec = {
   accent: "",
   fixture: 0,
   page: 1,
+  metric: "goals-for",
+  venue: "all",
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "player-history": 1 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "player-history": 1, "team-projections": 3, "projected-table": 3, "league-table": 3, "team-history": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -379,6 +397,8 @@ export function decodeSpec(search: string): GraphicSpec {
     accent: normaliseAccent(q.get("accent") ?? ""),
     fixture: intOrNull(q.get("fx")) ?? 0,
     page: Math.min(MAX_PAGE, Math.max(1, intOrNull(q.get("pg")) ?? 1)),
+    metric: (TEAM_METRIC_IDS as string[]).includes(q.get("mt") ?? "") ? (q.get("mt") as TeamMetricId) : d.metric,
+    venue: (VENUE_IDS as string[]).includes(q.get("vn") ?? "") ? (q.get("vn") as VenueId) : d.venue,
   };
 }
 
@@ -417,6 +437,8 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.accent) add("accent", spec.accent.replace(/^#/, ""));
   if (spec.fixture) add("fx", String(spec.fixture));
   if (spec.page > 1) add("pg", String(spec.page));
+  if (spec.metric !== d.metric) add("mt", spec.metric);
+  if (spec.venue !== d.venue) add("vn", spec.venue);
   return parts.join("&");
 }
 
@@ -1491,7 +1513,11 @@ export type GraphicData =
   | { kind: "match-report"; report: MatchReportContent; gwLabel: string }
   | { kind: "player-projections"; projections: PlayerProjectionsContent; gwLabel: string; subtitle: string }
   | { kind: "gw-top-scorers"; scorers: TopScorersContent; gwLabel: string; subtitle: string }
-  | { kind: "player-history"; history: PlayerHistoryContent; gwLabel: string };
+  | { kind: "player-history"; history: PlayerHistoryContent; gwLabel: string }
+  | { kind: "team-projections"; teams: TeamProjectionsContent; gwLabel: string; subtitle: string }
+  | { kind: "projected-table"; table: TableContent; gwLabel: string; subtitle: string }
+  | { kind: "league-table"; table: TableContent; gwLabel: string; subtitle: string }
+  | { kind: "team-history"; history: TeamHistoryContent; gwLabel: string };
 
 // ---------- post captions ----------
 
@@ -1517,6 +1543,10 @@ const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
   "player-projections": "#xPts",
   "gw-top-scorers": "#TopScorers",
   "player-history": "#PlayerForm",
+  "team-projections": "#TeamProjections",
+  "projected-table": "#ProjectedTable",
+  "league-table": "#PremierLeague",
+  "team-history": "#TeamForm",
 };
 
 function captionGw(label: string | null | undefined): string | null {
@@ -1631,6 +1661,29 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
         t.assists ? plural(t.assists, "assist", "assists") : null,
       ].filter((b): b is string => !!b);
       return done(`${history.name} (${history.teamShort}) ${data.gwLabel}: ${bits.join(", ")}`, data.gwLabel);
+    }
+    case "team-projections": {
+      const { teams } = data;
+      const label = { "goals-for": "goals scored", "goals-against": "goals conceded", "clean-sheets": "clean-sheet chance", assists: "assists" }[teams.metric];
+      const value = (v: number) => (teams.metric === "clean-sheets" ? `${Math.round(v)}%` : v.toFixed(2));
+      const top = teams.rows.slice(0, 3).map((r) => `${r.short} ${value(r.perGame)}`).join(" · ");
+      return done(top ? `${data.gwLabel} projected ${label} per game, best first (our projections): ${top}` : `${data.gwLabel} team projections`, data.gwLabel);
+    }
+    case "projected-table": {
+      const top = data.table.rows.slice(0, 3).map((r, i) => `${r.short} ${r.points}${i === 0 ? " pts" : ""}`).join(" · ");
+      return done(top ? `Projected table after ${data.gwLabel}: ${top}` : `Projected table after ${data.gwLabel}`, data.gwLabel);
+    }
+    case "league-table": {
+      const where = data.table.venue === "all" ? "" : ` (${data.table.venue} matches)`;
+      const top = data.table.rows.slice(0, 3).map((r, i) => `${r.short} ${r.points}${i === 0 ? " pts" : ""}`).join(" · ");
+      return done(top ? `Premier League table${where} after ${data.gwLabel}: ${top}` : `Premier League table${where}`, data.gwLabel);
+    }
+    case "team-history": {
+      const { history } = data;
+      const form = history.results.map((r) => r.result).join("");
+      const suffix = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
+      const place = history.position === null ? "" : `, ${history.position}${suffix(history.position)} in the table`;
+      return done(`${history.name} ${data.gwLabel}: ${form || "no results yet"}${place}`, data.gwLabel);
     }
     case "cover": {
       const { cover } = data;
@@ -1830,6 +1883,14 @@ export function isEmptyGraphic(data: GraphicData): boolean {
       return data.scorers.rows.length === 0;
     case "player-history":
       return data.history.bars.every((b) => b.points === null);
+    case "team-projections":
+      return data.teams.rows.length === 0;
+    case "projected-table":
+      return data.table.rows.length === 0;
+    case "league-table":
+      return data.table.rows.length === 0 || !data.table.started;
+    case "team-history":
+      return data.history.results.length === 0;
     default:
       return false;
   }

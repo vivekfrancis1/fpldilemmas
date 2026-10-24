@@ -18,6 +18,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeasonBadge } from "@/components/season-badge";
+import { teamGraphicLink } from "@shared/graphics-teams";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 interface FixtureDetail {
   opponent: string;
@@ -685,6 +687,10 @@ export default function TeamCSProjections() {
               className={`inline-flex items-center gap-1.5 rounded-full border text-xs font-medium px-3 py-1.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
               <Users className="h-3.5 w-3.5" />{showOpponent ? 'Hide opponents' : 'Show opponents'}
             </button>
+                <ShareGraphicLink
+                  testId="link-share-image"
+                  href={teamGraphicLink({ template: "team-projections", metric: "clean-sheets", from: parseInt(startGameweek, 10), to: parseInt(endGameweek, 10) <= 38 ? parseInt(endGameweek, 10) : undefined })}
+                />
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen((open) => !open)}

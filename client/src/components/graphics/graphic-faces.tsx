@@ -31,6 +31,7 @@ import {
   type SizeId,
 } from "@shared/graphics";
 import { formatGoals } from "@shared/graphics";
+import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
 import { getJerseyUrl } from "@/lib/jersey";
@@ -1565,6 +1566,170 @@ function HistoryFace({ spec, theme, history, gwLabel }: { spec: GraphicSpec; the
   );
 }
 
+
+// ---------- Team graphics ----------
+
+function TeamProjectionsFace({ spec, theme, teams, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; teams: TeamProjectionsContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const def = TEAM_METRICS[teams.metric];
+  const value = (v: number) => (def.unit === "percent" ? `${Math.round(v)}%` : v.toFixed(2));
+  const perColumn = Math.ceil(teams.rows.length / 2);
+  const columns = [teams.rows.slice(0, perColumn), teams.rows.slice(perColumn)];
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {teams.rows.length === 0 ? (
+        <EmptyNote theme={theme} land={land}>No fixtures with projections in {gwLabel}.</EmptyNote>
+      ) : (
+        <>
+          <div style={{ fontSize: land ? 13 : 17, color: theme.muted, fontWeight: 700, marginBottom: land ? 6 : 10, flexShrink: 0 }}>
+            Big number: {def.perGameLabel} · small: games and total in the range · {def.better === "lower" ? "fewest first" : "best first"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: land ? 12 : 18, flex: 1, minHeight: 0 }}>
+            {columns.map((rows, ci) => (
+              <div key={ci} style={{ display: "flex", flexDirection: "column", gap: land ? 5 : tall ? 10 : 7, minWidth: 0, minHeight: 0 }}>
+                {rows.map((r) => (
+                  <div key={r.teamId} style={{ ...panel(theme, { borderRadius: 14 }), position: "relative", overflow: "hidden", flex: 1, minHeight: 0, maxHeight: land ? 56 : 120 }} data-testid={`team-row-${r.short}`}>
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(4, r.share * 100)}%`, background: theme.accent, opacity: 0.2 }} />
+                    <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", gap: land ? 8 : 12, padding: land ? "0 10px" : "0 16px" }}>
+                      <div style={{ fontSize: land ? 18 : tall ? 30 : 26, fontWeight: 900, color: theme.accent, width: land ? 26 : 40, flexShrink: 0 }}>{r.rank}</div>
+                      <Jersey team={r.short} position="MID" px={land ? 30 : tall ? 54 : 44} />
+                      <div style={{ flex: 1, minWidth: 0, fontSize: land ? 20 : tall ? 34 : 30, fontWeight: 900, ...ellipsis }}>{r.short}</div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: land ? 22 : tall ? 38 : 34, fontWeight: 900, lineHeight: 1 }}>{value(r.perGame)}</div>
+                        <div style={{ fontSize: land ? 10 : tall ? 15 : 14, color: theme.muted, fontWeight: 700, whiteSpace: "nowrap" }}>
+                          {r.games} {r.games === 1 ? "game" : "games"} · {r.total.toFixed(1)} {def.totalLabel}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Frame>
+  );
+}
+
+function TableFace({ spec, theme, table, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; table: TableContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const font = land ? 14 : tall ? 25 : 20;
+  const head = land ? 11 : tall ? 16 : 14;
+  const jersey = land ? 17 : tall ? 36 : 28;
+  const num = land ? 50 : tall ? 66 : 58;
+  const zoneColor = { top4: theme.good, relegation: theme.bad } as const;
+  const cells = (r: { played: number; wins: number; draws: number; losses: number; goalsFor: number; goalsAgainst: number; goalDifference: number }) =>
+    [r.played, r.wins, r.draws, r.losses, r.goalsFor, r.goalsAgainst, r.goalDifference > 0 ? `+${r.goalDifference}` : r.goalDifference];
+  const labels = ["P", "W", "D", "L", "GF", "GA", "GD"];
+  const hasZones = table.rows.some((r) => r.zone !== null);
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {table.rows.length === 0 ? (
+        <EmptyNote theme={theme} land={land}>No table to show yet.</EmptyNote>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: land ? 2 : 4 }} data-testid="table-rows">
+          <div style={{ display: "flex", alignItems: "center", fontSize: head, fontWeight: 800, color: theme.muted, letterSpacing: 1, padding: `0 ${land ? 10 : 16}px 0 ${land ? 16 : 22}px`, flexShrink: 0 }}>
+            <div style={{ width: land ? 30 : 46 }}>#</div>
+            <div style={{ flex: 1 }}>CLUB</div>
+            {labels.map((l) => <div key={l} style={{ width: num, textAlign: "center" }}>{l}</div>)}
+            <div style={{ width: land ? 56 : 84, textAlign: "center" }}>PTS</div>
+          </div>
+          {table.rows.map((r) => (
+            <div key={r.teamId} style={{ ...panel(theme, { borderRadius: land ? 6 : 10 }), flex: 1, minHeight: 0, maxHeight: land ? 30 : 70, display: "flex", alignItems: "center", fontSize: font, fontWeight: 700, padding: `0 ${land ? 10 : 16}px 0 ${land ? 10 : 16}px`, borderLeft: `${land ? 5 : 7}px solid ${r.zone ? zoneColor[r.zone] : "transparent"}` }} data-testid={`table-row-${r.short}`}>
+              <div style={{ width: land ? 30 : 46, fontWeight: 900, color: theme.muted }}>{r.position}</div>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: land ? 8 : 12 }}>
+                <Jersey team={r.short} position="MID" px={jersey} />
+                <span style={{ fontWeight: 900, ...ellipsis }}>{land || tall ? r.name : r.short}</span>
+              </div>
+              {cells(r).map((v, i) => <div key={i} style={{ width: num, textAlign: "center", opacity: i === 6 ? 1 : 0.9 }}>{v}</div>)}
+              <div style={{ width: land ? 56 : 84, textAlign: "center", fontWeight: 900, fontSize: font * 1.12, color: theme.accent }}>{r.points}</div>
+            </div>
+          ))}
+          {hasZones && (
+            <div style={{ display: "flex", gap: 22, fontSize: land ? 11 : 16, color: theme.muted, fontWeight: 700, flexShrink: 0, paddingTop: land ? 2 : 6 }}>
+              <span><span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: theme.good, marginRight: 8 }} />Top 4</span>
+              <span><span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: theme.bad, marginRight: 8 }} />Bottom 3</span>
+            </div>
+          )}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+function TeamHistoryFace({ spec, theme, history, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; history: TeamHistoryContent; gwLabel: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const dash = (v: number | string | null) => (v === null ? "—" : String(v));
+  const suffix = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th");
+  const tiles: Array<[string, string]> = [
+    ["Position", history.position === null ? "—" : `${history.position}${suffix(history.position)}`],
+    ["Points", dash(history.points)],
+    ["W-D-L", history.wins === null ? "—" : `${history.wins}-${history.draws}-${history.losses}`],
+    ["Goals F-A", history.goalsFor === null ? "—" : `${history.goalsFor}-${history.goalsAgainst}`],
+    ["xG F-A", history.xgFor === null || history.xgAgainst === null ? "—" : `${history.xgFor}-${history.xgAgainst}`],
+    ["Clean sheets", dash(history.cleanSheets)],
+  ];
+  const chipColor = { W: theme.good, D: theme.muted, L: theme.bad } as const;
+  const w = history.window;
+  const rowFont = land ? 17 : tall ? 30 : 26;
+  const resultRow = (r: TeamHistoryContent["results"][number], i: number) => (
+    <div key={i} style={{ ...panel(theme, { borderRadius: land ? 10 : 14 }), flex: 1, minHeight: 0, maxHeight: land ? 56 : 96, display: "flex", alignItems: "center", gap: land ? 8 : 16, padding: land ? "0 12px" : "0 22px" }} data-testid={`team-result-${i}`}>
+      <div style={{ width: land ? 46 : 74, fontSize: land ? 13 : 20, fontWeight: 800, color: theme.muted, flexShrink: 0 }}>GW{r.gameweek}</div>
+      <div style={{ width: land ? 22 : 34, fontSize: land ? 12 : 19, fontWeight: 800, color: theme.muted, flexShrink: 0 }}>{r.isHome ? "H" : "A"}</div>
+      <Jersey team={r.opponentShort} position="MID" px={land ? 26 : tall ? 54 : 44} />
+      <div style={{ flex: 1, minWidth: 0, fontSize: rowFont, fontWeight: 800, ...ellipsis }}>{r.opponentName}</div>
+      <div style={{ fontSize: land ? 22 : tall ? 40 : 34, fontWeight: 900, whiteSpace: "nowrap" }}>{r.scored} – {r.conceded}</div>
+      <div style={{ width: land ? 28 : 52, height: land ? 28 : 52, borderRadius: land ? 8 : 14, background: chipColor[r.result], color: "#0b1020", display: "flex", alignItems: "center", justifyContent: "center", fontSize: land ? 16 : 28, fontWeight: 900, flexShrink: 0 }}>{r.result}</div>
+    </div>
+  );
+  const half = Math.ceil(history.results.length / 2);
+  return (
+    <Frame spec={spec} theme={theme} subtitle={`${gwLabel || "Season"} · recent results and form`} gwLabel={gwLabel}>
+      <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : tall ? 18 : 14, flex: 1, minHeight: 0 }}>
+        <div style={{ ...panel(theme), display: "flex", alignItems: "center", gap: land ? 14 : 22, padding: land ? "8px 18px" : "16px 26px", flexShrink: 0 }}>
+          <Jersey team={history.short} position="MID" px={land ? 52 : tall ? 100 : 84} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: land ? 32 : tall ? 56 : 48, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{history.name}</div>
+            <div style={{ fontSize: land ? 15 : 24, color: theme.muted, fontWeight: 700, ...ellipsis }}>
+              {history.results.length ? `Last ${history.results.length}: W${w.wins} D${w.draws} L${w.losses} · goals ${w.goalsFor}-${w.goalsAgainst}` : "No finished matches yet"}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: land ? 5 : 8, flexShrink: 0 }}>
+            {history.results.map((r, i) => (
+              <div key={i} style={{ width: land ? 22 : 38, height: land ? 22 : 38, borderRadius: land ? 6 : 10, background: chipColor[r.result], color: "#0b1020", display: "flex", alignItems: "center", justifyContent: "center", fontSize: land ? 13 : 22, fontWeight: 900 }}>{r.result}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: land ? 8 : 12, flexShrink: 0 }}>
+          {tiles.map(([label, value]) => (
+            <div key={label} style={{ ...panel(theme, { borderRadius: 14 }), padding: land ? "6px 4px" : "12px 6px", textAlign: "center", minWidth: 0 }}>
+              <div style={{ fontSize: land ? 20 : tall ? 34 : 28, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap" }}>{value}</div>
+              <div style={{ fontSize: land ? 11 : tall ? 17 : 15, color: theme.muted, fontWeight: 700, whiteSpace: "nowrap" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        {history.results.length === 0 ? (
+          <EmptyNote theme={theme} land={land}>This club has no finished matches yet.</EmptyNote>
+        ) : land ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flex: 1, minHeight: 0 }}>
+            {[history.results.slice(0, half), history.results.slice(half)].map((rows, ci) => (
+              <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 6, minHeight: 0 }}>{rows.map((r, i) => resultRow(r, ci * half + i))}</div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: tall ? 12 : 8, flex: 1, minHeight: 0 }}>
+            {history.results.map(resultRow)}
+          </div>
+        )}
+      </div>
+    </Frame>
+  );
+}
+
 // ---------- entry point ----------
 
 export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme: GraphicTheme; data: GraphicData }) {
@@ -1589,6 +1754,10 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "player-projections": return <ProjectionsFace spec={spec} theme={theme} projections={data.projections} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "gw-top-scorers": return <ScorersFace spec={spec} theme={theme} scorers={data.scorers} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "player-history": return <HistoryFace spec={spec} theme={theme} history={data.history} gwLabel={data.gwLabel} />;
+    case "team-projections": return <TeamProjectionsFace spec={spec} theme={theme} teams={data.teams} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "projected-table":
+    case "league-table": return <TableFace spec={spec} theme={theme} table={data.table} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
+    case "team-history": return <TeamHistoryFace spec={spec} theme={theme} history={data.history} gwLabel={data.gwLabel} />;
     case "match-report": return <ReportFace spec={spec} theme={theme} report={data.report} gwLabel={data.gwLabel} />;
     case "top-differentials": return <DifferentialsFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
   }

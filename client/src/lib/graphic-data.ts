@@ -2,6 +2,15 @@ import type { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import { projectionWindow } from "@shared/compare-utils";
 import {
+  TEAM_METRICS,
+  buildLeagueTable,
+  buildProjectedTable,
+  buildTeamHistory,
+  buildTeamProjections,
+  resolveProjectedEndGameweek,
+  teamGraphicUrl,
+} from "@shared/graphics-teams";
+import {
   PROJECTION_GROUP_LIMIT,
   buildPlayerHistory,
   buildPlayerProjections,
@@ -84,6 +93,10 @@ export interface GraphicDataContext {
   matchModelGw?: number;
   /** Player History: FPL's match history of the chosen player; undefined while loading. */
   playerHistory?: { playerId: number; history: HistoryRowInput[] };
+  /** The first gameweek that has not started (39 when the season is over). */
+  nextGameweek: number;
+  /** Team graphics: the response of the one request `teamGraphicUrl` names for the graphic, with that URL; undefined while loading. */
+  teamData?: { url: string; data: any[] };
 }
 
 export interface ResolvedGameweeks {
@@ -286,6 +299,42 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
       });
       return { data: { kind: "player-history", history, gwLabel: gameweekLabel(gws[0], gws[gws.length - 1]) }, problem: null };
     }
+    case "team-projections": {
+      const url = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+      if (!url || !ctx.teamData || ctx.teamData.url !== url) return { data: null, problem: null };
+      const teamsContent = buildTeamProjections({ rows: ctx.teamData.data, metric: spec.metric, gameweeks, teamShortById, teamNameById });
+      return { data: { kind: "team-projections", teams: teamsContent, gwLabel, subtitle: `${gwLabel} · ${TEAM_METRICS[spec.metric].perGameLabel} · our projections` }, problem: null };
+    }
+    case "projected-table": {
+      const url = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+      if (!url || !ctx.teamData || ctx.teamData.url !== url) return { data: null, problem: null };
+      const end = resolveProjectedEndGameweek(spec.to, ctx.nextGameweek);
+      const table = buildProjectedTable({ rows: ctx.teamData.data, endGameweek: end });
+      const counts = table.actualGames !== null && table.projectedGames !== null ? ` · ${table.actualGames} played, ${table.projectedGames} projected` : "";
+      return { data: { kind: "projected-table", table, gwLabel: gameweekLabel(end, end), subtitle: `${end === 38 ? "Final table" : `After GW${end}`}${counts}` }, problem: null };
+    }
+    case "league-table": {
+      const url = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+      if (!url || !ctx.teamData || ctx.teamData.url !== url) return { data: null, problem: null };
+      const table = buildLeagueTable({ rows: ctx.teamData.data, venue: spec.venue });
+      if (!table.started) return { data: null, problem: "The season has not kicked off yet, so there is no league table to show." };
+      const played = table.rows.reduce((n, r) => n + r.played, 0);
+      const matches = spec.venue === "all" ? played / 2 : played;
+      const latest = fixtures ? resultGameweeks(asMatchFixtures(fixtures)).slice(-1)[0] ?? 0 : 0;
+      const venueText = spec.venue === "all" ? "All matches" : spec.venue === "home" ? "Home matches" : "Away matches";
+      return { data: { kind: "league-table", table, gwLabel: latest ? gameweekLabel(latest, latest) : "", subtitle: `${venueText} · ${matches === 1 ? "1 match" : `${matches} matches`} played` }, problem: null };
+    }
+    case "team-history": {
+      const teamId = spec.teams[0];
+      if (!teamId) return { data: null, problem: "Pick a club to see its recent results." };
+      if (!fixtures) return { data: null, problem: null };
+      const url = teamGraphicUrl(spec, ctx.defaultRange, ctx.nextGameweek);
+      if (!ctx.teamData || ctx.teamData.url !== url) return { data: null, problem: null };
+      const history = buildTeamHistory({ teamId, fixtures: asMatchFixtures(fixtures), standings: ctx.teamData.data, teamShortById, teamNameById, from: spec.from, to: spec.to });
+      if (!history) return { data: null, problem: "That club was not found." };
+      const gws = history.results.map((r) => r.gameweek);
+      return { data: { kind: "team-history", history, gwLabel: gws.length ? gameweekLabel(gws[0], gws[gws.length - 1]) : "" }, problem: null };
+    }
     case "top-differentials": {
       const rows = buildDifferentials({ elements, projections: projections ?? [], teamShortById, from, to, pos: spec.pos, maxOwn: spec.maxOwn, top: spec.top });
       const subtitle = `Owned by under ${spec.maxOwn}% · ${spec.pos ?? "All positions"} · ${gwLabel}`;
@@ -309,6 +358,7 @@ export function makeGraphicDataContext(input: {
   matchModel?: MatchModelInput;
   matchModelGw?: number;
   playerHistory?: { playerId: number; history: HistoryRowInput[] };
+  teamData?: { url: string; data: any[] };
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
@@ -329,5 +379,7 @@ export function makeGraphicDataContext(input: {
     matchModel: input.matchModel,
     matchModelGw: input.matchModelGw,
     playerHistory: input.playerHistory,
+    nextGameweek: events.find((e) => e.is_next)?.id ?? 39,
+    teamData: input.teamData,
   };
 }

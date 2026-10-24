@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { SeasonBadge } from "@/components/season-badge";
+import { teamGraphicLink } from "@shared/graphics-teams";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 interface TeamStanding {
   id: number;
@@ -241,6 +243,15 @@ export default function ProjectedStandings() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+      <div className="mb-2 flex justify-end">
+        <ShareGraphicLink
+          testId="link-share-image"
+          href={viewMode === "projected"
+            ? teamGraphicLink({ template: "projected-table", endGameweek: selectedEndGameweek ?? undefined })
+            : teamGraphicLink({ template: "league-table" })}
+          label={viewMode === "projected" ? "Share projected table" : "Share table"}
+        />
+      </div>
     </>
   );
 

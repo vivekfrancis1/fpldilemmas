@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { teamGraphicLink } from "@shared/graphics-teams";
+import { ShareGraphicLink } from "@/components/share-graphic-link";
 
 const LAST_SEASON = "2025/26";
 
@@ -579,6 +581,9 @@ export default function TeamDetail() {
             )}
             <div className="min-w-0">
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{teamName}</h1>
+              {bootstrapTeam && (
+                <ShareGraphicLink className="mt-1.5" testId="link-share-image" href={teamGraphicLink({ template: "team-history", team: bootstrapTeam.id })} label="Share form" />
+              )}
               {currentTeamStanding && (
                 <Badge variant="outline" className="text-xs mt-1">
                   <Trophy className="h-3 w-3 mr-1" /> {currentTeamStanding.position}{currentTeamStanding.position === 1 ? 'st' : currentTeamStanding.position === 2 ? 'nd' : currentTeamStanding.position === 3 ? 'rd' : 'th'} in {CURRENT_SEASON}

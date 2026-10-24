@@ -6,7 +6,7 @@
 //   Player Comparison      the 3 most transferred in this gameweek (topped up from the best projected)
 //   Cover Generator        the 3 best projected players
 //   Player News Quote      the most newsworthy player, else the most transferred in
-//   Predicted Lineups      the club whose match kicks off next
+//   Predicted Lineups      the club whose match kicks off next (also Team History)
 //   Fixtures Comparison    the 3 clubs with the easiest run (lowest average official difficulty)
 // Team Reveal loads the saved FPL team ID's squad instead (the page does that), and the other templates are driven by
 // data (captain picks, ticker, trends, team of the week, leaders...) so they never open empty.
@@ -27,7 +27,7 @@ export interface GraphicDefaultsContext {
 }
 
 const PLAYER_TEMPLATES = new Set(["player-card", "player-comparison", "cover", "player-news", "player-history"]);
-const TEAM_TEMPLATES = new Set(["predicted-lineup", "fixtures-comparison"]);
+const TEAM_TEMPLATES = new Set(["predicted-lineup", "fixtures-comparison", "team-history"]);
 
 /** True when this template has nothing chosen and has a default to offer. */
 export function needsDefaults(spec: GraphicSpec): boolean {
@@ -69,7 +69,8 @@ export function defaultSelectionPatch(spec: GraphicSpec, ctx: GraphicDefaultsCon
       const id = mostNewsworthy(elements) ?? trendingIn(elements, 1)[0];
       return id === undefined ? null : { players: [id] };
     }
-    case "predicted-lineup": {
+    case "predicted-lineup":
+    case "team-history": {
       if (!ctx.fixtures) return null;
       const club = nextFixtureClub(ctx.fixtures, ctx.gameweek);
       return club === null ? null : { teams: [club] };
