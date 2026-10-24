@@ -1303,6 +1303,7 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
   const jersey = land ? 84 : tall ? 170 : 130;
   const nameFont = land ? 28 : tall ? 46 : 38;
   const xgFont = land ? 56 : tall ? 88 : 72;
+  const csFont = land ? 20 : tall ? 34 : 28;
   const xg = (v: number | null) => (v === null ? "–" : formatGoals(v));
   const side = sideColors(theme);
   const cs = (v: number | null) => (v === null ? "–" : `${Math.round(v)}%`);
@@ -1315,11 +1316,15 @@ function PreviewFace({ spec, theme, preview, gwLabel }: { spec: GraphicSpec; the
             <div style={{ fontSize: nameFont, fontWeight: 900, maxWidth: "100%", textAlign: "center", lineHeight: 1.05, overflowWrap: "anywhere" }}>{preview.home.name}</div>
           </div>
           <div style={{ flexShrink: 0, textAlign: "center" }}>
-            <div style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>
-              <span style={{ color: side.home }}>{xg(preview.home.xg)}</span> – <span style={{ color: side.away }}>{xg(preview.away.xg)}</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", whiteSpace: "nowrap", textAlign: "center" }}>
+              <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, color: side.home }}>{xg(preview.home.xg)}</span>
+              <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, padding: "0 0.25em" }}>–</span>
+              <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, color: side.away }}>{xg(preview.away.xg)}</span>
+              <span style={{ fontSize: csFont, fontWeight: 800, marginTop: land ? 4 : 10 }}>CS {cs(preview.home.cs)}</span>
+              <span />
+              <span style={{ fontSize: csFont, fontWeight: 800, marginTop: land ? 4 : 10 }}>CS {cs(preview.away.cs)}</span>
             </div>
-            <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: 6 }}>Expected goals</div>
-            <div style={{ fontSize: land ? 14 : 22, fontWeight: 800, marginTop: land ? 4 : 10 }}>Clean sheet {cs(preview.home.cs)} · {cs(preview.away.cs)}</div>
+            <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: land ? 6 : 10 }}>Expected goals · CS: clean-sheet chance</div>
           </div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
             <Jersey team={preview.away.short} position="MID" px={jersey} />
