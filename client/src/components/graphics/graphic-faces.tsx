@@ -1165,11 +1165,13 @@ function PredictionsFace({ spec, theme, predictions, gwLabel, subtitle }: { spec
                   <Jersey team={r.home.short} position="MID" px={jersey} />
                 </div>
                 <div style={{ width: land ? 190 : tall ? 270 : 240, flexShrink: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>
-                    <span style={{ color: side.home }}>{xgText(r.home.xg)}</span> – <span style={{ color: side.away }}>{xgText(r.away.xg)}</span>
-                  </div>
-                  <div style={{ fontSize: csFont, fontWeight: 800, color: theme.muted, marginTop: land ? 2 : 4, whiteSpace: "nowrap" }}>
-                    CS {csText(r.home.cs)} · {csText(r.away.cs)}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", whiteSpace: "nowrap", textAlign: "center" }}>
+                    <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, color: side.home }}>{xgText(r.home.xg)}</span>
+                    <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, padding: "0 0.25em" }}>–</span>
+                    <span style={{ fontSize: xgFont, fontWeight: 900, lineHeight: 1, color: side.away }}>{xgText(r.away.xg)}</span>
+                    <span style={{ fontSize: csFont, fontWeight: 800, color: theme.muted, marginTop: land ? 2 : 4 }}>CS {csText(r.home.cs)}</span>
+                    <span />
+                    <span style={{ fontSize: csFont, fontWeight: 800, color: theme.muted, marginTop: land ? 2 : 4 }}>CS {csText(r.away.cs)}</span>
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: land ? 8 : 10 }}>
