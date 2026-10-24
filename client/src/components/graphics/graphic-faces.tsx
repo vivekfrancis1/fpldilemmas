@@ -1383,8 +1383,8 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
   const sideRows = (home: string[], away: string[]) => [...home.map((n) => <span key={`h${n}`}>{n} <span style={{ color: theme.muted }}>· {report.home.short}</span></span>), ...away.map((n) => <span key={`a${n}`}>{n} <span style={{ color: theme.muted }}>· {report.away.short}</span></span>)];
   const goals = <ReportList title="Goals" rows={sideRows(report.goals.home, report.goals.away)} theme={theme} font={font} empty="No goals" />;
   const assists = <ReportList title="Assists" rows={sideRows(report.assists.home, report.assists.away)} theme={theme} font={font} empty="No assists" />;
-  const maxCards = land ? 4 : tall ? 10 : 6;
-  const maxDefensive = land ? 3 : tall ? 6 : 5;
+  const maxCards = land ? 3 : tall ? 10 : 4;
+  const maxDefensive = land ? 2 : tall ? 6 : 4;
   const shownCards = report.cards.slice(0, maxCards).map(card);
   if (report.cards.length > maxCards) shownCards.push(<span key="more" style={{ color: theme.muted }}>+{report.cards.length - maxCards} more</span>);
   const cards = <ReportList title="Cards" rows={shownCards} theme={theme} font={font} empty="No cards" />;
@@ -1418,7 +1418,24 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
       {shownDefensive.some((d) => d.earned) && <div style={{ fontSize: font * 0.72, color: theme.muted, fontWeight: 600, marginTop: 4 }}>+2 = earned the points</div>}
     </div>
   );
-  const notes = report.notes.length > 0 ? <ReportList title="Penalties" rows={report.notes} theme={theme} font={font} empty="" /> : null;
+  const maxSaves = land ? 2 : 3;
+  const saves = (
+    <ReportList
+      title="Saves"
+      rows={report.saves.slice(0, maxSaves).map((sv, i) => (
+        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: theme.accent, fontWeight: 900, minWidth: font * 1.2 }}>{sv.value}</span>
+          <span>{sv.name} <span style={{ color: theme.muted }}>· {sv.teamShort}</span></span>
+          {sv.points > 0 && <span style={{ background: theme.good, color: "#0b1020", borderRadius: 999, padding: `0 ${font * 0.4}px`, fontSize: font * 0.75, fontWeight: 900 }}>+{sv.points}</span>}
+        </span>
+      ))}
+      theme={theme}
+      font={font}
+      empty="None recorded"
+    />
+  );
+  const cleanSheets = <ReportList title="Clean sheets" rows={report.cleanSheets.map((c) => <span key={c}>{c}</span>)} theme={theme} font={font} empty="None" />;
+  const notes = report.notes.length > 0 ? <ReportList title="Penalties & own goals" rows={report.notes} theme={theme} font={font} empty="" /> : null;
   return (
     <Frame spec={spec} theme={theme} subtitle={`${gwLabel} · ${report.kickoffLabel} · full time`} gwLabel={gwLabel}>
       <div style={{ display: "flex", flexDirection: "column", gap: land ? 10 : tall ? 22 : 16, flex: 1, minHeight: 0 }}>
@@ -1439,6 +1456,8 @@ function ReportFace({ spec, theme, report, gwLabel }: { spec: GraphicSpec; theme
           {cards}
           {bonus}
           {defensive}
+          {saves}
+          {cleanSheets}
           {notes}
         </div>
       </div>

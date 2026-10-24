@@ -463,3 +463,37 @@ describe("defensive contributions in the match report", () => {
     expect(r.defensive).toEqual([{ name: "Unknown", teamShort: "ARS", value: 20, earned: false }]);
   });
 });
+
+describe("other point-scoring components in the match report", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    { identifier: "saves", h: [{ value: 0, element: 99 }], a: [{ value: 7, element: 22 }] },
+    { identifier: "own_goals", h: [{ value: 1, element: 5 }], a: [{ value: 2, element: 21 }] },
+    { identifier: "penalties_saved", h: [], a: [{ value: 1, element: 22 }] },
+  ];
+  const report = buildMatchReport({ fixture: done(90, 8, 1, 2, 3, 0, stats), elements, teamShortById, teamNameById })!;
+
+  it("lists goalkeeper saves, most first, with the points they earn (1 for every 3)", () => {
+    expect(report.saves).toEqual([{ name: "Martinez", teamShort: "AVL", value: 7, points: 2 }]);
+  });
+  it("never lists a goalkeeper with no saves", () => {
+    const r = buildMatchReport({ fixture: done(91, 8, 1, 2, 1, 0, [{ identifier: "saves", h: [{ value: 0, element: 22 }], a: [] }]), elements, teamShortById, teamNameById })!;
+    expect(r.saves).toEqual([]);
+  });
+  it("orders level saves home side first, then by name", () => {
+    const r = buildMatchReport({ fixture: done(92, 8, 6, 2, 1, 0, [{ identifier: "saves", h: [{ value: 3, element: 14 }], a: [{ value: 3, element: 22 }] }]), elements, teamShortById, teamNameById })!;
+    expect(r.saves.map((s) => s.name)).toEqual(["Alisson", "Martinez"]);
+    expect(r.saves.map((s) => s.points)).toEqual([1, 1]);
+  });
+  it("notes own goals after the penalties", () => {
+    expect(report.notes).toEqual(["Martinez saved a penalty", "Gabriel scored an own goal", "Watkins scored 2 own goals"]);
+  });
+  it("lists the clubs that kept a clean sheet: the side that conceded none", () => {
+    expect(report.cleanSheets).toEqual(["ARS"]);
+    const draw = buildMatchReport({ fixture: done(93, 8, 1, 2, 0, 0), elements, teamShortById, teamNameById })!;
+    expect(draw.cleanSheets).toEqual(["ARS", "AVL"]);
+    const both = buildMatchReport({ fixture: done(94, 8, 1, 2, 1, 1), elements, teamShortById, teamNameById })!;
+    expect(both.cleanSheets).toEqual([]);
+    const away = buildMatchReport({ fixture: done(95, 8, 1, 2, 0, 2), elements, teamShortById, teamNameById })!;
+    expect(away.cleanSheets).toEqual(["AVL"]);
+  });
+});

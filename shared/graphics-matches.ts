@@ -457,6 +457,14 @@ export interface MatchReportDefender {
   earned: boolean;
 }
 
+/** A goalkeeper's saves in the match and the points they earn (1 for every 3). */
+export interface MatchReportSaves {
+  name: string;
+  teamShort: string;
+  value: number;
+  points: number;
+}
+
 /** How many contributors the report lists (the face shows fewer on small sizes). */
 export const DEFENSIVE_LIST_LIMIT = 6;
 
@@ -482,6 +490,11 @@ export interface MatchReportContent {
   bonus: MatchReportBonus[];
   /** The biggest defensive contributors of both sides, most first (up to DEFENSIVE_LIST_LIMIT). */
   defensive: MatchReportDefender[];
+  /** Goalkeepers with at least one save, most first. */
+  saves: MatchReportSaves[];
+  /** The clubs that conceded none (home side first). */
+  cleanSheets: string[];
+  /** Penalties missed and saved, then own goals. */
   notes: string[];
 }
 
@@ -540,6 +553,24 @@ export function buildMatchReport(input: {
     }
   }
 
+  for (const [which] of sides) {
+    for (const e of entries(f.stats, "own_goals", which)) {
+      if (e.value > 0) notes.push(`${nameOf(elements, e.element)} scored ${e.value === 1 ? "an own goal" : `${e.value} own goals`}`);
+    }
+  }
+
+  // most first; level counts: home side first, then by name
+  const saves = sides
+    .flatMap(([which, teamShort], sideIndex) =>
+      entries(f.stats, "saves", which)
+        .filter((e) => e.value > 0)
+        .map((e) => ({ name: nameOf(elements, e.element), teamShort, value: e.value, points: Math.floor(e.value / 3), sideIndex })),
+    )
+    .sort((a, b) => b.value - a.value || a.sideIndex - b.sideIndex || a.name.localeCompare(b.name))
+    .map(({ sideIndex: _s, ...d }): MatchReportSaves => d);
+
+  const cleanSheets = [...(away.score === 0 ? [home.short] : []), ...(home.score === 0 ? [away.short] : [])];
+
   return {
     fixtureId: f.id,
     gameweek: f.event as number,
@@ -551,6 +582,8 @@ export function buildMatchReport(input: {
     cards,
     bonus,
     defensive,
+    saves,
+    cleanSheets,
     notes,
   };
 }
