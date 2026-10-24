@@ -111,19 +111,15 @@ describe("buildLeagueOwnership", () => {
       expect(run({ managers: two, you, differentialMax: 51 }).you!.differentials.map((d) => d.playerId)).toEqual([98, 99]);
     });
 
-    it("gaps are players held by at least 50% of the league that you do not own (boundary inclusive), most-owned first", () => {
+    it("has no gaps list any more: what you are missing is the threats list", () => {
       const out = run({ you: { managerId: 4, picks: managers[3].picks } });
-      // 33 and 25 are held by 3 of 4 (75%) and you swapped them out
-      expect(out.you!.gaps.map((g) => g.playerId)).toEqual([25, 33]);
-      const out2 = run({ you: { managerId: 4, picks: managers[3].picks }, gapMin: 76 });
-      expect(out2.you!.gaps).toEqual([]);
+      expect(out.you).not.toHaveProperty("gaps");
     });
 
     it("works for a manager who is not in the league sample (percentages are still against the league)", () => {
       const out = run({ you: { managerId: 777, picks: squad(base15, 31) } });
       expect(out.you!.inSample).toBe(false);
       expect(out.you!.differentials).toEqual([]);
-      expect(out.you!.gaps).toEqual([]);
     });
 
     describe("threats (popular players you don't own)", () => {
@@ -230,10 +226,6 @@ describe("buildLeagueOwnership", () => {
         expect(out.you!.differentials[0].points).toBe(0);
       });
 
-      it("gaps carry points too", () => {
-        const out = run({ managers: ms, you: you4, points });
-        expect(out.you!.gaps.find((g) => g.playerId === 33)!.points).toBe(5);
-      });
     });
 
     it("flags whether you are one of the managers counted", () => {
@@ -242,7 +234,7 @@ describe("buildLeagueOwnership", () => {
 
     it("an incomplete squad for you gives a clear 'no full squad' result, not a guess", () => {
       const out = run({ you: { managerId: 4, picks: [pick(1)] } });
-      expect(out.you).toMatchObject({ hasFullSquad: false, differentials: [], gaps: [] });
+      expect(out.you).toMatchObject({ hasFullSquad: false, differentials: [], threats: [] });
     });
   });
 
@@ -312,12 +304,12 @@ describe("GET /api/league-ownership/:leagueId (against FPL's own data, league 31
     expect(out.template.managersCounted).toBe(out.managersCounted);
   });
 
-  it("you mode: differentials and gaps respect the thresholds", async () => {
+  it("you mode: differentials respect the threshold", async () => {
     const youId = 9267;
     const { status, body } = await getJson(`/api/league-ownership/314?gw=${latest}&managerId=${youId}`);
     expect(status).toBe(200);
     for (const d of body.you.differentials) expect(d.ownedBy * 100).toBeLessThan(50 * body.managersCounted);
-    for (const g of body.you.gaps) expect(g.ownedBy * 100).toBeGreaterThanOrEqual(50 * body.managersCounted);
+    expect(body.you).not.toHaveProperty("gaps");
     const yours = new Set(body.you.differentials.map((d: any) => d.playerId));
     expect(body.you.threats.length).toBeLessThanOrEqual(12);
     for (let i = 0; i < body.you.threats.length; i++) {

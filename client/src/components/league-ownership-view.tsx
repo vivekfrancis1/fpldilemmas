@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Flame, ShieldAlert, Shirt, Sparkles, Star, Target } from "lucide-react";
+import { Crown, ShieldAlert, Shirt, Sparkles, Star, Target } from "lucide-react";
 import type { LeagueOwnership, OwnedPlayer, Threat, YourPlayer } from "@shared/league-ownership";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -65,7 +65,7 @@ function ThreatLine({ t }: { t: Threat }) {
 
 const POS = ["GKP", "DEF", "MID", "FWD"] as const;
 
-/** Ownership, captains, template XI, and (with a team ID) differentials, gaps and threats for one classic league. */
+/** Ownership, captains, template XI, and (with a team ID) differentials and threats for one classic league. */
 export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId: string; managerId: string }) {
   const [gameweek, setGameweek] = useState<number | null>(null);
   const [showAllOwned, setShowAllOwned] = useState(false);
@@ -135,28 +135,23 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
             ) : (
               <>
                 {data.you && (
-                  <SectionCard icon={Target} title="You versus your league" subtitle="Where your squad stands out, what it is missing, and which rivals hold players you do not" testId="you">
+                  <SectionCard icon={Target} title="You versus your league" subtitle="Where your squad stands out, and the popular players you are missing" testId="you">
                     {!data.you.hasFullSquad ? (
                       <p className="text-sm text-gray-500">We couldn't load a full 15-player squad for that team in GW{data.gameweek}.</p>
                     ) : (
                       <>
                         {!data.you.inSample && <p className="mb-3 text-xs text-gray-500">You're outside the managers counted, so this compares your squad with them.</p>}
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-4">
                           <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-3">
                             <h3 className="flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300"><Sparkles className="h-4 w-4" /> Your differentials</h3>
                             <p className="text-xs text-gray-500">Owned by under 50% of the league</p>
                             {data.you.differentials.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70">{data.you.differentials.map((p) => <PlayerLine key={p.playerId} p={p} />)}</ul>}
                           </div>
-                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
-                            <h3 className="flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-300"><Flame className="h-4 w-4" /> Gaps</h3>
-                            <p className="text-xs text-gray-500">Owned by half or more of the league, not by you</p>
-                            {data.you.gaps.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70">{data.you.gaps.map((p) => <PlayerLine key={p.playerId} p={p} />)}</ul>}
+                          <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-3">
+                            <h3 className="flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><ShieldAlert className="h-4 w-4" /> Threats</h3>
+                            <p className="text-xs text-gray-500">Owned by more than 25% of the league, but not by you. Most owned first, with their points and every manager who holds them</p>
+                            {data.you.threats.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70" data-testid="list-threats">{data.you.threats.map((t) => <ThreatLine key={t.playerId} t={t} />)}</ul>}
                           </div>
-                        </div>
-                        <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-3">
-                          <h3 className="flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><ShieldAlert className="h-4 w-4" /> Threats</h3>
-                          <p className="text-xs text-gray-500">Owned by more than 25% of the league, but not by you. Most owned first, with their points and every manager who holds them</p>
-                          {data.you.threats.length === 0 ? <p className="py-2 text-sm text-gray-500">None.</p> : <ul className="mt-1 divide-y divide-gray-200/70" data-testid="list-threats">{data.you.threats.map((t) => <ThreatLine key={t.playerId} t={t} />)}</ul>}
                         </div>
                       </>
                     )}
