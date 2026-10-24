@@ -32,7 +32,7 @@ import {
   playerDetailedPositions
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { isFixtureActuallyOver } from "@shared/fixture-status";
+import { completedFixtures as pickCompletedFixtures, isFixtureActuallyOver, xgfCacheUsable } from "@shared/fixture-status";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
 import { shouldExcludeFromCurrentSeason, DEPARTED_PLAYER_NAMES } from "@shared/departed-players";
@@ -12286,14 +12286,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   bonusPointsInFlight.clear();
 
   // Cache for xGF live data (expensive: 27 GW fetches). Refreshes once per hour.
-  let xgfLiveDataCache: { liveDataMap: Map<number, any>; timestamp: number } | null = null;
+  let xgfLiveDataCache: { liveDataMap: Map<number, any>; timestamp: number; requested: Set<number> } | null = null;
   const XGF_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
   let xgfInFlight: Promise<Map<number, any>> | null = null;
 
   async function getXgfLiveData(completedGameweeks: Set<number>): Promise<Map<number, any>> {
     const now = Date.now();
-    // Return cached data if still fresh
-    if (xgfLiveDataCache && (now - xgfLiveDataCache.timestamp) < XGF_CACHE_DURATION) {
+    // Return cached data if still fresh and it already tried every gameweek asked for (the first match of a gameweek to end
+    // would otherwise be missing its stats until the cache expired)
+    if (xgfLiveDataCache && xgfCacheUsable(xgfLiveDataCache, completedGameweeks, now, XGF_CACHE_DURATION)) {
       return xgfLiveDataCache.liveDataMap;
     }
     // Deduplicate concurrent calls
@@ -12348,7 +12349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (result) liveDataMap.set(result.gameweek, result.data);
           }
         }
-        xgfLiveDataCache = { liveDataMap, timestamp: Date.now() };
+        xgfLiveDataCache = { liveDataMap, timestamp: Date.now(), requested: new Set(gameweekList) };
         return liveDataMap;
       } finally {
         xgfInFlight = null;
@@ -12372,12 +12373,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const fixturesData = await fixturesResponse.json();
     const bootstrapData = await bootstrapResponse.json();
     
-    // Filter for only completed fixtures
-    const completedFixtures = fixturesData.filter((fixture: any) => 
-      fixture.finished === true && 
-      fixture.team_h_score !== null && 
-      fixture.team_a_score !== null
-    );
+    // Only completed fixtures: a match counts as soon as it ends, before FPL confirms bonus points (`finished` lags behind)
+    const completedFixtures = pickCompletedFixtures<any>(fixturesData);
     
     console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for enhanced standings`);
     
