@@ -68,3 +68,23 @@ export function layoutLineup(players: LayoutPlayer[]): { rows: LayoutRow[]; form
   const formation = rows.filter((r) => r.key !== "GKP").map((r) => r.ids.length).join("-");
   return { rows, formation };
 }
+
+// Roles that only one player can fill in a real XI: one player per flank, at the back and out wide. Listed twice in a squad
+// (two right-backs), only the one with more expected minutes can start.
+const FLANK_SLOT: Record<string, string> = { LB: "left-back", LWB: "left-back", RB: "right-back", RWB: "right-back", LM: "left-wide", LW: "left-wide", RM: "right-wide", RW: "right-wide" };
+
+/** Ids of the players who lose a flank to a teammate with more expected minutes (ties go to the lower id). */
+export function sharedSlotLosers(players: Array<{ id: number; role: string | null; minutes: number }>): Set<number> {
+  const best = new Map<string, { id: number; minutes: number }>();
+  const losers = new Set<number>();
+  for (const p of players) {
+    const slot = p.role ? FLANK_SLOT[p.role] : undefined;
+    if (!slot) continue;
+    const cur = best.get(slot);
+    if (!cur) { best.set(slot, p); continue; }
+    const challengerWins = p.minutes > cur.minutes || (p.minutes === cur.minutes && p.id < cur.id);
+    losers.add(challengerWins ? cur.id : p.id);
+    if (challengerWins) best.set(slot, p);
+  }
+  return losers;
+}

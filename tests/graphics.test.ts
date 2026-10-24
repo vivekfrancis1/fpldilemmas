@@ -526,6 +526,27 @@ describe("buildPredictedLineup", () => {
     expect(l.formation).toBe(l.rows.filter((r) => r.position !== "GKP").map((r) => r.players.length).join("-"));
   });
 
+  it("two players listed as right-back: only the one with more expected minutes can start", () => {
+    // 13 (88 min) and 14 (85 min) are both right-backs; 11 is the left-back, 12 and 15 centre-backs
+    const detailed = new Map<number, string[]>([[11, ["LB"]], [12, ["CB"]], [13, ["RB"]], [14, ["RB"]], [15, ["CB"]]]);
+    const l = run({ detailedPositions: detailed });
+    const startIds = l.rows.flatMap((r) => r.players).map((p) => p.id);
+    expect(startIds).toContain(13);
+    expect(startIds).not.toContain(14);
+    expect(l.complete).toBe(true);
+    expect(startIds).toHaveLength(11);
+    expect(l.bench.map((p) => p.id)).toContain(14);
+  });
+
+  it("if dropping the second right-back would leave no legal XI, he still plays", () => {
+    const few = elements.filter((e) => ![14, 15].includes(e.id)); // only 3 defenders left: 11, 12, 13
+    const detailed = new Map<number, string[]>([[11, ["CB"]], [12, ["RB"]], [13, ["RB"]]]);
+    const l = run({ elements: few, detailedPositions: detailed });
+    const startIds = l.rows.flatMap((r) => r.players).map((p) => p.id);
+    expect(l.complete).toBe(true);
+    expect(startIds).toEqual(expect.arrayContaining([11, 12, 13]));
+  });
+
   it("without detailed positions the old FPL-position layout is kept", () => {
     expect(run().rows.map((r) => r.position)).toEqual(["GKP", "DEF", "MID", "FWD"]);
     expect(run().rows.flatMap((r) => r.players).every((p) => p.role === null)).toBe(true);

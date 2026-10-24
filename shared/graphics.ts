@@ -6,7 +6,7 @@
 import { bestValueIndexes, fixturesForGameweeks, projectionWindow, teamsWithUnscheduledFixtures, type CompareFixtureInput, type TeamFixture } from "./compare-utils";
 import { shareFileName } from "./share-cards";
 import { bestLineup, type LineupPlayer } from "./lineup";
-import { layoutLineup, type LineKey } from "./lineup-layout";
+import { layoutLineup, sharedSlotLosers, type LineKey } from "./lineup-layout";
 import type { TableContent, TeamHistoryContent, TeamProjectionsContent } from "./graphics-teams";
 import type { PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
@@ -792,8 +792,8 @@ const TYPE_BY_POSITION: Record<GraphicPosition, 1 | 2 | 3 | 4> = { GKP: 1, DEF: 
 
 /**
  * The likeliest XI for one club in one gameweek: the legal XI (1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD) with the most
- * total expected minutes, using the same formation search as the FPL lineup helper. Expected minutes are our
- * own projections (they already include injury news); this is not official team news. Players with no expected
+ * total expected minutes, using the same formation search as the FPL lineup helper, and with only one player per flank
+ * role (of two right-backs, the one with more minutes). Expected minutes are our own projections (they already include injury news); this is not official team news. Players with no expected
  * minutes that gameweek, or who are unavailable or suspended, are never listed.
  */
 export function buildPredictedLineup(input: {
@@ -835,7 +835,11 @@ export function buildPredictedLineup(input: {
     candidates.push({ id: e.id, elementType: TYPE_BY_POSITION[position], xPts: raw });
   }
 
-  const best = bestLineup(candidates);
+  // Two players listed in the same flank role (two right-backs): only the one with more expected minutes can start, unless
+  // that would leave no legal XI.
+  const losers = sharedSlotLosers(candidates.map((c) => ({ id: c.id, role: tokens.get(c.id)!.role, minutes: c.xPts ?? 0 })));
+  let best = bestLineup(candidates.filter((c) => !losers.has(c.id)));
+  if (!(best.complete && best.starting.length === 11)) best = bestLineup(candidates);
   const byMinutes = (a: LineupToken, b: LineupToken) => b.xMins - a.xMins || a.id - b.id;
   let starting: LineupToken[];
   let complete = best.complete && best.starting.length === 11;
