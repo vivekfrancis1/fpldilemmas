@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import LeagueOwnershipView from "@/components/league-ownership-view";
 import {
   Dialog,
   DialogContent,
@@ -340,6 +341,8 @@ export default function MyDashboard() {
   
   // Live standings state - tracks which league's live standings panel is open
   const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
+  // League picked for the ownership analysis in the Leagues tab (defaults to the first private league)
+  const [ownershipLeagueId, setOwnershipLeagueId] = useState<string | null>(null);
   
   // Player points breakdown modal state
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any | null>(null);
@@ -2291,6 +2294,39 @@ export default function MyDashboard() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* League ownership: who a private league owns and captains, its template XI, and your differentials and threats */}
+              {(() => {
+                const privateLeagues = (leaguesData?.classic ?? [])
+                  .filter((l) => l.league_type === 'x' && l.id > 1000 && l.entry_rank > 0)
+                  .sort((a, b) => a.entry_rank - b.entry_rank);
+                if (privateLeagues.length === 0) return null;
+                const shownId = privateLeagues.some((l) => String(l.id) === ownershipLeagueId) ? ownershipLeagueId! : String(privateLeagues[0].id);
+                return (
+                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg" data-testid="card-league-ownership">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                        </div>
+                        League Ownership
+                      </CardTitle>
+                      <CardDescription>Who your league owns and captains, its template XI, and your differentials and threats.</CardDescription>
+                      <Select value={shownId} onValueChange={setOwnershipLeagueId}>
+                        <SelectTrigger className="mt-2 h-10 w-full sm:w-[320px]" data-testid="select-ownership-league"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {privateLeagues.map((l) => (
+                            <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+                      <LeagueOwnershipView key={`${shownId}:${searchedId}`} leagueId={shownId} managerId={searchedId} />
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </TabsContent>
 
             {/* Next Gameweek Team Tab */}
