@@ -585,6 +585,8 @@ export interface PlotState {
   size: SizeMode;
   /** Draw the straight-line trend through the plotted players. */
   trend: boolean;
+  /** Optional headline for the share image (replaces the graph's own title there). */
+  headline: string;
 }
 
 export const DEFAULT_PLOT_STATE: PlotState = {
@@ -604,8 +606,10 @@ export const DEFAULT_PLOT_STATE: PlotState = {
   color: "club",
   size: "none",
   trend: false,
+  headline: "",
 };
 
+export const MAX_HEADLINE = 60;
 export const MIN_TOP = 5;
 export const MAX_TOP = 100;
 
@@ -634,6 +638,7 @@ export function encodePlotState(state: PlotState): string {
   if (state.color !== d.color) params.set("cb", state.color);
   if (state.size !== d.size) params.set("sz", state.size);
   if (state.trend) params.set("tr", "1");
+  if (state.headline) params.set("h", state.headline.slice(0, MAX_HEADLINE));
   return params.toString().replace(/%2C/g, ",");
 }
 
@@ -676,6 +681,7 @@ export function decodePlotState(search: string): PlotState {
     color: COLOR_MODES.some((m) => m.id === q.get("cb")) ? (q.get("cb") as ColorMode) : d.color,
     size: SIZE_MODES.some((m) => m.id === q.get("sz")) ? (q.get("sz") as SizeMode) : d.size,
     trend: q.get("tr") === "1",
+    headline: (q.get("h") ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_HEADLINE),
   };
 }
 

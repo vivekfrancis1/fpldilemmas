@@ -231,3 +231,17 @@ describe("plotCsv polish", () => {
     expect(plotCsv(one, "ownership", "price", new Set()).split("\r\n")[0]).toBe("Player,Team,Position,Price (£m),Ownership (%),Your team,Available");
   });
 });
+
+describe("image headline in the link", () => {
+  it("is empty by default and round trips", () => {
+    expect(decodePlotState("").headline).toBe("");
+    expect(encodePlotState(DEFAULT_PLOT_STATE)).toBe("");
+    const q = encodePlotState({ ...DEFAULT_PLOT_STATE, headline: "Who to buy for GW9 & why" });
+    expect(decodePlotState(q).headline).toBe("Who to buy for GW9 & why");
+  });
+
+  it("is cut to 60 characters and control characters are dropped", () => {
+    expect(decodePlotState(`h=${"x".repeat(100)}`).headline.length).toBe(60);
+    expect(decodePlotState("h=Hello%00%0AWorld").headline).toBe("Hello World");
+  });
+});

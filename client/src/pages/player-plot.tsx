@@ -54,6 +54,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ShareImageButton } from "@/components/share-image-button";
 import PlayerPlotChart, { CARD_THEME, SCREEN_THEME } from "@/components/player-plot-chart";
 import { teamColor } from "@/lib/team-colors";
+import { getJerseyUrl } from "@/lib/jersey";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 
 const PROJECTION_WEEKS = 4;
@@ -352,6 +353,13 @@ export default function PlayerPlotPage() {
     state.maxPrice ? `up to £${state.maxPrice.toFixed(1)}m` : null,
   ].filter(Boolean) as string[];
 
+  const imageTitle = state.headline.trim() || title;
+  // The player you tapped is called out on the share image: shirt, name, price and both plotted values, with their rank
+  const featured = selected && plotted.some((p) => p.id === selected.id) ? selected : null;
+  const featuredRank = featured
+    ? [...plotted].filter((p) => p.values[state.y] != null).sort((a, b) => (b.values[state.y] as number) - (a.values[state.y] as number)).findIndex((p) => p.id === featured.id) + 1
+    : 0;
+
   const renderShareCard = () => {
     const medX = median(shown.map((p) => p.values[state.x]));
     const medY = median(shown.map((p) => p.values[state.y]));
@@ -384,7 +392,7 @@ export default function PlayerPlotPage() {
           fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", overflow: "hidden",
         }}
       >
-        <div style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.1, letterSpacing: 0.5, textTransform: "uppercase" }}>{title}</div>
+        <div style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.1, letterSpacing: 0.5, textTransform: "uppercase" }}>{imageTitle}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18 }}>
           {chips.map((c) => (
             <span key={c} style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "8px 16px", borderRadius: 999, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>{c}</span>
@@ -411,6 +419,25 @@ export default function PlayerPlotPage() {
           trend={trendLine}
           interactive={false}
         />
+        {featured && (
+          <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 10, padding: "12px 22px", borderRadius: 20, background: "rgba(251,191,36,0.10)", border: "2px solid rgba(251,191,36,0.6)" }}>
+            <img src={getJerseyUrl(featured.teamShort, featured.position)} alt="" width={70} height={70} style={{ width: 70, height: 70, objectFit: "contain", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 2, color: "#fbbf24" }}>FEATURED</div>
+              <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.1 }}>{featured.name}</div>
+              <div style={{ fontSize: 20, color: "#cbd5e1", fontWeight: 600 }}>
+                {featured.teamShort} · {featured.position} · £{featured.price.toFixed(1)}m · {featured.ownership.toFixed(1)}% owned
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 40, fontWeight: 900, color: "#fbbf24", lineHeight: 1 }}>{formatStatValue(yDef, featured.values[state.y])}</div>
+              <div style={{ fontSize: 18, color: "#94a3b8", fontWeight: 600 }}>{yDef?.label}</div>
+              <div style={{ fontSize: 18, color: "#cbd5e1", fontWeight: 700 }}>
+                {formatStatValue(xDef, featured.values[state.x])} {xDef ? `· ${featuredRank ? `#${featuredRank} of ${plotted.length}` : ""}` : ""}
+              </div>
+            </div>
+          </div>
+        )}
         {picks && (
           <div style={{ display: "flex", gap: 18, marginTop: 8 }}>
             {list(`TARGET: ${preset!.quadrants!.tl.toUpperCase()}`, "#34d399", "rgba(52,211,153,0.5)", "rgba(52,211,153,0.07)", picks.tl)}
@@ -548,6 +575,19 @@ export default function PlayerPlotPage() {
               {mineError && <p className="mt-1.5 text-xs text-red-600" role="alert">{(mineError as Error).message}</p>}
             </div>
 
+            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3" data-testid="plot-headline">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Image headline</span>
+              <Input
+                value={state.headline}
+                maxLength={60}
+                onChange={(e) => update({ headline: e.target.value })}
+                placeholder="Optional: your own title for the shared image"
+                className="h-9 min-w-[220px] flex-1 rounded-xl"
+                data-testid="input-plot-headline"
+              />
+              <span className="text-[11px] text-gray-500">Tap a dot to feature that player on the image.</span>
+            </div>
+
             {showFilters && (
               <div className="space-y-3 border-t border-gray-100 pt-3" data-testid="plot-filters">
                 <div className="flex flex-wrap items-center gap-2">
@@ -654,7 +694,7 @@ export default function PlayerPlotPage() {
                 </Button>
                 <ShareImageButton
                   renderCard={renderShareCard}
-                  title={title}
+                  title={imageTitle}
                   width={1080}
                   height={1350}
                   fileName={shareFileName(["player-plot", state.y, "vs", state.x])}
