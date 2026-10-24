@@ -69,26 +69,27 @@ export default function ProjectedStandings() {
     try { return JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}'); } catch { return {}; }
   }, [fixtureMode]);
 
-  const maxEndGameweek = Math.min(currentGameweek + 6, hasTBCFixture ? 39 : 38);
+  // Project to the end of the season (GW38) by default; GW39 (TBC) stays selectable when there are unscheduled fixtures
+  const defaultEndGameweek = 38;
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
 
   useEffect(() => {
     if (bootstrapData && selectedEndGameweek === null) {
       if (viewMode === "projected") {
-        setSelectedEndGameweek(maxEndGameweek);
+        setSelectedEndGameweek(defaultEndGameweek);
       } else {
         setSelectedEndGameweek(lastFinishedGameweek);
       }
     }
-  }, [bootstrapData, maxEndGameweek, lastFinishedGameweek, selectedEndGameweek, viewMode]);
+  }, [bootstrapData, defaultEndGameweek, lastFinishedGameweek, selectedEndGameweek, viewMode]);
 
   useEffect(() => {
     if (viewMode === "projected") {
-      setSelectedEndGameweek(maxEndGameweek);
+      setSelectedEndGameweek(defaultEndGameweek);
     } else {
       setSelectedEndGameweek(lastFinishedGameweek);
     }
-  }, [viewMode, maxEndGameweek, lastFinishedGameweek]);
+  }, [viewMode, defaultEndGameweek, lastFinishedGameweek]);
 
   const tbcAssignmentsJson = fixtureMode === 'custom' ? JSON.stringify(tbcAssignments) : null;
 
@@ -274,7 +275,7 @@ export default function ProjectedStandings() {
     );
   }
 
-  const totalGameweeks = selectedEndGameweek || (viewMode === "projected" ? maxEndGameweek : lastFinishedGameweek);
+  const totalGameweeks = selectedEndGameweek || (viewMode === "projected" ? defaultEndGameweek : lastFinishedGameweek);
 
   return (
     <div className="fpl-page-container compact-rows">
