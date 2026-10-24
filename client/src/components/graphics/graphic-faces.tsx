@@ -478,8 +478,8 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
 
 function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode }) {
   const line = "rgba(255,255,255,0.45)";
-  // attack at the top: forwards first, goalkeeper at the bottom
-  const ordered = [...rows].reverse();
+  // goalkeeper at the top, then defenders, midfielders and the attack at the bottom (rows come in that order)
+  const ordered = rows;
   return (
     <div
       style={{
