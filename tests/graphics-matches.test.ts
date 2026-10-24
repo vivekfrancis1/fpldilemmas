@@ -497,3 +497,35 @@ describe("other point-scoring components in the match report", () => {
     expect(away.cleanSheets).toEqual(["AVL"]);
   });
 });
+
+describe("the match report caption carries the other point-scoring components", () => {
+  const stats: MatchFixtureInput["stats"] = [
+    { identifier: "saves", h: [{ value: 4, element: 14 }], a: [{ value: 7, element: 22 }, { value: 0, element: 99 }] },
+    { identifier: "own_goals", h: [{ value: 1, element: 5 }], a: [] },
+    { identifier: "penalties_saved", h: [], a: [{ value: 1, element: 22 }] },
+  ];
+  const spec = { ...DEFAULT_SPEC, template: "match-report" as const };
+  const caption = (fixture: MatchFixtureInput) =>
+    buildCaption({ kind: "match-report", report: buildMatchReport({ fixture, elements, teamShortById, teamNameById })!, gwLabel: "GW8" }, spec);
+
+  it("names the clean sheets, the saves and the penalty and own-goal notes", () => {
+    const c = caption(done(96, 8, 1, 2, 1, 0, stats));
+    expect(c).toContain("ARS 1-0 AVL");
+    expect(c).toContain("clean sheet: ARS");
+    expect(c).toContain("saves: Martinez 7, Alisson 4");
+    expect(c).toContain("Martinez saved a penalty");
+    expect(c).toContain("Gabriel scored an own goal");
+    expect(c.length).toBeLessThanOrEqual(256);
+  });
+  it("says clean sheets (plural) when both sides kept one, and leaves out whatever did not happen", () => {
+    const c = caption(done(97, 8, 1, 2, 0, 0));
+    expect(c).toContain("clean sheets: ARS & AVL");
+    expect(c).not.toContain("saves");
+    expect(c).not.toContain("own goal");
+  });
+  it("is just the headline when nothing else happened", () => {
+    const c = caption(done(98, 8, 1, 2, 1, 1));
+    expect(c).toContain("ARS 1-1 AVL");
+    expect(c).not.toContain("clean sheet");
+  });
+});

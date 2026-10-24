@@ -1719,7 +1719,13 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
     }
     case "match-report": {
       const { report } = data;
-      return done(`${report.home.short} ${report.home.score}-${report.away.score} ${report.away.short} ${data.gwLabel} report`, data.gwLabel);
+      const head = `${report.home.short} ${report.home.score}-${report.away.score} ${report.away.short} ${data.gwLabel} report`;
+      const extras = [
+        report.cleanSheets.length ? `clean ${report.cleanSheets.length === 1 ? "sheet" : "sheets"}: ${report.cleanSheets.join(" & ")}` : null,
+        report.saves.length ? `saves: ${report.saves.slice(0, 2).map((sv) => `${sv.name} ${sv.value}`).join(", ")}` : null,
+        ...report.notes,
+      ].filter((b): b is string => !!b);
+      return done(extras.length ? `${head}: ${extras.join(" · ")}` : head, data.gwLabel);
     }
     case "player-projections": {
       const { projections } = data;
