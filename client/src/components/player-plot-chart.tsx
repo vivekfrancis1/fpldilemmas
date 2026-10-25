@@ -35,6 +35,8 @@ export interface PlotTheme {
   /** tick numbers and axis titles (stronger than `muted`) */
   tick: string;
   plotBg: string;
+  /** bottom colour of the plot-area gradient */
+  plotBg2: string;
   dotStroke: string;
   tipBg: string;
   tipBorder: string;
@@ -52,12 +54,13 @@ export const SCREEN_THEME: PlotTheme = {
   median: "#d97706",
   medianText: "#ffffff",
   tick: "var(--fpl-text-primary)",
-  plotBg: "var(--card, #ffffff)",
+  plotBg: "color-mix(in srgb, var(--card, #ffffff) 94%, #6366f1)",
+  plotBg2: "var(--card, #ffffff)",
   dotStroke: "#ffffff",
   tipBg: "var(--card, #ffffff)",
   tipBorder: "rgba(100,116,139,0.45)",
-  good: "rgba(16,185,129,0.20)",
-  bad: "rgba(239,68,68,0.16)",
+  good: "rgba(16,185,129,0.26)",
+  bad: "rgba(239,68,68,0.20)",
   goodText: "#059669",
   badText: "#dc2626",
 };
@@ -70,12 +73,13 @@ export const CARD_THEME: PlotTheme = {
   median: "#fbbf24",
   medianText: "#0b1020",
   tick: "#e2e8f0",
-  plotBg: "rgba(255,255,255,0.03)",
+  plotBg: "rgba(129,140,248,0.10)",
+  plotBg2: "rgba(255,255,255,0.02)",
   dotStroke: "rgba(255,255,255,0.92)",
   tipBg: "#111a33",
   tipBorder: "rgba(255,255,255,0.25)",
-  good: "rgba(52,211,153,0.22)",
-  bad: "rgba(248,113,113,0.18)",
+  good: "rgba(52,211,153,0.28)",
+  bad: "rgba(248,113,113,0.22)",
   goodText: "#34d399",
   badText: "#f87171",
 };
@@ -158,7 +162,7 @@ export default function PlayerPlotChart({
   const pw = width - ml - mr;
   const ph = height - mt - mb;
   const capSize = Math.round(fontSize * 0.95);
-  const radius = Math.max(5, Math.round(fontSize * 0.58));
+  const radius = Math.max(6, Math.round(fontSize * 0.7));
   const uid = useId().replace(/:/g, "");
   const [hoverId, setHoverId] = useState<number | null>(null);
   // the starred name is a little wider
@@ -304,8 +308,15 @@ export default function PlayerPlotChart({
     >
       <defs>
         <clipPath id={`${uid}-plot`}>
-          <rect x={left} y={top} width={pw} height={ph} rx={8} />
+          <rect x={left} y={top} width={pw} height={ph} rx={12} />
         </clipPath>
+        <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={theme.plotBg} />
+          <stop offset="1" stopColor={theme.plotBg2} />
+        </linearGradient>
+        <filter id={`${uid}-shadow`} x="-60%" y="-60%" width="220%" height="220%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="2" floodColor="#0f172a" floodOpacity="0.32" />
+        </filter>
         {/* strongest in the corner, fading toward the median lines */}
         <linearGradient id={`${uid}-good`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor={theme.good} stopOpacity={1} />
@@ -318,7 +329,7 @@ export default function PlayerPlotChart({
       </defs>
 
       {/* plot background, so the chart stands apart from the card around it */}
-      <rect x={left} y={top} width={pw} height={ph} rx={8} fill={theme.plotBg} />
+      <rect x={left} y={top} width={pw} height={ph} rx={12} fill={`url(#${uid}-bg)`} />
 
       {/* quadrant tints */}
       {quadrants && tint && mx !== null && my !== null && (
@@ -331,7 +342,7 @@ export default function PlayerPlotChart({
       {/* grid + ticks */}
       {yTicks.map((t) => (
         <g key={`y${t}`}>
-          <line x1={left} x2={right} y1={py(t)} y2={py(t)} stroke={theme.grid} strokeWidth={1} />
+          <line x1={left} x2={right} y1={py(t)} y2={py(t)} stroke={theme.grid} strokeWidth={1} strokeDasharray="1 5" strokeLinecap="round" />
           <text x={left - 8} y={py(t)} textAnchor="end" dominantBaseline="central" fill={theme.tick} fillOpacity={0.78} fontSize={fontSize} fontWeight={500}>
             {tickText(yDef, t)}
           </text>
@@ -339,13 +350,13 @@ export default function PlayerPlotChart({
       ))}
       {xTicks.map((t) => (
         <g key={`x${t}`}>
-          <line x1={px(t)} x2={px(t)} y1={top} y2={bottom} stroke={theme.grid} strokeWidth={1} />
+          <line x1={px(t)} x2={px(t)} y1={top} y2={bottom} stroke={theme.grid} strokeWidth={1} strokeDasharray="1 5" strokeLinecap="round" />
           <text x={px(t)} y={bottom + fontSize + 6} textAnchor="middle" fill={theme.tick} fillOpacity={0.78} fontSize={fontSize} fontWeight={500}>
             {tickText(xDef, t)}
           </text>
         </g>
       ))}
-      <rect x={left} y={top} width={pw} height={ph} rx={8} fill="none" stroke={theme.grid} strokeWidth={1.25} />
+      <rect x={left} y={top} width={pw} height={ph} rx={12} fill="none" stroke={theme.grid} strokeWidth={1.25} />
 
       {/* axis titles */}
       <text x={left + pw / 2} y={height - 6} textAnchor="middle" fill={theme.tick} fillOpacity={0.9} fontSize={fontSize} fontWeight={800} letterSpacing={0.8}>
@@ -441,7 +452,10 @@ export default function PlayerPlotChart({
                 stroke={theme.dotStroke}
                 strokeWidth={1.75}
                 strokeDasharray={p.available ? undefined : "2 2"}
+                filter={interactive && p.available ? `url(#${uid}-shadow)` : undefined}
               />
+              {/* soft gloss, so the dots read as little beads rather than flat discs */}
+              {p.available && <ellipse cx={cx - r * 0.22} cy={cy - r * 0.38} rx={r * 0.5} ry={r * 0.3} fill="#ffffff" opacity={0.3} style={{ pointerEvents: "none" }} />}
             </g>
           );
         })}
@@ -495,9 +509,10 @@ export default function PlayerPlotChart({
       {/* hover card */}
       {tip && active && (
         <g transform={`translate(${tip.x} ${tip.y})`} style={{ pointerEvents: "none" }}>
-          <rect width={tip.w} height={tip.h} rx={10} fill={theme.tipBg} stroke={theme.tipBorder} strokeWidth={1} style={{ filter: "drop-shadow(0 4px 10px rgba(15,23,42,0.28))" }} />
-          <rect width={5} height={tip.h - 16} x={0} y={8} rx={2.5} fill={dotColor(active)} />
-          <text x={14} y={tip.tf * 1.5 + 2} fill={theme.text} fontSize={tip.tf + 1} fontWeight={800}>{active.name}</text>
+          <rect width={tip.w} height={tip.h} rx={14} fill={theme.tipBg} stroke={theme.tipBorder} strokeWidth={1} style={{ filter: "drop-shadow(0 8px 18px rgba(15,23,42,0.30))" }} />
+          <rect width={tip.w - 28} height={3.5} x={14} y={0} rx={1.75} fill={dotColor(active)} />
+          <circle cx={tip.w - 16} cy={tip.tf * 1.5 - 3} r={5} fill={dotColor(active)} stroke={theme.dotStroke} strokeWidth={1.5} />
+          <text x={14} y={tip.tf * 1.5 + 2} fill={theme.text} fontSize={tip.tf + 2} fontWeight={800}>{active.name}</text>
           <text x={14} y={tip.tf * 3 + 2} fill={theme.muted} fontSize={tip.tf} fontWeight={600}>{tip.sub}</text>
           {tip.rows.map(([label, value], i) => (
             <g key={label}>

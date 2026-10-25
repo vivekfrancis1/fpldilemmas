@@ -56,6 +56,7 @@ import PlayerPlotChart, { CARD_THEME, SCREEN_THEME } from "@/components/player-p
 import { teamColor } from "@/lib/team-colors";
 import { getJerseyUrl } from "@/lib/jersey";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
+import badge from "@/assets/fpl-dilemmas-badge.png?inline";
 
 const PROJECTION_WEEKS = 4;
 const MIN_MINUTES_OPTIONS = [0, 90, 180, 300, 450, 600];
@@ -397,18 +398,24 @@ export default function PlayerPlotPage() {
     return (
       <div
         style={{
-          width: 1080, height: 1350, boxSizing: "border-box", padding: "40px 36px 28px", display: "flex", flexDirection: "column",
-          background: "linear-gradient(170deg, #0b1020 0%, #121936 100%)", color: "#f8fafc", border: "6px solid #fbbf24",
+          width: 1080, height: 1350, boxSizing: "border-box", padding: "44px 40px 28px", display: "flex", flexDirection: "column",
+          background: "radial-gradient(circle at 92% -4%, rgba(129,140,248,0.38), transparent 42%), radial-gradient(circle at -6% 104%, rgba(251,191,36,0.18), transparent 38%), linear-gradient(170deg, #0b1020 0%, #121936 100%)",
+          color: "#f8fafc", position: "relative",
           fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", overflow: "hidden",
         }}
       >
-        <div style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.1, letterSpacing: 0.5, textTransform: "uppercase" }}>{imageTitle}</div>
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 10, background: "linear-gradient(90deg, #fbbf24, #f472b6 45%, #818cf8)" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <img src={badge} alt="" width={40} height={40} style={{ width: 40, height: 40 }} />
+          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 4, color: "#fbbf24" }}>PLAYER PLOT</span>
+        </div>
+        <div style={{ fontSize: 50, fontWeight: 900, lineHeight: 1.08, letterSpacing: 0.3, textTransform: "uppercase" }}>{imageTitle}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18 }}>
-          {chips.map((c) => (
-            <span key={c} style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "8px 16px", borderRadius: 999, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>{c}</span>
+          {chips.map((c, i) => (
+            <span key={c} style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "8px 16px", borderRadius: 999, background: i === 0 ? "rgba(251,191,36,0.16)" : "rgba(255,255,255,0.07)", border: `1px solid ${i === 0 ? "rgba(251,191,36,0.5)" : "rgba(255,255,255,0.14)"}`, color: i === 0 ? "#fde68a" : "#f8fafc" }}>{c}</span>
           ))}
         </div>
-        <div style={{ marginTop: 18, padding: "14px 20px", borderLeft: "5px solid #fbbf24", background: "rgba(255,255,255,0.05)", borderRadius: 12, fontSize: 21, lineHeight: 1.35, color: "#cbd5e1" }}>
+        <div style={{ marginTop: 18, padding: "14px 20px", borderLeft: "5px solid #fbbf24", background: "linear-gradient(90deg, rgba(251,191,36,0.10), rgba(255,255,255,0.04))", borderRadius: 14, fontSize: 21, lineHeight: 1.35, color: "#cbd5e1" }}>
           <b style={{ color: "#fbbf24", letterSpacing: 1.5 }}>HOW TO READ </b>
           {preset?.hint ?? "Each dot is a player. Further right means more of the horizontal stat, higher up means more of the vertical stat."}
         </div>
@@ -509,29 +516,42 @@ export default function PlayerPlotPage() {
           </div>
         </div>
 
-        <SectionCard icon={SlidersHorizontal} title="Choose what to plot" subtitle="Any stat on each axis, with filters to narrow the players" className="mb-4" bodyClassName="space-y-4 p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,330px)_minmax(0,1fr)] lg:items-start">
+        <SectionCard icon={SlidersHorizontal} title="Choose what to plot" subtitle="Any stat on each axis, with filters to narrow the players" className="order-2 lg:sticky lg:top-16 lg:order-1 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto" bodyClassName="space-y-4 p-4">
+            {/* find a player: first, because it is the quickest way to see where someone sits */}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find a player on the chart..."
+                className="rounded-xl pl-9"
+                data-testid="input-plot-search"
+              />
+            </div>
             {/* axes */}
-            <div className="flex items-end gap-2">
+            <div className="space-y-2 rounded-2xl border border-indigo-500/15 bg-gradient-to-b from-indigo-500/[0.06] to-transparent p-3">
               <StatSelect label="Horizontal axis (X)" value={state.x} onChange={(x) => update({ x })} testId="select-x" />
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
+                size="sm"
                 aria-label="Swap axes"
                 onClick={() => update({ x: state.y, y: state.x, xScale: state.yScale, yScale: state.xScale })}
+                className="w-full gap-2 rounded-full text-xs font-semibold text-indigo-700 dark:text-indigo-300"
                 data-testid="button-swap-axes"
               >
-                <ArrowLeftRight className="h-4 w-4" />
+                <ArrowLeftRight className="h-3.5 w-3.5 rotate-90" /> Swap axes
               </Button>
               <StatSelect label="Vertical axis (Y)" value={state.y} onChange={(y) => update({ y })} testId="select-y" />
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
               <ScaleToggle label="X scale" value={state.xScale} onChange={(xScale) => update({ xScale })} testId="xscale" />
               <ScaleToggle label="Y scale" value={state.yScale} onChange={(yScale) => update({ yScale })} testId="yscale" />
               <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
                 <Switch checked={state.median} onCheckedChange={(median) => update({ median })} data-testid="switch-median" />
-                Median lines
+                Median
               </label>
               <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
                 <Switch checked={state.trend} onCheckedChange={(trend) => update({ trend })} data-testid="switch-trend" />
@@ -540,7 +560,7 @@ export default function PlayerPlotPage() {
               <button
                 type="button"
                 onClick={() => setShowFilters((v) => !v)}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-indigo-500/25 bg-indigo-500/[0.06] px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300"
                 aria-expanded={showFilters}
                 data-testid="button-toggle-filters"
               >
@@ -549,7 +569,7 @@ export default function PlayerPlotPage() {
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-gray-100 pt-3" data-testid="plot-dimensions">
+            <div className="space-y-3 border-t border-gray-100 pt-3" data-testid="plot-dimensions">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Colour by</span>
                 <SegmentedControl ariaLabel="Colour by" testIdPrefix="color" value={state.color} onChange={(color) => update({ color: color as ColorMode })} options={COLOR_MODES.map((m) => ({ value: m.id, label: m.label }))} />
@@ -562,7 +582,7 @@ export default function PlayerPlotPage() {
 
             <div className="border-t border-gray-100 pt-3" data-testid="plot-mine">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                <span className="flex basis-full items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
                   <Star className="h-3.5 w-3.5 text-amber-500" /> My team
                 </span>
                 <Input
@@ -570,7 +590,7 @@ export default function PlayerPlotPage() {
                   onChange={(e) => setMineInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyMine()}
                   placeholder="Your FPL team ID or entry link, to ring your 15 players"
-                  className="h-9 min-w-[220px] flex-1 rounded-xl"
+                  className="h-9 min-w-0 basis-full rounded-xl"
                   data-testid="input-my-team"
                 />
                 <Button type="button" size="sm" onClick={applyMine} disabled={!parseManagerId(mineInput) || mineLoading} className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 font-bold text-white hover:from-amber-400 hover:to-orange-400" data-testid="button-my-team">
@@ -586,13 +606,13 @@ export default function PlayerPlotPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3" data-testid="plot-headline">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Image headline</span>
+              <span className="basis-full text-xs font-bold uppercase tracking-[0.12em] text-gray-500">Image headline</span>
               <Input
                 value={state.headline}
                 maxLength={60}
                 onChange={(e) => update({ headline: e.target.value })}
                 placeholder="Optional: your own title for the shared image"
-                className="h-9 min-w-[220px] flex-1 rounded-xl"
+                className="h-9 min-w-0 basis-full rounded-xl"
                 data-testid="input-plot-headline"
               />
               <span className="text-[11px] text-gray-500">Tap a dot to feature that player on the image.</span>
@@ -616,7 +636,7 @@ export default function PlayerPlotPage() {
                   ))}
                   {state.positions.length === 0 && <span className="text-xs text-gray-500">All positions</span>}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <SmallSelect
                     label="Team"
                     testId="select-team"
@@ -667,25 +687,18 @@ export default function PlayerPlotPage() {
               </div>
             )}
 
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Find a player on the chart..."
-                className="pl-9"
-                data-testid="input-plot-search"
-              />
-            </div>
         </SectionCard>
 
-        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="p-3 sm:p-5">
+        <div className="order-1 min-w-0 lg:order-2">
+        <section className="relative overflow-hidden rounded-3xl border border-indigo-500/15 bg-white shadow-[0_12px_40px_-14px_rgba(79,70,229,0.28)]">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-24 top-1/2 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+          <div className="relative p-3 sm:p-5">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 <IconTile icon={ChartScatter} />
                 <div className="min-w-0">
-                <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg" data-testid="text-plot-title">{title}</h2>
+                <h2 className="bg-gradient-to-r from-indigo-700 to-violet-600 bg-clip-text text-lg font-extrabold leading-tight tracking-tight text-transparent sm:text-xl dark:from-indigo-300 dark:to-violet-300" data-testid="text-plot-title">{title}</h2>
                 <p className="mt-0.5 text-xs text-gray-500">
                   {plotted.length} players
                   {usesHorizon ? ` · ${horizonLabel}` : ""}
@@ -724,14 +737,14 @@ export default function PlayerPlotPage() {
                   ? Array.from(new Set(plotted.map((p) => p.teamShort))).sort().map((t) => ({ key: t, label: t, color: teamColor(t) }))
                   : colorLegend(state.color)
                 ).map((l) => (
-                  <span key={l.key} className="inline-flex items-center gap-1.5">
+                  <span key={l.key} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100/80 py-0.5 pl-1 pr-2 dark:bg-white/5">
                     <span className="inline-block h-3 w-3 rounded-full ring-2 ring-white shadow-sm dark:ring-white/80" style={{ background: l.color }} /> {l.label}
                   </span>
                 ))}
               </div>
             )}
 
-            <div ref={chartRef} className="w-full rounded-xl bg-gradient-to-b from-indigo-500/[0.03] to-transparent" data-testid="plot-chart">
+            <div ref={chartRef} className="w-full rounded-2xl" data-testid="plot-chart">
               {loading || bootstrapError || chartWidth === 0 ? (
                 <div className="py-16 text-center text-sm text-gray-500" role="status">
                   {bootstrapError ? "Couldn't load player data. Please refresh." : "Loading players…"}
@@ -828,7 +841,7 @@ export default function PlayerPlotPage() {
             icon={TrendingUp}
             title="Beating and missing the trend"
             subtitle={`The line explains ${Math.round(trendLine.r2 * 100)}% of the spread in ${yDef?.label ?? state.y}. The biggest gaps from it:`}
-            className="mt-5"
+            className="mt-4"
             testId="plot-outliers"
           >
             <div className="grid gap-4 md:grid-cols-2">
@@ -862,7 +875,7 @@ export default function PlayerPlotPage() {
             icon={Star}
             title="Your squad on this chart"
             subtitle={`${mineList.length} players, best first by ${yDef?.label ?? state.y}`}
-            className="mt-5"
+            className="mt-4"
             testId="plot-mine-list"
           >
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -883,6 +896,8 @@ export default function PlayerPlotPage() {
             </ul>
           </SectionCard>
         )}
+        </div>
+        </div>
       </div>
     </div>
   );
