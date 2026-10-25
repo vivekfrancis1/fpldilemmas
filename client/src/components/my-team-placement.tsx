@@ -22,6 +22,41 @@ export interface MyEntry {
   totalTransfers: number;
 }
 
+/** Looks one team up from FPL's entry summary; `id` is "" until there is a valid team ID to look up. */
+function useEntryQuery(id: string) {
+  return useQuery<MyEntry | null>({
+    queryKey: ["/api/entry", id, "placement"],
+    enabled: id !== "",
+    retry: false,
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch(`/api/entry/${encodeURIComponent(id)}`);
+      if (!res.ok) return null;
+      const e = await res.json();
+      return {
+        managerId: Number(e.id),
+        name: `${e.player_first_name ?? ""} ${e.player_last_name ?? ""}`.trim() || e.name,
+        teamName: e.name,
+        totalPoints: Number(e.summary_overall_points) || 0,
+        gameweekPoints: Number(e.summary_event_points) || 0,
+        overallRank: e.summary_overall_rank ?? null,
+        gameweekRank: e.summary_event_rank ?? null,
+        currentEvent: Number(e.current_event) || 0,
+        teamValue: Number(e.last_deadline_value) || 0,
+        bank: Number(e.last_deadline_bank) || 0,
+        totalTransfers: Number(e.last_deadline_total_transfers) || 0,
+      };
+    },
+  });
+}
+
+/** The team for a team ID the page already holds (no input box of its own). */
+export function useEntryById(managerId: string): MyEntry | null {
+  const id = /^\d+$/.test(managerId) ? managerId : "";
+  const query = useEntryQuery(id);
+  return id !== "" ? query.data ?? null : null;
+}
+
 export function useMyEntry() {
   const [input, setInput] = useState("");
   const [id, setId] = useState("");
@@ -46,30 +81,7 @@ export function useMyEntry() {
     return () => clearTimeout(t);
   }, [input]);
 
-  const query = useQuery<MyEntry | null>({
-    queryKey: ["/api/entry", id, "placement"],
-    enabled: id !== "",
-    retry: false,
-    staleTime: 2 * 60 * 1000,
-    queryFn: async () => {
-      const res = await fetch(`/api/entry/${encodeURIComponent(id)}`);
-      if (!res.ok) return null;
-      const e = await res.json();
-      return {
-        managerId: Number(e.id),
-        name: `${e.player_first_name ?? ""} ${e.player_last_name ?? ""}`.trim() || e.name,
-        teamName: e.name,
-        totalPoints: Number(e.summary_overall_points) || 0,
-        gameweekPoints: Number(e.summary_event_points) || 0,
-        overallRank: e.summary_overall_rank ?? null,
-        gameweekRank: e.summary_event_rank ?? null,
-        currentEvent: Number(e.current_event) || 0,
-        teamValue: Number(e.last_deadline_value) || 0,
-        bank: Number(e.last_deadline_bank) || 0,
-        totalTransfers: Number(e.last_deadline_total_transfers) || 0,
-      };
-    },
-  });
+  const query = useEntryQuery(id);
 
   return {
     input,
@@ -103,6 +115,45 @@ function Tile({ label, rank, size, points, testId, detail }: { label: string; ra
   );
 }
 
+/** The rank of `entry` by total and gameweek points among `members`, as two tiles plus any caveats. */
+export function PlacementResults({ entry: e, members, groupLabel, note }: { entry: MyEntry; members: PlacementMember[]; groupLabel: string; note?: string }) {
+  const placement = useMemo(
+    () => placeInGroup(members, { managerId: e.managerId, totalPoints: e.totalPoints, gameweekPoints: e.gameweekPoints }),
+    [e, members],
+  );
+
+  return (
+    <div className="space-y-2" data-testid="my-team-placement">
+      <p className="text-sm text-gray-700">
+        <span className="font-bold">{e.teamName}</span> ({e.name}){" "}
+        {placement.isMember ? `is already one of ${groupLabel}.` : `added to ${groupLabel} for comparison.`}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Tile
+          label="Total points"
+          rank={placement.totalRank}
+          size={placement.size}
+          points={e.totalPoints}
+          testId="placement-total"
+          detail={
+            placement.totalPointsToNextPlace !== null
+              ? `${placement.totalPointsToNextPlace} behind the place above`
+              : placement.totalPointsAheadOfNext !== null
+                ? `${placement.totalPointsAheadOfNext} clear of the place below`
+                : undefined
+          }
+        />
+        <Tile label={`GW${e.currentEvent || ""} points`} rank={placement.gameweekRank} size={placement.size} points={e.gameweekPoints} testId="placement-gameweek" />
+      </div>
+      {(placement.missing > 0 || note) && (
+        <p className="text-xs text-gray-500" data-testid="text-placement-note">
+          {[placement.missing > 0 ? `${placement.missing} manager${placement.missing === 1 ? "" : "s"} left out: their points aren't available yet.` : "", note ?? ""].filter(Boolean).join(" ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** "Where would my team place?" - team ID box plus the rank of that team by total and gameweek points among `members`. */
 export function MyTeamPlacementPanel({
   my,
@@ -116,10 +167,6 @@ export function MyTeamPlacementPanel({
   /** Extra caveat, e.g. a league too big to read in full. */
   note?: string;
 }) {
-  const placement = useMemo(
-    () => (my.entry ? placeInGroup(members, { managerId: my.entry.managerId, totalPoints: my.entry.totalPoints, gameweekPoints: my.entry.gameweekPoints }) : null),
-    [my.entry, members],
-  );
   const e = my.entry;
 
   return (
@@ -134,36 +181,7 @@ export function MyTeamPlacementPanel({
       />
       {my.isLoading && <p className="text-sm text-gray-500" data-testid="text-my-team-loading">Finding your team…</p>}
       {my.notFound && <p className="text-sm text-red-600" data-testid="text-my-team-notfound">We couldn't find a team with that ID.</p>}
-      {e && placement && (
-        <div className="space-y-2" data-testid="my-team-placement">
-          <p className="text-sm text-gray-700">
-            <span className="font-bold">{e.teamName}</span> ({e.name}){" "}
-            {placement.isMember ? `is already one of ${groupLabel}.` : `added to ${groupLabel} for comparison.`}
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Tile
-              label="Total points"
-              rank={placement.totalRank}
-              size={placement.size}
-              points={e.totalPoints}
-              testId="placement-total"
-              detail={
-                placement.totalPointsToNextPlace !== null
-                  ? `${placement.totalPointsToNextPlace} behind the place above`
-                  : placement.totalPointsAheadOfNext !== null
-                    ? `${placement.totalPointsAheadOfNext} clear of the place below`
-                    : undefined
-              }
-            />
-            <Tile label={`GW${e.currentEvent || ""} points`} rank={placement.gameweekRank} size={placement.size} points={e.gameweekPoints} testId="placement-gameweek" />
-          </div>
-          {(placement.missing > 0 || note) && (
-            <p className="text-xs text-gray-500" data-testid="text-placement-note">
-              {[placement.missing > 0 ? `${placement.missing} manager${placement.missing === 1 ? "" : "s"} left out: their points aren't available yet.` : "", note ?? ""].filter(Boolean).join(" ")}
-            </p>
-          )}
-        </div>
-      )}
+      {e && <PlacementResults entry={e} members={members} groupLabel={groupLabel} note={note} />}
     </InputPanel>
   );
 }

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LeagueOwnershipView from "@/components/league-ownership-view";
+import LeagueStandingsView from "@/components/league-standings-view";
 import { InputPanel } from "@/components/tool-ui";
 
 type ClassicLeague = { id: number; name: string; league_type?: string };
@@ -28,7 +29,7 @@ const write = (k: string, v: string) => {
   }
 };
 
-export default function LeagueOwnershipPage() {
+export default function LeagueComparisonPage() {
   const [managerInput, setManagerInput] = useState("");
   const [lookupId, setLookupId] = useState("");
   const [selectedLeague, setSelectedLeague] = useState("");
@@ -45,7 +46,9 @@ export default function LeagueOwnershipPage() {
   };
 
   useEffect(() => {
-    const league = read(LEAGUE_KEY);
+    // a shared link (…?league=123) opens that league; otherwise the last one used
+    const fromLink = new URLSearchParams(window.location.search).get("league") ?? "";
+    const league = /^\d+$/.test(fromLink) ? fromLink : read(LEAGUE_KEY);
     const manager = readToolManagerId();
     setManagerInput(manager);
     setLookupId(manager);
@@ -116,7 +119,7 @@ export default function LeagueOwnershipPage() {
               <Users />
               <h1 data-testid="text-page-title">League Comparison</h1>
             </div>
-            <p className="fpl-page-subtitle">Compare your team with any mini-league: what it owns and captains, its template XI, and your differentials.</p>
+            <p className="fpl-page-subtitle">Any league's standings, where your team places in them, and what the league owns and captains.</p>
           </div>
         </div>
 
@@ -185,6 +188,7 @@ export default function LeagueOwnershipPage() {
           )}
         </InputPanel>
 
+        {query && <LeagueStandingsView key={`standings:${query.league}:${query.manager}`} leagueId={query.league} managerId={query.manager} />}
         {query && <LeagueOwnershipView key={`${query.league}:${query.manager}`} leagueId={query.league} managerId={query.manager} />}
       </div>
     </div>
