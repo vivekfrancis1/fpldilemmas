@@ -437,28 +437,39 @@ function FixturesFace({ spec, theme, grid, gwLabel }: { spec: GraphicSpec; theme
 
 // ---------- Price Change ----------
 
-function PriceList({ title, color, rows, more, theme, land }: { title: string; color: string; rows: PriceChangeContent["risers"]; more: number; theme: GraphicTheme; land: boolean }) {
+function PriceList({ title, color, rows, more, theme, land, rise }: { title: string; color: string; rows: PriceChangeContent["risers"]; more: number; theme: GraphicTheme; land: boolean; rise: boolean }) {
+  const total = rows.length + more;
   return (
-    <div style={{ ...panel(theme), flex: 1, minWidth: 0, display: "flex", flexDirection: "column", padding: land ? "12px 16px" : "20px 22px" }}>
-      <div style={{ fontSize: land ? 20 : 28, fontWeight: 900, color, letterSpacing: 1.5, marginBottom: land ? 4 : 10 }}>{title}</div>
-      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <div style={{ ...panel(theme), position: "relative", overflow: "hidden", flex: 1, minWidth: 0, display: "flex", flexDirection: "column", border: `1px solid ${withAlpha(color, 0.55)}` }}>
+      {/* header band: the direction at a glance */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: land ? "10px 16px" : "18px 22px", background: `linear-gradient(90deg, ${withAlpha(color, 0.38)}, ${withAlpha(color, 0.06)})`, borderBottom: `1px solid ${withAlpha(color, 0.4)}`, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: land ? 10 : 14, minWidth: 0 }}>
+          <div style={{ width: land ? 34 : 54, height: land ? 34 : 54, borderRadius: "50%", background: color, color: theme.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: land ? 18 : 30, fontWeight: 900, flexShrink: 0 }}>{rise ? "▲" : "▼"}</div>
+          <div style={{ fontSize: land ? 20 : 32, fontWeight: 900, color: theme.text, letterSpacing: 2 }}>{title}</div>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: land ? 30 : 52, fontWeight: 900, color, lineHeight: 1 }}>{total}</div>
+        </div>
+      </div>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: land ? "2px 14px 6px" : "6px 20px 12px" }}>
         {rows.length === 0 ? (
-          <div style={{ color: theme.muted, fontSize: land ? 18 : 24, fontWeight: 700, paddingTop: 12 }}>None</div>
+          <div style={{ color: theme.muted, fontSize: land ? 18 : 24, fontWeight: 700, paddingTop: 14 }}>None</div>
         ) : (
           rows.map((r, i) => (
-            <div key={i} style={{ flex: 1, maxHeight: land ? 56 : 90, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${theme.panelBorder}`, minHeight: 0 }}>
-              <div style={{ minWidth: 0 }}>
+            <div key={i} style={{ position: "relative", flex: 1, maxHeight: land ? 60 : 118, display: "flex", alignItems: "center", gap: land ? 10 : 16, borderTop: i === 0 ? "none" : `1px solid ${theme.panelBorder}`, minHeight: 0 }}>
+              <Jersey team={r.team} position={r.position} px={land ? 40 : 68} />
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: land ? 22 : 32, fontWeight: 900, lineHeight: 1.1, ...ellipsis }}>{r.name}</div>
-                <div style={{ fontSize: land ? 14 : 19, color: theme.muted, fontWeight: 600, ...ellipsis }}>{r.team} · {r.position}</div>
+                <div style={{ fontSize: land ? 13 : 19, color: theme.muted, fontWeight: 600, ...ellipsis }}>{r.team} · {r.ownership.toFixed(1)}% owned</div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: land ? 22 : 32, fontWeight: 900 }}>{r.price}</div>
-                <div style={{ fontSize: land ? 14 : 19, color, fontWeight: 800 }}>{r.change}</div>
+              <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <div style={{ fontSize: land ? 22 : 32, fontWeight: 900, lineHeight: 1 }}>{r.price}</div>
+                <div style={{ fontSize: land ? 13 : 19, color, fontWeight: 900, padding: land ? "1px 10px" : "2px 14px", borderRadius: 999, background: withAlpha(color, 0.16), border: `1px solid ${withAlpha(color, 0.6)}` }}>{r.change}</div>
               </div>
             </div>
           ))
         )}
-        {more > 0 && <div style={{ color: theme.muted, fontSize: land ? 14 : 20, fontWeight: 700, paddingTop: 6 }}>+{more} more</div>}
+        {more > 0 && <div style={{ color: theme.muted, fontSize: land ? 14 : 20, fontWeight: 700, paddingTop: 8 }}>+{more} more</div>}
       </div>
     </div>
   );
@@ -475,8 +486,8 @@ function PriceFace({ spec, theme, prices, dateLabel }: { spec: GraphicSpec; them
         </div>
       ) : (
         <div style={{ display: "flex", gap: land ? 14 : 20, flex: 1, minHeight: 0 }}>
-          <PriceList title="RISERS ▲" color={theme.good} rows={prices.risers} more={prices.moreRisers} theme={theme} land={land} />
-          <PriceList title="FALLERS ▼" color={theme.bad} rows={prices.fallers} more={prices.moreFallers} theme={theme} land={land} />
+          <PriceList title="RISERS" color={theme.good} rows={prices.risers} more={prices.moreRisers} theme={theme} land={land} rise />
+          <PriceList title="FALLERS" color={theme.bad} rows={prices.fallers} more={prices.moreFallers} theme={theme} land={land} rise={false} />
         </div>
       )}
     </Frame>
@@ -487,8 +498,12 @@ function PriceFace({ spec, theme, prices, dateLabel }: { spec: GraphicSpec; them
 
 function DifferentialsFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; rows: DifferentialRow[]; gwLabel: string; subtitle: string }) {
   const land = spec.size === "landscape";
-  const nameFont = land ? 26 : spec.size === "portrait" ? 42 : 38;
-  const jersey = land ? 44 : 76;
+  const tall = spec.size === "portrait";
+  const many = rows.length > 6;
+  const nameFont = land ? 24 : many ? 30 : tall ? 40 : 36;
+  const jersey = land ? 44 : many ? 56 : 72;
+  const own = rows.map((r) => parseFloat(r.ownership) || 0);
+  const diamond = land ? 34 : many ? 40 : 50;
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
       {rows.length === 0 ? (
@@ -496,18 +511,35 @@ function DifferentialsFace({ spec, theme, rows, gwLabel, subtitle }: { spec: Gra
           No players match these filters.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 12, flex: 1, minHeight: 0 }}>
-          {rows.map((r) => (
-            <div key={r.id} style={{ ...panel(theme), flex: 1, maxHeight: land ? 84 : 150, display: "flex", alignItems: "center", gap: land ? 14 : 22, padding: land ? "0 18px" : "0 28px", minHeight: 0 }}>
-              <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, width: land ? 36 : 58, flexShrink: 0 }}>{r.rank}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : many ? 8 : 12, flex: 1, minHeight: 0 }}>
+          {rows.map((r, i) => (
+            <div
+              key={r.id}
+              style={{
+                ...panel(theme, { background: `linear-gradient(100deg, ${clubTint(r.teamShort, theme, i === 0 ? 0.5 : 0.32)} 0%, ${theme.panel} 52%)` }),
+                position: "relative", overflow: "hidden", flex: 1, maxHeight: land ? 84 : tall ? 170 : 150, display: "flex", alignItems: "center", gap: land ? 14 : 20, padding: land ? "0 18px" : "0 26px", minHeight: 0,
+                border: i === 0 ? `2px solid ${theme.accent}` : `1px solid ${theme.panelBorder}`,
+              }}
+            >
+              {/* rank in a diamond: a differential is a hidden gem */}
+              <div style={{ width: diamond, height: diamond, flexShrink: 0, transform: "rotate(45deg)", borderRadius: 8, background: i === 0 ? theme.accent : theme.panel, border: i === 0 ? "none" : `2px solid ${theme.accent}`, display: "flex", alignItems: "center", justifyContent: "center", margin: land ? "0 6px" : "0 10px" }}>
+                <div style={{ transform: "rotate(-45deg)", fontSize: land ? 18 : many ? 22 : 28, fontWeight: 900, color: i === 0 ? theme.bg : theme.accent }}>{r.rank}</div>
+              </div>
               <Jersey team={r.teamShort} position={r.position} px={jersey} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}{r.doubtful ? " ⚠" : ""}</div>
-                <div style={{ fontSize: land ? 15 : 22, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price}</div>
+                <div style={{ fontSize: land ? 14 : many ? 18 : 21, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price}</div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{r.xpts.toFixed(1)}</div>
-                <div style={{ fontSize: land ? 13 : 18, color: theme.muted, fontWeight: 700 }}>xPts · {r.ownership} owned</div>
+              {/* ownership meter on a fixed 0-20% scale: a short bar is a well-kept secret */}
+              <div style={{ width: land ? 150 : many ? 160 : 190, flexShrink: 0 }}>
+                <div style={{ fontSize: land ? 11 : 16, fontWeight: 800, letterSpacing: land ? 1 : 1.5, color: theme.muted, marginBottom: 4, whiteSpace: "nowrap" }}>OWNED BY {r.ownership}</div>
+                <div style={{ height: land ? 8 : 12, borderRadius: 999, background: theme.panel, border: `1px solid ${theme.panelBorder}`, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.min(100, Math.max(5, (own[i] / 20) * 100))}%`, height: "100%", borderRadius: 999, background: `linear-gradient(90deg, ${theme.accent}, ${withAlpha(theme.accent, 0.5)})` }} />
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0, minWidth: land ? 74 : 116 }}>
+                <div style={{ fontSize: land ? 30 : many ? 38 : 50, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{r.xpts.toFixed(1)}</div>
+                <div style={{ fontSize: land ? 12 : 17, color: theme.muted, fontWeight: 800, letterSpacing: 1 }}>xPTS</div>
               </div>
             </div>
           ))}
@@ -544,7 +576,7 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
   );
 }
 
-function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode }) {
+function Pitch<T extends { id: number }>({ rows, renderToken, night }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode; night?: boolean }) {
   const line = "rgba(255,255,255,0.45)";
   // goalkeeper at the top, then defenders, midfielders and the attack at the bottom (rows come in that order). The team now
   // faces down the page, so its left is the viewer's right: each row comes in left-to-right order and is drawn mirrored.
@@ -553,7 +585,10 @@ function Pitch<T extends { id: number }>({ rows, renderToken }: { rows: Array<{ 
     <div
       style={{
         position: "relative", flex: 1, minHeight: 0, borderRadius: 20, overflow: "hidden", border: `3px solid ${line}`,
-        background: "repeating-linear-gradient(180deg, #1e7a3b 0px, #1e7a3b 70px, #23893f 70px, #23893f 140px)",
+        background: night
+          ? "radial-gradient(ellipse at 50% 38%, rgba(190,255,210,0.22) 0%, transparent 62%), repeating-linear-gradient(180deg, #0f5a2b 0px, #0f5a2b 70px, #146a33 70px, #146a33 140px)"
+          : "repeating-linear-gradient(180deg, #1e7a3b 0px, #1e7a3b 70px, #23893f 70px, #23893f 140px)",
+        boxShadow: night ? "inset 0 0 90px 10px rgba(0,0,0,0.55), 0 20px 50px -20px rgba(0,0,0,0.7)" : undefined,
       }}
     >
       <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 3, background: line }} />
@@ -1262,16 +1297,20 @@ function TrendsFace({ spec, theme, trends, gwLabel, subtitle }: { spec: GraphicS
 
 function TotwTokenView({ p, jersey, nameFont, ptsFont }: { p: TotwToken; jersey: number; nameFont: number; ptsFont: number }) {
   const badgePx = Math.round(jersey * 0.42);
+  const big = p.points >= 10;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2 }}>
       <div style={{ position: "relative", width: jersey, height: jersey }}>
-        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        {/* the captain stands in a golden glow */}
+        {p.isCaptain && <div style={{ position: "absolute", inset: -jersey * 0.22, borderRadius: "50%", background: "radial-gradient(circle, rgba(250,204,21,0.75) 0%, transparent 68%)" }} />}
+        <div style={{ position: "relative" }}><Jersey team={p.teamShort} position={p.position} px={jersey} /></div>
         {p.isCaptain && (
           <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: "#facc15", color: "#713f12", border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>C</div>
         )}
       </div>
       <div style={{ maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "1px 10px", borderRadius: "8px 8px 0 0", fontSize: nameFont, fontWeight: 800, lineHeight: 1.25, background: "rgba(255,255,255,0.96)", color: "#111827", ...ellipsis }}>{p.name}</div>
-      <div style={{ maxWidth: "100%", boxSizing: "border-box", padding: "1px 12px", borderRadius: "0 0 8px 8px", fontSize: ptsFont, fontWeight: 900, lineHeight: 1.25, background: "#7c3aed", color: "#ffffff", textAlign: "center" }}>{p.points} pts</div>
+      {/* double-figure hauls shine gold */}
+      <div style={{ maxWidth: "100%", boxSizing: "border-box", padding: "1px 12px", borderRadius: "0 0 8px 8px", fontSize: ptsFont, fontWeight: 900, lineHeight: 1.25, background: big ? "linear-gradient(90deg, #fbbf24, #f59e0b)" : "#7c3aed", color: big ? "#451a03" : "#ffffff", textAlign: "center" }}>{p.points} pts</div>
     </div>
   );
 }
@@ -1283,16 +1322,28 @@ function TotwFace({ spec, theme, totw, gwLabel }: { spec: GraphicSpec; theme: Gr
   const nameFont = land ? 16 : tall ? 26 : 22;
   const ptsFont = land ? 15 : tall ? 24 : 20;
   const captain = totw.rows.flatMap((r) => r.players).find((p) => p.isCaptain);
-  const pitch = <Pitch rows={totw.rows} renderToken={(p) => <TotwTokenView p={p} jersey={jersey} nameFont={nameFont} ptsFont={ptsFont} />} />;
+  const pitch = <Pitch night rows={totw.rows} renderToken={(p) => <TotwTokenView p={p} jersey={jersey} nameFont={nameFont} ptsFont={ptsFont} />} />;
   const summary = (
-    <div style={{ ...panel(theme), padding: land ? "12px 16px" : "14px 24px", flexShrink: 0, display: "flex", flexDirection: land ? "column" : "row", alignItems: land ? "flex-start" : "center", justifyContent: "space-between", gap: land ? 4 : 20 }}>
-      <div>
-        <div style={{ fontSize: land ? 40 : 54, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{totw.total} pts</div>
-        <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, marginTop: 4 }}>XI total, captain counted twice</div>
+    <div style={{ ...panel(theme, { background: `linear-gradient(100deg, ${withAlpha(theme.accent, 0.28)} 0%, ${theme.panel} 60%)`, border: `1px solid ${withAlpha(theme.accent, 0.6)}` }), padding: land ? "14px 16px" : "14px 26px", flexShrink: 0, display: "flex", flexDirection: land ? "column" : "row", alignItems: land ? "flex-start" : "center", justifyContent: "space-between", gap: land ? 10 : 22 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: land ? 10 : 18, minWidth: 0 }}>
+        {captain && (
+          <div style={{ position: "relative", width: land ? 56 : 84, height: land ? 56 : 84, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "absolute", inset: -10, borderRadius: "50%", background: "radial-gradient(circle, rgba(250,204,21,0.6) 0%, transparent 68%)" }} />
+            <div style={{ position: "relative" }}><Jersey team={captain.teamShort} position={captain.position} px={land ? 56 : 84} /></div>
+          </div>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: land ? 12 : 17, fontWeight: 900, letterSpacing: 3, color: "#facc15" }}>★ CAPTAIN</div>
+          {captain && <div style={{ fontSize: land ? 20 : 32, fontWeight: 900, lineHeight: 1.1, ...ellipsis }}>{captain.name}</div>}
+          {captain && <div style={{ fontSize: land ? 13 : 19, fontWeight: 700, color: theme.muted }}>{captain.points} pts, counted twice</div>}
+        </div>
       </div>
-      <div style={{ textAlign: land ? "left" : "right", fontSize: land ? 15 : 22, fontWeight: 700, color: theme.muted }}>
-        {totw.formation && <div style={{ fontSize: land ? 26 : 36, fontWeight: 900, color: theme.text }}>{totw.formation}</div>}
-        {captain && <div>Captain: {captain.name}</div>}
+      <div style={{ display: "flex", alignItems: "center", gap: land ? 12 : 22, flexShrink: 0 }}>
+        {totw.formation && <div style={{ fontSize: land ? 20 : 30, fontWeight: 900, padding: land ? "2px 12px" : "4px 20px", borderRadius: 999, border: `2px solid ${theme.accent}`, color: theme.text }}>{totw.formation}</div>}
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: land ? 40 : 66, fontWeight: 900, color: theme.accent, lineHeight: 0.95, letterSpacing: -2 }}>{totw.total}</div>
+          <div style={{ fontSize: land ? 12 : 17, fontWeight: 800, letterSpacing: 2, color: theme.muted }}>XI POINTS</div>
+        </div>
       </div>
     </div>
   );
