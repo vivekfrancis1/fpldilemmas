@@ -1063,6 +1063,7 @@ export default function PlayerDefensiveContributions() {
       {/* Main Content */}
       <SectionCard
         icon={Shield}
+        className="[&_h2]:overflow-visible [&_h2]:whitespace-normal"
         title={viewMode === "future"
           ? "Player Defensive Contributions Projections"
           : "Player Defensive Contributions History"}
