@@ -26,6 +26,70 @@ import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { getPreseasonDraft } from "@/lib/preseason-draft-cache";
 import { draftToFplPicks } from "@/lib/draft-to-fpl-picks";
+import { IconTile, InputPanel, Pill, SectionCard, SegmentedControl } from "@/components/tool-ui";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+
+// Collapsible version of the shared SectionCard look (gradient header band, indigo icon tile). The body is only
+// mounted while open, matching the previous Collapsible behaviour.
+function PlannerSection({
+  icon,
+  title,
+  badge,
+  titleExtra,
+  open,
+  onToggle,
+  toggleTestId,
+  titleTestId,
+  className = "",
+  bodyClassName = "p-4 sm:p-5",
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  badge?: ReactNode;
+  titleExtra?: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  toggleTestId?: string;
+  titleTestId?: string;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        className={`flex cursor-pointer flex-wrap items-center gap-3 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 transition-colors hover:from-indigo-500/10 sm:px-5 ${open ? "border-b border-gray-100" : ""}`}
+        data-testid={toggleTestId}
+      >
+        <IconTile icon={icon} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1" data-testid={titleTestId}>
+          <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">{title}</h2>
+          {badge}
+          {titleExtra}
+        </div>
+        {open ? <ChevronUp className="h-5 w-5 shrink-0 text-indigo-500" /> : <ChevronDown className="h-5 w-5 shrink-0 text-indigo-500" />}
+      </div>
+      {open && <div className={bodyClassName}>{children}</div>}
+    </section>
+  );
+}
+
+/** Draft badge shown next to section titles: "Base" in grey, "Draft A" in indigo. */
+function DraftPill({ activeDraft }: { activeDraft: string }) {
+  return <Pill tone={activeDraft === "Base" ? "gray" : "indigo"}>{activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}</Pill>;
+}
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -6094,13 +6158,13 @@ export default function TransferPlanner() {
   if (bootstrapData && isSeasonEnded(bootstrapData.events)) {
     return (
       <div className="w-full py-2 sm:py-3 md:py-4 space-y-3 md:space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-            <Target className="h-4 w-4 md:h-5 md:w-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Target className="h-8 w-8" />
+              <h1>Transfer Planner</h1>
+            </div>
+            <p className="fpl-page-subtitle">Plan transfers & optimise your lineup</p>
           </div>
         </div>
         <SeasonEndedNotice />
@@ -6113,20 +6177,21 @@ export default function TransferPlanner() {
 
       <div className="w-full py-2 sm:py-3 md:py-4 space-y-3 md:space-y-4">
       {/* Header - Compact */}
-      <div className="flex items-center gap-2 mb-1">
-        <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-          <Target className="h-4 w-4 md:h-5 md:w-5 text-white" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
-          <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Target className="h-8 w-8" />
+            <h1>Transfer Planner</h1>
+          </div>
+          <p className="fpl-page-subtitle">Plan transfers & optimise your lineup</p>
         </div>
       </div>
 
-      {/* Manager Search Section - Compact */}
-      <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
-        <CardContent className="p-2 sm:p-3">
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+      {/* Manager Search Section */}
+      <InputPanel icon={Search} title="Find your team" subtitle="Enter your FPL manager ID or the link to your entry page">
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-indigo-500" />
             <Input
               id="manager-id"
               type="text"
@@ -6137,25 +6202,25 @@ export default function TransferPlanner() {
                 setManagerId(extractedId);
               }}
               onKeyPress={handleKeyPress}
-              className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+              className="h-11 rounded-xl pl-10 text-base"
               data-testid="input-manager-id"
               disabled={isLoadingTeam}
             />
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleSearch} 
-                disabled={!managerId.trim() || isLoadingTeam}
-                className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
-                data-testid="button-search-manager"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                {isLoadingTeam ? "..." : "Load"}
-              </Button>
-              <FplConnectDialog />
-            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleSearch} 
+              disabled={!managerId.trim() || isLoadingTeam}
+              className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 text-sm font-semibold"
+              data-testid="button-search-manager"
+            >
+              <Search className="h-4 w-4 mr-1" />
+              {isLoadingTeam ? "..." : "Load"}
+            </Button>
+            <FplConnectDialog />
+          </div>
+        </div>
+      </InputPanel>
 
       {/* Session expiry notification for logged-in users */}
       {useFallbackEndpoint && isOwnTeam && !pendingDraftFallback && (() => {
@@ -6163,8 +6228,8 @@ export default function TransferPlanner() {
         const upcomingGW = currentGW + 1;
         
         return (
-          <Alert className="bg-blue-50 border-blue-200">
-            <AlertDescription className="text-sm text-blue-800">
+          <Alert className="rounded-xl border-indigo-200 bg-indigo-50 text-indigo-900 dark:text-indigo-200">
+            <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div>
@@ -6188,8 +6253,8 @@ export default function TransferPlanner() {
         const upcomingGW = currentGW + 1;
 
         return (
-          <Alert className="bg-blue-50 border-blue-200">
-            <AlertDescription className="text-sm text-blue-800">
+          <Alert className="rounded-xl border-indigo-200 bg-indigo-50 text-indigo-900 dark:text-indigo-200">
+            <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div>
@@ -6205,8 +6270,8 @@ export default function TransferPlanner() {
         );
       })()}
       {isOwnTeam && !useFallbackEndpoint && (
-        <Alert className="bg-green-50 border-green-200">
-          <AlertDescription className="text-sm text-green-800">
+        <Alert className="rounded-xl border-emerald-200 bg-emerald-50">
+          <AlertDescription className="text-sm text-emerald-800 dark:text-emerald-200">
             <div className="flex items-start gap-2">
               <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <div>Live data — connected to your FPL account, showing your team as it stands right now.</div>
@@ -6217,9 +6282,9 @@ export default function TransferPlanner() {
 
       {/* Using the saved pre-season draft instead of a real (not-yet-available) squad */}
       {usingDraftFallback && !teamDataError && teamData && (
-        <Alert className="bg-purple-50 border-purple-200">
-          <AlertCircle className="h-4 w-4 text-purple-700" />
-          <AlertDescription className="text-purple-800">
+        <Alert className="rounded-xl border-violet-200 bg-violet-50">
+          <AlertCircle className="h-4 w-4 text-violet-700" />
+          <AlertDescription className="text-violet-800 dark:text-violet-200">
             Manager {searchedId}'s GW1 squad isn't available from FPL yet — planning from your
             saved GW1 draft instead (from My Dashboard or Pick Team).
           </AlertDescription>
@@ -6232,7 +6297,7 @@ export default function TransferPlanner() {
           to be tried (see pendingDraftFallback above) so a transient intermediate failure
           doesn't flash on screen. */}
       {searchedId && !isLoadingTeam && teamDataError && !pendingDraftFallback && (
-        <Alert variant={isTeamNotAvailableError(teamDataError) ? "default" : "destructive"}>
+        <Alert variant={isTeamNotAvailableError(teamDataError) ? "default" : "destructive"} className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {isTeamNotAvailableError(teamDataError)
@@ -6244,34 +6309,24 @@ export default function TransferPlanner() {
 
       {/* Draft Selection Section - Collapsed by default */}
       {searchedId && teamData && selectedGameweek && (
-        <Collapsible open={isDraftSelectionOpen} onOpenChange={setIsDraftSelectionOpen}>
-          <Card className="bg-background shadow-sm border">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <List className="h-5 w-5 text-blue-600" />
-                    <span className="text-base sm:text-lg font-semibold">Draft Selection</span>
-                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
-                      {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
-                    </Badge>
-                    {isSaving && activeDraft !== "Base" && (
-                      <span className="text-xs sm:text-sm text-blue-600 animate-pulse">Saving...</span>
-                    )}
-                    {!isSaving && lastSavedAt && activeDraft !== "Base" && (
-                      <span className="text-xs sm:text-sm text-green-600">✓</span>
-                    )}
-                  </div>
-                  {isDraftSelectionOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0 pb-4 px-3 sm:px-6 space-y-3">
+        <PlannerSection
+          icon={List}
+          title="Draft Selection"
+          badge={<DraftPill activeDraft={activeDraft} />}
+          titleExtra={
+            <>
+              {isSaving && activeDraft !== "Base" && (
+                <span className="text-xs sm:text-sm text-indigo-600 animate-pulse">Saving...</span>
+              )}
+              {!isSaving && lastSavedAt && activeDraft !== "Base" && (
+                <span className="text-xs sm:text-sm text-emerald-600">✓</span>
+              )}
+            </>
+          }
+          open={isDraftSelectionOpen}
+          onToggle={() => setIsDraftSelectionOpen(!isDraftSelectionOpen)}
+        >
+              <div className="space-y-3">
                 {/* Draft Buttons */}
                 <div className="flex gap-2 flex-wrap items-center">
                   {savedDrafts.map((draft: any) => {
@@ -6285,7 +6340,7 @@ export default function TransferPlanner() {
                             <Button
                               onClick={() => switchToDraft(draft.draftLetter)}
                               variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                              className="relative h-8 sm:h-9 text-sm sm:text-base px-3"
+                              className={`relative h-9 rounded-xl px-4 text-sm font-bold ${activeDraft === draft.draftLetter ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border-gray-200 text-gray-700 hover:border-indigo-300 hover:text-indigo-700"}`}
                               data-testid={`button-switch-draft-${draft.draftLetter}`}
                             >
                               {draft.draftLetter}
@@ -6328,7 +6383,7 @@ export default function TransferPlanner() {
                     <Button
                       onClick={createNewDraft}
                       variant="outline"
-                      className="h-8 sm:h-9 gap-1 border-dashed text-sm sm:text-base px-3"
+                      className="h-9 gap-1 rounded-xl border-dashed border-indigo-300 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
                       data-testid="button-new-draft"
                     >
                       <Plus className="h-4 w-4" />
@@ -6344,7 +6399,7 @@ export default function TransferPlanner() {
                       onClick={() => saveCurrentDraft()}
                       variant="default"
                       disabled={!hasUnsavedChanges}
-                      className="h-8 text-sm px-3"
+                      className="h-8 rounded-lg bg-indigo-600 px-3 text-sm hover:bg-indigo-700"
                       data-testid="button-save-draft"
                     >
                       <Save className="h-3.5 w-3.5 mr-1" />
@@ -6384,27 +6439,23 @@ export default function TransferPlanner() {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+              </div>
+        </PlannerSection>
       )}
 
       {/* Chip Selection */}
       {searchedId && teamData && selectedGameweek && (
-        <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
-          <Card className="border-gray-200 bg-white">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4 cursor-pointer hover:bg-muted/50 transition-colors" data-testid="button-toggle-chips-planning">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2" data-testid="text-chips-planning-title">
-                    <Sparkles className="h-5 w-5 text-amber-600" />
-                    <span className="text-base sm:text-lg font-semibold">Chip Selection</span>
+        <PlannerSection
+          icon={Sparkles}
+          title="Chip Selection"
+          titleTestId="text-chips-planning-title"
+          toggleTestId="button-toggle-chips-planning"
+          titleExtra={
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button className="inline-flex items-center">
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                            <Info className="h-4 w-4 text-indigo-400 cursor-help" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="w-80 p-4">
@@ -6422,20 +6473,15 @@ export default function TransferPlanner() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </div>
-                  {isChipsPlanningOpen ? (
-                    <ChevronUp className="h-5 w-5 text-amber-700" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-amber-700" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="px-3 sm:px-6 space-y-3 md:space-y-4 pt-2 md:pt-4" data-testid="section-chips-planning">
+          }
+          open={isChipsPlanningOpen}
+          onToggle={() => setIsChipsPlanningOpen(!isChipsPlanningOpen)}
+          bodyClassName="p-4 sm:p-5"
+        >
+              <div className="space-y-3 md:space-y-4" data-testid="section-chips-planning">
             {/* Important Chip Information */}
-            <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-              <Info className="h-4 w-4 text-blue-600" />
+            <Alert className="rounded-xl border-indigo-200 bg-indigo-50">
+              <Info className="h-4 w-4 text-indigo-600" />
               <AlertDescription className="text-xs md:text-sm">
                 <div className="space-y-1">
                   {historyData?.chips && historyData.chips.length > 0 ? (
@@ -6468,8 +6514,8 @@ export default function TransferPlanner() {
                 cancelled on FPL before the deadline (Wildcard/Free Hit are applied silently
                 since they can't be undone there either). */}
             {detectedTeamChipNotice && (
-              <Alert className="border-purple-300 bg-purple-50 dark:bg-purple-950/20">
-                <Info className="h-4 w-4 text-purple-600" />
+              <Alert className="rounded-xl border-violet-300 bg-violet-50">
+                <Info className="h-4 w-4 text-violet-600" />
                 <AlertDescription className="text-xs md:text-sm flex items-center justify-between gap-3">
                   <span>
                     <strong>{getChipDisplayName(detectedTeamChipNotice.chip)}</strong> is already active on your FPL account for GW{detectedTeamChipNotice.gameweek} — applied to this plan.
@@ -6495,12 +6541,10 @@ export default function TransferPlanner() {
                 const remaining = getRemainingChips()[chipType];
                 const used = 2 - remaining;
                 return (
-                  <div key={chipType} className="p-3 rounded-lg border bg-white dark:bg-background">
+                  <div key={chipType} className="rounded-xl border border-gray-200 border-t-2 border-t-amber-400 bg-white p-3 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs md:text-sm font-semibold">{getChipDisplayName(chipType)}</span>
-                      <Badge variant={remaining > 0 ? "default" : "secondary"} className="text-xs">
-                        {remaining} left
-                      </Badge>
+                      <Pill tone={remaining > 0 ? "indigo" : "gray"}>{remaining} left</Pill>
                     </div>
                     <p className="text-[10px] md:text-xs text-muted-foreground">{getChipDescription(chipType)}</p>
                   </div>
@@ -6509,8 +6553,8 @@ export default function TransferPlanner() {
             </div>
 
             {/* Chip Selection for Upcoming Gameweeks */}
-            <div className="border-t pt-3">
-              <h4 className="text-xs md:text-sm font-semibold mb-2">Plan Chips for Upcoming Gameweeks</h4>
+            <div className="border-t border-gray-100 pt-3">
+              <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide text-gray-500 mb-2">Plan Chips for Upcoming Gameweeks</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {getNextGameweeks().map((gw) => {
                   const remainingChips = getRemainingChips();
@@ -6531,7 +6575,7 @@ export default function TransferPlanner() {
                           }
                         }}
                       >
-                        <SelectTrigger className="h-8 text-xs flex-1" data-testid={`chip-selector-gw${gw.id}`}>
+                        <SelectTrigger className="h-9 flex-1 rounded-lg text-xs" data-testid={`chip-selector-gw${gw.id}`}>
                           <SelectValue placeholder="No chip planned" />
                         </SelectTrigger>
                         <SelectContent>
@@ -6547,7 +6591,7 @@ export default function TransferPlanner() {
                         </SelectContent>
                       </Select>
                       {isLocked ? (
-                        <span className="flex items-center gap-1 text-[10px] text-purple-600 font-medium whitespace-nowrap" title="Already played on FPL — can't be cancelled">
+                        <span className="flex items-center gap-1 text-[10px] text-violet-600 font-medium whitespace-nowrap" title="Already played on FPL — can't be cancelled">
                           <Lock className="h-3 w-3" />
                           Played
                         </span>
@@ -6570,8 +6614,8 @@ export default function TransferPlanner() {
 
             {/* Planned Chips Summary */}
             {Object.keys(plannedChips).length > 0 && (
-              <div className="border-t pt-3">
-                <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
+              <div className="border-t border-gray-100 pt-3">
+                <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
                   <Calendar className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
                   Planned Chips Summary
                 </h4>
@@ -6579,43 +6623,27 @@ export default function TransferPlanner() {
                   {Object.entries(plannedChips)
                     .filter(([_, chipType]) => chipType !== null)
                     .map(([gameweek, chipType]) => (
-                      <Badge key={gameweek} className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                      <Pill key={gameweek} tone="amber" className="text-xs px-2.5 py-1">
                         GW{gameweek}: {getChipDisplayNameWithNumber(chipType as ChipType)}
-                      </Badge>
+                      </Pill>
                     ))}
                 </div>
               </div>
             )}
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+              </div>
+        </PlannerSection>
       )}
 
       {/* Team Summary Stats */}
       {searchedId && teamData && selectedGameweek && (
-        <Collapsible open={isTeamSummaryOpen} onOpenChange={setIsTeamSummaryOpen}>
-          <Card className="border-gray-200 bg-white">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span className="text-base sm:text-lg font-semibold">Team Summary</span>
-                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
-                      {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
-                    </Badge>
-                  </div>
-                  {isTeamSummaryOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="px-3 sm:px-6 pt-0">
+        <PlannerSection
+          icon={TrendingUp}
+          title="Team Summary"
+          badge={<DraftPill activeDraft={activeDraft} />}
+          open={isTeamSummaryOpen}
+          onToggle={() => setIsTeamSummaryOpen(!isTeamSummaryOpen)}
+        >
+              <div>
                 {/* Transfer undo buttons */}
                 <div className="flex gap-1 md:gap-2 flex-wrap mb-4">
                   {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
@@ -6652,7 +6680,7 @@ export default function TransferPlanner() {
                   const isGWFinished = bootstrapData?.events.find(e => e.id === selectedGameweek)?.finished ?? false;
                   return (
                     <div className="mb-4">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
                         GW{selectedGameweek} Transfers
                       </div>
                       <div className="space-y-1.5">
@@ -6661,7 +6689,7 @@ export default function TransferPlanner() {
                           return (
                           <div
                             key={idx}
-                            className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-xs border ${isBroken ? "bg-orange-50 dark:bg-orange-950/30 border-orange-400 dark:border-orange-600" : "bg-white dark:bg-gray-900"}`}
+                            className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg text-xs border ${isBroken ? "bg-orange-50 dark:bg-orange-950/30 border-orange-400 dark:border-orange-600" : "bg-white border-gray-200"}`}
                             data-testid={`completed-transfer-row-${idx}`}
                           >
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -6679,7 +6707,7 @@ export default function TransferPlanner() {
                               )}
                               <span className="font-semibold text-red-600 truncate">{transfer.outPlayerName}</span>
                               <span className="text-muted-foreground shrink-0">→</span>
-                              <span className="font-semibold text-green-600 truncate">{transfer.inPlayerName}</span>
+                              <span className="font-semibold text-emerald-600 truncate">{transfer.inPlayerName}</span>
                               <span className="text-muted-foreground shrink-0 hidden sm:inline">
                                 £{transfer.sellingPrice.toFixed(1)}m / £{transfer.buyingPrice.toFixed(1)}m
                               </span>
@@ -6704,9 +6732,9 @@ export default function TransferPlanner() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
               {/* Formation */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Formation</div>
-                <div className="text-xl sm:text-2xl font-bold text-indigo-600">
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5">Formation</div>
+                <div className="text-xl sm:text-2xl font-extrabold tabular-nums text-indigo-600">
                   {(() => {
                     const starting11 = manualLineup.slice(0, 11);
                     const defs = starting11.filter(p => getPlayerById(p.element)?.element_type === 2).length;
@@ -6718,8 +6746,8 @@ export default function TransferPlanner() {
               </div>
 
               {/* Total Projected Points for Selected GW */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-emerald-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5 flex items-center gap-1">
                   <span>GW {selectedGameweek} xPts</span>
                   {plannedChips[selectedGameweek] && (
                     <TooltipProvider>
@@ -6734,7 +6762,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-xl sm:text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-extrabold tabular-nums text-emerald-600">
                   {(() => {
                     const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
                     let total = 0;
@@ -6751,8 +6779,8 @@ export default function TransferPlanner() {
               </div>
 
               {/* Total Projected Points for Next 6 GWs */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-2">
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5 flex items-center gap-2">
                   <span>
                     {nextGameweeks.length > 0 
                       ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} xPts`
@@ -6780,7 +6808,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-xl sm:text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
+                <div className="text-xl sm:text-2xl font-extrabold tabular-nums text-indigo-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -6821,24 +6849,24 @@ export default function TransferPlanner() {
               </div>
 
               {/* Cash in Bank */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash in Bank</div>
-                <div className={`text-xl sm:text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-amber-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5">Cash in Bank</div>
+                <div className={`text-xl sm:text-2xl font-extrabold tabular-nums ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-amber-600'}`}>
                   £{calculateInitialBank().toFixed(1)}m
                 </div>
               </div>
 
               {/* Transfers */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-violet-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5 flex items-center gap-1">
                   <span>Transfers</span>
                   {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
                     <Sparkles className="h-3 w-3 text-amber-600" />
                   )}
                 </div>
-                <div className={`text-xl sm:text-2xl font-bold ${(() => {
+                <div className={`text-xl sm:text-2xl font-extrabold tabular-nums ${(() => {
                   const remaining = calculateTransfersRemaining();
-                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-purple-600';
+                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-violet-600';
                 })()}`}>
                   {calculateTransfersUsed()}/{calculateInitialTransfers()}
                 </div>
@@ -6853,9 +6881,9 @@ export default function TransferPlanner() {
               </div>
 
               {/* Cash in Bank After Transfers */}
-              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash After Transfers</div>
-                <div className={`text-xl sm:text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+              <div className="rounded-xl border border-gray-200 border-t-2 border-t-amber-400 bg-white px-3 py-2.5 shadow-sm">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-gray-500 mb-0.5">Cash After Transfers</div>
+                <div className={`text-xl sm:text-2xl font-extrabold tabular-nums ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-amber-600'}`}>
                   £{calculateBankAfterTransfers().toFixed(1)}m
                 </div>
                 {calculateBankAfterTransfers() < 0 && (
@@ -6865,10 +6893,8 @@ export default function TransferPlanner() {
                 )}
               </div>
             </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+              </div>
+        </PlannerSection>
       )}
 
       {/* Team Selection & Projected Points — side-by-side on desktop */}
