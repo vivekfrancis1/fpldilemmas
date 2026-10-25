@@ -37,6 +37,7 @@ import type { GwPointsContent, GwPointsRow, PlayerHistoryContent, PlayerProjecti
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
 import { getJerseyUrl } from "@/lib/jersey";
 import badge from "@/assets/fpl-dilemmas-badge.png?inline";
+import { teamColor } from "@/lib/team-colors";
 
 // Every graphic is drawn at its exact export size with plain inline styles (no theme tokens, no Tailwind), so the
 // PNG looks the same on every device. The same component draws the on-screen preview and the exported image.
@@ -67,6 +68,13 @@ function withAlpha(hex: string, alpha: number): string {
 /** Dark text on a pale background: the Light theme. */
 function isLightTheme(theme: GraphicTheme): boolean {
   return contrastRatio(theme.text, "#ffffff") > 7;
+}
+
+/** The club's colour at a given strength; a club colour that vanishes into the background falls back to the accent. */
+function clubTint(team: string, theme: GraphicTheme, alpha: number): string {
+  const c = teamColor(team);
+  const visible = Math.min(contrastRatio(c, theme.bg), contrastRatio(c, theme.bg2)) >= 1.5;
+  return withAlpha(visible ? c : theme.accent, alpha);
 }
 
 const ellipsis: CSSProperties = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 };
@@ -208,45 +216,71 @@ function FixtureBox({ items, theme, font }: { items: Array<{ opponent: string; i
 function PlayerCardFace({ spec, theme, card, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; card: PlayerCardContent; gwLabel: string }) {
   const land = spec.size === "landscape";
   const tall = spec.size === "portrait";
-  const jersey = land ? 120 : tall ? 190 : 150;
   const nameFont = land ? 48 : tall ? 84 : 72;
-  const tileValue = land ? 34 : tall ? 46 : 42;
-  const tileLabel = land ? 16 : 20;
+  const tileValue = land ? 34 : tall ? 46 : 38;
+  const tileLabel = land ? 16 : tall ? 20 : 18;
   const gap = land ? 14 : 20;
 
+  const jerseyBox = land ? 120 : tall ? 210 : 140;
   const identity = (
-    <div style={{ display: "flex", alignItems: "center", gap: 22, minWidth: 0 }}>
-      <Jersey team={card.teamShort} position={card.position} px={jersey} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{card.name}</div>
-        <div style={{ fontSize: land ? 22 : 28, color: theme.muted, fontWeight: 700, marginTop: 6, ...ellipsis }}>{card.teamName} · {card.position}</div>
-        {land && <div style={{ fontSize: 38, fontWeight: 900, color: theme.accent, lineHeight: 1.1, marginTop: 4 }}>{card.price}</div>}
-        {card.news && <div style={{ fontSize: land ? 16 : 20, color: theme.bad, fontWeight: 700, marginTop: 6, ...ellipsis }}>⚠ {card.news}</div>}
+    <div
+      style={{
+        position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap: land ? 18 : 28, minWidth: 0,
+        padding: land ? "12px 20px" : tall ? "18px 32px" : "12px 30px", borderRadius: 28, flexShrink: 0,
+        background: `linear-gradient(115deg, ${clubTint(card.teamShort, theme, 0.55)} 0%, ${clubTint(card.teamShort, theme, 0.10)} 75%)`,
+        border: `1px solid ${clubTint(card.teamShort, theme, 0.75)}`,
+        boxShadow: `0 18px 40px -22px ${clubTint(card.teamShort, theme, 0.9)}`,
+      }}
+    >
+      {/* the club code as a huge ghost behind everything */}
+      <div style={{ position: "absolute", right: land ? 10 : 24, bottom: land ? -24 : -44, fontSize: land ? 150 : 270, fontWeight: 900, lineHeight: 1, letterSpacing: -6, color: theme.text, opacity: 0.07 }}>{card.teamShort}</div>
+      <div style={{ position: "relative", width: jerseyBox, height: jerseyBox, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: -26, borderRadius: "50%", background: `radial-gradient(circle, ${clubTint(card.teamShort, theme, 0.75)} 0%, transparent 68%)` }} />
+        <div style={{ position: "relative" }}><Jersey team={card.teamShort} position={card.position} px={jerseyBox} /></div>
       </div>
-      {!land && (
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 60, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{card.price}</div>
-          <div style={{ fontSize: 18, color: theme.muted, fontWeight: 700, letterSpacing: 1.5, marginTop: 4 }}>PRICE</div>
+      <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.02, letterSpacing: -1, ...ellipsis }}>{card.name}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: land ? 6 : 12, minWidth: 0 }}>
+          <span style={{ fontSize: land ? 15 : 20, fontWeight: 900, letterSpacing: 1.5, padding: land ? "3px 12px" : "5px 16px", borderRadius: 999, background: theme.accent, color: theme.bg, flexShrink: 0 }}>{card.position}</span>
+          <span style={{ fontSize: land ? 20 : 28, color: theme.text, opacity: 0.85, fontWeight: 700, ...ellipsis }}>{card.teamName}</span>
         </div>
-      )}
+        {land && <div style={{ fontSize: 36, fontWeight: 900, color: theme.accent, lineHeight: 1.1, marginTop: 6 }}>{card.price}</div>}
+        {card.news && <div style={{ fontSize: land ? 16 : 20, color: theme.bad, fontWeight: 700, marginTop: 8, ...ellipsis }}>⚠ {card.news}</div>}
+      </div>
+      {!land && <div style={{ position: "relative", textAlign: "right", flexShrink: 0 }}>
+        <div style={{ fontSize: land ? 40 : tall ? 72 : 64, fontWeight: 900, color: theme.accent, lineHeight: 1, letterSpacing: -1 }}>{card.price}</div>
+        <div style={{ fontSize: land ? 13 : 18, color: theme.muted, fontWeight: 800, letterSpacing: 3, marginTop: 6 }}>PRICE</div>
+      </div>}
     </div>
   );
 
+  const gwValues = card.xpts.perGameweek.map((g) => g.value ?? 0);
+  const gwMax = Math.max(0.1, ...gwValues);
+  const barH = land ? 46 : tall ? 100 : 46;
   const xpts = (
-    <div style={{ ...panel(theme), padding: land ? "14px 22px" : "20px 28px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
-        <span style={{ fontSize: land ? 18 : 24, fontWeight: 800, color: theme.muted, letterSpacing: 1 }}>EXPECTED POINTS · {gwLabel}</span>
-        <span style={{ fontSize: land ? 48 : tall ? 80 : 72, fontWeight: 900, color: card.xpts.total === null ? theme.muted : theme.accent, lineHeight: 1 }}>
+    <div style={{ ...panel(theme), padding: land ? "14px 22px" : tall ? "20px 28px" : "14px 28px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <div style={{ fontSize: land ? 16 : 22, fontWeight: 800, color: theme.muted, letterSpacing: 2 }}>EXPECTED POINTS</div>
+          <div style={{ fontSize: land ? 14 : 20, fontWeight: 700, color: theme.muted, opacity: 0.8 }}>{gwLabel}</div>
+        </div>
+        <span style={{ fontSize: land ? 56 : tall ? 96 : 76, fontWeight: 900, color: card.xpts.total === null ? theme.muted : theme.accent, lineHeight: 1, letterSpacing: -2 }}>
           {card.xpts.total === null ? "—" : card.xpts.total.toFixed(1)}
         </span>
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: land ? 10 : 16 }}>
-        {card.xpts.perGameweek.map((g) => (
-          <div key={g.gameweek} style={{ flex: 1, textAlign: "center", background: theme.panel, borderRadius: 12, padding: land ? "6px 0" : "10px 0", minWidth: 0 }}>
-            <div style={{ fontSize: land ? 14 : 18, color: theme.muted, fontWeight: 700 }}>GW{g.gameweek}</div>
-            <div style={{ fontSize: land ? 22 : 30, fontWeight: 800 }}>{g.value === null ? "—" : g.value.toFixed(1)}</div>
-          </div>
-        ))}
+      {/* one bar per gameweek: the tallest is the best one */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: land ? 8 : 12, marginTop: land ? 10 : tall ? 18 : 10 }}>
+        {card.xpts.perGameweek.map((g) => {
+          const v = g.value ?? 0;
+          const best = g.value !== null && v === gwMax;
+          return (
+            <div key={g.gameweek} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 0 }}>
+              <div style={{ fontSize: land ? 18 : 28, fontWeight: 900, color: best ? theme.accent : theme.text }}>{g.value === null ? "—" : g.value.toFixed(1)}</div>
+              <div style={{ width: "100%", height: Math.max(6, Math.round((v / gwMax) * barH)), borderRadius: 10, background: best ? `linear-gradient(180deg, ${theme.accent}, ${withAlpha(theme.accent, 0.55)})` : `linear-gradient(180deg, ${withAlpha(theme.accent, 0.55)}, ${withAlpha(theme.accent, 0.18)})` }} />
+              <div style={{ fontSize: land ? 13 : 18, color: theme.muted, fontWeight: 700 }}>GW{g.gameweek}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -254,7 +288,7 @@ function PlayerCardFace({ spec, theme, card, gwLabel }: { spec: GraphicSpec; the
   const tiles = (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: land ? 10 : 14 }}>
       {card.tiles.map((t) => (
-        <div key={t.label} style={{ ...panel(theme, { borderRadius: 16 }), padding: land ? "10px 12px" : "16px 18px", minWidth: 0 }}>
+        <div key={t.label} style={{ ...panel(theme, { borderRadius: 16, borderTop: `4px solid ${theme.accent}` }), padding: land ? "10px 12px" : tall ? "14px 18px" : "8px 18px", minWidth: 0 }}>
           <div style={{ fontSize: tileValue, fontWeight: 900, lineHeight: 1.1, ...ellipsis }}>{t.value}</div>
           <div style={{ fontSize: tileLabel, color: theme.muted, fontWeight: 700, marginTop: 4, ...ellipsis }}>{t.label}</div>
         </div>
@@ -661,13 +695,15 @@ function RevealFace({ spec, theme, reveal, gwLabel, stats }: { spec: GraphicSpec
   const land = spec.size === "landscape";
   const tall = spec.size === "portrait";
   // with the manager's figures (captain tiles, transfers, overall) there is less room for the pitch, so the players are drawn smaller
+  // tiles (captain, vice, overall) when there are figures; the transfers / bank panel only when there is something to put in it
+  const showPanel = !!stats && (stats.transfers !== null || stats.bank !== null);
   const withStats = !!stats;
-  const jersey = land ? (withStats ? 44 : 52) : tall ? (withStats ? 88 : 104) : withStats ? 48 : 66;
-  const nameFont = land ? (withStats ? 13 : 15) : tall ? (withStats ? 21 : 24) : withStats ? 17 : 20;
-  const fixFont = land ? (withStats ? 11 : 13) : tall ? (withStats ? 17 : 20) : withStats ? 14 : 17;
+  const jersey = land ? (showPanel ? 44 : withStats ? 48 : 52) : tall ? (showPanel ? 88 : withStats ? 96 : 104) : showPanel ? 48 : withStats ? 58 : 66;
+  const nameFont = land ? (showPanel ? 13 : 15) : tall ? (showPanel ? 21 : 24) : showPanel ? 17 : 20;
+  const fixFont = land ? (showPanel ? 11 : 13) : tall ? (showPanel ? 17 : 20) : showPanel ? 14 : 17;
   const manager = spec.manager.trim();
   // with the manager's figures the squad value moves up here and the chip into the transfers panel, to leave room for the pitch
-  const subtitle = [manager, gwLabel, reveal.formation, stats ? `Squad ${reveal.squadValue}` : null].filter(Boolean).join(" · ");
+  const subtitle = [manager, gwLabel, reveal.formation, showPanel ? `Squad ${reveal.squadValue}` : null].filter(Boolean).join(" · ");
   const token = (p: RevealToken) => <RevealTokenView p={p} jersey={jersey} nameFont={nameFont} fixFont={fixFont} />;
   const pitch = <Pitch rows={reveal.rows} renderToken={token} />;
   const captain = reveal.rows.flatMap((r) => r.players).concat(reveal.bench).find((p) => p.isCaptain);
@@ -702,7 +738,7 @@ function RevealFace({ spec, theme, reveal, gwLabel, stats }: { spec: GraphicSpec
       {stats.overallRank !== null && <StatTile theme={theme} size={spec.size} label="Overall rank" value={formatFull(stats.overallRank)} basis={land ? "calc(50% - 4px)" : undefined} />}
     </div>
   ) : null;
-  const transfers = stats ? <TransfersPanel stats={stats} theme={theme} size={spec.size} chipLabel={reveal.chipLabel} /> : null;
+  const transfers = stats && showPanel ? <TransfersPanel stats={stats} theme={theme} size={spec.size} chipLabel={reveal.chipLabel} /> : null;
 
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
@@ -715,7 +751,7 @@ function RevealFace({ spec, theme, reveal, gwLabel, stats }: { spec: GraphicSpec
         <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
           <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>{pitch}</div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
-            {!stats && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>{chip}{value}</div>}
+            {!showPanel && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>{chip}{value}</div>}
             {tiles}
             {transfers}
             {bench}
@@ -729,7 +765,7 @@ function RevealFace({ spec, theme, reveal, gwLabel, stats }: { spec: GraphicSpec
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
-          {!stats && <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {!showPanel && <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flexShrink: 0 }}>
             {chip}{value}
             {!stats && (captain || vice) && (
               <span style={{ fontSize: 20, fontWeight: 700, color: theme.muted }}>
@@ -768,23 +804,32 @@ function StatTile({ theme, size, label, value, sub, badge, basis, big }: { theme
   );
 }
 
-/** This gameweek's transfers, in the order they were made, with the points hit when FPL has it. */
+/** This gameweek's transfers (when known), the points hit, the chip, and the money in the bank the manager declared. */
 function TransfersPanel({ stats, theme, size, chipLabel }: { stats: RevealStats; theme: GraphicTheme; size: SizeId; chipLabel?: string | null }) {
   const land = size === "landscape";
   const limit = size === "portrait" ? 4 : land ? 2 : 3;
-  const shown = stats.transfers.slice(0, limit);
+  const transfers = stats.transfers;
+  const shown = transfers ? transfers.slice(0, limit) : [];
   const font = land ? 14 : size === "portrait" ? 24 : 20;
   const hit = stats.transferCost ? `-${stats.transferCost} pts` : null;
+  const bank = stats.bank !== null ? `£${(stats.bank / 10).toFixed(1)}m` : null;
+  const label = transfers ? `Transfers${transfers.length ? ` (${transfers.length})` : ""}` : "In the bank";
+  const pill = (text: string) => (
+    <span style={{ background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "1px 10px" : "2px 14px", fontWeight: 900, letterSpacing: 1 }}>{text}</span>
+  );
   return (
     <div style={{ ...panel(theme, { borderRadius: 16 }), padding: land ? "6px 10px" : "10px 16px", flexShrink: 0 }} data-testid="reveal-transfers">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: land ? 11 : 15, fontWeight: 800, letterSpacing: 1.2, color: theme.muted, textTransform: "uppercase" }}>
-        <span>{`Transfers${stats.transfers.length ? ` (${stats.transfers.length})` : ""}`}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: land ? 11 : 15, fontWeight: 800, letterSpacing: 1.2, color: theme.muted, textTransform: "uppercase" }}>
+        <span>{label}</span>
         <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {hit && <span style={{ color: theme.bad }}>{hit}</span>}
-          {chipLabel && <span style={{ background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "1px 10px" : "2px 14px", fontWeight: 900, letterSpacing: 1 }}>{chipLabel}</span>}
+          {transfers && bank && <span style={{ color: theme.text }} data-testid="reveal-bank">Bank {bank}</span>}
+          {chipLabel && pill(chipLabel)}
         </span>
       </div>
-      {stats.transfers.length === 0 ? (
+      {!transfers ? (
+        <div style={{ fontSize: font + 4, fontWeight: 900, marginTop: 2 }} data-testid="reveal-bank">{bank}</div>
+      ) : transfers.length === 0 ? (
         <div style={{ fontSize: font, fontWeight: 800, marginTop: 2 }}>No transfers this gameweek</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: land ? 1 : 3, marginTop: 2 }}>
@@ -796,8 +841,8 @@ function TransfersPanel({ stats, theme, size, chipLabel }: { stats: RevealStats;
               <span style={{ fontSize: font - 4, color: theme.muted, fontWeight: 700 }}>{t.outTeam} → {t.inTeam}</span>
             </div>
           ))}
-          {stats.transfers.length > shown.length && (
-            <div style={{ fontSize: font - 2, fontWeight: 700, color: theme.muted }}>+{stats.transfers.length - shown.length} more</div>
+          {transfers.length > shown.length && (
+            <div style={{ fontSize: font - 2, fontWeight: 700, color: theme.muted }}>+{transfers.length - shown.length} more</div>
           )}
         </div>
       )}
@@ -1005,42 +1050,106 @@ function NewsFace({ spec, theme, news }: { spec: GraphicSpec; theme: GraphicThem
 
 // ---------- Captain Picks ----------
 
+function FixtureChips({ fixtures, theme, font, width }: { fixtures: CaptainPickRow["fixtures"]; theme: GraphicTheme; font: number; width: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, width, flexShrink: 0 }}>
+      {(fixtures.length ? fixtures : [null]).slice(0, 2).map((f, i) => {
+        const c = f ? fdrColor(f.difficulty) : null;
+        return (
+          <div key={i} style={{ background: c ? c.bg : theme.panel, color: c ? c.fg : theme.muted, borderRadius: 10, textAlign: "center", fontSize: font, fontWeight: 800, padding: "3px 0" }}>
+            {f ? `${f.opponent} (${f.isHome ? "H" : "A"})` : "No game"}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const MEDAL = ["#fbbf24", "#cbd5e1", "#f59e0b"];
+
 function CaptainFace({ spec, theme, rows, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }) {
   const land = spec.size === "landscape";
-  const nameFont = land ? 26 : spec.size === "portrait" ? 42 : 38;
-  const jersey = land ? 44 : 76;
+  const tall = spec.size === "portrait";
+  const [top, ...rest] = rows;
+  const maxX = Math.max(0.1, ...rows.map((r) => r.xpts));
+  const many = rest.length > 5;
+  const rowName = land ? 24 : many ? 30 : 38;
+  const rowJersey = land ? 44 : many ? 56 : 72;
+
+  const hero = top ? (
+    <div
+      style={{
+        position: "relative", overflow: "hidden", borderRadius: 30, display: "flex", alignItems: "center", gap: land ? 18 : 30,
+        flex: rest.length === 0 ? 1 : land ? 1 : "0 0 auto", minHeight: 0,
+        padding: land ? "20px 24px" : tall ? "30px 36px" : "24px 34px",
+        background: `linear-gradient(120deg, ${clubTint(top.teamShort, theme, 0.6)} 0%, ${clubTint(top.teamShort, theme, 0.12)} 80%)`,
+        border: `2px solid ${theme.accent}`,
+        boxShadow: `0 22px 50px -24px ${theme.accent}`,
+        ...(land ? { flexDirection: "column" as const, justifyContent: "center", textAlign: "center" as const } : {}),
+      }}
+    >
+      <div style={{ position: "absolute", right: -10, top: land ? -30 : -50, fontSize: land ? 220 : 380, fontWeight: 900, lineHeight: 1, color: theme.text, opacity: 0.06 }}>C</div>
+      <div style={{ position: "relative", width: land ? 150 : tall ? 240 : 200, height: land ? 150 : tall ? 240 : 200, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: -30, borderRadius: "50%", background: `radial-gradient(circle, ${clubTint(top.teamShort, theme, 0.8)} 0%, transparent 66%)` }} />
+        <div style={{ position: "relative" }}><Jersey team={top.teamShort} position={top.position} px={land ? 150 : tall ? 240 : 200} /></div>
+        {/* the armband */}
+        <div style={{ position: "absolute", right: -6, bottom: -4, width: land ? 46 : 64, height: land ? 46 : 64, borderRadius: "50%", background: theme.accent, color: theme.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: land ? 28 : 40, fontWeight: 900, border: `4px solid ${theme.bg}`, boxShadow: "0 6px 16px rgba(0,0,0,0.4)" }}>C</div>
+      </div>
+      <div style={{ position: "relative", flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: land ? "center" : "stretch", gap: land ? 6 : 10 }}>
+        <div style={{ fontSize: land ? 15 : 22, fontWeight: 900, letterSpacing: 4, color: theme.accent }}>★ TOP CAPTAIN PICK</div>
+        <div style={{ fontSize: land ? 38 : tall ? 76 : 64, fontWeight: 900, lineHeight: 1, letterSpacing: -1, ...ellipsis, maxWidth: "100%" }}>{top.name}{top.doubtful ? " ⚠" : ""}</div>
+        <div style={{ fontSize: land ? 15 : 22, color: theme.text, opacity: 0.8, fontWeight: 700, ...ellipsis, maxWidth: "100%" }}>{top.teamShort} · {top.position} · {top.price} · {top.ownership} owned</div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: land ? 14 : 24, marginTop: land ? 6 : 10, justifyContent: land ? "center" : "flex-start" }}>
+          <div>
+            <div style={{ fontSize: land ? 56 : tall ? 104 : 88, fontWeight: 900, color: theme.accent, lineHeight: 0.95, letterSpacing: -3 }}>{top.captainPoints.toFixed(1)}</div>
+            <div style={{ fontSize: land ? 12 : 18, color: theme.muted, fontWeight: 800, letterSpacing: 2 }}>AS CAPTAIN · {top.xpts.toFixed(1)} xPTS ×2</div>
+          </div>
+          <FixtureChips fixtures={top.fixtures} theme={theme} font={land ? 14 : 22} width={land ? 100 : 170} />
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const list = rest.length > 0 && (
+    <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : many ? 8 : 12, flex: 1, minHeight: 0 }}>
+      {rest.map((r) => {
+        const medal = r.rank <= 3 ? MEDAL[r.rank - 1] : null;
+        return (
+          <div key={r.id} style={{ ...panel(theme), position: "relative", overflow: "hidden", flex: 1, maxHeight: land ? 84 : tall ? 180 : 150, display: "flex", alignItems: "center", gap: land ? 12 : 20, padding: land ? "0 16px" : "0 24px", minHeight: 0 }}>
+            {/* how far behind the top pick: a bar in the club colour along the bottom */}
+            <div style={{ position: "absolute", left: 0, bottom: 0, height: land ? 5 : 7, width: `${Math.max(6, (r.xpts / maxX) * 100)}%`, background: `linear-gradient(90deg, ${clubTint(r.teamShort, theme, 0.95)}, ${clubTint(r.teamShort, theme, 0.35)})` }} />
+            <div style={{ width: land ? 36 : many ? 44 : 56, height: land ? 36 : many ? 44 : 56, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: land ? 20 : many ? 24 : 32, fontWeight: 900, background: medal ?? theme.panel, color: medal ? "#0b1020" : theme.accent, border: medal ? "none" : `2px solid ${theme.panelBorder}` }}>{r.rank}</div>
+            <Jersey team={r.teamShort} position={r.position} px={rowJersey} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: rowName, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}{r.doubtful ? " ⚠" : ""}</div>
+              <div style={{ fontSize: land ? 13 : many ? 17 : 20, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price} · {r.ownership} owned</div>
+            </div>
+            <FixtureChips fixtures={r.fixtures} theme={theme} font={land ? 14 : many ? 17 : 21} width={land ? 98 : many ? 130 : 156} />
+            <div style={{ textAlign: "right", flexShrink: 0, minWidth: land ? 80 : 120 }}>
+              <div style={{ fontSize: land ? 28 : many ? 36 : 46, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{r.xpts.toFixed(1)}</div>
+              <div style={{ fontSize: land ? 12 : 16, color: theme.muted, fontWeight: 700 }}>xPts · cap {r.captainPoints.toFixed(1)}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
-      {rows.length === 0 ? (
+      {!top ? (
         <div style={{ ...panel(theme), flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 40, fontSize: land ? 24 : 32, color: theme.muted, fontWeight: 700 }}>
           No projections for this gameweek yet.
         </div>
+      ) : land ? (
+        <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: rest.length ? "0 0 40%" : 1, display: "flex", minWidth: 0 }}>{hero}</div>
+          {rest.length > 0 && <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>{list}</div>}
+        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: land ? 8 : 12, flex: 1, minHeight: 0 }}>
-          {rows.map((r) => (
-            <div key={r.id} style={{ ...panel(theme), flex: 1, maxHeight: land ? 84 : 150, display: "flex", alignItems: "center", gap: land ? 12 : 20, padding: land ? "0 16px" : "0 26px", minHeight: 0 }}>
-              <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, width: land ? 34 : 54, flexShrink: 0 }}>{r.rank}</div>
-              <Jersey team={r.teamShort} position={r.position} px={jersey} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.05, ...ellipsis }}>{r.name}{r.doubtful ? " ⚠" : ""}</div>
-                <div style={{ fontSize: land ? 14 : 21, color: theme.muted, fontWeight: 700, ...ellipsis }}>{r.teamShort} · {r.position} · {r.price} · {r.ownership} owned</div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, width: land ? 104 : 168, flexShrink: 0 }}>
-                {(r.fixtures.length ? r.fixtures : [null]).slice(0, 2).map((f, i) => {
-                  const c = f ? fdrColor(f.difficulty) : null;
-                  return (
-                    <div key={i} style={{ background: c ? c.bg : theme.panel, color: c ? c.fg : theme.muted, borderRadius: 10, textAlign: "center", fontSize: land ? 15 : 22, fontWeight: 800, padding: land ? "2px 0" : "4px 0" }}>
-                      {f ? `${f.opponent} (${f.isHome ? "H" : "A"})` : "No game"}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0, minWidth: land ? 84 : 130 }}>
-                <div style={{ fontSize: land ? 28 : 46, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{r.xpts.toFixed(1)}</div>
-                <div style={{ fontSize: land ? 12 : 17, color: theme.muted, fontWeight: 700 }}>xPts · cap {r.captainPoints.toFixed(1)}</div>
-              </div>
-            </div>
-          ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1, minHeight: 0 }}>
+          {hero}
+          {list}
         </div>
       )}
     </Frame>
