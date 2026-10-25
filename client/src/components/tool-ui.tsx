@@ -65,6 +65,7 @@ export function SectionCard({
   className = "",
   bodyClassName = "p-4 sm:p-5",
   testId,
+  onHeaderClick,
 }: {
   icon: LucideIcon;
   title: string;
@@ -74,10 +75,15 @@ export function SectionCard({
   className?: string;
   bodyClassName?: string;
   testId?: string;
+  /** Makes the whole header a click target (e.g. to collapse the section). */
+  onHeaderClick?: () => void;
 }) {
   return (
     <section className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`} data-testid={testId}>
-      <header className="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 sm:px-5">
+      <header
+        className={`flex flex-wrap items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 sm:px-5 ${onHeaderClick ? "cursor-pointer" : ""}`}
+        onClick={onHeaderClick}
+      >
         <IconTile icon={icon} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-bold leading-tight text-gray-900 sm:text-lg">{title}</h2>
@@ -175,11 +181,26 @@ export function HeroPanel({ children, className = "", testId }: { children: Reac
 }
 
 /** A big number with a label and a line of context, for use on a HeroPanel. */
-export function HeroStat({ label, value, sub, testId, valueTestId }: { label: string; value: ReactNode; sub?: ReactNode; testId?: string; valueTestId?: string }) {
+export function HeroStat({
+  label,
+  value,
+  sub,
+  testId,
+  valueTestId,
+  size = "lg",
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  testId?: string;
+  valueTestId?: string;
+  /** "md" for rows of four or more stats, where "lg" numbers would not fit on a phone. */
+  size?: "lg" | "md";
+}) {
   return (
     <div data-testid={testId}>
       <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">{label}</div>
-      <div className="mt-1 text-4xl font-extrabold leading-none tabular-nums sm:text-5xl" data-testid={valueTestId}>{value}</div>
+      <div className={`mt-1 font-extrabold leading-none tabular-nums ${size === "md" ? "text-2xl sm:text-3xl" : "text-4xl sm:text-5xl"}`} data-testid={valueTestId}>{value}</div>
       {sub && <div className="mt-1.5 text-xs font-medium text-white/75">{sub}</div>}
     </div>
   );
@@ -245,5 +266,16 @@ export function InputPanel({ icon: Icon, title, subtitle, children }: { icon: Lu
       </div>
       <div className="space-y-3">{children}</div>
     </section>
+  );
+}
+
+/** Small white tile with a label and a value, for secondary figures that sit under a hero panel. */
+export function StatTile({ label, value, tone = "gray", testId }: { label: string; value: ReactNode; tone?: "gray" | "indigo" | "green" | "amber"; testId?: string }) {
+  const accent = { gray: "border-t-gray-300", indigo: "border-t-indigo-400", green: "border-t-emerald-400", amber: "border-t-amber-400" }[tone];
+  return (
+    <div className={`rounded-xl border border-gray-200 border-t-2 bg-white px-3 py-2.5 shadow-sm ${accent}`} data-testid={testId}>
+      <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500 sm:text-[11px]">{label}</div>
+      <div className="mt-0.5 text-base font-extrabold tabular-nums text-gray-900 sm:text-lg">{value}</div>
+    </div>
   );
 }

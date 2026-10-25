@@ -50,8 +50,10 @@ import {
   Clock,
   Wallet,
   Zap,
+  Shirt,
   X
 } from "lucide-react";
+import { HeroPanel, HeroStat, SectionCard, SegmentedControl, StatTile } from "@/components/tool-ui";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { InstructionSteps, InstructionStep } from "@/components/instruction-steps";
@@ -1442,53 +1444,39 @@ export default function MyDashboard() {
 
         {/* Pre-season "Create Optimised Team" — only relevant before GW1 kicks off */}
         {bootstrapData && currentGameweek === 0 && (
-          <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
-            <CardHeader className="cursor-pointer" onClick={() => setShowPreseasonOptimizer(prev => !prev)}>
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
-                    Create Your Optimised Team
-                  </CardTitle>
-                  <CardDescription>
-                    GW1 hasn't started yet — build your ideal £100m squad for the new season, choosing how many gameweeks to optimise for and which players to include or exclude.
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {showPreseasonOptimizer ? (
-                    <>Hide <ChevronUp className="h-4 w-4 ml-1" /></>
-                  ) : (
-                    <>Build My Team <ChevronDown className="h-4 w-4 ml-1" /></>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
+          <SectionCard
+            icon={Sparkles}
+            title="Create Your Optimised Team"
+            subtitle="GW1 hasn't started yet — build your ideal £100m squad for the new season, choosing how many gameweeks to optimise for and which players to include or exclude."
+            className="mb-3 sm:mb-4"
+            bodyClassName={showPreseasonOptimizer ? "p-4 sm:p-5" : "hidden"}
+            onHeaderClick={() => setShowPreseasonOptimizer(prev => !prev)}
+            action={
+              <Button variant="outline" size="sm" className="shrink-0 rounded-xl">
+                {showPreseasonOptimizer ? (
+                  <>Hide <ChevronUp className="h-4 w-4 ml-1" /></>
+                ) : (
+                  <>Build My Team <ChevronDown className="h-4 w-4 ml-1" /></>
+                )}
+              </Button>
+            }
+          >
             {showPreseasonOptimizer && (
-              <CardContent>
-                <WildcardOptimizer variant="embedded" defaultUnlimitedBudget={false} defaultBudget={100} defaultHorizon={5} allowSaveAsDraft />
-              </CardContent>
+              <WildcardOptimizer variant="embedded" defaultUnlimitedBudget={false} defaultBudget={100} defaultHorizon={5} allowSaveAsDraft />
             )}
-          </Card>
+          </SectionCard>
         )}
 
         {/* Manager Search Section - Compact */}
-        <Card className="mb-2 border-0 bg-white/80 backdrop-blur-sm shadow-md">
-          <CardContent className="p-2 sm:p-2 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+        <Card className="mb-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] shadow-sm dark:via-transparent">
+          <CardContent className="p-3 sm:p-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
             {/* Search mode toggle */}
-            <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
-              <button
-                onClick={() => { setSearchMode("id"); }}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === "id" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                Manager ID
-              </button>
-              <button
-                onClick={() => { setSearchMode("name"); }}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === "name" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                Name / Team
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel="Search by"
+              value={searchMode}
+              onChange={(v) => setSearchMode(v)}
+              options={[{ value: "id" as const, label: "Manager ID" }, { value: "name" as const, label: "Name / Team" }]}
+            />
 
             {searchMode === "id" ? (
               <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-1 min-w-0">
@@ -1503,14 +1491,14 @@ export default function MyDashboard() {
                   }}
                   onKeyPress={handleKeyPress}
                   autoComplete="off"
-                  className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  className="flex-1 h-10 rounded-xl text-sm"
                   data-testid="input-manager-id"
                 />
                 <div className="flex gap-2">
                   <Button 
                     onClick={handleSearch} 
                     disabled={!managerId.trim() || isLoading}
-                    className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                    className="flex-1 sm:flex-none h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 text-sm rounded-xl font-bold"
                     data-testid="button-search-manager"
                   >
                     <Search className="h-4 w-4 mr-1" />
@@ -1530,7 +1518,7 @@ export default function MyDashboard() {
                       onChange={(e) => setNameSearchTeam(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
                       autoComplete="off"
-                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      className="h-10 rounded-xl text-sm"
                       data-testid="input-team-name"
                     />
                   </div>
@@ -1542,7 +1530,7 @@ export default function MyDashboard() {
                       onChange={(e) => setNameSearchManager(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
                       autoComplete="off"
-                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      className="h-10 rounded-xl text-sm"
                       data-testid="input-manager-name"
                     />
                   </div>
@@ -1550,7 +1538,7 @@ export default function MyDashboard() {
                     <Button
                       onClick={() => handleNameSearch()}
                       disabled={(!nameSearchTeam.trim() && !nameSearchManager.trim()) || isNameSearching}
-                      className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                      className="flex-1 sm:flex-none h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 text-sm rounded-xl font-bold"
                       data-testid="button-search-name"
                     >
                       {isNameSearching ? <RefreshCw className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
@@ -1577,7 +1565,7 @@ export default function MyDashboard() {
                     {nameSearchResults.map((m) => (
                       <button
                         key={m.id}
-                        className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-100 last:border-0 transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 border-b border-gray-100 last:border-0 transition-colors"
                         onClick={() => {
                           const idStr = String(m.id);
                           setManagerId(idStr);
@@ -1593,7 +1581,7 @@ export default function MyDashboard() {
                             <span className="text-xs text-gray-500 ml-1">({m.entry_name})</span>
                           </div>
                           {m.summary_overall_rank && (
-                            <span className="text-xs text-purple-600 whitespace-nowrap">Overall Rank #{m.summary_overall_rank.toLocaleString()}</span>
+                            <span className="text-xs text-indigo-600 whitespace-nowrap">Overall Rank #{m.summary_overall_rank.toLocaleString()}</span>
                           )}
                         </div>
                         <div className="text-xs text-gray-400 mt-0.5">
@@ -1647,16 +1635,33 @@ export default function MyDashboard() {
         {managerData && !isLoading && (
           <div className="space-y-2">
             {/* Manager Overview */}
-            <Card className="border-0 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-lg">
-              <CardHeader className="flex flex-row flex-wrap items-baseline justify-center gap-x-3 space-y-0 px-2 py-1 sm:px-2 sm:py-1">
-                <CardTitle className="text-lg sm:text-xl font-semibold text-gradient bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  {managerData.player_first_name} {managerData.player_last_name}
-                </CardTitle>
-                <CardDescription className="text-sm sm:text-base text-gray-600">
-                  {managerData.player_region_name} • Manager ID: {managerData.id}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <HeroPanel className="!rounded-2xl !p-4 sm:!p-5" testId="manager-hero">
+              <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-xl font-extrabold sm:text-2xl">{managerData.player_first_name} {managerData.player_last_name}</h2>
+                <span className="text-sm font-medium text-white/75">{managerData.player_region_name} • Manager ID: {managerData.id}</span>
+              </div>
+              <div className={`grid grid-cols-2 gap-x-5 gap-y-4 ${teamData ? 'sm:grid-cols-4' : 'sm:grid-cols-2'}`}>
+                <HeroStat size="md" label="Total pts" value={formatRank(managerData.summary_overall_points)} testId="card-total-points" />
+                <HeroStat
+                  size="md"
+                  label="Rank"
+                  value={formatRank(managerData.summary_overall_rank)}
+                  testId="card-overall-rank"
+                  sub={getRankChange() !== null && getRankChange() !== 0 ? (
+                    <span className="inline-flex items-center gap-1">
+                      {getRankChange()! > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                      {formatRank(Math.abs(getRankChange()!))} {getRankChange()! > 0 ? 'up' : 'down'}
+                    </span>
+                  ) : undefined}
+                />
+                {teamData && (
+                  <>
+                    <HeroStat size="md" label="GW points" value={managerData?.summary_event_points || 0} />
+                    <HeroStat size="md" label="GW rank" value={formatRank(managerData?.summary_event_rank || 0)} />
+                  </>
+                )}
+              </div>
+            </HeroPanel>
 
             {/* Main Dashboard Tabs */}
             <Tabs
@@ -1667,10 +1672,10 @@ export default function MyDashboard() {
               className="w-full"
             >
               {/* Dynamic grid based on whether next team data is available */}
-              <TabsList className={`grid w-full ${teamData ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'} gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg`}>
+              <TabsList className={`grid w-full ${teamData ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'} gap-1 sm:gap-0 h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none`}>
                 <TabsTrigger 
                   value="overview" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px]"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]"
                   data-testid="tab-overview"
                 >
                   Overview
@@ -1679,7 +1684,7 @@ export default function MyDashboard() {
                 {teamData && (
                   <TabsTrigger
                     value="nextteam"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px]"
+                    className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]"
                     data-testid="tab-nextteam"
                   >
                     Projections
@@ -1687,28 +1692,28 @@ export default function MyDashboard() {
                 )}
                 <TabsTrigger
                   value="leagues"
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px]"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]"
                   data-testid="tab-leagues"
                 >
                   Leagues
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px]"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]"
                   data-testid="tab-transfers"
                 >
                   Transfers
                 </TabsTrigger>
                 <TabsTrigger 
                   value="chips" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px] col-span-1 sm:col-span-1"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px] col-span-1 sm:col-span-1"
                   data-testid="tab-chips"
                 >
                   Chips
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-1 sm:py-1 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[32px] col-span-2 sm:col-span-1"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px] col-span-2 sm:col-span-1"
                   data-testid="tab-performance"
                 >
                   History
@@ -1718,107 +1723,30 @@ export default function MyDashboard() {
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-3 mt-2 sm:mt-2">
                 <div className="space-y-3">
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-                  {/* Total Points */}
-                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm" data-testid="card-total-points">
-                    <CardContent className="p-2 sm:p-3">
-                      <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Total Pts</p>
-                      <p className="text-base sm:text-lg font-bold text-blue-900">{formatRank(managerData.summary_overall_points)}</p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Overall Rank */}
-                  <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 shadow-sm" data-testid="card-overall-rank">
-                    <CardContent className="p-2 sm:p-3">
-                      <p className="text-[10px] sm:text-xs font-medium text-amber-700 mb-0.5">Rank</p>
-                      <p className="text-base sm:text-lg font-bold text-amber-900">
-                        {formatRank(managerData.summary_overall_rank)}
-                        {getRankChange() !== null && getRankChange() !== 0 && (
-                          <span className={`ml-1.5 inline-flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatRank(Math.abs(getRankChange()!))}
-                            {getRankChange()! > 0 ? (
-                              <TrendingUp className="h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3" />
-                            )}
-                          </span>
-                        )}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {teamData && (
-                    <>
-                      {/* GW Points */}
-                      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-green-700 mb-0.5">GW Points</p>
-                          <p className="text-base sm:text-lg font-bold text-green-900">
-                            {managerData?.summary_event_points || 0}
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      {/* GW Rank */}
-                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-purple-700 mb-0.5">GW Rank</p>
-                          <p className="text-base sm:text-lg font-bold text-purple-900">
-                            {formatRank(managerData?.summary_event_rank || 0)}
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      {/* Formation */}
-                      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-emerald-700 mb-0.5">Formation</p>
-                          <p className="text-base sm:text-lg font-bold text-emerald-900">
-                            {getFormationString()}
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      {/* Squad Value */}
-                      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-orange-700 mb-0.5">Squad Value</p>
-                          <p className="text-base sm:text-lg font-bold text-orange-900">
-                            {formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))}
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      {/* Cash in Bank */}
-                      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-yellow-700 mb-0.5">Cash in Bank</p>
-                          <p className="text-base sm:text-lg font-bold text-yellow-900">
-                            {formatPrice(teamData.entry_history?.bank || 0)}
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      {/* Transfers */}
-                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                        <CardContent className="p-2 sm:p-3">
-                          <p className="text-[10px] sm:text-xs font-medium text-blue-700 mb-0.5">Transfers</p>
-                          <p className="text-base sm:text-lg font-bold text-blue-900">
-                            {teamData.entry_history?.event_transfers || 0}/{(() => {
-                              const transfersMade = teamData.entry_history?.event_transfers || 0;
-                              const transferCost = teamData.entry_history?.event_transfers_cost || 0;
-                              const freeTransfers = transfersMade - (transferCost / 4);
-                              return freeTransfers;
-                            })()}
-                            {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
-                              <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
-                            )}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </>
-                  )}
-                </div>
+                {teamData && (
+                  <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+                    <StatTile tone="green" label="Formation" value={getFormationString()} />
+                    <StatTile tone="indigo" label="Squad Value" value={formatPrice((teamData.entry_history?.value || 0) - (teamData.entry_history?.bank || 0))} />
+                    <StatTile tone="amber" label="Cash in Bank" value={formatPrice(teamData.entry_history?.bank || 0)} />
+                    <StatTile
+                      tone="indigo"
+                      label="Transfers"
+                      value={
+                        <>
+                          {teamData.entry_history?.event_transfers || 0}/{(() => {
+                            const transfersMade = teamData.entry_history?.event_transfers || 0;
+                            const transferCost = teamData.entry_history?.event_transfers_cost || 0;
+                            const freeTransfers = transfersMade - (transferCost / 4);
+                            return freeTransfers;
+                          })()}
+                          {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
+                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history?.event_transfers_cost}pts)</span>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                )}
 
               {teamData && (
                 <>
@@ -1957,19 +1885,23 @@ export default function MyDashboard() {
                     })();
 
                     return (
-                      <div className="max-w-4xl mx-auto">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-600">GW Squad</span>
+                      <SectionCard
+                        icon={Shirt}
+                        title="GW Squad"
+                        className="max-w-4xl mx-auto"
+                        bodyClassName="p-3 sm:p-4"
+                        action={
                           <Button
                             size="sm"
                             variant={showGwLivePoints ? "default" : "outline"}
-                            className={showGwLivePoints ? "h-7 bg-green-600 hover:bg-green-700 text-white gap-1.5" : "h-7 gap-1.5"}
+                            className={showGwLivePoints ? "h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" : "h-8 rounded-xl gap-1.5"}
                             onClick={() => setShowGwLivePoints(v => !v)}
                           >
                             <Zap className="h-3.5 w-3.5" />
                             Live Points
                           </Button>
-                        </div>
+                        }
+                      >
                         {showGwLivePoints && gwLiveTotal !== null && (
                           <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
                             <Zap className="h-4 w-4 text-green-600 shrink-0" />
@@ -1992,7 +1924,7 @@ export default function MyDashboard() {
                             if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain, player.multiplier || 1);
                           }}
                         />
-                      </div>
+                      </SectionCard>
                     );
                   })()}
 
@@ -2011,16 +1943,16 @@ export default function MyDashboard() {
             <TabsContent value="leagues" className="space-y-3 mt-2 sm:mt-2">
                 {/* My Leagues */}
                 {leaguesData && leaguesData.classic && (
-                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg" data-testid="card-leagues">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
-                        <div className="p-2 bg-indigo-100 rounded-lg">
-                          <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm" data-testid="card-leagues">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Trophy className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         My Leagues
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-4 sm:p-5">
                     {/* Table Header */}
                     <div className="hidden sm:grid sm:grid-cols-[1fr_110px_100px_90px_90px] gap-4 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-3 border-b pb-2">
                       <div>League</div>
@@ -2298,28 +2230,25 @@ export default function MyDashboard() {
               {/* Multi-gameweek optimizer, mirroring Team Optimizer's next-GWs view */}
               {multiGwBasePicks && multiGwOptimized.size > 0 && (
                 <>
-                  <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <CardTitle className="text-white text-sm sm:text-base md:text-lg">
-                        Projected Points - Next {multiGwOptimizerGWs.length} Gameweeks
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-4 sm:pb-6">
-                      <div className="text-3xl sm:text-4xl md:text-5xl font-bold">
-                        {Array.from(multiGwOptimized.values()).reduce((sum, gw) => sum + gw.totalPoints, 0).toFixed(1)}
-                      </div>
-                      <div className="text-purple-100 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
-                        Auto Optimized Lineup
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <HeroPanel className="!rounded-2xl !p-4 sm:!p-5">
+                    <HeroStat
+                      label={`Projected Points - Next ${multiGwOptimizerGWs.length} Gameweeks`}
+                      value={Array.from(multiGwOptimized.values()).reduce((sum, gw) => sum + gw.totalPoints, 0).toFixed(1)}
+                      sub="Auto Optimized Lineup"
+                    />
+                  </HeroPanel>
 
-                  <Card>
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <CardTitle className="text-sm sm:text-base md:text-lg">Projected Points by Gameweek</CardTitle>
-                      <CardDescription>Tap a gameweek to switch its optimized lineup</CardDescription>
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                          <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                        </div>
+                        Projected Points by Gameweek
+                      </CardTitle>
+                      <CardDescription className="text-xs text-gray-500 sm:text-sm">Tap a gameweek to switch its optimized lineup</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4 sm:p-5">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                         {multiGwOptimizerGWs.map(gw => {
                           const gwResult = multiGwOptimized.get(gw);
@@ -2329,13 +2258,13 @@ export default function MyDashboard() {
                             <Card
                               key={gw}
                               className={`min-h-[90px] sm:min-h-[100px] cursor-pointer transition-colors ${
-                                isSelected ? 'ring-2 ring-purple-500 bg-purple-50' : 'hover:bg-gray-50'
+                                isSelected ? 'ring-2 ring-indigo-500 bg-indigo-500/10' : 'hover:bg-gray-50'
                               }`}
                               onClick={() => setSelectedMultiGwOptimizerGW(gw)}
                             >
                               <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
                                 <div className="text-[10px] sm:text-xs font-medium text-gray-600 mb-0.5 sm:mb-1">GW{gw}</div>
-                                <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 mb-0.5 sm:mb-1">
+                                <div className="text-base sm:text-lg md:text-xl font-extrabold text-indigo-600 mb-0.5 sm:mb-1">
                                   {(gwResult?.totalPoints || 0).toFixed(2)}
                                 </div>
                                 {formation && (
@@ -2352,16 +2281,19 @@ export default function MyDashboard() {
                   </Card>
 
                   {shownMultiGwGW !== null && multiGwOptimized.get(shownMultiGwGW) && (
-                    <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
-                      <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
-                        <CardTitle className="text-lg sm:text-xl text-purple-900">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                        <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                            <Shirt className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                          </div>
                           GW {shownMultiGwGW} Optimized Lineup
                         </CardTitle>
-                        <CardDescription className="text-purple-700 mt-1">
+                        <CardDescription className="text-xs text-gray-500 sm:text-sm">
                           Best XI for GW {shownMultiGwGW} based on projected points, using your current squad.
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
+                      <CardContent className="p-4 sm:p-5">
                         <PitchView
                           players={multiGwOptimized.get(shownMultiGwGW)!.picks
                             .filter(pick => pick.position <= 11)
@@ -2486,7 +2418,7 @@ export default function MyDashboard() {
               {fplStatus?.connected && !isLoadingNextTeam && !nextTeamData && (
                 <>
                   {user && (
-                    <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                       <CardContent className="p-6 sm:p-8 text-center">
                         <div className="max-w-md mx-auto space-y-4">
                           <div className="text-lg font-semibold text-blue-900">
@@ -2543,16 +2475,19 @@ export default function MyDashboard() {
               
               {/* Show GW 22 team when FPL IS connected and data is available */}
               {fplStatus?.connected && nextTeamData && teamData && (
-                <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
-                  <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
-                    <CardTitle className="text-lg sm:text-xl text-green-900">
+                <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                    <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                        <Target className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                      </div>
                       GW {getNextGameweekDashboard()} Fixtures & Projections
                     </CardTitle>
-                    <CardDescription className="text-green-700 mt-1">
+                    <CardDescription className="text-xs text-gray-500 sm:text-sm">
                       Showing GW {getNextGameweekDashboard()} fixtures and projected points for your synced team.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
+                  <CardContent className="p-4 sm:p-5">
                     {/* FPL Session Reminder for non-logged-in users */}
                     {searchedId && !user && (
                       <Alert className="mb-6 border-blue-200 bg-blue-50">
@@ -2605,24 +2540,24 @@ export default function MyDashboard() {
                       const nextGw = getNextGameweekDashboard();
                       
                       return (
-                        <Alert className="mb-6 border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50">
-                          <Sparkles className="h-4 w-4 text-purple-600" />
-                          <AlertDescription className="text-sm text-purple-800">
-                            <span className="font-semibold text-purple-900">
+                        <Alert className="mb-6 border-indigo-300 bg-gradient-to-r from-indigo-50 to-indigo-50">
+                          <Sparkles className="h-4 w-4 text-indigo-600" />
+                          <AlertDescription className="text-sm text-indigo-800">
+                            <span className="font-semibold text-indigo-900">
                               {getChipDisplayName(activeChip)} Active
                             </span>
                             {isUnlimitedTransfersActive() && (
-                              <span className="text-purple-600 ml-1">
+                              <span className="text-indigo-600 ml-1">
                                 - Unlimited transfers available for GW {nextGw}!
                               </span>
                             )}
                             {activeChip === 'bboost' && (
-                              <span className="text-purple-600 ml-1">
+                              <span className="text-indigo-600 ml-1">
                                 - All 15 players will earn points this gameweek!
                               </span>
                             )}
                             {activeChip === '3xc' && (
-                              <span className="text-purple-600 ml-1">
+                              <span className="text-indigo-600 ml-1">
                                 - Your captain will earn 3x points this gameweek!
                               </span>
                             )}
@@ -2660,17 +2595,17 @@ export default function MyDashboard() {
                       })();
                       const netXPts = totalStartingXPts - hitCost;
                       return (
-                        <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg mb-6">
-                          <CardContent className="p-4 sm:p-6">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm mb-6">
+                          <CardContent className="p-4 sm:p-5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-purple-200 rounded-full">
-                                  <Target className="h-6 w-6 text-purple-700" />
+                                <div className="p-2.5 bg-indigo-200 rounded-full">
+                                  <Target className="h-6 w-6 text-indigo-700" />
                                 </div>
                                 <div>
-                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points (Optimised)</p>
+                                  <p className="text-xs sm:text-sm font-medium text-indigo-700">GW {nextGW} Team Projected Points (Optimised)</p>
                                   <div className="flex items-baseline gap-2">
-                                    <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(2)}</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-indigo-900">{netXPts.toFixed(2)}</p>
                                     {hitCost > 0 && (
                                       <span className="text-sm text-red-600 font-medium">(-{hitCost} hit)</span>
                                     )}
@@ -2679,13 +2614,13 @@ export default function MyDashboard() {
                               </div>
                               <div className="text-right space-y-1.5">
                                 {activeChipVal === 'bboost' ? (
-                                  <p className="text-xs text-purple-600">Incl. bench (BB)</p>
+                                  <p className="text-xs text-indigo-600">Incl. bench (BB)</p>
                                 ) : (
-                                  <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(2)}</p>
+                                  <p className="text-xs text-indigo-600">Bench: {totalBenchXPts.toFixed(2)}</p>
                                 )}
                                 <div className="flex gap-1.5 justify-end items-center">
                                   {activeChipVal && activeChipVal !== 'bboost' && (
-                                    <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-100">
+                                    <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-100">
                                       {activeChipVal === '3xc' ? '3xC' : activeChipVal === 'freehit' ? 'FH' : activeChipVal === 'wildcard' ? 'WC' : activeChipVal}
                                     </Badge>
                                   )}
@@ -2699,12 +2634,12 @@ export default function MyDashboard() {
 
                     {/* Team Overview Cards */}
                     <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4 mb-6">
-                      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                      <Card className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1">Formation</p>
-                              <p className="text-xl sm:text-2xl font-bold text-emerald-900">
+                              <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Formation</p>
+                              <p className="text-xl sm:text-2xl font-extrabold text-gray-900">
                                 {(() => {
                                   const starting = getOptimizedPicksForNextGW(nextTeamData.picks, getUpcomingActiveChip()).filter(p => p.position <= 11);
                                   const defs = starting.filter(p => {
@@ -2723,21 +2658,21 @@ export default function MyDashboard() {
                                 })()}
                               </p>
                             </div>
-                            <div className="p-2 bg-emerald-200 rounded-full">
-                              <Trophy className="h-5 w-5 text-emerald-700" />
+                            <div className="p-2 rounded-full bg-indigo-500/10">
+                              <Trophy className="h-5 w-5 text-indigo-600" />
                             </div>
                           </div>
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                      <Card className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers</p>
-                              <p className="text-xl sm:text-2xl font-bold text-blue-900">
+                              <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Transfers</p>
+                              <p className="text-xl sm:text-2xl font-extrabold text-gray-900">
                                 {isUnlimitedTransfersActive() ? (
-                                  <span className="text-purple-600">∞ Unlimited</span>
+                                  <span className="text-indigo-600">∞ Unlimited</span>
                                 ) : (
                                   <>
                                     {nextTeamData.transfers?.made ?? 0}/{nextTeamData.transfers?.limit ?? 1}
@@ -2758,35 +2693,35 @@ export default function MyDashboard() {
                                 return null;
                               })()}
                             </div>
-                            <div className="p-2 bg-blue-200 rounded-full">
-                              <ArrowLeftRight className="h-5 w-5 text-blue-700" />
+                            <div className="p-2 rounded-full bg-indigo-500/10">
+                              <ArrowLeftRight className="h-5 w-5 text-indigo-600" />
                             </div>
                           </div>
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                      <Card className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-amber-700 mb-1">Bank</p>
-                              <p className="text-xl sm:text-2xl font-bold text-amber-900">
+                              <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Bank</p>
+                              <p className="text-xl sm:text-2xl font-extrabold text-gray-900">
                                 {formatPrice(nextTeamData.transfers?.bank || nextTeamData.entry_history?.bank || 0)}
                               </p>
                             </div>
-                            <div className="p-2 bg-amber-200 rounded-full">
-                              <DollarSign className="h-5 w-5 text-amber-700" />
+                            <div className="p-2 rounded-full bg-indigo-500/10">
+                              <DollarSign className="h-5 w-5 text-indigo-600" />
                             </div>
                           </div>
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                      <Card className="rounded-xl border border-gray-200 border-t-2 border-t-indigo-400 bg-white shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-green-700 mb-1">Squad Value</p>
-                              <p className="text-xl sm:text-2xl font-bold text-green-900">
+                              <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Squad Value</p>
+                              <p className="text-xl sm:text-2xl font-extrabold text-gray-900">
                                 {formatPrice((() => {
                                   const squadValue = nextTeamData.picks.reduce((total: number, pick: any) => {
                                     const player = getPlayerById(pick.element);
@@ -2796,8 +2731,8 @@ export default function MyDashboard() {
                                 })())}
                               </p>
                             </div>
-                            <div className="p-2 bg-green-200 rounded-full">
-                              <TrendingUp className="h-5 w-5 text-green-700" />
+                            <div className="p-2 rounded-full bg-indigo-500/10">
+                              <TrendingUp className="h-5 w-5 text-indigo-600" />
                             </div>
                           </div>
                         </CardContent>
@@ -2812,14 +2747,16 @@ export default function MyDashboard() {
                       if (gwTransfers.length === 0) return null;
                       
                       return (
-                        <Card className="mb-6 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2 text-orange-900">
-                              <ArrowLeftRight className="h-5 w-5 text-orange-600" />
+                        <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                          <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                            <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                                <ArrowLeftRight className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                              </div>
                               GW {nextGw} Transfers ({gwTransfers.length})
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="pt-0">
+                          <CardContent className="p-4 sm:p-5">
                             <div className="space-y-3">
                               {gwTransfers.map((transfer, idx) => {
                                 const playerIn = getPlayerById(transfer.element_in);
@@ -2828,7 +2765,7 @@ export default function MyDashboard() {
                                 const teamOut = bootstrapData?.teams.find(t => t.id === playerOut?.team);
                                 
                                 return (
-                                  <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 shadow-sm">
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                       <div className="flex flex-col items-center min-w-[80px]">
                                         <span className="text-xs text-red-600 font-medium mb-1">OUT</span>
@@ -2840,7 +2777,7 @@ export default function MyDashboard() {
                                       </div>
                                       
                                       <div className="flex-shrink-0">
-                                        <ArrowLeftRight className="h-4 w-4 text-orange-500" />
+                                        <ArrowLeftRight className="h-4 w-4 text-indigo-500" />
                                       </div>
                                       
                                       <div className="flex flex-col items-center min-w-[80px]">
@@ -2946,18 +2883,18 @@ export default function MyDashboard() {
               {/* Transfers Tab */}
               <TabsContent value="transfers" className="space-y-3 mt-2 sm:mt-2">
                 {/* Free Transfers Summary Card - Shows for all users, with more detail when FPL is synced */}
-                <Card className="border-0 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-lg">
-                  <CardContent className="p-4 sm:p-6">
+                <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-3 bg-emerald-100 rounded-xl">
-                          <ArrowLeftRight className="h-6 w-6 text-emerald-600" />
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                          <ArrowLeftRight className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         <div>
-                          <h3 className="text-lg sm:text-xl font-bold text-emerald-800">
+                          <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                             GW{getNextGameweekDashboard()} Transfer Summary
                           </h3>
-                          <p className="text-sm text-emerald-600">
+                          <p className="text-sm text-gray-500">
                             {nextTeamData?.transfers 
                               ? 'Pending transfers for next gameweek' 
                               : `${calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())} free transfer${calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard()) === 1 ? '' : 's'} available at the beginning of the gameweek.`}
@@ -2968,10 +2905,10 @@ export default function MyDashboard() {
                         {/* Free Transfers at Start - always use history-based calculation (FPL API limit field
                             applies old pre-2024/25 wildcard rules and cannot be trusted) */}
                         <div className="text-center">
-                          <div className="text-2xl sm:text-3xl font-bold text-blue-700">
+                          <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 dark:text-indigo-300">
                             {calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard())}
                           </div>
-                          <div className="text-xs sm:text-sm text-blue-600 font-medium">
+                          <div className="text-xs sm:text-sm text-gray-500 font-medium">
                             Free at Start
                           </div>
                         </div>
@@ -2979,11 +2916,11 @@ export default function MyDashboard() {
                         {nextTeamData?.transfers && (
                           <>
                             {/* Transfers Made */}
-                            <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
-                              <div className="text-2xl sm:text-3xl font-bold text-orange-600">
+                            <div className="text-center border-l border-gray-200 pl-4 sm:pl-6">
+                              <div className="text-2xl sm:text-3xl font-extrabold text-amber-600">
                                 {nextTeamData.transfers.made || 0}
                               </div>
-                              <div className="text-xs sm:text-sm text-orange-600 font-medium">
+                              <div className="text-xs sm:text-sm text-gray-500 font-medium">
                                 Made
                               </div>
                             </div>
@@ -2994,11 +2931,11 @@ export default function MyDashboard() {
                               const hitCost = Math.max(0, (made - limit) * 4);
                               if (hitCost > 0) {
                                 return (
-                                  <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
-                                    <div className="text-2xl sm:text-3xl font-bold text-red-600">
+                                  <div className="text-center border-l border-gray-200 pl-4 sm:pl-6">
+                                    <div className="text-2xl sm:text-3xl font-extrabold text-red-600">
                                       -{hitCost}
                                     </div>
-                                    <div className="text-xs sm:text-sm text-red-600 font-medium">
+                                    <div className="text-xs sm:text-sm text-gray-500 font-medium">
                                       Point Hit
                                     </div>
                                   </div>
@@ -3007,11 +2944,11 @@ export default function MyDashboard() {
                               return null;
                             })()}
                             {/* Remaining Free Transfers */}
-                            <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
-                              <div className="text-2xl sm:text-3xl font-bold text-emerald-700">
+                            <div className="text-center border-l border-gray-200 pl-4 sm:pl-6">
+                              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">
                                 {Math.max(0, calculateFreeTransfers(historyData?.current, historyData?.chips, getNextGameweekDashboard()) - (nextTeamData.transfers.made || 0))}
                               </div>
-                              <div className="text-xs sm:text-sm text-emerald-600 font-medium">
+                              <div className="text-xs sm:text-sm text-gray-500 font-medium">
                                 Remaining
                               </div>
                             </div>
@@ -3024,29 +2961,29 @@ export default function MyDashboard() {
 
                 {/* Upcoming Transfers Section (Free Hit / Wildcard) */}
                 {isOwnTeam && getUpcomingTransfers().length > 0 && (
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="flex items-center gap-2 text-purple-800 text-lg sm:text-xl">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         GW{getNextGameweekDashboard()} {getChipDisplayName(getUpcomingActiveChip())} Transfers
                       </CardTitle>
-                      <CardDescription className="text-purple-700 text-sm sm:text-base mt-2">
+                      <CardDescription className="text-xs text-gray-500 sm:text-sm">
                         Players changed for the upcoming gameweek with your {getChipDisplayName(getUpcomingActiveChip())} chip
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-4 sm:p-5">
                       <div className="space-y-3">
                         {getUpcomingTransfers().map((transfer, index) => {
                           const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
                           const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
                           
                           return (
-                            <div key={`upcoming-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-2 border-purple-200 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
+                            <div key={`upcoming-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Badge className="bg-purple-100 text-purple-800 text-xs">
+                                  <Badge className="bg-indigo-100 text-indigo-800 text-xs">
                                     {getChipDisplayName(transfer.chipName || null)}
                                   </Badge>
                                   <span className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {transfer.event}</span>
@@ -3098,7 +3035,7 @@ export default function MyDashboard() {
                               </div>
                               
                               <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
-                                <Badge className="bg-purple-500 text-white text-xs">
+                                <Badge className="bg-indigo-500 text-white text-xs">
                                   UPCOMING
                                 </Badge>
                               </div>
@@ -3112,29 +3049,29 @@ export default function MyDashboard() {
 
                 {/* Pending Transfers Section (GW14 transfers after Free Hit reverts) */}
                 {isOwnTeam && getPendingTransfers().length > 0 && (
-                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="flex items-center gap-2 text-blue-800 text-lg sm:text-xl">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         GW{getNextGameweekDashboard()} Pending Transfers
                       </CardTitle>
-                      <CardDescription className="text-blue-700 text-sm sm:text-base mt-2">
+                      <CardDescription className="text-xs text-gray-500 sm:text-sm">
                         Transfers made for the upcoming gameweek (not yet confirmed in FPL history)
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-4 sm:p-5">
                       <div className="space-y-3">
                         {getPendingTransfers().map((transfer, index) => {
                           const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
                           const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
                           
                           return (
-                            <div key={`pending-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-2 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
+                            <div key={`pending-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                  <Badge className="bg-indigo-100 text-indigo-800 text-xs">
                                     PENDING
                                   </Badge>
                                   <span className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {transfer.event}</span>
@@ -3186,7 +3123,7 @@ export default function MyDashboard() {
                               </div>
                               
                               <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
-                                <Badge className="bg-blue-500 text-white text-xs">
+                                <Badge className="bg-indigo-500 text-white text-xs">
                                   PRE-DEADLINE
                                 </Badge>
                               </div>
@@ -3200,27 +3137,27 @@ export default function MyDashboard() {
 
                 {/* Regular Transfer History */}
                 {transfersData && (
-                  <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="flex items-center gap-2 text-orange-800 text-lg sm:text-xl">
-                        <div className="p-2 bg-orange-100 rounded-lg">
-                          <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<ArrowLeftRight className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         Transfer History
                         {getTotalTransferCount() > 0 && (
-                          <Badge className="bg-orange-500 text-white text-sm ml-2">
+                          <Badge className="bg-indigo-500 text-white text-sm ml-2">
                             {getTotalTransferCount()} total
                           </Badge>
                         )}
                       </CardTitle>
-                      <CardDescription className="text-orange-700 text-sm sm:text-base mt-2">
+                      <CardDescription className="text-xs text-gray-500 sm:text-sm">
                         All transfers made this season with player prices and gameweek details
                         {getTotalTransferCount() > 0 && (
                           <span className="block text-xs mt-1">(excludes Free Hit and Wildcard gameweek transfers)</span>
                         )}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-4 sm:p-5">
                       {transfersData && transfersData.length > 0 ? (
                         <div className="space-y-3">
                           {(() => {
@@ -3247,8 +3184,8 @@ export default function MyDashboard() {
                               return (
                                 <div key={gw} className="bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
                                   {/* GW header */}
-                                  <div className="flex items-center justify-between px-3 py-2 bg-orange-50/80 border-b border-orange-100">
-                                    <span className="text-sm font-semibold text-orange-800">Gameweek {gw}</span>
+                                  <div className="flex items-center justify-between px-3 py-2 bg-indigo-50/80 border-b border-indigo-100">
+                                    <span className="text-sm font-semibold text-indigo-800">Gameweek {gw}</span>
                                     <div className="flex items-center gap-3">
                                       <span className="text-xs text-gray-500">{latestDate.toLocaleDateString()}</span>
                                       {netTotal !== 0 && (
@@ -3295,8 +3232,8 @@ export default function MyDashboard() {
                         </div>
                       ) : (
                         <div className="text-center py-8">
-                          <div className="p-4 bg-orange-100 rounded-full w-fit mx-auto mb-4">
-                            <ArrowLeftRight className="h-8 w-8 text-orange-600" />
+                          <div className="p-4 bg-indigo-100 rounded-full w-fit mx-auto mb-4">
+                            <ArrowLeftRight className="h-8 w-8 text-indigo-600" />
                           </div>
                           <h3 className="text-lg font-semibold text-gray-800 mb-2">No Transfers Yet</h3>
                           <p className="text-gray-600">
@@ -3319,29 +3256,29 @@ export default function MyDashboard() {
               <TabsContent value="chips" className="space-y-3 mt-2 sm:mt-2">
                 {/* Upcoming Active Chip (Free Hit / Wildcard) */}
                 {isOwnTeam && getUpcomingActiveChip() && (
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="flex items-center gap-2 text-purple-800 text-lg sm:text-xl">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                      <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         Active Chip for GW{getNextGameweekDashboard()}
                       </CardTitle>
-                      <CardDescription className="text-purple-700 text-sm sm:text-base mt-2">
+                      <CardDescription className="text-xs text-gray-500 sm:text-sm">
                         This chip is active for the upcoming gameweek — you can cancel it in the FPL app before the deadline
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-center gap-4 p-4 border-2 border-purple-200 rounded-xl bg-white/70">
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                          <Sparkles className="h-6 w-6 text-purple-600" />
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex items-center gap-4 p-4 border border-indigo-200 rounded-xl bg-white/70">
+                        <div className="p-3 bg-indigo-100 rounded-lg">
+                          <Sparkles className="h-6 w-6 text-indigo-600" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-purple-500 text-white text-sm px-3 py-1">
+                            <Badge className="bg-indigo-500 text-white text-sm px-3 py-1">
                               {getChipDisplayName(getUpcomingActiveChip())}
                             </Badge>
-                            <Badge variant="outline" className="border-purple-300 text-purple-700 text-xs">
+                            <Badge variant="outline" className="border-indigo-300 text-indigo-700 text-xs">
                               ACTIVE
                             </Badge>
                           </div>
@@ -3350,7 +3287,7 @@ export default function MyDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-xs text-purple-600 font-medium">UPCOMING</div>
+                          <div className="text-xs text-indigo-600 font-medium">UPCOMING</div>
                         </div>
                       </div>
                     </CardContent>
@@ -3358,15 +3295,17 @@ export default function MyDashboard() {
                 )}
 
                 {/* Previously Used Chips */}
-                <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
-                  <CardHeader className="p-4 sm:p-6">
-                    <CardTitle className="flex items-center gap-2 text-amber-800 text-lg sm:text-xl">
-                      <Star className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                    <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                        <Star className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                      </div>
                       Chips Used
                     </CardTitle>
-                    <CardDescription className="text-sm sm:text-base mt-2">Special chips played this season</CardDescription>
+                    <CardDescription className="text-xs text-gray-500 sm:text-sm">Special chips played this season</CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
+                  <CardContent className="p-4 sm:p-5">
                     {historyData?.chips && historyData.chips.length > 0 ? (
                       <div className="space-y-2">
                         {historyData.chips.map((chip, index) => (
@@ -3397,20 +3336,20 @@ export default function MyDashboard() {
                 {historyData && (
                   <>
                     {/* Season History - Now on top */}
-                    <Card className="border-0 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
-                          <div className="p-2 bg-indigo-100 rounded-lg">
-                            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                        <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                           </div>
                           Season History
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="space-y-3">
                           {/* Current Season */}
                           {managerData && (
-                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-xl border-2 border-indigo-300 shadow-sm">
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-100 to-indigo-100 rounded-xl border-2 border-indigo-300 shadow-sm">
                               <div className="flex items-center gap-2">
                                 <div className="text-lg font-semibold text-gray-800">2025/26</div>
                                 <Badge className="bg-indigo-600 text-white text-xs">Current</Badge>
@@ -3471,17 +3410,17 @@ export default function MyDashboard() {
 
                     {/* Gameweek History - Now below Season History */}
                     {historyData?.current && historyData.current.length > 0 && (
-                      <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg">
-                        <CardHeader className="p-4 sm:p-6">
-                          <CardTitle className="flex items-center gap-2 text-emerald-800 text-lg sm:text-xl">
-                            <div className="p-2 bg-emerald-100 rounded-lg">
-                              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+                      <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                        <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                          <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                             </div>
                             Gameweek History
                           </CardTitle>
                           <CardDescription>Points and rank progression by gameweek</CardDescription>
                         </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
+                        <CardContent className="p-4 sm:p-5">
                           <div className="overflow-x-auto">
                             <Table>
                               <TableHeader>
@@ -3588,19 +3527,19 @@ export default function MyDashboard() {
             {/* Chips Tab */}
             <TabsContent value="chips" className="space-y-3 mt-2 sm:mt-2">
               {historyData && (
-                <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
-                  <CardHeader className="p-4 sm:p-6">
-                    <CardTitle className="flex items-center gap-2 text-amber-800 text-lg sm:text-xl">
-                      <div className="p-2 bg-amber-100 rounded-lg">
-                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
+                <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <CardHeader className="space-y-1 border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent p-4 sm:px-5 sm:py-3">
+                    <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+<Star className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
                       </div>
                       Chip Usage Summary
                     </CardTitle>
-                    <CardDescription className="text-sm sm:text-base mt-2">
+                    <CardDescription className="text-xs text-gray-500 sm:text-sm">
                       Complete overview of FPL chip usage for this season
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
+                  <CardContent className="p-4 sm:p-5">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -3712,7 +3651,7 @@ export default function MyDashboard() {
         {/* Initial State - How to find Manager ID */}
         {!searchedId && (
           <Card className="mb-6 sm:mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-5">
               <div className="max-w-2xl mx-auto">
                 <h3 className="text-sm sm:text-base font-semibold mb-4">To find your Manager ID, follow these steps:</h3>
                 <InstructionSteps>
@@ -3764,9 +3703,9 @@ export default function MyDashboard() {
           
           {selectedPlayerForProjection && (
             <PlayerPopupDetails player={selectedPlayerForProjection}>
-              <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
+              <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-indigo-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">GW {selectedPlayerForProjection.gameweek} Projected Points</p>
-                <p className="text-3xl sm:text-4xl font-bold text-purple-700">
+                <p className="text-3xl sm:text-4xl font-bold text-indigo-700">
                   {(selectedPlayerForProjection.totalProjected * selectedPlayerForProjection.multiplier).toFixed(2)}
                 </p>
                 {selectedPlayerForProjection.multiplier > 1 && (
@@ -3798,7 +3737,7 @@ export default function MyDashboard() {
                           <span className="font-semibold text-xs sm:text-sm text-gray-800">
                             {fixture.isHome ? 'vs' : '@'} {fixture.opponent}
                           </span>
-                          <span className="font-bold text-xs sm:text-sm text-purple-700">
+                          <span className="font-bold text-xs sm:text-sm text-indigo-700">
                             {(fixture.totalPoints || 0).toFixed(2)} pts
                           </span>
                         </div>
@@ -3810,7 +3749,7 @@ export default function MyDashboard() {
                                   <span className="text-sm">{comp.icon}</span>
                                   <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
                                 </div>
-                                <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                                <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
                                   {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
                                 </span>
                               </div>
@@ -3827,7 +3766,7 @@ export default function MyDashboard() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
                     <span className="font-semibold text-xs sm:text-sm text-gray-800">Scoring Components</span>
-                    <span className="font-bold text-xs sm:text-sm text-purple-700">
+                    <span className="font-bold text-xs sm:text-sm text-indigo-700">
                       {selectedPlayerForProjection.totalProjected.toFixed(2)} pts
                     </span>
                   </div>
@@ -3840,7 +3779,7 @@ export default function MyDashboard() {
                             <span className="text-sm">{comp.icon}</span>
                             <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
                           </div>
-                          <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
                             {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
                           </span>
                         </div>
