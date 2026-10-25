@@ -26,7 +26,7 @@ import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { getPreseasonDraft } from "@/lib/preseason-draft-cache";
 import { draftToFplPicks } from "@/lib/draft-to-fpl-picks";
-import { IconTile, InputPanel, Pill, SectionCard, SegmentedControl } from "@/components/tool-ui";
+import { IconTile, InputPanel, Pill, PosChip, SectionCard, SegmentedControl, TeamChip, asPos } from "@/components/tool-ui";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -635,12 +635,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   return (
-    <Card ref={sectionRef} className="border-0 shadow-none">
-      <CardHeader className="pb-1 pt-3 px-2 md:px-4">
-        <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
-      </CardHeader>
-      {/* Filter bar — outside CardHeader so overflow-x-auto works correctly */}
-      <div className="px-2 md:px-4 pb-2 flex flex-col gap-1.5">
+    <div ref={sectionRef}>
+    <SectionCard icon={BarChart3} title="Projected Points - Next 6 Gameweeks" bodyClassName="p-0">
+      {/* Filter bar */}
+      <div className="px-3 md:px-4 pt-3 pb-2 flex flex-col gap-2">
         {/* Row 1: dropdowns + price */}
         <div className="overflow-x-auto">
         <div className="flex flex-row gap-1.5 items-center flex-nowrap w-max min-w-full">
@@ -648,10 +646,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <div className="relative flex-shrink-0" ref={positionDropdownRef}>
             <button
               onClick={() => setPositionDropdownOpen(o => !o)}
-              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-9 px-3 text-sm rounded-xl border font-semibold flex items-center gap-1 transition-colors whitespace-nowrap ${
                 positionFilters.size > 0
-                  ? 'bg-purple-600 text-white border-purple-600'
-                  : 'bg-background text-foreground border-input hover:border-purple-400'
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-background text-foreground border-gray-200 hover:border-indigo-300'
               }`}
             >
               {positionFilters.size === 0 ? 'Position' : `${positionFilters.size} Pos`}
@@ -675,7 +673,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           if (next.has(value)) next.delete(value); else next.add(value);
                           return next;
                         })}
-                        className="w-3.5 h-3.5 accent-purple-600"
+                        className="w-3.5 h-3.5 accent-indigo-600"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
                     </label>
@@ -698,10 +696,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <div className="relative flex-shrink-0" ref={teamDropdownRef}>
             <button
               onClick={() => setTeamDropdownOpen(o => !o)}
-              className={`h-8 px-2.5 text-sm rounded-md border font-medium flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`h-9 px-3 text-sm rounded-xl border font-semibold flex items-center gap-1 transition-colors whitespace-nowrap ${
                 teamFilters.size > 0
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-background text-foreground border-input hover:border-blue-400'
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-background text-foreground border-gray-200 hover:border-indigo-300'
               }`}
             >
               {teamFilters.size === 0 ? 'Team' : `${teamFilters.size} Team${teamFilters.size > 1 ? 's' : ''}`}
@@ -715,7 +713,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     placeholder="Search teams..."
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="w-full h-7 px-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-600"
+                    className="w-full h-7 px-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-indigo-400 dark:bg-gray-800 dark:border-gray-600"
                     autoFocus
                   />
                 </div>
@@ -732,7 +730,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                             if (next.has(team)) next.delete(team); else next.add(team);
                             return next;
                           })}
-                          className="w-3.5 h-3.5 accent-blue-600"
+                          className="w-3.5 h-3.5 accent-indigo-600"
                         />
                         <span className="text-sm text-gray-700 dark:text-gray-300">{team}</span>
                       </label>
@@ -753,7 +751,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           </div>
           {/* Group filter */}
           <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-            <SelectTrigger className="h-8 text-sm w-28 flex-shrink-0 rounded-md" data-testid="select-load-group">
+            <SelectTrigger className="h-9 text-sm w-28 flex-shrink-0 rounded-xl" data-testid="select-load-group">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
@@ -774,7 +772,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={minPrice}
               onChange={(e) => setMinPrice(parseFloat(e.target.value) || 3.5)}
-              className="h-8 w-16 text-sm rounded-md"
+              className="h-9 w-16 text-sm rounded-xl"
               data-testid="input-min-price"
             />
             <span className="text-sm text-muted-foreground">–</span>
@@ -785,7 +783,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               max="15.0"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-              className="h-8 w-16 text-sm rounded-md"
+              className="h-9 w-16 text-sm rounded-xl"
               data-testid="input-max-price"
             />
           </div>
@@ -797,7 +795,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             placeholder="Search Players"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-sm flex-1 min-w-0 rounded-md"
+            className="h-9 text-sm flex-1 min-w-0 rounded-xl"
             data-testid="input-player-search"
           />
           {transferredOutPlayers.length > 0 && (
@@ -814,11 +812,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           )}
         </div>
       </div>
-      <CardContent className="p-1">
+      <div className="p-1 pb-2">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm leading-tight">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-gray-100">
                 <th className="text-left py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[130px] min-w-[130px] max-w-[130px]">
                   <Button
                     variant="ghost"
@@ -895,7 +893,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 return (
                   <tr
                     key={player.playerId}
-                    className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
+                    className="border-b border-gray-100 hover:bg-indigo-50/40 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
                     <td className="py-0.5 px-1 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[130px] min-w-[130px] max-w-[130px]">
@@ -907,16 +905,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           <PlayerAvailabilityBadge player={player} />
                         </TooltipProvider>
                       </div>
-                      <div className="text-[9px] text-muted-foreground truncate">
-                        {(() => {
-                          const positionShortforms: { [key: string]: string } = {
-                            'Goalkeeper': 'GKP',
-                            'Defender': 'DEF',
-                            'Midfielder': 'MID',
-                            'Forward': 'FWD'
-                          };
-                          return positionShortforms[player.position] || player.position;
-                        })()} • {getTeamShortName(player.team)}
+                      <div className="flex items-center gap-1 truncate">
+                        <PosChip pos={asPos(({ 'Goalkeeper': 'GKP', 'Defender': 'DEF', 'Midfielder': 'MID', 'Forward': 'FWD' } as { [key: string]: string })[player.position] || player.position)} className="!px-1 !text-[9px] !leading-3" />
+                        <TeamChip className="!px-1 !text-[9px] !leading-3">{getTeamShortName(player.team)}</TeamChip>
                       </div>
                     </td>
                     <td className="py-0.5 px-0.5 text-center w-[28px] min-w-[28px] max-w-[28px]">
@@ -940,7 +931,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-5 w-5 text-green-600 hover:bg-green-50 hover:text-green-700"
+                            className="h-5 w-5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                             onClick={() => onTransferIn(player.playerId, playerElementType)}
                             data-testid={`transfer-in-${player.playerId}`}
                             title="Transfer In"
@@ -955,7 +946,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       const gwPoints = player.gameweekProjections[selectedGameweek.toString()] || 0;
                       const top3 = getTop3ForGameweek(selectedGameweek);
                       let bgColor = '';
-                      let textColor = 'text-purple-600';
+                      let textColor = 'text-indigo-600';
                       if (player.playerId === top3.first) {
                         bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
                         textColor = 'text-yellow-800 dark:text-yellow-300';
@@ -973,10 +964,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       );
                     })()}
                     <td className="py-0.5 px-0.5 text-center">
-                      <span className="font-bold text-green-600">{(player.totalExpectedPoints || 0).toFixed(1)}</span>
+                      <span className="font-bold text-emerald-600">{(player.totalExpectedPoints || 0).toFixed(1)}</span>
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
-                      <span className="text-blue-600 dark:text-blue-400">{(player.averageValue || 0).toFixed(1)}</span>
+                      <span className="text-indigo-600 dark:text-indigo-400">{(player.averageValue || 0).toFixed(1)}</span>
                     </td>
                     <td className="py-0.5 px-0.5 text-center">
                       <span className="text-orange-600 dark:text-orange-400">{Math.round(player.ownership)}%</span>
@@ -992,8 +983,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
+    </div>
   );
 }
 
@@ -6034,12 +6026,12 @@ export default function TransferPlanner() {
         
         {/* Centered Popup */}
         <div 
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[min(90vw,360px)] max-h-[85vh] overflow-y-auto"
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-600 overflow-hidden w-[min(90vw,360px)] max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           data-testid={`${isBench ? 'bench' : 'list'}-actions-${pick.element}`}
         >
           {/* Header with player info */}
-          <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 sm:px-5 py-4">
+          <div className="relative bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-700 dark:to-violet-800 px-4 sm:px-5 py-4">
             <div className="text-white text-base sm:text-lg font-bold text-center mb-2">{player.web_name}</div>
             <div className="flex justify-center items-center gap-2 sm:gap-3 text-white/90 text-xs sm:text-sm mb-2">
               <span>{getTeamName(player.team)}</span>
@@ -6066,7 +6058,7 @@ export default function TransferPlanner() {
           {/* Switch Player Option */}
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
-              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
+              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
                 <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
@@ -6086,7 +6078,7 @@ export default function TransferPlanner() {
             </Select>
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
-              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
+              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
                 <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
@@ -6116,7 +6108,7 @@ export default function TransferPlanner() {
           )}
           
           <button 
-            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
+            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => handleTransferOut(pick)} 
             data-testid={`${isBench ? 'bench' : 'list'}-transfer-out-${pick.element}`}
           >
@@ -6124,7 +6116,7 @@ export default function TransferPlanner() {
           </button>
           {!pick.is_captain && (
             <button 
-              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
+              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
               onClick={() => handleSetCaptain(pick.element)} 
               data-testid={`${isBench ? 'bench' : 'list'}-make-captain-${pick.element}`}
             >
@@ -6133,7 +6125,7 @@ export default function TransferPlanner() {
           )}
           {!pick.is_vice_captain && (
             <button 
-              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
+              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
               onClick={() => handleSetViceCaptain(pick.element)} 
               data-testid={`${isBench ? 'bench' : 'list'}-make-vice-${pick.element}`}
             >
@@ -6141,7 +6133,7 @@ export default function TransferPlanner() {
             </button>
           )}
           <button 
-            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
+            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-white hover:bg-indigo-50 dark:bg-gray-800 dark:hover:bg-indigo-950/40 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
             data-testid={`${isBench ? 'bench' : 'list'}-edit-buy-price-${pick.element}`}
           >
@@ -6902,45 +6894,33 @@ export default function TransferPlanner() {
         <div className="flex flex-col gap-3">
         {/* Fixture Mode Toggle — only shown when there are TBC fixtures to assign */}
         {hasTBCFixtures && (
-        <div className="flex flex-row gap-1.5 items-center">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Fixtures:</span>
-          {(['base', 'custom', 'expert'] as const)
-            .filter(mode => {
-              if (mode !== 'custom') return true;
-              try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; }
-            })
-            .map(mode => (
-              <button
-                key={mode}
-                onClick={() => setFixtureMode(mode)}
-                className={`h-7 px-2.5 text-xs rounded-md border font-medium transition-colors whitespace-nowrap ${
-                  fixtureMode === mode
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-background text-foreground border-input hover:border-purple-400'
-                }`}
-              >
-                {mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures'}
-              </button>
-            ))}
-          <a href="/fixtures" className="text-xs text-blue-600 hover:underline flex-shrink-0 ml-1">⚙ Edit fixtures</a>
+        <div className="flex flex-row flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Fixtures</span>
+          <SegmentedControl
+            ariaLabel="Fixture mode"
+            value={fixtureMode}
+            onChange={setFixtureMode}
+            options={(['base', 'custom', 'expert'] as const)
+              .filter(mode => {
+                if (mode !== 'custom') return true;
+                try { return Object.keys(JSON.parse(localStorage.getItem('fpl-tbc-assignments') || '{}')).length > 0; } catch { return false; }
+              })
+              .map(mode => ({ value: mode, label: mode === 'base' ? 'Base' : mode === 'custom' ? 'My Fixtures' : 'Expert Fixtures' }))}
+          />
+          <a href="/fixtures" className="text-xs font-semibold text-indigo-600 hover:underline flex-shrink-0 ml-1">⚙ Edit fixtures</a>
         </div>
         )}
         <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Left column: Team Selection */}
           <div className="w-full lg:w-[60%] flex-shrink-0">
-        <Card ref={teamLineupRef} className="border-gray-200 bg-white">
-          <CardHeader className="py-3 px-3 sm:px-6">
-            <div className="flex items-center justify-between gap-2">
-              {/* Left: title */}
-              <div className="flex items-center gap-2 shrink-0">
-                <Users className="h-5 w-5 text-blue-600" />
-                <span className="text-base sm:text-lg font-semibold">Team Selection</span>
-              </div>
-              {/* Centre: draft badge + chip */}
-              <div className="flex items-center gap-2 justify-center">
-                <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
-                  {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
-                </Badge>
+        <div ref={teamLineupRef}>
+        <SectionCard
+          icon={Users}
+          title="Team Selection"
+          bodyClassName="p-3 sm:p-5"
+          action={
+            <div className="flex items-center gap-2">
+              <DraftPill activeDraft={activeDraft} />
                 {(() => {
                   const currentChip = plannedChips[selectedGameweek];
                   if (currentChip) {
@@ -6949,13 +6929,10 @@ export default function TransferPlanner() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="cursor-help">
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
-                              >
-                                <Sparkles className="h-3 w-3 mr-1" />
+                              <Pill tone="amber" className="gap-1 px-2.5 py-1 text-xs">
+                                <Sparkles className="h-3 w-3" />
                                 {getChipDisplayNameWithNumber(currentChip)}
-                              </Badge>
+                              </Pill>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -6968,16 +6945,15 @@ export default function TransferPlanner() {
                   }
                   return null;
                 })()}
-              </div>
-              {/* Right: spacer to balance layout */}
-              <div className="shrink-0 w-[100px] sm:w-[130px]" />
             </div>
+          }
+        >
             {/* Gameweek Navigation Bar */}
-            <div className="flex items-center gap-1 mt-2">
+            <div className="mb-4 flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-3 text-xs sm:text-sm font-bold shrink-0 border-2 border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:opacity-40"
+                className="h-9 shrink-0 rounded-xl border-gray-200 px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-40 sm:text-sm"
                 disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) <= 0}
                 onClick={() => {
                   const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
@@ -6987,24 +6963,19 @@ export default function TransferPlanner() {
                 <ChevronLeft className="h-4 w-4" />
                 <span className="hidden sm:inline ml-0.5">Prev</span>
               </Button>
-              <div className="flex gap-1 flex-1 justify-center flex-wrap">
-                {nextGameweeks.map(gw => (
-                  <Button
-                    key={gw.id}
-                    variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 text-xs font-semibold min-w-[2.5rem] px-2"
-                    onClick={() => { setSelectedPlayer(null); setSelectedGameweek(gw.id); }}
-                    data-testid={`gw-button-${gw.id}`}
-                  >
-                    GW{gw.id}
-                  </Button>
-                ))}
+              <div className="flex min-w-0 flex-1 justify-center overflow-x-auto">
+                <SegmentedControl
+                  ariaLabel="Gameweek"
+                  testIdPrefix="gw-button"
+                  value={selectedGameweek as number}
+                  onChange={(id) => { setSelectedPlayer(null); setSelectedGameweek(id); }}
+                  options={nextGameweeks.map(gw => ({ value: gw.id, label: `GW${gw.id}` }))}
+                />
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-3 text-xs sm:text-sm font-bold shrink-0 border-2 border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:opacity-40"
+                className="h-9 shrink-0 rounded-xl border-gray-200 px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-40 sm:text-sm"
                 disabled={nextGameweeks.findIndex(gw => gw.id === selectedGameweek) >= nextGameweeks.length - 1}
                 onClick={() => {
                   const idx = nextGameweeks.findIndex(gw => gw.id === selectedGameweek);
@@ -7015,8 +6986,6 @@ export default function TransferPlanner() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
             {/* View Toggle and Optimization Controls */}
             <div className="flex flex-col gap-3 mb-2">
               {/* All buttons in one row */}
@@ -7057,7 +7026,7 @@ export default function TransferPlanner() {
                     <Button
                       onClick={handleApplyRecommendedTransfers}
                       disabled={isLoadingRecommendations}
-                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white"
+                      className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white"
                       data-testid="button-apply-recommended-transfers"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
@@ -7103,7 +7072,7 @@ export default function TransferPlanner() {
                     {unappliedRecs.map((rec: any, idx: number) => (
                       <p key={idx}>
                         {rec.playerOut?.webName} → {rec.playerIn?.webName} 
-                        <span className="text-green-600 font-semibold ml-1">
+                        <span className="text-emerald-600 font-semibold ml-1">
                           (+{rec.pointsGain?.toFixed(2) || '0.00'} pts)
                         </span>
                       </p>
@@ -7113,7 +7082,7 @@ export default function TransferPlanner() {
               })()}
             </div>
 
-            <div className="text-xs sm:text-sm text-muted-foreground mb-2 italic">
+            <div className="text-xs sm:text-sm text-gray-500 mb-2">
               Click on the player to transfer or swap or set as captain
             </div>
 
@@ -7125,7 +7094,7 @@ export default function TransferPlanner() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowProjectedPoints(p => !p)}
-                    className={`h-8 px-2 text-xs font-semibold shadow border-2 ${showProjectedPoints ? 'bg-white/90 dark:bg-gray-800/90 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300' : 'bg-gray-200 dark:bg-gray-700 border-gray-400 dark:border-gray-500 text-gray-500 dark:text-gray-400'}`}
+                    className={`h-8 rounded-xl px-2 text-xs font-semibold shadow border ${showProjectedPoints ? 'bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300' : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-500 text-gray-500 dark:text-gray-400'}`}
                     title={showProjectedPoints ? 'Hide projected points' : 'Show projected points'}
                   >
                     {showProjectedPoints ? <Eye className="h-3.5 w-3.5 mr-1" /> : <EyeOff className="h-3.5 w-3.5 mr-1" />}
@@ -7134,7 +7103,7 @@ export default function TransferPlanner() {
                   <div className="flex items-center gap-1">
                   {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
                     <>
-                      <div className="flex items-center gap-1 px-2 py-1 bg-green-600/90 rounded text-white text-[10px] sm:text-xs font-semibold shadow">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-emerald-600/90 rounded-lg text-white text-[10px] sm:text-xs font-semibold shadow">
                         <Sparkles className="h-3 w-3" />
                         <span className="hidden sm:inline">Optimised</span>
                       </div>
@@ -7182,7 +7151,7 @@ export default function TransferPlanner() {
                       size="sm"
                       onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
                       disabled={!selectedGameweek || !playerProjections6GW}
-                      className="h-8 px-3 text-xs sm:text-sm font-bold bg-green-600 hover:bg-green-500 text-white shadow-lg border-2 border-green-400"
+                      className="h-8 rounded-xl px-3 text-xs sm:text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg border-0"
                       data-testid="button-optimise-lineup"
                     >
                       <Sparkles className="h-4 w-4 mr-1.5" />
@@ -7321,11 +7290,11 @@ export default function TransferPlanner() {
                     icon: string; dot: string;
                   }> = {
                     wildcard: {
-                      idle:     'bg-white border-purple-200 text-purple-800 hover:bg-purple-50 hover:border-purple-400 dark:bg-background dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-950/30',
-                      active:   'bg-purple-100 border-purple-500 text-purple-900 ring-2 ring-purple-400/60 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-200',
+                      idle:     'bg-white border-violet-200 text-violet-800 hover:bg-violet-50 hover:border-violet-400 dark:bg-background dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/30',
+                      active:   'bg-violet-100 border-violet-500 text-violet-900 ring-2 ring-violet-400/60 dark:bg-violet-900/30 dark:border-violet-400 dark:text-violet-200',
                       disabled: 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-muted/20 dark:border-muted dark:text-muted-foreground',
-                      icon:     'text-purple-500 dark:text-purple-400',
-                      dot:      'bg-purple-500',
+                      icon:     'text-violet-500 dark:text-violet-400',
+                      dot:      'bg-violet-500',
                     },
                     '3xc': {
                       idle:     'bg-white border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-400 dark:bg-background dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/30',
@@ -7351,11 +7320,11 @@ export default function TransferPlanner() {
                   };
 
                   return (
-                    <div className="mx-1 mt-3 mb-1 rounded-xl border bg-muted/20 dark:bg-muted/10 p-2.5">
+                    <div className="mx-1 mt-3 mb-1 rounded-xl border border-gray-200 bg-gray-50/70 p-2.5">
                       {/* Header */}
                       <div className="flex items-center gap-1.5 mb-2 px-0.5">
-                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                        <Sparkles className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                        <span className="text-xs font-bold text-gray-500 tracking-wide uppercase">
                           Apply chip to GW{selectedGameweek}
                         </span>
                         {currentChip && (
@@ -7445,10 +7414,10 @@ export default function TransferPlanner() {
                 })()}
 
                 {/* Total Projected Points */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
-                    <span className="text-2xl font-bold text-blue-600">
+                <div className="pt-1">
+                  <div className="flex justify-between items-center rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-500/[0.08] to-violet-500/[0.05] px-4 py-3">
+                    <span className="text-sm font-bold uppercase tracking-wide text-gray-600">Total Projected Points (GW{selectedGameweek})</span>
+                    <span className="text-2xl font-extrabold tabular-nums text-indigo-600">
                       {(() => {
                         const isBenchBoostActive = selectedGameweek ? plannedChips[selectedGameweek] === 'bboost' : false;
                         const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
@@ -7464,8 +7433,8 @@ export default function TransferPlanner() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </SectionCard>
+        </div>
           </div>
           {/* Right column: Projected Points */}
           <div className="w-full lg:w-[40%] min-w-0">
