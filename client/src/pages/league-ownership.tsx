@@ -5,6 +5,7 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LeagueOwnershipView from "@/components/league-ownership-view";
 import { InputPanel } from "@/components/tool-ui";
@@ -119,20 +120,32 @@ export default function LeagueOwnershipPage() {
           </div>
         </div>
 
-        <InputPanel icon={Search} title="Find your league" subtitle="Enter your team ID and pick one of your classic leagues">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input
-              value={managerInput}
-              onChange={(e) => setManagerInput(extractManagerId(e.target.value))}
-              onKeyDown={(e) => e.key === "Enter" && /^\d+$/.test(manager()) && setLookupId(manager())}
-              placeholder="Your team ID"
-              inputMode="numeric"
-              className="h-11 rounded-xl text-base"
-              data-testid="input-manager-id"
-            />
-            {leagueList && (
-              <Select value={customMode ? "other" : leagues.some((l) => String(l.id) === selectedLeague) ? selectedLeague : ""} onValueChange={chooseLeague}>
-                <SelectTrigger className="h-11 rounded-xl text-base" data-testid="select-league"><SelectValue placeholder="Choose a league" /></SelectTrigger>
+        <InputPanel icon={Search} title="Find your league" subtitle="Enter your team ID, then pick one of your leagues">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="manager-id" className="text-sm font-semibold">1. Your team ID</Label>
+              <Input
+                id="manager-id"
+                value={managerInput}
+                onChange={(e) => setManagerInput(extractManagerId(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && /^\d+$/.test(manager()) && setLookupId(manager())}
+                placeholder="e.g. 1234567"
+                inputMode="numeric"
+                className="h-11 rounded-xl text-base"
+                data-testid="input-manager-id"
+              />
+              <p className="text-xs text-gray-500">The number in the URL when you open your team on the FPL site.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="league-select" className="text-sm font-semibold">2. Your league</Label>
+              <Select
+                value={customMode ? "other" : leagues.some((l) => String(l.id) === selectedLeague) ? selectedLeague : ""}
+                onValueChange={chooseLeague}
+                disabled={!leagueList}
+              >
+                <SelectTrigger id="league-select" className="h-11 rounded-xl text-base" data-testid="select-league">
+                  <SelectValue placeholder={leagueList ? "Choose a league" : leaguesLoading ? "Finding your leagues…" : "Enter your team ID first"} />
+                </SelectTrigger>
                 <SelectContent>
                   {leagues.map((l) => (
                     <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
@@ -140,27 +153,34 @@ export default function LeagueOwnershipPage() {
                   <SelectItem value="other">Another league (enter its ID)…</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-            {!leagueList && (
-              <div className="flex h-11 items-center text-sm text-gray-500" data-testid="text-league-hint">
-                {leaguesLoading ? "Finding your leagues…" : noLeagues ? "We couldn't find leagues for that team ID." : "Your leagues will appear here."}
-              </div>
-            )}
+              <p className="text-xs text-gray-500" data-testid="text-league-hint">
+                {leagueList
+                  ? "Private leagues only. Not listed? Choose “Another league”."
+                  : noLeagues
+                    ? "We couldn't find leagues for that team ID. Check it, or enter a league ID below."
+                    : "Your private leagues appear here once your team ID is in."}
+              </p>
+            </div>
           </div>
           {showCustom && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value.replace(/\D/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && loadCustom()}
-                placeholder="Classic league ID (from the league page URL)"
-                inputMode="numeric"
-                className="h-11 rounded-xl text-base"
-                data-testid="input-league-id"
-              />
-              <Button onClick={loadCustom} disabled={!/^\d+$/.test(customInput.trim())} className="h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 font-bold text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-load">
-                Show league
-              </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="league-id" className="text-sm font-semibold">League ID</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  id="league-id"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value.replace(/\D/g, ""))}
+                  onKeyDown={(e) => e.key === "Enter" && loadCustom()}
+                  placeholder="e.g. 123456"
+                  inputMode="numeric"
+                  className="h-11 rounded-xl text-base"
+                  data-testid="input-league-id"
+                />
+                <Button onClick={loadCustom} disabled={!/^\d+$/.test(customInput.trim())} className="h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 font-bold text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-load">
+                  Show league
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">The number in the URL when you open the league's standings page on the FPL site.</p>
             </div>
           )}
         </InputPanel>
