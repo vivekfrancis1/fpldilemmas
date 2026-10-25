@@ -491,7 +491,7 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Crown className="h-8 w-8" />
-              <h1>{eliteGroup ? eliteGroup.name : "Top FPL Managers (All Time)"}</h1>
+              <h1>{eliteGroup ? eliteGroup.name : "All Time Top 100 FPL Managers"}</h1>
               <SeasonBadge season={viewSeason} />
             </div>
             <p className="fpl-page-subtitle">
