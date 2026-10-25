@@ -1,6 +1,6 @@
 # Plan 018 — Hindsight: Season view
 
-Status: IMPLEMENTED locally (2026-10-25), not pushed. Season view + ten What-if scenarios (set and forget, same captain, vice-captain, chase form, one goalkeeper, stop rotating by position, chip timing, hits, no Wildcard, no Free Hit); 98 tests across the hindsight files pass. Decisions: Season view only (transfers / bench swaps / chip timing deferred); own squad only, no GW-average or other-manager benchmarks.
+Status: IMPLEMENTED locally (2026-10-25), not pushed. Season view + ten What-if scenarios (set and forget, same captain, vice-captain, chase form, one goalkeeper, stop rotating by position, chip timing, hits, no Wildcard, no Free Hit); 73 tests across the three hindsight test files pass. Decisions: Season view only (transfers / bench swaps / chip timing deferred); own squad only, no GW-average or other-manager benchmarks.
 Builds on: plan-006 (Hindsight, single gameweek).
 
 Principle (unchanged): every number is official FPL data or exact arithmetic on it. No grade, no "you should have known".
