@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShareImageButton } from "@/components/share-image-button";
 import { hindsightCard, shareFileName } from "@shared/share-cards";
-import { HeroPanel, HeroStat, InputPanel, Pill, PosChip, SectionCard, asPos } from "@/components/tool-ui";
+import { HeroPanel, HeroStat, InputPanel, Pill, PosChip, SectionCard, SegmentedControl, asPos } from "@/components/tool-ui";
+import { SeasonView } from "@/components/hindsight-season";
+import { WhatIfView } from "@/components/hindsight-what-if";
 
 interface Pick { id: number; name: string; position: string; points: number; multiplier: number; started: boolean; isCaptain: boolean; inBestXI: boolean }
 interface HindsightResponse {
@@ -29,12 +31,15 @@ interface HindsightResponse {
   picks: Pick[];
 }
 
+type View = "gameweek" | "season" | "what-if";
+
 const CHIP_LABEL: Record<string, string> = { bboost: "Bench Boost", "3xc": "Triple Captain", freehit: "Free Hit", wildcard: "Wildcard", manager: "Assistant Manager" };
 
 export default function Hindsight() {
   const [input, setInput] = useState("");
   const [managerId, setManagerId] = useState("");
   const [gameweek, setGameweek] = useState<number | null>(null);
+  const [view, setView] = useState<View>("gameweek");
 
   useEffect(() => {
     const saved = readToolManagerId();
@@ -113,7 +118,7 @@ export default function Hindsight() {
               <History />
               <h1 data-testid="text-page-title">Hindsight</h1>
             </div>
-            <p className="fpl-page-subtitle">Your points last gameweek versus the best XI you could have fielded from the same 15 players.</p>
+            <p className="fpl-page-subtitle">Your points versus the best XI you could have fielded from the same 15 players: one gameweek, the whole season, or a what-if.</p>
           </div>
         </div>
 
@@ -131,7 +136,7 @@ export default function Hindsight() {
               {isFetching ? "Loading…" : "Show hindsight"}
             </Button>
           </div>
-          {data && (
+          {data && view === "gameweek" && (
             <Select value={String(data.gameweek)} onValueChange={(v) => setGameweek(Number(v))}>
               <SelectTrigger className="h-10 w-[170px] rounded-xl" data-testid="select-gameweek"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -143,9 +148,28 @@ export default function Hindsight() {
           )}
         </InputPanel>
 
-        {error && <Card><CardContent className="p-6 text-sm" data-testid="text-error">{(error as Error).message}</CardContent></Card>}
+        {managerId && (
+          <div className="mb-5">
+            <SegmentedControl
+              ariaLabel="Hindsight view"
+              value={view}
+              onChange={setView}
+              testIdPrefix="view"
+              options={[
+                { value: "gameweek", label: "Gameweek" },
+                { value: "season", label: "Season" },
+                { value: "what-if", label: "What if" },
+              ]}
+            />
+          </div>
+        )}
 
-        {data && !error && (
+        {managerId && view === "season" && <SeasonView managerId={managerId} onOpenGameweek={(gw) => { setGameweek(gw); setView("gameweek"); }} />}
+        {managerId && view === "what-if" && <WhatIfView managerId={managerId} />}
+
+        {view === "gameweek" && error && <Card><CardContent className="p-6 text-sm" data-testid="text-error">{(error as Error).message}</CardContent></Card>}
+
+        {view === "gameweek" && data && !error && (
           <div className="space-y-5">
             <HeroPanel testId="summary">
               <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-bold">

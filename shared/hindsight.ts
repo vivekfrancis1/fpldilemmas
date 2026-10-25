@@ -66,3 +66,57 @@ export function bestPossible<T extends HindsightPick>(players: T[], chip: Hindsi
     complete: true,
   };
 }
+
+const POSITION_NAMES = ["GKP", "DEF", "MID", "FWD"] as const;
+
+export interface GameweekHindsightInput {
+  /** Official picks for the gameweek (`/entry/{id}/event/{gw}/picks/` -> picks). */
+  picks: Array<{ element: number; position: number; multiplier: number; is_captain?: boolean }>;
+  activeChip?: string | null;
+  entryHistory?: { points?: number; event_transfers_cost?: number; points_on_bench?: number } | null;
+  /** Final points per player for the gameweek; a player missing from the feed scored 0. */
+  pointsById: Map<number, number>;
+  elements: Map<number, { element_type?: number; web_name?: string }>;
+}
+
+/** One manager's gameweek against the best XI and captain available from the same 15 (the arithmetic behind /api/hindsight). */
+export function buildGameweekHindsight(input: GameweekHindsightInput) {
+  const players = input.picks.map((p) => {
+    const el = input.elements.get(p.element);
+    return {
+      id: p.element,
+      elementType: (el?.element_type ?? 3) as 1 | 2 | 3 | 4,
+      points: input.pointsById.get(p.element) ?? 0,
+      name: el?.web_name as string,
+      multiplier: p.multiplier,
+      started: p.position <= 11,
+      isCaptain: !!p.is_captain,
+    };
+  });
+
+  const chip = input.activeChip ?? null;
+  const best = bestPossible(players, chip);
+  const officialPoints = input.entryHistory?.points ?? 0;
+  const chosenCaptain = players.find((p) => p.isCaptain) ?? null;
+  const bestCaptain = players.find((p) => p.id === best.captainId) ?? null;
+  const bestIds = new Set(best.starting.map((p) => p.id));
+  const view = (p: (typeof players)[number]) => ({ id: p.id, name: p.name, position: POSITION_NAMES[p.elementType - 1], points: p.points });
+
+  return {
+    chip,
+    officialPoints,
+    transferCost: input.entryHistory?.event_transfers_cost ?? 0,
+    pointsOnBench: input.entryHistory?.points_on_bench ?? 0,
+    bestPossible: best.total,
+    gap: best.total - officialPoints,
+    formation: best.formation,
+    captainMultiplier: best.captainMultiplier,
+    captain: {
+      chosen: chosenCaptain && view(chosenCaptain),
+      best: bestCaptain && view(bestCaptain),
+    },
+    bestXI: best.starting.map(view),
+    bestBench: best.bench.map(view),
+    picks: players.map((p) => ({ ...view(p), multiplier: p.multiplier, started: p.started, isCaptain: p.isCaptain, inBestXI: bestIds.has(p.id) })),
+  };
+}

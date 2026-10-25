@@ -42,7 +42,9 @@ import { buildCaptaincyMatrix, MATRIX_POSITIONS } from "@shared/captaincy-matrix
 import { TEMPLATE_GROUPS, buildTemplateTeam, parseTemplateGroup } from "@shared/template-team";
 import { registerSharedGraphicsRoutes } from "./shared-graphics-routes";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
-import { bestPossible } from "@shared/hindsight";
+import { buildGameweekHindsight } from "@shared/hindsight";
+import { summarizeSeason, type SeasonRow } from "@shared/hindsight-season";
+import { setAndForget, captainEveryWeek, stickWithKeeper, viceEveryWeek, chipTiming, hitsWorthIt, type ChipWindow, type WhatIfWeek } from "@shared/hindsight-what-if";
 import { buildLeagueOwnership, selectableGameweeks } from "@shared/league-ownership";
 import { parseSubscription } from "@shared/deadline-reminders";
 import { pushConfigured, saveSubscription, removeSubscription, countSubscriptions, MAX_SUBSCRIPTIONS } from "./push-reminders";
@@ -1532,49 +1534,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const live = await liveResponse.json();
       const pointsById = new Map<number, number>((live.elements as any[]).map((e) => [e.id, e.stats?.total_points ?? 0]));
       const elementById = new Map<number, any>(bootstrap.elements.map((e: any) => [e.id, e]));
-      const POS = ["GKP", "DEF", "MID", "FWD"];
-
-      const players = (picksData.picks as any[]).map((p) => ({
-        id: p.element as number,
-        elementType: (elementById.get(p.element)?.element_type ?? 3) as 1 | 2 | 3 | 4,
-        points: pointsById.get(p.element) ?? 0,
-        name: elementById.get(p.element)?.web_name as string,
-        multiplier: p.multiplier as number,
-        started: p.position <= 11,
-        isCaptain: !!p.is_captain,
-      }));
-
-      const chip: string | null = picksData.active_chip ?? null;
-      const best = bestPossible(players, chip);
-      const officialPoints: number = picksData.entry_history?.points ?? 0;
-      const chosenCaptain = players.find((p) => p.isCaptain) ?? null;
-      const bestCaptain = players.find((p) => p.id === best.captainId) ?? null;
-      const bestIds = new Set(best.starting.map((p) => p.id));
-      const view = (p: (typeof players)[number]) => ({ id: p.id, name: p.name, position: POS[p.elementType - 1], points: p.points });
-
       res.json({
         managerId: Number(managerId),
         gameweek,
         finishedGameweeks: finished,
-        chip,
-        officialPoints,
-        transferCost: picksData.entry_history?.event_transfers_cost ?? 0,
-        pointsOnBench: picksData.entry_history?.points_on_bench ?? 0,
-        bestPossible: best.total,
-        gap: best.total - officialPoints,
-        formation: best.formation,
-        captainMultiplier: best.captainMultiplier,
-        captain: {
-          chosen: chosenCaptain && view(chosenCaptain),
-          best: bestCaptain && view(bestCaptain),
-        },
-        bestXI: best.starting.map(view),
-        bestBench: best.bench.map(view),
-        picks: players.map((p) => ({ ...view(p), multiplier: p.multiplier, started: p.started, isCaptain: p.isCaptain, inBestXI: bestIds.has(p.id) })),
+        ...buildGameweekHindsight({
+          picks: picksData.picks,
+          activeChip: picksData.active_chip,
+          entryHistory: picksData.entry_history,
+          pointsById,
+          elements: elementById,
+        }),
       });
     } catch (error) {
       console.error("Error building hindsight:", error);
       res.status(500).json({ error: "Failed to build the hindsight view" });
+    }
+  });
+
+  // Hindsight over the whole season and "what if" scenarios. Both read the same data: the manager's official picks for every
+  // finished gameweek and every player's final points. A finished gameweek never changes, so picks (null = no full squad that
+  // week, e.g. joined late) and points are cached in memory, and the assembled season for 10 minutes. A gameweek with no squad is
+  // skipped; any other FPL failure fails the request rather than presenting a partial season as complete.
+  // Logic: shared/hindsight-season.ts, shared/hindsight-what-if.ts.
+  const seasonGuard = makeIpGuard(30);
+  const finishedSquadCache = new Map<string, { active_chip?: string | null; entry_history?: any; picks: any[] } | null>();
+  const finishedPointsByGw = new Map<number, Map<number, number>>();
+  type SeasonWeek = { gameweek: number; row: SeasonRow; what: WhatIfWeek };
+  type SeasonData = {
+    finished: number[];
+    weeks: SeasonWeek[];
+    players: Array<{ id: number; name: string; position: string; weeks: number; captainWeeks: number }>;
+    chipWindows: ChipWindow[];
+  };
+  const seasonDataCache = createTtlCache<SeasonData>(10 * 60 * 1000, 200);
+  const httpError = (status: number, message: string) => Object.assign(new Error(message), { status });
+
+  const fetchFinishedSquad = async (managerId: string, gw: number) => {
+    const key = `${managerId}:${gw}`;
+    if (finishedSquadCache.has(key)) return finishedSquadCache.get(key)!;
+    const r = await fetchWithTimeout(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${gw}/picks/`, 10_000, { headers: FPL_HEADERS });
+    let squad: { active_chip?: string | null; entry_history?: any; picks: any[] } | null = null;
+    if (r.status !== 404) {
+      if (!r.ok) throw httpError(502, "Could not load this squad from FPL");
+      const body = await r.json();
+      squad = Array.isArray(body.picks) && body.picks.length === 15 ? body : null;
+    }
+    if (finishedSquadCache.size > 20000) finishedSquadCache.delete(finishedSquadCache.keys().next().value as string);
+    finishedSquadCache.set(key, squad);
+    return squad;
+  };
+
+  const fetchFinishedPoints = async (gw: number) => {
+    const hit = finishedPointsByGw.get(gw);
+    if (hit) return hit;
+    const r = await internalFetch(`api/event/${gw}/live`);
+    if (!r.ok) throw httpError(503, "Live points are not available");
+    const points = new Map<number, number>(((await r.json()).elements as any[]).map((e) => [e.id, e.stats?.total_points ?? 0]));
+    finishedPointsByGw.set(gw, points);
+    return points;
+  };
+
+  const loadSeason = async (managerId: string): Promise<SeasonData> => {
+    const bootstrapResponse = await internalFetch("api/bootstrap-static");
+    if (!bootstrapResponse.ok) throw httpError(503, "FPL data is not available yet");
+    const bootstrap = await bootstrapResponse.json();
+    const finished: number[] = (bootstrap.events as any[]).filter((e) => e.finished).map((e) => e.id).sort((a, b) => a - b);
+    if (finished.length === 0) throw httpError(400, "No gameweek has finished yet");
+
+    const cacheKey = `${managerId}:${finished[finished.length - 1]}`;
+    const cached = seasonDataCache.get(cacheKey);
+    if (cached) return cached;
+
+    const elementById = new Map<number, any>(bootstrap.elements.map((e: any) => [e.id, e]));
+    const POS = ["GKP", "DEF", "MID", "FWD"];
+    const weeks: SeasonWeek[] = [];
+    for (let i = 0; i < finished.length; i += 8) {
+      const batch = finished.slice(i, i + 8);
+      const squads = await Promise.all(batch.map((gw) => fetchFinishedSquad(managerId, gw)));
+      for (let k = 0; k < batch.length; k++) {
+        const squad = squads[k];
+        if (!squad) continue;
+        const gameweek = batch[k];
+        const pointsById = await fetchFinishedPoints(gameweek);
+        const built = buildGameweekHindsight({ picks: squad.picks, activeChip: squad.active_chip, entryHistory: squad.entry_history, pointsById, elements: elementById });
+        weeks.push({
+          gameweek,
+          row: {
+            gameweek,
+            chip: built.chip,
+            officialPoints: built.officialPoints,
+            transferCost: built.transferCost,
+            pointsOnBench: built.pointsOnBench,
+            bestPossible: built.bestPossible,
+            captainMultiplier: built.captainMultiplier,
+            captain: built.captain,
+          },
+          what: {
+            gameweek,
+            chip: built.chip,
+            officialPoints: built.officialPoints,
+            transferCost: built.transferCost,
+            pointsById,
+            picks: squad.picks.map((p: any) => ({
+              id: p.element,
+              name: elementById.get(p.element)?.web_name as string,
+              elementType: (elementById.get(p.element)?.element_type ?? 3) as 1 | 2 | 3 | 4,
+              started: p.position <= 11,
+              multiplier: p.multiplier,
+              isCaptain: !!p.is_captain,
+              isVice: !!p.is_vice_captain,
+            })),
+          },
+        });
+      }
+    }
+    if (weeks.length === 0) throw httpError(404, "No squad found for this manager");
+
+    const seen = new Map<number, { id: number; name: string; position: string; weeks: number; captainWeeks: number }>();
+    for (const w of weeks) {
+      for (const p of w.what.picks) {
+        const e = seen.get(p.id) ?? { id: p.id, name: p.name, position: POS[p.elementType - 1], weeks: 0, captainWeeks: 0 };
+        e.weeks++;
+        if (p.isCaptain) e.captainWeeks++;
+        seen.set(p.id, e);
+      }
+    }
+    const players = [...seen.values()].sort((a, b) => b.captainWeeks - a.captainWeeks || b.weeks - a.weeks || a.id - b.id);
+
+    const chipWindows: ChipWindow[] = ((bootstrap.chips ?? []) as any[]).map((c) => ({ name: c.name, start: c.start_event, stop: c.stop_event }));
+    const data = { finished, weeks, players, chipWindows };
+    seasonDataCache.set(cacheKey, data);
+    return data;
+  };
+
+  const sendSeasonError = (res: any, error: any, what: string) => {
+    if (error?.status) return res.status(error.status).json({ error: error.message });
+    console.error(`Error building ${what}:`, error);
+    return res.status(500).json({ error: `Failed to build ${what}` });
+  };
+
+  app.get("/api/hindsight/:managerId/season", async (req, res) => {
+    if (seasonGuard(req, res)) return;
+    try {
+      const { managerId } = req.params;
+      if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
+      const { finished, weeks, players } = await loadSeason(managerId);
+      res.json({ managerId: Number(managerId), finishedGameweeks: finished, ...summarizeSeason(weeks.map((w) => w.row)), players });
+    } catch (error) {
+      sendSeasonError(res, error, "the season hindsight view");
+    }
+  });
+
+  // scenario=set-and-forget[&from=GW] | captain&player=ID | keeper[&player=ID] | vice | chips | hits
+  app.get("/api/hindsight/:managerId/what-if", async (req, res) => {
+    if (seasonGuard(req, res)) return;
+    try {
+      const { managerId } = req.params;
+      if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
+      const scenario = String(req.query.scenario ?? "");
+      if (!["set-and-forget", "captain", "keeper", "vice", "chips", "hits"].includes(scenario)) return res.status(400).json({ error: "Unknown scenario" });
+      const intParam = (name: string): number | null | "bad" => {
+        const v = req.query[name];
+        if (v === undefined || v === "") return null;
+        return /^\d+$/.test(String(v)) ? Number(v) : "bad";
+      };
+      const player = intParam("player");
+      const from = intParam("from");
+      if (player === "bad") return res.status(400).json({ error: "Invalid player" });
+      if (from === "bad") return res.status(400).json({ error: "Invalid gameweek" });
+      if (scenario === "captain" && player === null) return res.status(400).json({ error: "Choose a player to captain" });
+
+      const { weeks, players, chipWindows } = await loadSeason(managerId);
+      const whatIfWeeks = weeks.map((w) => w.what);
+
+      if (scenario === "set-and-forget") {
+        const fromGameweek = from ?? weeks[0].gameweek;
+        const result = setAndForget(whatIfWeeks, fromGameweek);
+        if (!result) return res.status(400).json({ error: "No squad found for that gameweek", gameweeks: weeks.map((w) => w.gameweek) });
+        return res.json({ managerId: Number(managerId), gameweeks: weeks.map((w) => w.gameweek), ...result });
+      }
+      if (scenario === "captain") {
+        const chosen = players.find((p) => p.id === player);
+        if (!chosen) return res.status(400).json({ error: "That player was never in your squad" });
+        return res.json({ managerId: Number(managerId), player: { id: chosen.id, name: chosen.name }, ...captainEveryWeek(whatIfWeeks, chosen.id) });
+      }
+      if (scenario === "vice") return res.json({ managerId: Number(managerId), ...viceEveryWeek(whatIfWeeks) });
+      if (scenario === "chips") return res.json({ managerId: Number(managerId), ...chipTiming(whatIfWeeks, chipWindows) });
+      if (scenario === "hits") return res.json({ managerId: Number(managerId), ...hitsWorthIt(whatIfWeeks) });
+      const result = stickWithKeeper(whatIfWeeks, player ?? undefined);
+      if (!result) return res.status(400).json({ error: "No such goalkeeper in your squads" });
+      res.json({ managerId: Number(managerId), ...result });
+    } catch (error) {
+      sendSeasonError(res, error, "the what-if view");
     }
   });
 
