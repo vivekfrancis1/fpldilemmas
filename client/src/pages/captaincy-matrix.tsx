@@ -78,7 +78,7 @@ export default function CaptaincyMatrix() {
         {/* Spotlight: the best option across all teams */}
         {best && (
           <section
-            className="relative mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-lg sm:p-6"
+            className="relative mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-800 via-indigo-600 to-blue-700 p-5 text-white shadow-lg sm:p-6"
             data-testid="spotlight"
           >
             <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />

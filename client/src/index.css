@@ -1033,7 +1033,7 @@ input, select, textarea {
   --spacing: 0.25rem;
   
   /* FPL Custom Colors */
-  --fpl-purple: hsl(291 63% 11%);
+  --fpl-purple: hsl(243 47% 14%);
   --fpl-green: hsl(158 100% 50%);
   --fpl-pink: hsl(343 89% 46%);
   --fpl-light: hsl(210 17% 98%);
@@ -1086,7 +1086,7 @@ input, select, textarea {
   --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
   
   /* FPL Custom Colors for Dark Mode */
-  --fpl-purple: hsl(291 63% 15%);
+  --fpl-purple: hsl(243 40% 17%);
   --fpl-green: hsl(158 100% 45%);
   --fpl-pink: hsl(343 89% 41%);
   --fpl-light: hsl(210 17% 8%);

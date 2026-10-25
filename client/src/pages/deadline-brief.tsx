@@ -151,11 +151,11 @@ export default function DeadlineBriefPage() {
           <div className="space-y-5">
             {/* Hero: deadline and countdown */}
             <section
-              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-lg sm:p-7"
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-800 via-indigo-600 to-blue-700 p-5 text-white shadow-lg sm:p-7"
               data-testid="deadline"
             >
               <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
               <div className="relative flex flex-wrap items-center justify-between gap-x-8 gap-y-5">
                 <div className="min-w-[220px]">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75">

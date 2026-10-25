@@ -170,11 +170,11 @@ export function EmptyNote({ icon: Icon, children }: { icon: LucideIcon; children
 export function HeroPanel({ children, className = "", testId }: { children: ReactNode; className?: string; testId?: string }) {
   return (
     <section
-      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-lg sm:p-7 ${className}`}
+      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-800 via-indigo-600 to-blue-700 p-5 text-white shadow-lg sm:p-7 ${className}`}
       data-testid={testId}
     >
       <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
       <div className="relative">{children}</div>
     </section>
   );

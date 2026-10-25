@@ -213,7 +213,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const SidebarContent = ({ className = "" }: { className?: string }) => (
     <div className={`h-full bg-fpl-purple text-white overflow-y-auto ${className}`}>
         {/* Header */}
-        <div className="p-3 sm:p-4 md:p-6 border-b border-purple-400/20">
+        <div className="p-3 sm:p-4 md:p-6 border-b border-indigo-400/20">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center min-w-0 hover:opacity-80 transition-opacity cursor-pointer">
               <h1 className="text-sm sm:text-base md:text-lg font-bold truncate">FPL Dilemmas</h1>
@@ -239,15 +239,15 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 <div className={`group flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
                   isCurrentPage
                     ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-purple-100 hover:bg-white/5 hover:text-white'
+                    : 'text-indigo-100 hover:bg-white/5 hover:text-white'
                 }`}>
-                  <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
+                  <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-indigo-300 group-hover:text-indigo-200'}`} />
                   <p className="text-xs sm:text-sm font-medium truncate">{PRIMARY_LINK_LABELS[item.href] ?? item.label}</p>
                 </div>
               </Link>
             );
           })}
-          <div className="border-b border-purple-400/20 pt-1" />
+          <div className="border-b border-indigo-400/20 pt-1" />
         </div>
 
         {/* Navigation — collapsed to just category headers by default (one open at a time), so
@@ -259,7 +259,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               .filter((section) => section.items.length > 0) // Only show sections with visible items
               .map((section) => (
               <AccordionItem key={section.section} value={section.section} className="border-b-0">
-                <AccordionTrigger className="px-1 py-2 sm:py-3 text-purple-200 text-xs sm:text-sm font-semibold tracking-wide hover:no-underline hover:text-white data-[state=open]:text-white">
+                <AccordionTrigger className="px-1 py-2 sm:py-3 text-indigo-200 text-xs sm:text-sm font-semibold tracking-wide hover:no-underline hover:text-white data-[state=open]:text-white">
                   {section.section}
                 </AccordionTrigger>
                 <AccordionContent className="pb-1 pt-0">
@@ -279,10 +279,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           <div className={`group flex items-center justify-between px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
                             isCurrentPage
                               ? 'bg-white/10 text-white shadow-sm'
-                              : 'text-purple-100 hover:bg-white/5 hover:text-white'
+                              : 'text-indigo-100 hover:bg-white/5 hover:text-white'
                           }`}>
                             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                              <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
+                              <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-indigo-300 group-hover:text-indigo-200'}`} />
                               <div className="min-w-0">
                                 <p className={`text-xs sm:text-sm font-medium truncate ${isCurrentPage ? 'text-white' : 'group-hover:text-white'}`}>
                                   {item.label}
@@ -311,12 +311,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-purple-400/20">
+        <div className="p-4 border-t border-indigo-400/20">
           <div className="text-center">
-            <p className="text-xs text-purple-300">
+            <p className="text-xs text-indigo-300">
               Data from Fantasy Premier League
             </p>
-            <p className="text-xs text-purple-400 mt-1">
+            <p className="text-xs text-indigo-400 mt-1">
               Updated in real-time
             </p>
           </div>

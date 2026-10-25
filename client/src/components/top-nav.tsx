@@ -219,7 +219,7 @@ function NavDropdown({
         className={`flex items-center gap-0.5 xl:gap-1 px-1 lg:px-1.5 xl:px-2 h-full text-[12px] lg:text-[13px] xl:text-sm font-medium transition-colors whitespace-nowrap ${
           isActive
             ? "bg-white/15 text-white"
-            : "text-purple-100 hover:bg-white/10 hover:text-white"
+            : "text-indigo-100 hover:bg-white/10 hover:text-white"
         }`}
       >
         {label}
@@ -303,10 +303,10 @@ export default function TopNav() {
   }
 
   return (
-    <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-purple-500/30 shadow-sm">
+    <header className="hidden md:flex items-center bg-fpl-purple text-white sticky top-0 z-40 h-12 w-full border-b border-indigo-500/30 shadow-sm">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 px-2 lg:px-3 mr-1 lg:mr-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-purple-500/30 h-full">
-        <span className="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-indigo-600 text-[13px] leading-none flex-shrink-0">
+      <Link href="/" className="flex items-center gap-2 px-2 lg:px-3 mr-1 lg:mr-2 flex-shrink-0 hover:opacity-80 transition-opacity border-r border-indigo-500/30 h-full">
+        <span className="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 text-[13px] leading-none flex-shrink-0">
           ⚽
         </span>
         <span className="hidden 2xl:inline text-sm font-bold text-white whitespace-nowrap">FPL DILEMMAS</span>
@@ -331,7 +331,7 @@ export default function TopNav() {
             </Link>
           );
         })}
-        <span className="h-5 w-px bg-purple-500/40 mx-1 flex-shrink-0" aria-hidden />
+        <span className="h-5 w-px bg-indigo-500/40 mx-1 flex-shrink-0" aria-hidden />
         {dropdowns.map((d) => (
           <NavDropdown
             key={d.label}
@@ -351,17 +351,17 @@ export default function TopNav() {
       </nav>
 
       {/* Right side: refresh + auth */}
-      <div className="flex items-center gap-1 lg:gap-1.5 flex-shrink-0 px-2 lg:px-3 border-l border-purple-500/30 h-full">
-        <ThemeToggle className="text-purple-200 hover:text-white" />
-        <RefreshButton className="text-purple-200 hover:text-white" labelClassName="hidden 2xl:inline" />
-        <InstallAppButton className="text-purple-200 hover:text-white" />
+      <div className="flex items-center gap-1 lg:gap-1.5 flex-shrink-0 px-2 lg:px-3 border-l border-indigo-500/30 h-full">
+        <ThemeToggle className="text-indigo-200 hover:text-white" />
+        <RefreshButton className="text-indigo-200 hover:text-white" labelClassName="hidden 2xl:inline" />
+        <InstallAppButton className="text-indigo-200 hover:text-white" />
         {!isLoading && !isAuthenticated && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => (window.location.href = "/api/auth/google")}
             aria-label="Login"
-            className="text-fpl-purple border-white bg-white hover:bg-purple-50 text-xs h-7 px-2"
+            className="text-fpl-purple border-white bg-white hover:bg-indigo-50 text-xs h-7 px-2"
           >
             <LogIn className="h-3.5 w-3.5 lg:mr-1" />
             <span className="hidden lg:inline">Login</span>
@@ -369,7 +369,7 @@ export default function TopNav() {
         )}
         {!isLoading && isAuthenticated && (
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-purple-200 truncate max-w-[100px] hidden lg:block">{user?.email}</span>
+            <span className="text-xs text-indigo-200 truncate max-w-[100px] hidden lg:block">{user?.email}</span>
             <Button
               variant="outline"
               size="sm"
