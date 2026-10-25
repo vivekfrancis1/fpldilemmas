@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlayerNameCell } from "@/components/enhanced-table";
 import { buildCsv, csvFileName, numericFromDisplay, textOfNode } from "@shared/csv";
-import { Download } from "lucide-react";
+import { Download, BarChart3 } from "lucide-react";
 
 interface ColumnDefinition {
   id: string;
@@ -991,6 +991,9 @@ export default function PlayerStatsTable({
       <div className="fpl-card-header">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <h3 className="fpl-card-title" data-testid="text-table-title">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+              <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+            </span>
             Player Statistics
           </h3>
           <div className="flex items-center flex-wrap gap-2">

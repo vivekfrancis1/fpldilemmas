@@ -133,9 +133,9 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
       value: stats.mostAssists.value,
       player: stats.mostAssists.player,
       icon: UserPlus,
-      bgColor: "border-purple-500",
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-500",
+      bgColor: "border-indigo-500",
+      iconBg: "bg-indigo-100",
+      iconColor: "text-indigo-500",
       testId: "most-assists"
     },
     {
@@ -183,18 +183,18 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2">
       {statCards.map((card) => (
-        <div key={card.testId} className={`bg-white rounded-lg shadow-sm p-1.5 sm:p-2 border-l-2 ${card.bgColor}`} title={card.player || undefined}>
+        <div key={card.testId} className={`rounded-xl border border-gray-200 border-l-[3px] bg-white p-2 shadow-sm sm:p-2.5 ${card.bgColor}`} title={card.player || undefined}>
           <div className="flex items-center justify-between gap-1.5">
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] sm:text-xs text-gray-600 truncate" data-testid={`text-${card.testId}-label`}>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500 sm:text-[11px] truncate" data-testid={`text-${card.testId}-label`}>
                 {card.title}
               </p>
-              <p className="text-xs sm:text-sm font-bold text-gray-900 truncate" data-testid={`text-${card.testId}-value`}>
+              <p className="mt-0.5 text-sm font-extrabold tabular-nums text-gray-900 sm:text-base truncate" data-testid={`text-${card.testId}-value`}>
                 {card.value}
               </p>
             </div>
-            <div className={`w-6 h-6 ${card.iconBg} rounded-full flex items-center justify-center flex-shrink-0`}>
-              <card.icon className={`${card.iconColor} h-3 w-3`} />
+            <div className={`w-8 h-8 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+              <card.icon className={`${card.iconColor} h-4 w-4`} />
             </div>
           </div>
         </div>

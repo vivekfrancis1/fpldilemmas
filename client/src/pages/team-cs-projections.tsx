@@ -11,6 +11,7 @@ import { useFitColumns } from "@/hooks/use-fit-columns";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getBellCurveColor } from "@/lib/heatmap-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionCard } from "@/components/tool-ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -388,7 +389,7 @@ export default function TeamCSProjections() {
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
               Loading Clean Sheet Projections
             </CardTitle>
           </CardHeader>
@@ -477,7 +478,7 @@ export default function TeamCSProjections() {
                             })()}
                             <Link
                               href={`/team/${encodeURIComponent(team.team)}?from=${encodeURIComponent(window.location.pathname)}`}
-                              className="text-sm font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                              className="text-sm font-medium text-gray-900 hover:text-indigo-700 hover:underline"
                             >
                               {team.teamShort}
                             </Link>
@@ -654,7 +655,7 @@ export default function TeamCSProjections() {
                 <div className="flex items-center gap-1.5">
                   <label className="text-xs font-medium text-gray-500">Start:</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                    <SelectTrigger className={`h-8 rounded-xl text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -670,7 +671,7 @@ export default function TeamCSProjections() {
                 <div className="flex items-center gap-1.5">
                   <label className="text-xs font-medium text-gray-500">End:</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                    <SelectTrigger className={`h-8 rounded-xl text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -716,7 +717,7 @@ export default function TeamCSProjections() {
             {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
             <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
           </div>
-          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-indigo-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
@@ -724,7 +725,7 @@ export default function TeamCSProjections() {
 
           {/* Controls */}
           <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedTeams(new Set()); setSelectedGameweeks(new Set()); }}>
-            <Card className={`${isFiltersOpen ? 'mb-2 sm:mb-3' : 'hidden'}`}>
+            <Card className={`${isFiltersOpen ? 'mb-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] shadow-sm dark:via-transparent' : 'hidden'}`}>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-3 sm:pb-4">
                   <div className="w-full mt-3 space-y-3">
@@ -782,28 +783,24 @@ export default function TeamCSProjections() {
             </Card>
           </ResponsiveFilters>
 
-          {/* Meta row: count, selected gameweeks and the data-source legend */}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500 px-1">
-            <span>
-              {filteredProjections.length} teams
-              {selectedGameweeks.size > 0 && ` · ${selectedGameweeks.size} GW${selectedGameweeks.size === 1 ? '' : 's'} selected`}
-            </span>
-            <span className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />Live odds</span>
-              <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-gray-300" />Model</span>
-            </span>
-          </div>
-
-          {/* Team clean sheet tables (two side-by-side panels when the range is short) */}
-          <div className={`grid gap-4 ${splitPanels ? 'lg:grid-cols-2' : ''}`}>
-            {panelRows.map((rows, i) => (
-              <Card key={i} className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
-                <CardContent className="p-0">
+          <SectionCard
+            icon={Shield}
+            title={'Clean sheet odds'}
+            subtitle={`${filteredProjections.length} teams${selectedGameweeks.size > 0 ? ` · ${selectedGameweeks.size} GW${selectedGameweeks.size === 1 ? '' : 's'} selected` : ''}`}
+            bodyClassName="p-3 sm:p-4"
+            action={<span className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />Live odds</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-gray-300" />Model</span>
+              </span>}
+          >
+            <div className={`grid gap-4 ${splitPanels ? 'lg:grid-cols-2' : ''}`}>
+              {panelRows.map((rows, i) => (
+                <div key={i} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                   {renderTable(rows, splitPanels && i === 1 ? panelRows[0].length : 0, i === 0)}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
   );

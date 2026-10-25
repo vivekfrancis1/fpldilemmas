@@ -295,7 +295,7 @@ export default function ResultsAndFixtures() {
   // kickoff time is shown once, under the date, instead of being repeated as a chip.
   const getStatusBadge = (fixture: any) => {
     if (fixture.isResult) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">FT</Badge>;
+      return <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">FT</Badge>;
     } else if (fixture.isLive) {
       return <Badge variant="secondary" className="bg-red-100 text-red-800 animate-pulse">LIVE</Badge>;
     } else {
@@ -335,7 +335,7 @@ export default function ResultsAndFixtures() {
         </div>
         <div className="fpl-section-spacing">
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           </div>
         </div>
       </div>
@@ -380,7 +380,7 @@ export default function ResultsAndFixtures() {
                 <Select value={selectedGameweek.toString()} onValueChange={(value) =>
                   setSelectedGameweek(value === "all" ? "all" : parseInt(value))
                 }>
-                  <SelectTrigger data-testid="select-gameweek" className="w-28 h-8 text-xs">
+                  <SelectTrigger data-testid="select-gameweek" className="w-28 h-8 rounded-xl text-xs">
                     <SelectValue placeholder="All Gameweeks" />
                   </SelectTrigger>
                   <SelectContent>
@@ -413,7 +413,7 @@ export default function ResultsAndFixtures() {
         <div className="fpl-table-container">
           <div className="fpl-card-header">
             <div className="fpl-card-title">
-              <Trophy className="h-5 w-5 text-blue-600" />
+              <Trophy className="h-5 w-5 text-indigo-600" />
               {selectedGameweek === "all" 
                 ? `All Gameweeks (${filteredFixtures.length} matches)`
                 : `Gameweek ${selectedGameweek} (${filteredFixtures.length} matches)`
@@ -442,7 +442,7 @@ export default function ResultsAndFixtures() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Gameweek {gameweek}
                         {!isHistorical && gameweek === currentGameweek && (
-                          <Badge variant="outline" className="ml-2 text-blue-600">Current</Badge>
+                          <Badge variant="outline" className="ml-2 text-indigo-600">Current</Badge>
                         )}
                       </h3>
                       <div className="text-sm text-gray-600">
@@ -456,7 +456,7 @@ export default function ResultsAndFixtures() {
                           key={fixture.id} 
                           className={`p-3 bg-gray-50 rounded-lg transition-colors ${
                             isClickableFixture(fixture)
-                              ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
+                              ? 'hover:bg-indigo-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-indigo-500' 
                               : 'hover:bg-gray-100'
                           }`}
                           onClick={() => isClickableFixture(fixture) && handleMatchClick(fixture)}
@@ -475,7 +475,7 @@ export default function ResultsAndFixtures() {
                                     className="w-4 h-4 object-contain shrink-0"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                   />
-                                ) : <Home className="h-3 w-3 text-blue-500 shrink-0" />}
+                                ) : <Home className="h-3 w-3 text-indigo-500 shrink-0" />}
                                 <span className="font-medium text-gray-900 text-sm truncate">
                                   {fixture.homeTeam?.short_name || "TBD"}
                                 </span>
@@ -525,7 +525,7 @@ export default function ResultsAndFixtures() {
                                 {getStatusBadge(fixture)}
                               </div>
                               {isClickableFixture(fixture) && (
-                                <span className="text-[10px] text-blue-500">Tap for stats</span>
+                                <span className="text-[10px] text-indigo-500">Tap for stats</span>
                               )}
                             </div>
                           </div>
@@ -549,7 +549,7 @@ export default function ResultsAndFixtures() {
                                     className="w-5 h-5 object-contain"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                   />
-                                ) : <Home className="h-3 w-3 text-blue-500" />}
+                                ) : <Home className="h-3 w-3 text-indigo-500" />}
                               </div>
 
                               {/* Score or Time */}
@@ -596,7 +596,7 @@ export default function ResultsAndFixtures() {
                               
                               {/* Click indicator for completed and live matches */}
                               {isClickableFixture(fixture) && (
-                                <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                                <Badge variant="outline" className="text-xs text-indigo-600 opacity-70">
                                   Click for Stats
                                 </Badge>
                               )}
@@ -616,7 +616,7 @@ export default function ResultsAndFixtures() {
                     key={fixture.id} 
                     className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
                       isClickableFixture(fixture)
-                        ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
+                        ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-indigo-500 hover:bg-indigo-50' 
                         : 'hover:shadow-sm'
                     }`}
                     onClick={() => isClickableFixture(fixture) && handleMatchClick(fixture)}
@@ -635,7 +635,7 @@ export default function ResultsAndFixtures() {
                               className="w-4 h-4 object-contain shrink-0"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                          ) : <Home className="h-3 w-3 text-blue-500 shrink-0" />}
+                          ) : <Home className="h-3 w-3 text-indigo-500 shrink-0" />}
                           <span className="font-medium text-gray-900 text-sm truncate">
                             {fixture.homeTeam?.short_name || "TBD"}
                           </span>
@@ -685,7 +685,7 @@ export default function ResultsAndFixtures() {
                           {getStatusBadge(fixture)}
                         </div>
                         {isClickableFixture(fixture) && (
-                          <span className="text-[10px] text-blue-500">Tap for stats</span>
+                          <span className="text-[10px] text-indigo-500">Tap for stats</span>
                         )}
 
                       </div>
@@ -710,7 +710,7 @@ export default function ResultsAndFixtures() {
                               className="w-5 h-5 object-contain"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                          ) : <Home className="h-4 w-4 text-blue-500" />}
+                          ) : <Home className="h-4 w-4 text-indigo-500" />}
                         </div>
 
                         {/* Score or Time */}
@@ -757,7 +757,7 @@ export default function ResultsAndFixtures() {
                         
                         {/* Click indicator for completed and live matches */}
                         {isClickableFixture(fixture) && (
-                          <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                          <Badge variant="outline" className="text-xs text-indigo-600 opacity-70">
                             Click for Stats
                           </Badge>
                         )}

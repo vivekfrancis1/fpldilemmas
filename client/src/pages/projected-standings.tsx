@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
-import { Trophy, Target, Users, RefreshCw, Calendar, History } from "lucide-react";
+import { Trophy, Target, Users, RefreshCw, Calendar, History, Info } from "lucide-react";
+import { Pill, SectionCard } from "@/components/tool-ui";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -288,18 +289,18 @@ export default function ProjectedStandings() {
             {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
             <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
           </div>
-          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-indigo-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
       <div className="fpl-section-spacing">
-        <Card className="mb-2 sm:mb-3 shadow-md border-0">
-          <CardContent className="p-2 sm:p-3">
+        <Card className="mb-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] shadow-sm dark:via-transparent">
+          <CardContent className="p-3">
             <div className="flex flex-col gap-2 sm:gap-3">
               <div className="flex flex-wrap gap-2 sm:gap-3 items-center justify-between">
                 <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
                   <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-purple-600" />
+                    <Target className="h-4 w-4 text-indigo-600" />
                     <span className="text-xs md:text-sm font-semibold text-gray-700">
                       {viewMode === "projected" ? `Current GW: ${currentGameweek}` : `Last Finished: GW${lastFinishedGameweek}`}
                     </span>
@@ -308,7 +309,7 @@ export default function ProjectedStandings() {
 
                 {viewMode === "projected" && (
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-purple-600" />
+                    <Calendar className="h-4 w-4 text-indigo-600" />
                     <Label htmlFor="end-gameweek" className="text-xs md:text-sm font-semibold text-gray-700">
                       Project to:
                     </Label>
@@ -317,7 +318,7 @@ export default function ProjectedStandings() {
                       onValueChange={handleEndGameweekChange}
                       disabled={!bootstrapData || selectedEndGameweek === null}
                     >
-                      <SelectTrigger className="w-24 h-7 text-xs" data-testid="select-end-gameweek">
+                      <SelectTrigger className="w-24 h-8 rounded-xl text-xs" data-testid="select-end-gameweek">
                         <SelectValue placeholder="..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -342,34 +343,33 @@ export default function ProjectedStandings() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
-          <CardHeader className="border-b border-gray-100 bg-white py-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Trophy className="h-5 w-5 text-indigo-500" />
-                {viewMode === "projected" ? "Projected Table" : "Current Table"}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs text-gray-600"
-                  data-testid="button-refresh-standings"
-                >
-                  <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? '...' : 'Refresh'}
-                </Button>
-                <span className="px-2.5 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                  {viewMode === "projected"
-                    ? `To ${totalGameweeks === 39 ? 'GW39 (TBC)' : `GW${totalGameweeks}`}`
-                    : `GW${totalGameweeks}`}
-                </span>
-              </div>
+        <SectionCard
+          icon={Trophy}
+          title={viewMode === "projected" ? "Projected Table" : "Current Table"}
+          subtitle={viewMode === "projected" ? "Actual results plus projected outcomes" : "Actual results up to the last finished gameweek"}
+          bodyClassName="p-0"
+          action={
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs text-gray-600"
+                data-testid="button-refresh-standings"
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? '...' : 'Refresh'}
+              </Button>
+              <Pill tone="indigo" className="px-2.5 py-1 text-xs font-bold">
+                {viewMode === "projected"
+                  ? `To ${totalGameweeks === 39 ? 'GW39 (TBC)' : `GW${totalGameweeks}`}`
+                  : `GW${totalGameweeks}`}
+              </Pill>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+          }
+        >
+          <div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -497,8 +497,8 @@ export default function ProjectedStandings() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
         {!shouldAbsorbTBC && tbcData && tbcData.length > 0 && (
           <Card className="mt-6 border-amber-200 shadow-md">
@@ -551,9 +551,14 @@ export default function ProjectedStandings() {
           </Card>
         )}
 
-        <Card className="mt-3 sm:mt-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Table Legend</CardTitle>
+        <Card className="mt-3 sm:mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent py-3">
+            <CardTitle className="flex items-center gap-3 text-base font-bold text-gray-900 sm:text-lg">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15">
+                <Info className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+              </span>
+              Table Legend
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Calendar, ChevronUp, ChevronDown } from "lucide-react";
+import { BarChart3, Calendar, ChevronUp, ChevronDown, Trophy } from "lucide-react";
+import { Pill, SectionCard } from "@/components/tool-ui";
 import { LoadingExperience } from "@/components/loading-experience";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
@@ -224,11 +225,11 @@ export default function PlayerStats() {
         {/* Season Selector - Compact */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-600" />
+            <Calendar className="h-4 w-4 text-indigo-600" />
             <Label className="text-xs sm:text-sm font-semibold text-gray-700">Season:</Label>
           </div>
           <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-            <SelectTrigger className="w-auto min-w-[140px] bg-white text-sm h-9" data-testid="select-season">
+            <SelectTrigger className="w-auto min-w-[140px] rounded-xl bg-white text-sm h-9" data-testid="select-season">
               <SelectValue placeholder="Select season" />
             </SelectTrigger>
             <SelectContent>
@@ -246,9 +247,9 @@ export default function PlayerStats() {
             </SelectContent>
           </Select>
           {selectedSeason === "current" && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-1">
+            <Pill tone="indigo" className="px-2.5 py-1 text-xs font-bold">
               {currentGameweek === 0 ? "Pre-season" : `GW${startGameweek}-${endGameweek || currentGameweek}`}
-            </Badge>
+            </Pill>
           )}
           {/* the images are made from the live season: season-to-date leaders, and the latest finished gameweek's top scorers */}
           {selectedSeason === "current" && currentGameweek > 0 && (
@@ -260,27 +261,21 @@ export default function PlayerStats() {
         </div>
 
         {/* Quick Stats Overview */}
-        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
-          <Card className="mb-6 shadow-md border-0">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2.5 sm:py-3">
-                <CardTitle className="flex items-center justify-between text-xs sm:text-sm font-semibold text-gray-700" data-testid="text-quick-stats-title">
-                  <span>Quick Stats Overview</span>
-                  {isStatsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0 p-3 sm:p-4">
-                <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+        <SectionCard
+          icon={Trophy}
+          title="Quick Stats Overview"
+          subtitle="Season leaders at a glance"
+          className="mb-4"
+          testId="card-quick-stats"
+          bodyClassName={isStatsOpen ? "p-3 sm:p-4" : "hidden"}
+          onHeaderClick={() => setIsStatsOpen(open => !open)}
+          action={isStatsOpen ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+        >
+          {isStatsOpen && <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />}
+        </SectionCard>
 
         {/* Filters */}
-        <Card className="mb-6 shadow-md border-0 bg-white">
-          <CardContent className="p-3 sm:p-4">
+        <div>
             <FiltersPanel 
               filters={filters}
               setFilters={setFilters}
@@ -296,12 +291,11 @@ export default function PlayerStats() {
               onStartGWChange={setStartGameweek}
               onEndGWChange={setEndGameweek}
             />
-          </CardContent>
-        </Card>
+        </div>
           
         {/* Player Statistics Table */}
-        <Card className="overflow-hidden shadow-lg border-0">
-          <CardContent className="p-0">
+        <div>
+          <div>
             <PlayerStatsTable 
               data={selectedSeason === "current" ? bootstrapData : undefined}
               historicalData={selectedSeason === "blended" ? (blendedData || []) : selectedSeason !== "current" ? (historicalData || []) : undefined}
@@ -318,8 +312,8 @@ export default function PlayerStats() {
               compareList={compareList}
               maxCompareReached={maxCompareReached}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
 

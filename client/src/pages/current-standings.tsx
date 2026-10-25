@@ -6,6 +6,7 @@ import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Pill, SectionCard } from "@/components/tool-ui";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -328,44 +329,29 @@ export default function CurrentStandings() {
 
       <div className="fpl-section-spacing">
         {/* Current Status Info */}
-        <Card className="mb-6 shadow-md border-0">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 items-center justify-between">
-              <div className="flex flex-wrap gap-x-6 gap-y-2 items-center">
-                <div className="flex items-center gap-3">
-                  <Target className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    Official Premier League Table
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    Based on: Completed Matches Only
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {selectedSeason === CURRENT_SEASON ? "Updated: After Each Gameweek" : "Final Season Standings"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Pill tone="indigo" className="gap-1.5 px-3 py-1 text-xs">
+            <Target className="h-3.5 w-3.5" /> Official Premier League Table
+          </Pill>
+          <Pill tone="indigo" className="gap-1.5 px-3 py-1 text-xs">
+            <Users className="h-3.5 w-3.5" /> Based on: Completed Matches Only
+          </Pill>
+          <Pill tone="indigo" className="gap-1.5 px-3 py-1 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" /> {selectedSeason === CURRENT_SEASON ? "Updated: After Each Gameweek" : "Final Season Standings"}
+          </Pill>
+        </div>
 
         {/* Filters */}
-        <Card className="mb-6 shadow-md border-0 bg-white">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-center gap-6">
+        <Card className="mb-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] shadow-sm dark:via-transparent">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div className="flex items-center gap-3">
                 <SeasonSelector value={selectedSeason} onChange={setSelectedSeason} />
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm font-semibold text-gray-700">Filter by Venue:</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Venue</label>
                 <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
-                  <SelectTrigger className="w-[160px] bg-white" data-testid="select-venue-filter">
+                  <SelectTrigger className="w-[160px] rounded-xl bg-white" data-testid="select-venue-filter">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -380,9 +366,9 @@ export default function CurrentStandings() {
                 <ShareGraphicLink className="ml-auto" testId="link-share-image" href={teamGraphicLink({ template: "league-table", venue })} label="Share table" />
               )}
               <div className="flex items-center gap-3">
-                <label className="text-sm font-semibold text-gray-700">Statistics View:</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Statistics view</label>
                 <Select value={statsView} onValueChange={(value: 'totals' | 'per-game') => setStatsView(value)}>
-                  <SelectTrigger className="w-[180px] bg-white" data-testid="select-stats-view">
+                  <SelectTrigger className="w-[180px] rounded-xl bg-white" data-testid="select-stats-view">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -396,32 +382,28 @@ export default function CurrentStandings() {
         </Card>
 
         {/* Enhanced Current Standings Table */}
-        <Card className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
-          <CardHeader className="border-b border-gray-100 bg-white">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Trophy className="h-5 w-5 text-indigo-500" />
-                Enhanced Premier League Table
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-600"
-                  data-testid="button-refresh-current-standings"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                </Button>
-                <Badge variant="secondary" className="rounded-full">
-                  Detailed Statistics
-                </Badge>
-              </div>
+        <SectionCard
+          icon={Trophy}
+          title="Enhanced Premier League Table"
+          subtitle="Click any column header to sort"
+          bodyClassName="p-0"
+          action={
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-gray-600"
+                data-testid="button-refresh-current-standings"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Pill tone="indigo" className="px-3 py-1 text-xs font-bold">Detailed Statistics</Pill>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+          }
+        >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] lg:min-w-[1400px]">
                 <thead className="bg-gray-50">
@@ -493,7 +475,7 @@ export default function CurrentStandings() {
                     <SortableHeader field="goalDifference" tooltip="Goal difference (Goals For - Goals Against)">GD</SortableHeader>
                     
                     {/* Points */}
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l bg-indigo-50 cursor-pointer hover:bg-indigo-100 transition-colors"
                         onClick={() => handleSort('points')}
                         data-testid="sort-points">
                       <Tooltip>
@@ -590,7 +572,7 @@ export default function CurrentStandings() {
                               />
                             ) : null;
                           })()}
-                          <div className="text-sm font-medium text-gray-900 hover:text-purple-700 hover:underline" data-testid={`team-name-${team.shortName}`}>
+                          <div className="text-sm font-medium text-gray-900 hover:text-indigo-700 hover:underline" data-testid={`team-name-${team.shortName}`}>
                             {team.shortName}
                           </div>
                         </div>
@@ -624,7 +606,7 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Points */}
-                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-50" data-testid={`points-${team.shortName}`}>
+                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-indigo-50" data-testid={`points-${team.shortName}`}>
                         {formatStat(team.points)}
                       </td>
                       
@@ -635,7 +617,7 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
                         {formatXg(team.expectedGoalsAgainst)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
                         {team.adjustedGoalRate ? team.adjustedGoalRate.toFixed(2) : '0.00'}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
@@ -664,7 +646,7 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* GK Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600 border-l" data-testid={`saves-${team.shortName}`}>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600 border-l" data-testid={`saves-${team.shortName}`}>
                         {formatStat(team.saves)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`penalties-saved-${team.shortName}`}>
@@ -708,12 +690,12 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Points */}
-                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-100">{summaryStats.totals.points.toFixed(2)}</td>
+                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-indigo-100">{summaryStats.totals.points.toFixed(2)}</td>
                       
                       {/* Expected Goals */}
                       <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
@@ -724,7 +706,7 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600 border-l">{summaryStats.totals.saves.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed.toFixed(2)}</td>
@@ -758,12 +740,12 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Points */}
-                      <td className="px-3 py-4 text-center text-sm font-bold text-blue-900 border-l bg-blue-100">{summaryStats.averages.points.toFixed(1)}</td>
+                      <td className="px-3 py-4 text-center text-sm font-bold text-blue-900 border-l bg-indigo-100">{summaryStats.averages.points.toFixed(1)}</td>
                       
                       {/* Expected Goals */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
@@ -774,7 +756,7 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-700 border-l">{summaryStats.averages.cleanSheets.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-yellow-700">{summaryStats.averages.yellowCards.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-700">{summaryStats.averages.redCards.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700 border-l">{summaryStats.averages.saves.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700 border-l">{summaryStats.averages.saves.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{summaryStats.averages.penaltiesSaved.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-700 border-l">{summaryStats.averages.ownGoals.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{summaryStats.averages.penaltiesMissed.toFixed(1)}</td>
@@ -783,15 +765,11 @@ export default function CurrentStandings() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+        </SectionCard>
 
         {/* Enhanced Legend */}
-        <Card className="mt-3 sm:mt-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Enhanced Table Legend</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <SectionCard icon={Info} title="Enhanced Table Legend" className="mt-3 sm:mt-4">
+          <div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Basic Statistics</h4>
@@ -824,7 +802,7 @@ export default function CurrentStandings() {
               </div>
             </div>
             
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-indigo-50 rounded-xl">
               <h4 className="font-semibold text-gray-900 mb-2">💡 Table Features</h4>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• <strong>Sortable columns:</strong> Click any column header to sort by that statistic</li>
@@ -836,15 +814,15 @@ export default function CurrentStandings() {
               </ul>
             </div>
             
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-gray-50 rounded-xl">
               <p className="text-sm text-gray-600">
                 <strong>Note:</strong> All statistics are calculated from completed Premier League matches only. 
                 Enhanced data includes goalkeeper saves, defensive actions, cards, and advanced metrics 
                 to provide comprehensive team performance analysis.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       </div>
     </div>
     </TooltipProvider>

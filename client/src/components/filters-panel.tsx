@@ -92,18 +92,18 @@ export default function FiltersPanel({
   }
 
   return (
-    <div className="fpl-filters">
+    <div className="fpl-filters !mb-4 !rounded-2xl !bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] !shadow-sm dark:via-transparent">
       {/* Search stays outside the collapsible section below — it's the control people reach for
           most, so it shouldn't be hidden behind a click just because the rest of the filters are
           collapsed. */}
       <div className="fpl-card-content pb-0 flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 transform -translate-y-1/2 h-4 w-4 text-indigo-500" />
           <Input
             placeholder="Search players..."
             value={filters.search}
             onChange={(e) => handleFilterChange("search", e.target.value)}
-            className="pl-10"
+            className="h-10 rounded-xl pl-10"
             data-testid="input-search"
           />
         </div>
@@ -114,7 +114,7 @@ export default function FiltersPanel({
           className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-gray-900 cursor-pointer"
           data-testid="button-more-filters"
         >
-          <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+          <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
           <span className="hidden sm:inline">More</span> Filters
           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
         </button>
@@ -125,9 +125,9 @@ export default function FiltersPanel({
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${showGWFilters ? 'lg:grid-cols-6' : 'lg:grid-cols-4'} gap-3`}>
           {/* Position Filter */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Position</label>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Position</label>
             <Select value={filters.position} onValueChange={(value) => handleFilterChange("position", value)}>
-              <SelectTrigger className="h-9 text-sm" data-testid="select-position">
+              <SelectTrigger className="h-9 rounded-xl text-sm" data-testid="select-position">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -143,9 +143,9 @@ export default function FiltersPanel({
 
           {/* Team Filter */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Team</label>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Team</label>
             <Select value={filters.team} onValueChange={(value) => handleFilterChange("team", value)}>
-              <SelectTrigger className="h-9 text-sm" data-testid="select-team">
+              <SelectTrigger className="h-9 rounded-xl text-sm" data-testid="select-team">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -161,9 +161,9 @@ export default function FiltersPanel({
 
           {/* Max Price Filter */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Max Price</label>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Max Price</label>
             <Select value={filters.maxPrice} onValueChange={(value) => handleFilterChange("maxPrice", value)}>
-              <SelectTrigger className="h-9 text-sm" data-testid="select-max-price">
+              <SelectTrigger className="h-9 rounded-xl text-sm" data-testid="select-max-price">
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
               <SelectContent>
@@ -198,12 +198,12 @@ export default function FiltersPanel({
           {/* From GW Filter - Only for current season */}
           {showGWFilters && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">From GW</label>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">From GW</label>
               <Select 
                 value={startGameweek.toString()} 
                 onValueChange={(val) => onStartGWChange?.(parseInt(val))}
               >
-                <SelectTrigger className="h-9 text-sm" data-testid="select-start-gw">
+                <SelectTrigger className="h-9 rounded-xl text-sm" data-testid="select-start-gw">
                   <SelectValue placeholder="GW1" />
                 </SelectTrigger>
                 <SelectContent>
@@ -224,12 +224,12 @@ export default function FiltersPanel({
           {/* To GW Filter - Only for current season */}
           {showGWFilters && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">To GW</label>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">To GW</label>
               <Select 
                 value={endGameweek?.toString() || currentGameweek.toString()} 
                 onValueChange={(val) => onEndGWChange?.(parseInt(val))}
               >
-                <SelectTrigger className="h-9 text-sm" data-testid="select-end-gw">
+                <SelectTrigger className="h-9 rounded-xl text-sm" data-testid="select-end-gw">
                   <SelectValue placeholder={`GW${currentGameweek}`} />
                 </SelectTrigger>
                 <SelectContent>

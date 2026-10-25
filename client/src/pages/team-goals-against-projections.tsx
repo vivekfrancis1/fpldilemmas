@@ -10,6 +10,7 @@ import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useFitColumns } from "@/hooks/use-fit-columns";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionCard } from "@/components/tool-ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -597,7 +598,7 @@ export default function TeamGoalsAgainstProjections() {
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
               Loading Goals Against
             </CardTitle>
           </CardHeader>
@@ -727,7 +728,7 @@ export default function TeamGoalsAgainstProjections() {
                             })()}
                             <Link
                               href={`/team/${encodeURIComponent(team.team)}?from=${encodeURIComponent(window.location.pathname)}`}
-                              className="text-sm font-medium text-gray-900 hover:text-purple-700 hover:underline"
+                              className="text-sm font-medium text-gray-900 hover:text-indigo-700 hover:underline"
                             >
                               {team.teamShort}
                             </Link>
@@ -1037,7 +1038,7 @@ export default function TeamGoalsAgainstProjections() {
             {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
             <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
           </div>
-          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+          <a href="/fixtures" className="ml-2 self-center text-xs text-indigo-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
@@ -1047,9 +1048,9 @@ export default function TeamGoalsAgainstProjections() {
           <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
 
                 <div className="flex items-center gap-1.5">
-                  <label className="text-xs font-medium text-gray-600">Start:</label>
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Start</label>
                   <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                    <SelectTrigger className={`h-8 rounded-xl text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1063,9 +1064,9 @@ export default function TeamGoalsAgainstProjections() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <label className="text-xs font-medium text-gray-600">End:</label>
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-gray-500">End</label>
                   <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className={`h-7 text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
+                    <SelectTrigger className={`h-8 rounded-xl text-xs ${hasTBCFixture && fixtureMode === 'base' ? 'w-32' : 'w-20'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1102,7 +1103,7 @@ export default function TeamGoalsAgainstProjections() {
 
           {/* Controls */}
           <ResponsiveFilters open={isFiltersOpen} onOpenChange={setIsFiltersOpen} onReset={() => { setSelectedTeams(new Set()); setSelectedGameweeks(new Set()); }}>
-            <Card className={`${isFiltersOpen ? 'mb-2 sm:mb-3' : 'hidden'}`}>
+            <Card className={`${isFiltersOpen ? 'mb-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] shadow-sm dark:via-transparent' : 'hidden'}`}>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-3 sm:pb-4">
                   {viewMode === "past" && (
@@ -1115,7 +1116,7 @@ export default function TeamGoalsAgainstProjections() {
                           <button
                             key={n}
                             onClick={() => { setStartGameweek(String(start)); setEndGameweek(String(last)); }}
-                            className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                            className="text-xs px-2.5 py-0.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer font-medium"
                           >
                             Last {n} GWs
                           </button>
@@ -1123,7 +1124,7 @@ export default function TeamGoalsAgainstProjections() {
                       })}
                       <button
                         onClick={() => { const last = historyData?.lastFinishedGW || 24; setStartGameweek("1"); setEndGameweek(String(last)); }}
-                        className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                        className="text-xs px-2.5 py-0.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer font-medium"
                       >
                         All GWs
                       </button>
@@ -1185,46 +1186,24 @@ export default function TeamGoalsAgainstProjections() {
             </Card>
           </ResponsiveFilters>
 
-          {/* Meta row: what is shown, plus the data-source legend */}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500 px-1">
-
-            <span>{viewMode === 'future' ? 'Projected goals conceded' : 'Goals conceded history'} · GW{startGameweek} to GW{endGameweek} · {filteredProjections.length} teams{selectedGameweeks.size > 0 && ` · ${selectedGameweeks.size} GW${selectedGameweeks.size === 1 ? '' : 's'} selected`}</span>
-
-            {viewMode === "future" && (
-
-              <span className="flex items-center gap-4 text-xs">
-
+          <SectionCard
+            icon={Shield}
+            title={viewMode === 'future' ? 'Projected goals conceded' : 'Goals conceded history'}
+            subtitle={`GW${startGameweek} to GW${endGameweek} · ${filteredProjections.length} teams${selectedGameweeks.size > 0 ? ` · ${selectedGameweeks.size} GW${selectedGameweeks.size === 1 ? '' : 's'} selected` : ''}`}
+            bodyClassName="p-3 sm:p-4"
+            action={viewMode === "future" ? <span className="flex items-center gap-4 text-xs font-medium text-gray-500">
                 <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />Live odds</span>
-
                 <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-gray-300" />Model</span>
-
-              </span>
-
-            )}
-
-          </div>
-
-
-          {/* Tables: two side-by-side panels when the range is short */}
-
-          <div className={`grid gap-4 ${splitPanels ? 'lg:grid-cols-2' : ''}`}>
-
-            {panelRows.map((rows, i) => (
-
-              <Card key={i} className="overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm">
-
-                <CardContent className="p-0">
-
+              </span> : undefined}
+          >
+            <div className={`grid gap-4 ${splitPanels ? 'lg:grid-cols-2' : ''}`}>
+              {panelRows.map((rows, i) => (
+                <div key={i} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                   {renderTable(rows, splitPanels && i === 1 ? panelRows[0].length : 0, i === 0, i === panelRows.length - 1)}
-
-                </CardContent>
-
-              </Card>
-
-            ))}
-
-          </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
 
