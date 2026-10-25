@@ -1644,7 +1644,7 @@ export default function MyDashboard() {
                 <HeroStat size="md" label="Total pts" value={formatRank(managerData.summary_overall_points)} testId="card-total-points" />
                 <HeroStat
                   size="md"
-                  label="Rank"
+                  label="Overall Rank"
                   value={formatRank(managerData.summary_overall_rank)}
                   testId="card-overall-rank"
                   sub={getRankChange() !== null && getRankChange() !== 0 ? (
