@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, History, Loader2 } from "lucide-react";
+import LeagueOwnershipView from "@/components/league-ownership-view";
+import { Users, BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, History, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange, getChipLabel } from "@/lib/manager-standings-columns";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -834,6 +835,22 @@ export default function LeagueAnalysisPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* League Comparison: your team against this league's squads */}
+        {isClassicLeague && (
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg" data-testid="card-league-comparison">
+            <CardHeader className="pb-3">
+              <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                League Comparison
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Compare your team with this league: what it owns and captains, its template XI, and your differentials and threats.</p>
+            </CardHeader>
+            <CardContent>
+              <LeagueOwnershipView key={`${leagueId}:${managerId}`} leagueId={leagueId} managerId={managerId} />
+            </CardContent>
+          </Card>
+        )}
 
         {isClassicLeague && (
           <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
