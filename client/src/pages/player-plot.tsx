@@ -291,7 +291,7 @@ export default function PlayerPlotPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
-  // A team ID saved by any tool (Rate My Team, Hindsight, League Ownership, Graphics Maker...) is used automatically on
+  // A team ID saved by any tool (Rate My Team, Hindsight, League Comparison, Graphics Maker...) is used automatically on
   // arrival, unless the link already names a team. Clearing it afterwards sticks for the visit.
   const autoMine = useRef(false);
   useEffect(() => {

@@ -2325,9 +2325,9 @@ export default function MyDashboard() {
                         <div className="p-2 bg-indigo-100 rounded-lg">
                           <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                         </div>
-                        League Ownership
+                        League Comparison
                       </CardTitle>
-                      <CardDescription>Who your league owns and captains, its template XI, and your differentials and threats.</CardDescription>
+                      <CardDescription>Compare your team with any league: what it owns and captains, its template XI, and your differentials and threats.</CardDescription>
                       <div className="mt-2 space-y-1.5">
                         <Label htmlFor="ownership-league" className="text-sm font-semibold">League</Label>
                         <Select value={ownershipCustomMode ? "other" : listedId} onValueChange={chooseOwnershipLeague}>

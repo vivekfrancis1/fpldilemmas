@@ -114,9 +114,9 @@ export default function LeagueOwnershipPage() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Users />
-              <h1 data-testid="text-page-title">Mini-league Ownership</h1>
+              <h1 data-testid="text-page-title">League Comparison</h1>
             </div>
-            <p className="fpl-page-subtitle">Who your league owns and captains, its template XI, and your differentials.</p>
+            <p className="fpl-page-subtitle">Compare your team with any mini-league: what it owns and captains, its template XI, and your differentials.</p>
           </div>
         </div>
 

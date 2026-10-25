@@ -128,7 +128,7 @@ const navSections: NavSection[] = [
       { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3 },
       { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck },
       { path: "/hindsight", label: "Hindsight", icon: History },
-      { path: "/league-ownership", label: "League Ownership", icon: Users },
+      { path: "/league-ownership", label: "League Comparison", icon: Users },
       { path: "/league-rank", label: "League Rank", icon: Trophy },
       { path: "/projected-points", label: "Projected Points", icon: TrendingUp, adminOnly: true },
       { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, adminOnly: true },

@@ -1,4 +1,4 @@
-// Remembered team ID for Rate My Team, Hindsight and League Ownership. These tools often look up OTHER managers, so they
+// Remembered team ID for Rate My Team, Hindsight and League Comparison. These tools often look up OTHER managers, so they
 // keep their own key and never overwrite the ID My Team saved ("fpl-manager-id"); that one is only read to pre-fill.
 
 export const MY_TEAM_KEY = "fpl-manager-id";

@@ -12,7 +12,7 @@ const fake = (init: Record<string, string> = {}) => {
   };
 };
 
-describe("manager id storage for Rate My Team / Hindsight / League Ownership", () => {
+describe("manager id storage for Rate My Team / Hindsight / League Comparison", () => {
   it("pre-fills from the tools' own key first", () => {
     expect(readToolManagerId(fake({ [TOOLS_KEY]: "111", [MY_TEAM_KEY]: "222" }))).toBe("111");
   });
