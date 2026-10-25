@@ -529,7 +529,7 @@ export default function PlayerMinutes() {
             </CardContent>
           </Card>
         ) : (
-          <SectionCard icon={Clock} title="Player Minutes & Points from Minutes" bodyClassName="p-0">
+          <SectionCard icon={Clock} title="Player Minutes & Points from Minutes" bodyClassName="p-0" className="[&_h2]:overflow-visible [&_h2]:whitespace-normal">
             <div>
               <div className="relative">
               <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
