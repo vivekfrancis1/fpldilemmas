@@ -1064,12 +1064,12 @@ export default function PlayerDefensiveContributions() {
       <SectionCard
         icon={Shield}
         title={viewMode === "future"
-          ? `Player Defensive Contributions Projections: GW${startGameweek}-GW${endGameweek}`
-          : `Player Defensive Contributions History: GW${startGameweek}-GW${endGameweek}`}
-        subtitle={selectedGameweeks.size > 0 ? <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill> : undefined}
+          ? "Player Defensive Contributions Projections"
+          : "Player Defensive Contributions History"}
+        subtitle={<span className="inline-flex flex-wrap items-center gap-2"><span>GW{startGameweek}–GW{endGameweek}</span>{selectedGameweeks.size > 0 && <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill>}</span>}
         bodyClassName="p-0"
         action={
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
             <button
               onClick={() => setShowAllPlayers(!showAllPlayers)}
               title="By default, players who've appeared in under 50% of their team's games are hidden"

@@ -984,7 +984,7 @@ export default function PlayerGoalsScoredProjections() {
           <CollapsibleContent>
           <div className="border-t border-gray-100 p-4 sm:p-5">
             {(viewMode === "past" || viewMode === "pastXg") && (
-              <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
                 <span className="text-xs text-gray-500">Quick:</span>
                 {[6, 8, 12].map(n => {
                   const last = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
@@ -1093,14 +1093,14 @@ export default function PlayerGoalsScoredProjections() {
             <SectionCard
               icon={Target}
               title={viewMode === "future"
-                ? `Player Goal Projections: GW${startGameweek}-GW${endGameweek}`
+                ? "Player Goal Projections"
                 : viewMode === "pastXg"
-                  ? `Player xG History: GW${startGameweek}-GW${endGameweek}`
-                  : `Player Goals History: GW${startGameweek}-GW${endGameweek}`}
-              subtitle={gwFilter.size > 0 ? <Pill tone="indigo">{gwFilter.size} GW{gwFilter.size === 1 ? '' : 's'} selected</Pill> : undefined}
+                  ? "Player xG History"
+                  : "Player Goals History"}
+              subtitle={<span className="inline-flex flex-wrap items-center gap-2"><span>GW{startGameweek}–GW{endGameweek}</span>{gwFilter.size > 0 && <Pill tone="indigo">{gwFilter.size} GW{gwFilter.size === 1 ? '' : 's'} selected</Pill>}</span>}
               bodyClassName="p-0"
               action={
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   <button onClick={() => setShowOpponent(!showOpponent)}
                     className={`${CHIP} gap-1 ${showOpponent ? CHIP_ON : CHIP_OFF}`}>
                     {showOpponent ? 'Hide Opp' : 'Show Opp'}

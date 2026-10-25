@@ -781,7 +781,7 @@ export default function PlayerSaves() {
           <CollapsibleContent>
           <div className="border-t border-gray-100 p-4 sm:p-5">
             {viewMode === "past" && (
-              <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
                 <span className="text-xs text-gray-500">Quick:</span>
                 {[6, 8, 12].map(n => {
                   const last = historyData?.lastFinishedGW || 24;
@@ -885,11 +885,11 @@ export default function PlayerSaves() {
         {filteredAndSortedData.length > 0 && (
           <SectionCard
             icon={Shield}
-            title={`${viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW${startGameweek}-GW${endGameweek}`}
-            subtitle={selectedGameweeks.size > 0 ? <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill> : undefined}
+            title={viewMode === "future" ? "Expected Saves" : "Actual Saves"}
+            subtitle={<span className="inline-flex flex-wrap items-center gap-2"><span>GW{startGameweek}–GW{endGameweek}</span>{selectedGameweeks.size > 0 && <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill>}</span>}
             bodyClassName="p-0"
             action={
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
                 <button
                   onClick={() => setShowAllPlayers(!showAllPlayers)}
                   title="By default, players who've appeared in under 50% of their team's games are hidden"
