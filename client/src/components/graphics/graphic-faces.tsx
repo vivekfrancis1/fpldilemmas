@@ -111,8 +111,9 @@ function Frame({
       style={{
         width, height, boxSizing: "border-box", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative",
         background: [
-          `radial-gradient(circle at 100% 0%, ${withAlpha(theme.accent, light ? 0.20 : 0.24)} 0%, transparent 46%)`,
-          `radial-gradient(circle at 0% 100%, ${withAlpha(theme.accent, light ? 0.12 : 0.13)} 0%, transparent 42%)`,
+          // a cool glow top-right and the accent bottom-left: a warm accent glow on a dark background just looks muddy
+          `radial-gradient(circle at 100% 0%, ${light ? withAlpha(theme.accent, 0.20) : "rgba(129,140,248,0.26)"} 0%, transparent 48%)`,
+          `radial-gradient(circle at 0% 100%, ${withAlpha(theme.accent, light ? 0.12 : 0.10)} 0%, transparent 42%)`,
           `linear-gradient(160deg, ${theme.bg} 0%, ${theme.bg2} 100%)`,
         ].join(", "),
         color: theme.text, fontFamily: FONT,

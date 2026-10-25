@@ -117,6 +117,22 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "league-table": ListOrdered,
   "team-history": Activity,
 };
+// Templates are grouped so the picker stays short; each group has its own colour.
+type TemplateGroupId = "all" | "players" | "my-team" | "matches" | "teams" | "social";
+const TEMPLATE_GROUPS: Array<{ id: TemplateGroupId; label: string; tile: string; solid: string; chip: string; templates: string[] }> = [
+  { id: "all", label: "All", tile: "from-indigo-500/15 to-violet-500/15 text-indigo-600 dark:text-indigo-300", solid: "from-indigo-600 to-violet-600", chip: "from-indigo-600 to-violet-600", templates: [] },
+  { id: "players", label: "Players", tile: "from-indigo-500/15 to-violet-500/15 text-indigo-600 dark:text-indigo-300", solid: "from-indigo-600 to-violet-600", chip: "from-indigo-600 to-violet-600",
+    templates: ["player-card", "player-comparison", "price-change", "top-differentials", "captain-picks", "transfer-trends", "stat-leaders", "availability-watch", "player-projections", "gw-top-scorers", "gw-points", "player-history"] },
+  { id: "my-team", label: "My team & lineups", tile: "from-amber-500/20 to-orange-500/15 text-amber-700 dark:text-amber-300", solid: "from-amber-500 to-orange-600", chip: "from-amber-500 to-orange-600",
+    templates: ["team-reveal", "my-gameweek", "predicted-lineup", "team-of-the-week"] },
+  { id: "matches", label: "Matches", tile: "from-emerald-500/20 to-teal-500/15 text-emerald-700 dark:text-emerald-300", solid: "from-emerald-500 to-teal-600", chip: "from-emerald-500 to-teal-600",
+    templates: ["fixtures-comparison", "fixture-ticker", "match-predictions", "match-results", "match-preview", "match-report"] },
+  { id: "teams", label: "Clubs & tables", tile: "from-sky-500/20 to-cyan-500/15 text-sky-700 dark:text-sky-300", solid: "from-sky-500 to-blue-600", chip: "from-sky-500 to-blue-600",
+    templates: ["team-projections", "projected-table", "league-table", "team-history"] },
+  { id: "social", label: "Social", tile: "from-fuchsia-500/20 to-pink-500/15 text-fuchsia-700 dark:text-fuchsia-300", solid: "from-fuchsia-500 to-pink-600", chip: "from-fuchsia-500 to-pink-600",
+    templates: ["cover", "player-news"] },
+];
+const groupOfTemplate = (id: string): TemplateGroupId => TEMPLATE_GROUPS.find((g) => g.id !== "all" && g.templates.includes(id))?.id ?? "players";
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
@@ -767,6 +783,7 @@ export default function GraphicsPage() {
     // a link made by someone else keeps its own handle and accent; otherwise start from this browser's saved ones
     return fromLink.handle || fromLink.accent || typeof window === "undefined" ? fromLink : { ...fromLink, ...loadBrand() };
   });
+  const [group, setGroup] = useState<TemplateGroupId>(() => groupOfTemplate(spec.template));
   const [handleText, setHandleText] = useState(() => (spec.handle ? `@${spec.handle}` : ""));
   const [copied, setCopied] = useState(false);
   const [captionCopied, setCaptionCopied] = useState(false);
@@ -796,7 +813,7 @@ export default function GraphicsPage() {
   // on a phone the template cards scroll sideways: keep the chosen one in view
   useEffect(() => {
     document.querySelector(`[data-testid="template-${spec.template}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [spec.template]);
+  }, [spec.template, group]);
 
   // keep the address bar in step with the controls, so the current graphic can be shared as a link
   useEffect(() => {
@@ -1183,11 +1200,32 @@ export default function GraphicsPage() {
           </div>
         </div>
 
-        <div className="mb-5 overflow-x-auto pb-2 sm:overflow-visible sm:pb-0">
-        <div className="flex snap-x gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5" role="group" aria-label="Template" data-testid="graphics-templates">
-          {GRAPHIC_TEMPLATES.map((t) => {
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Template groups" data-testid="graphics-groups">
+          {TEMPLATE_GROUPS.map((g) => {
+            const on = group === g.id;
+            const count = g.id === "all" ? GRAPHIC_TEMPLATES.length : g.templates.length;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setGroup(g.id)}
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-bold transition-all ${on ? `border-transparent bg-gradient-to-r ${g.chip} text-white shadow-md` : "border-gray-200 bg-white text-gray-700 shadow-sm hover:-translate-y-0.5 hover:shadow-md"}`}
+                data-testid={`group-${g.id}`}
+              >
+                {g.label} <span className={`ml-1 text-xs font-semibold ${on ? "text-white/75" : "text-gray-400"}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mb-6 overflow-x-auto pb-2 sm:overflow-visible sm:pb-0">
+        <div className="flex snap-x gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" role="group" aria-label="Template" data-testid="graphics-templates">
+          {GRAPHIC_TEMPLATES.filter((t) => group === "all" || TEMPLATE_GROUPS.find((g) => g.id === group)?.templates.includes(t.id)).map((t) => {
             const Icon = TEMPLATE_ICON[t.id] ?? ImagePlus;
             const on = spec.template === t.id;
+            const tg = TEMPLATE_GROUPS.find((g) => g.id === groupOfTemplate(t.id))!;
             return (
               <button
                 key={t.id}
@@ -1202,19 +1240,20 @@ export default function GraphicsPage() {
                   })
                 }
                 aria-pressed={on}
-                className={`group flex w-44 shrink-0 snap-start items-center gap-3 rounded-2xl border p-3 text-left transition-all sm:w-auto sm:shrink sm:flex-col sm:items-start sm:gap-2 sm:p-4 ${
+                className={`group relative flex w-44 shrink-0 snap-start items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-all sm:w-auto sm:shrink sm:flex-col sm:items-start sm:gap-1.5 sm:p-3.5 ${
                   on
-                    ? "border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg ring-2 ring-indigo-300/50"
-                    : "border-gray-200 bg-white text-gray-800 shadow-sm hover:-translate-y-0.5 hover:shadow-md"
+                    ? `border-transparent bg-gradient-to-br ${tg.solid} text-white shadow-lg ring-2 ring-white/60 ring-offset-2 ring-offset-transparent`
+                    : "border-gray-200 bg-white text-gray-800 shadow-sm hover:-translate-y-0.5 hover:border-indigo-300/50 hover:shadow-lg"
                 }`}
                 data-testid={`template-${t.id}`}
               >
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${on ? "bg-white/20 text-white" : "bg-gradient-to-br from-indigo-500/15 to-violet-500/15 text-indigo-600 dark:text-indigo-300"}`}>
+                {on && <span className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20 blur-2xl" />}
+                <span className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${on ? "bg-white/20 text-white" : `bg-gradient-to-br ${tg.tile}`}`}>
                   <Icon className="h-5 w-5" />
                 </span>
-                <span className="min-w-0">
+                <span className="relative min-w-0">
                   <span className="block text-sm font-extrabold leading-tight">{t.label}</span>
-                  <span className={`mt-0.5 hidden text-xs leading-snug sm:block ${on ? "text-indigo-100" : "text-gray-500"}`}>{t.description}</span>
+                  <span className={`mt-0.5 hidden text-[11px] leading-snug sm:line-clamp-2 ${on ? "text-white/85" : "text-gray-500"}`}>{t.description}</span>
                 </span>
               </button>
             );
@@ -1819,16 +1858,16 @@ export default function GraphicsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-gray-100/60 p-3 [background-image:radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.18)_1px,transparent_0)] [background-size:18px_18px] sm:p-5">
+            <div className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-slate-900 p-3 shadow-[0_20px_60px_-20px_rgba(30,27,75,0.6)] [background-image:radial-gradient(circle_at_50%_-10%,rgba(129,140,248,0.35),transparent_55%),radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.07)_1px,transparent_0)] [background-size:auto,20px_20px] sm:p-6">
             <div ref={previewRef} className="w-full" data-testid="graphics-preview">
               {bootstrapError ? (
-                <div className="py-16 text-center text-sm text-gray-500" role="status">Couldn't load player data. Please refresh.</div>
+                <div className="py-16 text-center text-sm text-slate-300" role="status">Couldn't load player data. Please refresh.</div>
               ) : loading || (!data && !problem) ? (
-                <div className="py-16 text-center text-sm text-gray-500" role="status">Loading…</div>
+                <div className="py-16 text-center text-sm text-slate-300" role="status">Loading…</div>
               ) : problem ? (
-                <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center text-sm text-gray-600" role="status" data-testid="graphics-problem">{problem}</div>
+                <div className="rounded-xl border border-dashed border-slate-500 py-16 text-center text-sm text-slate-200" role="status" data-testid="graphics-problem">{problem}</div>
               ) : (
-                <div style={{ width: fullWidth * scale, height: fullHeight * scale, overflow: "hidden", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.18)" }}>
+                <div style={{ width: fullWidth * scale, height: fullHeight * scale, overflow: "hidden", borderRadius: 14, boxShadow: "0 24px 60px -12px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.08)" }}>
                   <div style={{ width: fullWidth, height: fullHeight, transform: `scale(${scale})`, transformOrigin: "top left" }}>{canvas}</div>
                 </div>
               )}
