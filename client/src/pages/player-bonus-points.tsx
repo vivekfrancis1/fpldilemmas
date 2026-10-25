@@ -20,6 +20,14 @@ import { SeasonBadge } from "@/components/season-badge";
 import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getHeatmapColor, HEATMAP_TIERS } from "@/lib/heatmap-colors";
+import { IconTile, Pill, SectionCard, SegmentedControl } from "@/components/tool-ui";
+
+// Filter chips in the shared tool look: indigo when on, muted grey when off.
+const CHIP = "chip-toggle inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold leading-none cursor-pointer transition-colors";
+const CHIP_ON = "bg-indigo-500/12 text-indigo-700 border-indigo-500/30 dark:text-indigo-300";
+const CHIP_OFF = "bg-gray-500/10 text-gray-400 border-gray-300/60";
+const CHIP_ACTION = "bg-emerald-500/12 text-emerald-700 border-emerald-500/30 dark:text-emerald-300";
+const CHIP_AMBER = "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300";
 
 interface FixtureDetail {
   opponent: string;
@@ -462,7 +470,7 @@ export default function PlayerBonusPoints() {
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
               Loading Bonus Points
             </CardTitle>
           </CardHeader>
@@ -493,25 +501,30 @@ export default function PlayerBonusPoints() {
       </div>
 
       {tbcTeamInfoMap.size > 0 && (
-        <div className="flex justify-center mb-5">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
-            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
-            {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
-            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
-          </div>
-          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            ariaLabel="Fixture mode"
+            value={fixtureMode}
+            onChange={(v) => setFixtureMode(v)}
+            options={[
+              { value: "base" as const, label: "Base Fixtures" },
+              ...(Object.keys(tbcAssignments).length > 0 ? [{ value: "custom" as const, label: "My Fixtures" }] : []),
+              { value: "expert" as const, label: "Expert Fixtures" },
+            ]}
+          />
+          <a href="/fixtures" className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300 flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
       <div className="fpl-section-spacing">
         {/* Gameweek range + search — always visible, not buried behind the collapsible */}
-        <div className="fpl-card mb-2">
-          <div className="p-2 sm:p-3">
+        <div className="mb-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm dark:via-transparent sm:p-5">
+          <div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">From</label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">From</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -523,9 +536,9 @@ export default function PlayerBonusPoints() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">To</label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">To</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -537,15 +550,15 @@ export default function PlayerBonusPoints() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                  <Search className="h-3.5 w-3.5 text-gray-500" />
+                <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <Search className="h-3.5 w-3.5 text-indigo-500" />
                   Search
                 </label>
                 <Input
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-7 text-xs"
+                  className="h-9 rounded-xl text-xs"
                   data-testid="input-search"
                 />
               </div>
@@ -554,12 +567,12 @@ export default function PlayerBonusPoints() {
         </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-3 md:mb-4">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <CollapsibleTrigger asChild>
-            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-yellow-600" />
-                <h2 className="fpl-card-title">Filters</h2>
+            <div className="flex cursor-pointer items-center justify-between gap-3 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5">
+              <div className="flex items-center gap-3">
+                <IconTile icon={Filter} />
+                <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">Filters</h2>
               </div>
               <div className="flex items-center gap-2">
                 {isFiltersOpen ? (
@@ -571,22 +584,22 @@ export default function PlayerBonusPoints() {
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-          <div className="p-2 sm:p-3">
+          <div className="border-t border-gray-100 p-4 sm:p-5">
             <div className="w-full space-y-3">
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                   </span>
                   <div className="flex flex-wrap items-center gap-1">
                     <button
                       onClick={() => setApplyAvailability(!applyAvailability)}
-                      className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                      className={`${CHIP} gap-1 ${applyAvailability ? CHIP_ON : CHIP_OFF}`}
                     >
                       Avail: {applyAvailability ? 'ON' : 'OFF'}
                     </button>
-                    <button onClick={clearGameweekSelections} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-clear-gw-selections">All</button>
-                    <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => startGameweek + i).filter(gw => !prev.has(gw))))} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300" data-testid="button-invert-gameweeks">Invert</button>
+                    <button onClick={clearGameweekSelections} className={`${CHIP} ${CHIP_ACTION}`} data-testid="button-clear-gw-selections">All</button>
+                    <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => startGameweek + i).filter(gw => !prev.has(gw))))} className={`${CHIP} ${CHIP_AMBER}`} data-testid="button-invert-gameweeks">Invert</button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
@@ -595,13 +608,13 @@ export default function PlayerBonusPoints() {
                     const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gw);
                     return (
                       <button key={gw} onClick={() => toggleGameweekSelection(gw)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                       >GW{gw}</button>
                     );
                   })}
                   {fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
                     <button onClick={() => toggleGameweekSelection(39)}
-                      className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                      className={`${CHIP} ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? CHIP_AMBER : CHIP_OFF}`}
                     >GW39 (TBC)</button>
                   )}
                 </div>
@@ -609,17 +622,17 @@ export default function PlayerBonusPoints() {
 
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Position{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                   </span>
-                  <button onClick={() => setSelectedPositions(new Set())} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                  <button onClick={() => setSelectedPositions(new Set())} className={`${CHIP} ${CHIP_ACTION}`}>All</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {['GKP','DEF','MID','FWD'].map(pos => {
                     const isActive = selectedPositions.size === 0 || selectedPositions.has(pos);
                     return (
                       <button key={pos} onClick={() => togglePositionSelection(pos)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                       >{pos}</button>
                     );
                   })}
@@ -628,17 +641,17 @@ export default function PlayerBonusPoints() {
 
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                   </span>
-                  <button onClick={() => setSelectedTeams(new Set())} className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                  <button onClick={() => setSelectedTeams(new Set())} className={`${CHIP} ${CHIP_ACTION}`}>All</button>
                 </div>
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {teams.map(team => {
                     const isActive = selectedTeams.size === 0 || selectedTeams.has(team);
                     return (
                       <button key={team} onClick={() => toggleTeamSelection(team)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                       >{team}</button>
                     );
                   })}
@@ -656,23 +669,18 @@ export default function PlayerBonusPoints() {
 
         {/* Results */}
         {filteredAndSortedData.length > 0 && (
-          <div className="fpl-card">
-            <div className="fpl-card-header">
-              <h2 className="fpl-card-title flex items-center gap-2">
-                Bonus Points Projections
-                {selectedGameweeks.size > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
-                  </Badge>
-                )}
-              </h2>
-            </div>
-            <div className="fpl-card-content p-0">
-              <div className="border rounded-lg overflow-hidden">
+          <SectionCard
+            icon={Star}
+            title="Bonus Points Projections"
+            subtitle={selectedGameweeks.size > 0 ? <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill> : undefined}
+            bodyClassName="p-0"
+          >
+            <div>
+              <div className="overflow-hidden">
                 <div className="relative">
                 <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
                   <table className="w-full [&_th]:snap-start [&_td]:snap-start">
-                    <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
+                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                       <tr>
                         <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px] text-xs md:text-sm">
                           <button
@@ -704,7 +712,7 @@ export default function PlayerBonusPoints() {
                           </th>
                         )}
                         <th
-                          className={`text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                          className={`text-center py-2 px-1 text-xs md:text-sm font-bold bg-indigo-100 border-l border-indigo-200 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
                           style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                         >
                           <button
@@ -747,7 +755,7 @@ export default function PlayerBonusPoints() {
                         const originalAverage = countedWeeks > 0 ? originalTotal / countedWeeks : 0;
                         
                         return (
-                        <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
+                        <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-indigo-50/50 ${index < 10 ? 'bg-indigo-50/30' : ''}`}>
                           <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 w-[130px] min-w-[130px]">
                             <PlayerNameCell
                               name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
@@ -780,7 +788,7 @@ export default function PlayerBonusPoints() {
                                     <PopoverTrigger asChild>
                                       <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
                                         {hasGwAdjustment && rawValue ? (
-                                          <span className="text-purple-700">{displayValue.toFixed(1)}</span>
+                                          <span className="text-indigo-700">{displayValue.toFixed(1)}</span>
                                         ) : (
                                           <span>{rawValue ? rawValue.toFixed(1) : '-'}</span>
                                         )}
@@ -804,7 +812,7 @@ export default function PlayerBonusPoints() {
                                   </Popover>
                                 ) : hasGwAdjustment && rawValue ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-purple-700 font-medium">{displayValue.toFixed(1)}</span>
+                                    <span className="text-indigo-700 font-medium">{displayValue.toFixed(1)}</span>
                                     <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(1)}</span>
                                   </div>
                                 ) : (
@@ -845,14 +853,14 @@ export default function PlayerBonusPoints() {
                             );
                           })()}
                           <td
-                            className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                            className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:static z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${hasAnyAdjustment ? 'bg-indigo-50' : getBonusColor(adjustedAverage)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
                             style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                           >
                             {(() => {
                               const tbcBonusVal2 = showTBCColumn ? (projection.bonusPoints?.['gw39'] || 0) : 0;
                               return hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-indigo-700">{(adjustedTotal + tbcBonusVal2).toFixed(1)}</span>
                                   <span className="text-gray-400 line-through text-[10px] md:text-xs">{(originalTotal + tbcBonusVal2).toFixed(1)}</span>
                                 </div>
                               ) : (
@@ -860,10 +868,10 @@ export default function PlayerBonusPoints() {
                               );
                             })()}
                           </td>
-                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : getBonusColor(adjustedAverage)}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center w-[52px] min-w-[52px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-indigo-50' : getBonusColor(adjustedAverage)}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(1)}</span>
+                                <span className="text-sm font-medium text-indigo-700">{adjustedAverage.toFixed(1)}</span>
                                 <span className="text-gray-400 line-through text-xs">{originalAverage.toFixed(1)}</span>
                               </div>
                             ) : (
@@ -886,17 +894,13 @@ export default function PlayerBonusPoints() {
                 </div>
               </div>
             </div>
-          </div>
+          </SectionCard>
         )}
 
         {filteredAndSortedData.length === 0 && bonusPointsProjections && (
-          <div className="fpl-card">
-            <div className="fpl-card-content py-12">
-              <div className="text-center text-gray-500">
-                <p className="text-lg font-medium">No players found</p>
-                <p className="text-sm mt-2">Try adjusting your filters</p>
-              </div>
-            </div>
+          <div className="rounded-2xl border border-gray-200 bg-white py-12 text-center text-gray-500 shadow-sm">
+            <p className="text-lg font-medium">No players found</p>
+            <p className="text-sm mt-2">Try adjusting your filters</p>
           </div>
         )}
       </div>

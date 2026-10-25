@@ -15,6 +15,14 @@ import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { useFitColumns } from "@/hooks/use-fit-columns";
 import JerseyIcon from "@/components/jersey-icon";
 import { getDefaultFiltersOpen } from "@/lib/utils";
+import { IconTile, PosChip, SectionCard, StatTile, TeamChip, asPos } from "@/components/tool-ui";
+
+// Filter chips in the shared tool look: indigo when on, muted grey when off.
+const CHIP = "chip-toggle inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold leading-none cursor-pointer transition-colors";
+const CHIP_ON = "bg-indigo-500/12 text-indigo-700 border-indigo-500/30 dark:text-indigo-300";
+const CHIP_OFF = "bg-gray-500/10 text-gray-400 border-gray-300/60";
+const CHIP_ACTION = "bg-emerald-500/12 text-emerald-700 border-emerald-500/30 dark:text-emerald-300";
+const CHIP_AMBER = "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300";
 
 interface BootstrapData {
   events: any[];
@@ -313,7 +321,7 @@ export default function PlayerMinutes() {
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
               Loading Minutes Projections
             </CardTitle>
           </CardHeader>
@@ -346,74 +354,37 @@ export default function PlayerMinutes() {
       <div className="fpl-section-spacing">
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6 mb-8">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-3 sm:p-6">
-              <div className="flex items-center">
-                <Users className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
-                <div className="ml-2 sm:ml-4 overflow-hidden">
-                  <p className="text-blue-100 text-[10px] sm:text-sm truncate">Total Players</p>
-                  <p className="text-base sm:text-2xl font-bold">{filteredAndSortedData.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-            <CardContent className="p-3 sm:p-6">
-              <div className="flex items-center">
-                <Target className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
-                <div className="ml-2 sm:ml-4 overflow-hidden">
-                  <p className="text-green-100 text-[10px] sm:text-sm truncate">Avg Current Min/Game</p>
-                  <p className="text-base sm:text-2xl font-bold">
-                    {filteredAndSortedData.length > 0 ?
-                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.currentMinutesPerGame, 0) / filteredAndSortedData.length)
-                      : '0'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-3 sm:p-6">
-              <div className="flex items-center">
-                <Clock className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
-                <div className="ml-2 sm:ml-4 overflow-hidden">
-                  <p className="text-purple-100 text-[10px] sm:text-sm truncate">Avg Minutes/Game</p>
-                  <p className="text-base sm:text-2xl font-bold">
-                    {filteredAndSortedData.length > 0 ?
-                      Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.expectedMinutesPerGame, 0) / filteredAndSortedData.length)
-                      : '0'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-3 sm:p-6">
-              <div className="flex items-center">
-                <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 shrink-0" />
-                <div className="ml-2 sm:ml-4 overflow-hidden">
-                  <p className="text-orange-100 text-[10px] sm:text-sm truncate">Expected 60+ Min</p>
-                  <p className="text-base sm:text-2xl font-bold">
-                    {filteredAndSortedData.filter(p => p.expectedMinutesPerGame >= 60).length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-5">
+          <StatTile tone="indigo" label="Total Players" value={filteredAndSortedData.length} />
+          <StatTile
+            tone="green"
+            label="Avg Current Min/Game"
+            value={filteredAndSortedData.length > 0 ?
+              Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.currentMinutesPerGame, 0) / filteredAndSortedData.length)
+              : '0'}
+          />
+          <StatTile
+            tone="indigo"
+            label="Avg Minutes/Game"
+            value={filteredAndSortedData.length > 0 ?
+              Math.round(filteredAndSortedData.reduce((sum, p) => sum + p.expectedMinutesPerGame, 0) / filteredAndSortedData.length)
+              : '0'}
+          />
+          <StatTile
+            tone="amber"
+            label="Expected 60+ Min"
+            value={filteredAndSortedData.filter(p => p.expectedMinutesPerGame >= 60).length}
+          />
         </div>
 
         {/* Gameweek range + search — always visible, not buried behind the collapsible */}
-        <Card className="mb-2">
-          <CardContent className="p-2 sm:p-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="mb-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm dark:via-transparent sm:p-5">
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">From:</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">From</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-9 w-full rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -425,9 +396,9 @@ export default function PlayerMinutes() {
               </div>
 
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">To:</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">To</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-9 w-full rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -439,38 +410,38 @@ export default function PlayerMinutes() {
               </div>
 
               <div className="">
-                <label className="text-xs font-semibold text-gray-600 mb-0.5 block">Search:</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-500" />
                   <Input
                     data-testid="input-player-search"
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-7 text-xs pl-8 border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                    className="h-9 rounded-xl pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div className="flex items-end">
-                <div className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 h-7 rounded-md text-xs font-medium border border-blue-100">
+                <div className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>{filteredAndSortedData.length} players</span>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-2 sm:mb-3">
-          <Card>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2 px-3 sm:px-4">
+              <div className="cursor-pointer bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5">
                 <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-blue-600" />
-                    <CardTitle className="text-sm">Filters</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <IconTile icon={Filter} />
+                    <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">Filters</h2>
                   </div>
                   <div className="flex items-center gap-2">
                     {isFiltersOpen ? (
@@ -480,14 +451,14 @@ export default function PlayerMinutes() {
                     )}
                   </div>
                 </div>
-              </CardHeader>
+              </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-          <CardContent className="p-3 sm:p-4 pt-0">
+          <div className="border-t border-gray-100 p-4 sm:p-5">
             <div className="max-w-[220px] mb-3">
-              <label className="text-xs font-semibold text-gray-600 mb-0.5 block">Min Minutes:</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Min Minutes</label>
               <Select value={minMinutes} onValueChange={setMinMinutes}>
-                <SelectTrigger className="h-7 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                <SelectTrigger className="h-9 w-full rounded-xl text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -501,11 +472,11 @@ export default function PlayerMinutes() {
             </div>
 
             <Tabs defaultValue="pos" className="w-full">
-              <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
-                <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+              <TabsList className="mb-3 grid h-auto w-full max-w-xs grid-cols-2 rounded-xl border border-gray-200 bg-gray-100 p-1">
+                <TabsTrigger value="pos" className="rounded-lg py-1.5 text-xs font-bold text-gray-600 transition-colors data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
                   <span className="hidden sm:inline">Position</span><span className="sm:hidden">Pos</span>{selectedPosition !== "all" && " (1)"}
                 </TabsTrigger>
-                <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                <TabsTrigger value="teams" className="rounded-lg py-1.5 text-xs font-bold text-gray-600 transition-colors data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
                   Teams{selectedTeam !== "all" && " (1)"}
                 </TabsTrigger>
               </TabsList>
@@ -518,7 +489,7 @@ export default function PlayerMinutes() {
                     return (
                       <button key={pos}
                         onClick={() => setSelectedPosition(selectedPosition === value && value !== 'all' ? 'all' : value)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}>
                         {pos}
                       </button>
                     );
@@ -529,22 +500,22 @@ export default function PlayerMinutes() {
               <TabsContent value="teams" className="mt-0">
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   <button onClick={() => setSelectedTeam('all')}
-                    className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${selectedTeam === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                    className={`${CHIP} ${selectedTeam === 'all' ? CHIP_ON : CHIP_OFF}`}>
                     All
                   </button>
                   {teams.map(team => (
                     <button key={team}
                       onClick={() => setSelectedTeam(selectedTeam === team ? 'all' : team)}
-                      className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${selectedTeam === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      className={`${CHIP} ${selectedTeam === team ? CHIP_ON : CHIP_OFF}`}>
                       {team}
                     </button>
                   ))}
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
+          </div>
             </CollapsibleContent>
-          </Card>
+          </div>
         </Collapsible>
 
         {/* Results Table */}
@@ -558,14 +529,8 @@ export default function PlayerMinutes() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-              <CardTitle className="flex items-center">
-                <Clock className="h-6 w-6 text-blue-600 mr-2" />
-                Player Minutes & Points from Minutes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+          <SectionCard icon={Clock} title="Player Minutes & Points from Minutes" bodyClassName="p-0">
+            <div>
               <div className="relative">
               <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
                 <table className="w-full [&_th]:snap-start [&_td]:snap-start">
@@ -575,7 +540,7 @@ export default function PlayerMinutes() {
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('name')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                         >
                           Player {getSortIcon('name')}
                         </Button>
@@ -584,7 +549,7 @@ export default function PlayerMinutes() {
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('team')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                         >
                           Team {getSortIcon('team')}
                         </Button>
@@ -593,7 +558,7 @@ export default function PlayerMinutes() {
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('position')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                         >
                           Pos {getSortIcon('position')}
                         </Button>
@@ -605,7 +570,7 @@ export default function PlayerMinutes() {
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('currentMinutes')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                         >
                           <span className="hidden md:inline">Curr</span>
                           <span className="md:hidden">Cur</span> {getSortIcon('currentMinutes')}
@@ -620,7 +585,7 @@ export default function PlayerMinutes() {
                           <Button
                             variant="ghost"
                             onClick={() => handleSort(`gw${gw}`)}
-                            className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                            className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                           >
                             <span className="md:hidden">{gw}</span>
                             <span className="hidden md:inline">GW{gw}</span>
@@ -629,13 +594,13 @@ export default function PlayerMinutes() {
                         </th>
                       ))}
                       <th
-                        className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-blue-50 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[60px] min-w-[60px]' : ''}`}
+                        className={`px-1 md:px-3 py-2 md:py-3 text-center border-l border-gray-200 bg-indigo-50 md:sticky md:right-0 z-[5] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)] ${!columnWidth ? 'w-[60px] min-w-[60px]' : ''}`}
                         style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                       >
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('avgXMins')}
-                          className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
+                          className="font-semibold text-gray-700 hover:text-indigo-600 p-0 h-auto text-xs md:text-sm"
                         >
                           Avg {getSortIcon('avgXMins')}
                         </Button>
@@ -646,7 +611,7 @@ export default function PlayerMinutes() {
                     {filteredAndSortedData.map((player, index) => (
                       <tr 
                         key={player.playerId}
-                        className={`hover:bg-blue-50 transition-colors ${
+                        className={`hover:bg-indigo-50 transition-colors ${
                           index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                         }`}
                       >
@@ -663,14 +628,10 @@ export default function PlayerMinutes() {
                           </div>
                         </td>
                         <td className="px-1 md:px-4 py-2 md:py-4 hidden md:table-cell">
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {player.teamShort}
-                          </Badge>
+                          <TeamChip>{player.teamShort}</TeamChip>
                         </td>
                         <td className="px-1 md:px-4 py-2 md:py-4 hidden md:table-cell">
-                          <Badge className={`${getPositionColor(player.position)} text-xs`}>
-                            {player.position}
-                          </Badge>
+                          <PosChip pos={asPos(player.position)} />
                         </td>
                         <td
                           className={`px-1 md:px-3 py-2 md:py-3 text-center ${getMinutesColor(player.currentMinutesPerGame)} ${!columnWidth ? 'w-[52px] min-w-[52px]' : ''}`}
@@ -715,8 +676,8 @@ export default function PlayerMinutes() {
                 </div>
               )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         )}
       </div>
     </div>

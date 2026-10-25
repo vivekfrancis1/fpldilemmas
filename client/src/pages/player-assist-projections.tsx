@@ -25,6 +25,14 @@ import { ProjectionDisclaimer } from "@/components/projection-disclaimer";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { getDefaultFiltersOpen } from "@/lib/utils";
 import { getHeatmapColor, HEATMAP_TIERS } from "@/lib/heatmap-colors";
+import { IconTile, Pill, SectionCard, SegmentedControl } from "@/components/tool-ui";
+
+// Filter chips in the shared tool look: indigo when on, muted grey when off.
+const CHIP = "chip-toggle inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold leading-none cursor-pointer transition-colors";
+const CHIP_ON = "bg-indigo-500/12 text-indigo-700 border-indigo-500/30 dark:text-indigo-300";
+const CHIP_OFF = "bg-gray-500/10 text-gray-400 border-gray-300/60";
+const CHIP_ACTION = "bg-emerald-500/12 text-emerald-700 border-emerald-500/30 dark:text-emerald-300";
+const CHIP_AMBER = "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300";
 
 interface FixtureDetail {
   opponent: string;
@@ -719,22 +727,19 @@ export default function PlayerAssistProjections() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "future" | "past" | "pastXa")} className="mb-3 sm:mb-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="future" className="flex items-center gap-1.5 flex-1">
-            <Calendar className="h-4 w-4" />
-            Assists Projections
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-1.5 flex-1">
-            <History className="h-4 w-4" />
-            Assists History
-          </TabsTrigger>
-          <TabsTrigger value="pastXa" className="flex items-center gap-1.5 flex-1">
-            <TrendingUp className="h-4 w-4" />
-            xA History
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="mb-4 overflow-x-auto">
+        <SegmentedControl
+          ariaLabel="View mode"
+          testIdPrefix="tab-view-mode"
+          value={viewMode}
+          onChange={(v) => setViewMode(v)}
+          options={[
+            { value: "future" as const, label: "Assists Projections" },
+            { value: "past" as const, label: "Assists History" },
+            { value: "pastXa" as const, label: "xA History" },
+          ]}
+        />
+      </div>
 
       {(viewMode === "past" || viewMode === "pastXa") && (
         <div className="mb-4">
@@ -779,7 +784,7 @@ export default function PlayerAssistProjections() {
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
               {viewMode === "future" ? "Loading Assist Projections" : "Loading Assist History"}
             </CardTitle>
           </CardHeader>
@@ -800,26 +805,31 @@ export default function PlayerAssistProjections() {
       {pageHeaderAndTabs}
 
       {viewMode === "future" && tbcTeamInfoMap.size > 0 && (
-        <div className="flex justify-center mb-5">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs shadow-sm">
-            <button onClick={() => setFixtureMode('base')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'base' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>Base Fixtures</button>
-            {Object.keys(tbcAssignments).length > 0 && <button onClick={() => setFixtureMode('custom')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>My Fixtures</button>}
-            <button onClick={() => setFixtureMode('expert')} className={`rounded-md px-3 py-1.5 font-medium transition-all ${fixtureMode === 'expert' ? 'bg-amber-100 text-amber-900 shadow-sm border border-amber-300' : 'text-gray-500 hover:text-gray-800'}`}>Expert Fixtures</button>
-          </div>
-          <a href="/fixtures" className="ml-2 self-center text-xs text-blue-600 hover:underline flex-shrink-0">⚙ Edit fixtures</a>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            ariaLabel="Fixture mode"
+            value={fixtureMode}
+            onChange={(v) => setFixtureMode(v)}
+            options={[
+              { value: "base" as const, label: "Base Fixtures" },
+              ...(Object.keys(tbcAssignments).length > 0 ? [{ value: "custom" as const, label: "My Fixtures" }] : []),
+              { value: "expert" as const, label: "Expert Fixtures" },
+            ]}
+          />
+          <a href="/fixtures" className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300 flex-shrink-0">⚙ Edit fixtures</a>
         </div>
       )}
 
       <div className="fpl-section-spacing">
 
         {/* Gameweek range + search — always visible, not buried behind the collapsible */}
-        <div className="fpl-card mb-2">
-          <div className="p-2 sm:p-3">
+        <div className="mb-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm dark:via-transparent sm:p-5">
+          <div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">From</label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">From</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -831,9 +841,9 @@ export default function PlayerAssistProjections() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">To</label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">To</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -845,8 +855,8 @@ export default function PlayerAssistProjections() {
               </div>
 
               <div className="space-y-1 sm:col-span-2 lg:col-span-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                  <Search className="h-3.5 w-3.5 text-gray-500" />
+                <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <Search className="h-3.5 w-3.5 text-indigo-500" />
                   Search
                 </label>
                 <Input
@@ -854,7 +864,7 @@ export default function PlayerAssistProjections() {
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-7 text-xs"
+                  className="h-9 rounded-xl text-xs"
                 />
               </div>
 
@@ -867,12 +877,12 @@ export default function PlayerAssistProjections() {
         </div>
 
         {/* Filters */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-3 md:mb-4">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <CollapsibleTrigger asChild>
-            <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-purple-600" />
-                <h2 className="fpl-card-title">Filters</h2>
+            <div className="flex cursor-pointer items-center justify-between gap-3 bg-gradient-to-r from-indigo-500/[0.06] via-violet-500/[0.03] to-transparent px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5">
+              <div className="flex items-center gap-3">
+                <IconTile icon={Filter} />
+                <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">Filters</h2>
               </div>
               <div className="flex items-center gap-2">
                 {isFiltersOpen ? (
@@ -884,7 +894,7 @@ export default function PlayerAssistProjections() {
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-          <div className="p-2 sm:p-3">
+          <div className="border-t border-gray-100 p-4 sm:p-5">
             {(viewMode === "past" || viewMode === "pastXa") && (
               <div className="flex flex-wrap items-center gap-2 mt-2 mb-1">
                 <span className="text-xs text-gray-500">Quick:</span>
@@ -895,7 +905,7 @@ export default function PlayerAssistProjections() {
                     <button
                       key={n}
                       onClick={() => { setStartGameweek(start); setEndGameweek(last); }}
-                      className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                      className={`${CHIP} ${CHIP_ON} hover:bg-indigo-500/20`}
                     >
                       Last {n} GWs
                     </button>
@@ -903,7 +913,7 @@ export default function PlayerAssistProjections() {
                 })}
                 <button
                   onClick={() => { const last = historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW || 24; setStartGameweek(1); setEndGameweek(last); }}
-                  className="text-xs px-2.5 py-0.5 rounded-full border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer font-medium"
+                  className={`${CHIP} ${CHIP_ON} hover:bg-indigo-500/20`}
                 >
                   All GWs
                 </button>
@@ -914,22 +924,22 @@ export default function PlayerAssistProjections() {
               {/* Gameweeks */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Gameweeks{selectedGameweeks.size > 0 && ` (${selectedGameweeks.size})`}
                   </span>
                   <div className="flex flex-wrap items-center gap-1">
                     <button onClick={() => setApplyAvailability(!applyAvailability)}
-                      className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                      className={`${CHIP} gap-1 ${applyAvailability ? CHIP_ON : CHIP_OFF}`}
                       data-testid="button-toggle-availability">
                       {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
                     </button>
                     <button onClick={clearGameweekSelections}
-                      className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300"
+                      className={`${CHIP} ${CHIP_ACTION}`}
                       data-testid="button-clear-gw-selections">
                       All
                     </button>
                     <button onClick={() => setSelectedGameweeks(prev => new Set(Array.from({ length: Math.min(endGameweek, 38) - startGameweek + 1 }, (_, i) => startGameweek + i).filter(gw => !prev.has(gw))))}
-                      className="chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer bg-orange-50 text-orange-700 border-orange-300"
+                      className={`${CHIP} ${CHIP_AMBER}`}
                       data-testid="button-invert-gameweeks">
                       Invert
                     </button>
@@ -941,7 +951,7 @@ export default function PlayerAssistProjections() {
                     const isActive = selectedGameweeks.size === 0 || selectedGameweeks.has(gwNumber);
                     return (
                       <button key={gwNumber} onClick={() => toggleGameweekSelection(gwNumber)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                         data-testid={`button-toggle-gw-${gwNumber}`}>
                         GW{gwNumber}
                       </button>
@@ -949,7 +959,7 @@ export default function PlayerAssistProjections() {
                   })}
                   {viewMode === 'future' && fixtureMode !== 'expert' && tbcTeamInfoMap.size > 0 && endGameweek >= 39 && (
                     <button onClick={() => toggleGameweekSelection(39)}
-                      className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
+                      className={`${CHIP} ${selectedGameweeks.size === 0 || selectedGameweeks.has(39) ? CHIP_AMBER : CHIP_OFF}`}>
                       GW39 (TBC)
                     </button>
                   )}
@@ -959,11 +969,11 @@ export default function PlayerAssistProjections() {
               {/* Position */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Position{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                   </span>
                   <button onClick={() => setSelectedPositions(new Set())}
-                    className="chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
+                    className={`${CHIP} ${CHIP_ACTION}`}>
                     All
                   </button>
                 </div>
@@ -972,7 +982,7 @@ export default function PlayerAssistProjections() {
                     const isActive = selectedPositions.size === 0 || selectedPositions.has(full);
                     return (
                       <button key={full} onClick={() => togglePositionSelection(full)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                         data-testid={`button-toggle-position-${full}`}>
                         {short}
                       </button>
@@ -984,11 +994,11 @@ export default function PlayerAssistProjections() {
               {/* Teams */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-600">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                   </span>
                   <button onClick={() => setSelectedTeams(new Set())}
-                    className="chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">
+                    className={`${CHIP} ${CHIP_ACTION}`}>
                     All
                   </button>
                 </div>
@@ -998,7 +1008,7 @@ export default function PlayerAssistProjections() {
                     const shortName = teamNameToShort?.get(team) || team;
                     return (
                       <button key={team} onClick={() => toggleTeamSelection(team)}
-                        className={`chip-toggle rounded-full border text-xs font-medium px-2.5 sm:px-3 py-1 leading-none cursor-pointer transition-colors ${isActive ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 border-gray-300'}`}
+                        className={`${CHIP} ${isActive ? CHIP_ON : CHIP_OFF}`}
                         data-testid={`button-toggle-team-${team}`}>
                         {shortName}
                       </button>
@@ -1021,20 +1031,15 @@ export default function PlayerAssistProjections() {
         {/* Results */}
         {!isLoading && initialized && filteredAndSortedData.length > 0 && (
           <div className="space-y-3 sm:space-y-4">
-              <div className="fpl-card">
-                <div className="fpl-card-header">
-                  <h2 className="fpl-card-title flex items-center gap-2 flex-wrap">
-                    <Zap className="h-5 w-5 text-green-600" />
-                    {viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW{startGameweek}-GW{endGameweek}
-                    {selectedGameweeks.size > 0 && (
-                      <Badge variant="secondary" className="ml-1 text-xs">
-                        {selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected
-                      </Badge>
-                    )}
-                  </h2>
+              <SectionCard
+                icon={Zap}
+                title={`${viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW${startGameweek}-GW${endGameweek}`}
+                subtitle={selectedGameweeks.size > 0 ? <Pill tone="indigo">{selectedGameweeks.size} GW{selectedGameweeks.size === 1 ? '' : 's'} selected</Pill> : undefined}
+                bodyClassName="p-0"
+                action={
                   <div className="flex items-center gap-2">
                     <button onClick={() => setShowOpponent(!showOpponent)}
-                      className={`inline-flex items-center gap-1 chip-toggle rounded-full border text-xs font-medium px-3 sm:px-3.5 py-1 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                      className={`${CHIP} gap-1 ${showOpponent ? CHIP_ON : CHIP_OFF}`}
                       data-testid="button-toggle-opponent">
                       <Users className="h-2.5 w-2.5" />{showOpponent ? 'Hide Opp' : 'Show Opp'}
                     </button>
@@ -1043,17 +1048,18 @@ export default function PlayerAssistProjections() {
                       disabled={isRefreshing}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 rounded-full"
                       data-testid="button-refresh-data"
                     >
                       <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                       {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
                     </Button>
                   </div>
-                </div>
-                <div className="fpl-card-content p-0">
+                }
+              >
+                <div>
                   <div className="relative">
-                  <div ref={gwTableContainerRef} className="overflow-x-auto -mx-4 sm:mx-0 snap-x snap-mandatory scroll-smooth">
+                  <div ref={gwTableContainerRef} className="overflow-x-auto snap-x snap-mandatory scroll-smooth">
                     <div className="min-w-full inline-block align-middle">
                       <table className="min-w-full divide-y divide-gray-200 [&_th]:snap-start [&_td]:snap-start">
                       <thead className="bg-gray-50 border-b">
@@ -1165,7 +1171,7 @@ export default function PlayerAssistProjections() {
                                           <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                             {hasGwAdjustment && projValue > 0 ? (
                                               <div className="flex flex-col items-center">
-                                                <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
+                                                <span className="text-indigo-700 font-medium">{formatValue(displayValue)}</span>
                                                 <span className="text-gray-400 line-through text-xs">{formatValue(projValue)}</span>
                                               </div>
                                             ) : (
@@ -1191,7 +1197,7 @@ export default function PlayerAssistProjections() {
                                       </Popover>
                                     ) : hasGwAdjustment && projValue > 0 ? (
                                       <>
-                                        <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
+                                        <span className="text-indigo-700 font-medium">{formatValue(displayValue)}</span>
                                         <span className="text-gray-400 line-through text-xs">{formatValue(projValue)}</span>
                                       </>
                                     ) : (
@@ -1240,14 +1246,14 @@ export default function PlayerAssistProjections() {
                               </td>
                             )}
                             <td
-                              className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-purple-50' : getAssistsColor(averageAssists)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center border-l border-gray-300 md:sticky md:right-[65px] z-[5] ${hasAnyAdjustment ? 'bg-indigo-50' : getAssistsColor(averageAssists)} ${!columnWidth ? 'w-[65px] min-w-[65px]' : ''}`}
                               style={columnWidth ? { width: columnWidth, minWidth: columnWidth } : undefined}
                             >
                               {(() => {
                                 const tbcContrib = showTBCColumn ? tbcAssists : 0;
                                 return hasAnyAdjustment ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
+                                    <span className="text-sm md:text-lg font-bold text-indigo-700">{viewMode === "past" ? Math.round(adjustedTotal + tbcContrib) : (adjustedTotal + tbcContrib).toFixed(2)}</span>
                                     <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal + tbcContrib) : (originalTotal + tbcContrib).toFixed(2)}</span>
                                   </div>
                                 ) : (
@@ -1274,18 +1280,16 @@ export default function PlayerAssistProjections() {
                   )}
                   </div>
                 </div>
-              </div>
+              </SectionCard>
           </div>
         )}
 
         {/* No Results */}
         {!isLoading && filteredAndSortedData.length === 0 && (
-          <div className="fpl-card">
-            <div className="fpl-card-content p-8 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
-              <p className="text-gray-600">Try adjusting your filters to see more results.</p>
-            </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No players found</h3>
+            <p className="text-gray-600">Try adjusting your filters to see more results.</p>
           </div>
         )}
       </div>
