@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { calculateFreeTransfers } from "@/lib/free-transfers";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +12,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ChainBreakConfirmationDialog } from "@/components/chain-break-confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +35,8 @@ function PlannerSection({
   title,
   badge,
   titleExtra,
+  subtitle,
+  actions,
   open,
   onToggle,
   toggleTestId,
@@ -49,6 +49,9 @@ function PlannerSection({
   title: string;
   badge?: ReactNode;
   titleExtra?: ReactNode;
+  subtitle?: ReactNode;
+  /** Buttons in the header that must not toggle the section when clicked. */
+  actions?: ReactNode;
   open: boolean;
   onToggle: () => void;
   toggleTestId?: string;
@@ -74,11 +77,15 @@ function PlannerSection({
         data-testid={toggleTestId}
       >
         <IconTile icon={icon} />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1" data-testid={titleTestId}>
-          <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">{title}</h2>
-          {badge}
-          {titleExtra}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1" data-testid={titleTestId}>
+            <h2 className="text-base font-bold leading-tight text-gray-900 sm:text-lg">{title}</h2>
+            {badge}
+            {titleExtra}
+          </div>
+          {subtitle && <p className="text-xs leading-snug text-gray-500">{subtitle}</p>}
         </div>
+        {actions && <div onClick={(e) => e.stopPropagation()}>{actions}</div>}
         {open ? <ChevronUp className="h-5 w-5 shrink-0 text-indigo-500" /> : <ChevronDown className="h-5 w-5 shrink-0 text-indigo-500" />}
       </div>
       {open && <div className={bodyClassName}>{children}</div>}
@@ -492,13 +499,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   if (!allPlayersData) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-muted-foreground">
-            No projection data available
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/60 py-12 text-center text-gray-600">
+        No projection data available
+      </div>
     );
   }
 
@@ -1886,7 +1889,7 @@ export default function TransferPlanner() {
   // Get chip icon color based on chip type
   const getChipIconColor = (chipType: ChipType): string => {
     const colors: Record<ChipType, string> = {
-      'wildcard': 'text-purple-600',
+      'wildcard': 'text-violet-600',
       '3xc': 'text-amber-600',
       'bboost': 'text-blue-600',
       'freehit': 'text-green-600'
@@ -7479,65 +7482,40 @@ export default function TransferPlanner() {
         if (!shouldShowTeamEvolution()) return null;
         
         return (
-        <Collapsible open={isTeamEvolutionOpen} onOpenChange={setIsTeamEvolutionOpen}>
-          <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="flex items-center justify-between flex-1" data-testid="text-team-evolution-title">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-indigo-600" />
-                    {activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
-                  </div>
-              {(() => {
-                const currentChip = selectedGameweek !== null ? plannedChips[selectedGameweek] : undefined;
-                if (currentChip) {
-                  return (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help">
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
-                            >
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
-                            </Badge>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
-                          <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                }
-                return null;
-              })()}
-                </CardTitle>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900"
-                    data-testid="button-toggle-team-evolution"
-                  >
-                    {isTeamEvolutionOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-              <CardDescription>
-                Horizontal scrollable view showing how your team evolves across the next 6 gameweeks with all planned transfers
-              </CardDescription>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent data-testid="section-team-evolution">
+        <PlannerSection
+          icon={Calendar}
+          title={activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
+          titleTestId="text-team-evolution-title"
+          toggleTestId="button-toggle-team-evolution"
+          subtitle="Horizontal scrollable view showing how your team evolves across the next 6 gameweeks with all planned transfers"
+          titleExtra={(() => {
+            const currentChip = selectedGameweek !== null ? plannedChips[selectedGameweek] : undefined;
+            if (currentChip) {
+              return (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="cursor-help">
+                        <Pill tone="amber" className="gap-1 px-2.5 py-1 text-xs">
+                          <Sparkles className="h-3 w-3" />
+                          {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
+                        </Pill>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
+                      <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+            return null;
+          })()}
+          open={isTeamEvolutionOpen}
+          onToggle={() => setIsTeamEvolutionOpen(!isTeamEvolutionOpen)}
+        >
+          <div data-testid="section-team-evolution">
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-4 min-w-max">
                 {/* Base Column */}
@@ -7547,7 +7525,7 @@ export default function TransferPlanner() {
                   const viceCaptain = baseLineup.find(p => p.is_vice_captain);
                   
                   return (
-                    <div className="flex-shrink-0 w-48 rounded-lg border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-950/20 p-3">
+                    <div className="flex-shrink-0 w-48 rounded-xl border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-950/20 p-3">
                       <div className="text-center font-bold mb-2 text-indigo-700 dark:text-indigo-300">Base</div>
                       <div className="space-y-0.5">
                         {/* Group by position: GK, DEF, MID, FWD */}
@@ -7566,11 +7544,11 @@ export default function TransferPlanner() {
                             return (
                               <div
                                 key={pick.element}
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                  player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                  player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                  player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                  'bg-red-600 text-white'
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                                  player.element_type === 1 ? 'border border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' :
+                                  player.element_type === 2 ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300' :
+                                  player.element_type === 3 ? 'border border-sky-500/30 bg-sky-500/15 text-sky-800 dark:text-sky-300' :
+                                  'border border-rose-500/30 bg-rose-500/15 text-rose-800 dark:text-rose-300'
                                 }`}
                                 data-testid={`evolution-base-player-${pick.element}`}
                               >
@@ -7652,8 +7630,8 @@ export default function TransferPlanner() {
                   const hasCompletedTransfers = gwTransfers.completed.length > 0;
 
                   return (
-                    <div key={gw.id} className="flex-shrink-0 w-48 rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-900 p-3">
-                      <div className="font-bold mb-2 flex items-center justify-between gap-1">
+                    <div key={gw.id} className="flex-shrink-0 w-48 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                      <div className="font-bold mb-2 flex items-center justify-between gap-1 text-gray-900">
                         <div className="flex items-center gap-1">
                           <span>GW{gw.id}</span>
                           {plannedChip && (
@@ -7704,12 +7682,12 @@ export default function TransferPlanner() {
                             return (
                               <div
                                 key={pick.element}
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
-                                  isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
-                                  player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                  player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                  player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                  'bg-red-600 text-white'
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold relative ${
+                                  isTransferredIn ? 'bg-emerald-500/20 text-emerald-900 border-2 border-emerald-500 dark:text-emerald-200' :
+                                  player.element_type === 1 ? 'border border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' :
+                                  player.element_type === 2 ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300' :
+                                  player.element_type === 3 ? 'border border-sky-500/30 bg-sky-500/15 text-sky-800 dark:text-sky-300' :
+                                  'border border-rose-500/30 bg-rose-500/15 text-rose-800 dark:text-rose-300'
                                 }`}
                                 data-testid={`evolution-gw${gw.id}-player-${pick.element}`}
                               >
@@ -7753,7 +7731,7 @@ export default function TransferPlanner() {
                                   )}
                                   <span className="font-semibold text-red-600">{transfer.outPlayerName}</span>
                                   <span className="text-muted-foreground mx-0.5">→</span>
-                                  <span className="font-semibold text-green-600">{transfer.inPlayerName}</span>
+                                  <span className="font-semibold text-emerald-600">{transfer.inPlayerName}</span>
                                 </span>
                                 <button
                                   onClick={() => handleUndoSingleTransferWithCheckForGW(idx, gw.id)}
@@ -7775,7 +7753,7 @@ export default function TransferPlanner() {
               </div>
             </div>
             
-            <div className="mt-4 text-xs text-muted-foreground space-y-1 border-t pt-3">
+            <div className="mt-4 text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-3">
               <p className="flex items-center gap-2">
                 <span className="text-sm font-bold">(C)</span>
                 <strong>Captain</strong>
@@ -7784,7 +7762,7 @@ export default function TransferPlanner() {
                 <strong>Vice Captain</strong>
               </p>
               <p className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded bg-green-100 border-2 border-green-500 dark:bg-green-950/40"></span>
+                <span className="inline-block w-4 h-4 rounded bg-emerald-500/20 border-2 border-emerald-500"></span>
                 <strong>Transferred In</strong>
               </p>
               <p className="flex items-center gap-2">
@@ -7792,10 +7770,8 @@ export default function TransferPlanner() {
                 <strong>Chip Active</strong>
               </p>
             </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+          </div>
+        </PlannerSection>
         );
       })()}
 
@@ -7806,16 +7782,13 @@ export default function TransferPlanner() {
         const uniqueDraftsCount = savedDrafts.filter(draft => !duplicateInfo[draft.draftLetter]?.isDuplicate).length;
         return uniqueDraftsCount >= 2;
       })() && (
-        <Collapsible open={isDraftComparisonOpen} onOpenChange={setIsDraftComparisonOpen}>
-          <Card className="border-gray-200 bg-white">
-            <CardHeader>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2" data-testid="text-draft-comparison-title">
-                    <Target className="h-5 w-5 text-blue-600" />
-                    Draft Comparison
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
+        <PlannerSection
+          icon={Target}
+          title="Draft Comparison"
+          titleTestId="text-draft-comparison-title"
+          toggleTestId="button-toggle-draft-comparison"
+          actions={
+            <>
                 {(() => {
                   const duplicateInfo = identifyDuplicateDrafts();
                   const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
@@ -7826,7 +7799,7 @@ export default function TransferPlanner() {
                         onClick={deleteAllDuplicateDrafts}
                         size="sm"
                         variant="outline"
-                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                        className="h-8 rounded-xl text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
                         data-testid="button-delete-all-duplicates"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
@@ -7836,42 +7809,23 @@ export default function TransferPlanner() {
                   }
                   return null;
                 })()}
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
-                        data-testid="button-toggle-draft-comparison"
-                      >
-                        {isDraftComparisonOpen ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                  </div>
-                </div>
-                
+            </>
+          }
+          open={isDraftComparisonOpen}
+          onToggle={() => setIsDraftComparisonOpen(!isDraftComparisonOpen)}
+        >
+              <div data-testid="section-draft-comparison">
                 {/* Filter Buttons */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show:</span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-all"
-                  >
-                    All Drafts
-                  </Button>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Show</span>
+                  <SegmentedControl
+                    ariaLabel="Draft filter"
+                    testIdPrefix="filter"
+                    value="all"
+                    onChange={() => {}}
+                    options={[{ value: "all", label: "All Drafts" }]}
+                  />
                 </div>
-              </div>
-              </div>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent data-testid="section-draft-comparison">
             {(() => {
               const comparisonData = buildDraftComparisonData();
               const nextGWs = getNextGameweeks();
@@ -7895,14 +7849,14 @@ export default function TransferPlanner() {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b">
+                      <tr className="border-b border-gray-200">
                         <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
                         {nextGWs.map(gw => (
                           <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
                             GW{gw.id}
                           </th>
                         ))}
-                        <th className="text-center p-2 font-semibold bg-blue-50 dark:bg-blue-950/20" data-testid="header-total">
+                        <th className="text-center p-2 font-semibold bg-indigo-500/10" data-testid="header-total">
                           Total
                         </th>
                       </tr>
@@ -7916,23 +7870,19 @@ export default function TransferPlanner() {
                         return (
                           <tr 
                             key={`${row.draftKey}-${row.mode}`} 
-                            className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                              row.draftKey === activeDraft ? 'bg-blue-50 dark:bg-blue-950/10' : ''
+                            className={`border-b border-gray-100 hover:bg-indigo-50/40 dark:hover:bg-gray-900 ${
+                              row.draftKey === activeDraft ? 'bg-indigo-500/[0.07]' : ''
                             }`}
                             data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
                           >
                             <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
                               <div className="flex items-center gap-2">
                                 <span>{row.draftKey}</span>
-                                {row.draftKey === activeDraft && <span className="text-blue-600">●</span>}
+                                {row.draftKey === activeDraft && <span className="text-indigo-600">●</span>}
                                 {isMaxTotal && (
-                                  <Badge 
-                                    variant="default" 
-                                    className="text-xs bg-green-600 text-white dark:bg-green-500"
-                                    data-testid={`badge-best-${row.draftKey}-${row.mode.toLowerCase()}`}
-                                  >
-                                    Best
-                                  </Badge>
+                                  <span data-testid={`badge-best-${row.draftKey}-${row.mode.toLowerCase()}`}>
+                                    <Pill tone="green">Best</Pill>
+                                  </span>
                                 )}
                                 
                                 {isDuplicate && (
@@ -8064,7 +8014,7 @@ export default function TransferPlanner() {
                             );
                           })}
                           <td 
-                            className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
+                            className="text-center p-2 font-extrabold tabular-nums text-indigo-600 bg-indigo-500/10"
                             data-testid={`cell-${row.draftKey}-total`}
                           >
                             {row.total.toFixed(2)}
@@ -8078,28 +8028,24 @@ export default function TransferPlanner() {
               );
             })()}
             
-            <div className="mt-4 text-xs text-muted-foreground space-y-1">
+            <div className="mt-4 text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-3">
               <p>● = Currently active draft (Manual mode)</p>
               <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
               <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
               <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
             </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+              </div>
+        </PlannerSection>
       )}
 
       {/* Empty State */}
       {!searchedId && (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
-              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Enter your Manager ID to start planning your transfers</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/60 py-12 text-center text-gray-600">
+          <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/15 to-violet-500/15 text-indigo-600">
+            <Target className="h-7 w-7" />
+          </span>
+          <p>Enter your Manager ID to start planning your transfers</p>
+        </div>
       )}
 
       {/* Captain Confirmation Dialog */}
@@ -8180,8 +8126,8 @@ export default function TransferPlanner() {
               return (
                 <>
                   {/* Current Information */}
-                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 space-y-2">
-                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Current Information</h4>
+                  <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-xl p-3 space-y-2">
+                    <h4 className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">Current Information</h4>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div>
                         <div className="text-muted-foreground">Buy Price</div>
@@ -8220,11 +8166,11 @@ export default function TransferPlanner() {
 
                   {/* New Sell Price Preview */}
                   {!isNaN(newBuyPrice) && newBuyPrice > 0 && (
-                    <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
-                      <div className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-3">
+                      <div className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 mb-1">
                         New Calculated Sell Price
                       </div>
-                      <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                      <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
                         £{newSellPrice.toFixed(1)}m
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
