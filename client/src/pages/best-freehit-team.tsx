@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw } from "lucide-react";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw, Shirt, SlidersHorizontal, ListOrdered } from "lucide-react";
+import { HeroPanel, HeroStat, Pill, PosChip, SectionCard, TeamChip, XptsBar, asPos } from "@/components/tool-ui";
 import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -735,33 +736,27 @@ export default function BestFreehitTeam() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
       <div className="lg:col-span-1">
       {/* Controls */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Team Optimization</CardTitle>
-              <CardDescription>
-                Select a gameweek to optimize your freehit team for maximum points
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshData}
-                disabled={isRefreshing || isLoading}
-                className="shrink-0"
-                data-testid="button-refresh-freehit-data"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span className="ml-2 hidden sm:inline">Refresh</span>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard
+        icon={SlidersHorizontal}
+        title="Team Optimization"
+        subtitle="Select a gameweek to optimize your freehit team for maximum points"
+        bodyClassName="space-y-4 p-4 sm:p-5"
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshData}
+            disabled={isRefreshing || isLoading}
+            className="shrink-0 rounded-xl"
+            data-testid="button-refresh-freehit-data"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="ml-2 hidden sm:inline">Refresh</span>
+          </Button>
+        }
+      >
           {/* Optimization Mode */}
-          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+          <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
@@ -773,9 +768,9 @@ export default function BestFreehitTeam() {
                   onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
                   data-testid="switch-unlimited-budget"
                 />
-                <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                <Pill tone={unlimitedBudget ? "gray" : "indigo"}>
                   {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
-                </Badge>
+                </Pill>
               </div>
               <p className="text-xs text-muted-foreground">
                 {unlimitedBudget
@@ -805,10 +800,10 @@ export default function BestFreehitTeam() {
           </div>
 
           {/* Player Inclusion/Exclusion */}
-          <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+          <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Users className="h-4 w-4" />
-              <h3 className="text-sm font-medium">Player Constraints</h3>
+              <Users className="h-4 w-4 text-indigo-600" />
+              <h3 className="text-sm font-bold text-gray-900">Player Constraints</h3>
             </div>
 
             {/* Players to Include */}
@@ -821,7 +816,7 @@ export default function BestFreehitTeam() {
                   <Badge
                     key={player.playerId}
                     variant="secondary"
-                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                    className="flex items-center gap-1 border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                   >
                     {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
@@ -833,7 +828,7 @@ export default function BestFreehitTeam() {
               </div>
               <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
+                  <Button variant="outline" size="sm" className="w-full justify-start rounded-xl bg-white">
                     <Plus className="h-4 w-4 mr-2" />
                     Add players to include
                   </Button>
@@ -898,7 +893,7 @@ export default function BestFreehitTeam() {
                   <Badge
                     key={player.playerId}
                     variant="secondary"
-                    className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
+                    className="flex items-center gap-1 border border-red-500/30 bg-red-500/15 text-red-800 dark:text-red-300"
                   >
                     {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
@@ -910,7 +905,7 @@ export default function BestFreehitTeam() {
               </div>
               <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
+                  <Button variant="outline" size="sm" className="w-full justify-start rounded-xl bg-white">
                     <X className="h-4 w-4 mr-2" />
                     Add players to exclude
                   </Button>
@@ -968,7 +963,7 @@ export default function BestFreehitTeam() {
 
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Gameweek</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Gameweek</label>
               <Select value={selectedGameweek.toString()} onValueChange={(value) => setSelectedGameweek(parseInt(value))}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -985,7 +980,7 @@ export default function BestFreehitTeam() {
             <Button 
               onClick={optimizeTeam} 
               disabled={isOptimizing || isLoading || snapshots.length === 0}
-              className="flex items-center gap-2"
+              className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
               data-testid="button-optimize-team"
             >
               {isOptimizing ? (
@@ -1012,166 +1007,148 @@ export default function BestFreehitTeam() {
               Data available for {gameweekRange} • Based on latest projections
             </p>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
       </div>
 
       {/* Optimal Team Results */}
       {optimalTeam ? (
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-5">
           {/* Team Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                {unlimitedBudget ? 'Top Players Selection' : 'Budget-Optimized Team'}
-              </CardTitle>
-              <CardDescription>
-                {unlimitedBudget 
+          <HeroPanel testId="freehit-summary">
+            <div className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Trophy className="h-5 w-5 text-amber-300" />
+              <h2 className="text-lg font-bold">{unlimitedBudget ? 'Top Players Selection' : 'Budget-Optimized Team'}</h2>
+              <span className="text-xs font-medium text-white/75">
+                {unlimitedBudget
                   ? 'Best players by projected points with no budget constraints'
-                  : `Optimized within £${budgetConstraint}m budget constraint`
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Formation</p>
-                  <p className="text-2xl font-bold">{optimalTeam.formation}</p>
+                  : `Optimized within £${budgetConstraint}m budget constraint`}
+              </span>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <HeroStat
+                label="Projected points"
+                value={optimalTeam.totalPoints.toFixed(1)}
+                sub="Starting XI with captain doubled"
+              />
+              <HeroStat label="Formation" value={optimalTeam.formation} sub={`GW${selectedGameweek} · single gameweek`} />
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Captain (C)</div>
+                <div className="mt-2 flex items-center gap-1.5 text-2xl font-extrabold leading-tight">
+                  <Crown className="h-5 w-5 shrink-0 text-amber-300" />
+                  <span className="truncate">{playerIdToWebName.get(optimalTeam.captain.playerId) || optimalTeam.captain.playerName}</span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Projected Points</p>
-                  <p className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</p>
-                  <p className="text-xs text-muted-foreground">Starting XI with captain doubled</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Captain (C)</p>
-                  <p className="text-lg font-bold flex items-center gap-1">
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                    {playerIdToWebName.get(optimalTeam.captain.playerId) || optimalTeam.captain.playerName}
-                  </p>
-                  <p className="text-xs text-green-600 font-medium">
-                    {getGameweekPoints(optimalTeam.captain, selectedGameweek).toFixed(1)} × 2 = {(getGameweekPoints(optimalTeam.captain, selectedGameweek) * 2).toFixed(1)} pts
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Vice Captain (V)</p>
-                  <p className="text-lg font-bold flex items-center gap-1">
-                    <Star className="h-4 w-4 text-blue-500" />
-                    {(optimalTeam.viceCaptain && (playerIdToWebName.get(optimalTeam.viceCaptain.playerId) || optimalTeam.viceCaptain.playerName)) || 'TBD'}
-                  </p>
-                  <p className="text-xs text-blue-600 font-medium">
-                    {optimalTeam.viceCaptain ? getGameweekPoints(optimalTeam.viceCaptain, selectedGameweek).toFixed(1) : '0.0'} pts
-                  </p>
+                <div className="mt-1.5 text-xs font-medium text-white/75">
+                  {getGameweekPoints(optimalTeam.captain, selectedGameweek).toFixed(1)} × 2 = {(getGameweekPoints(optimalTeam.captain, selectedGameweek) * 2).toFixed(1)} pts
                 </div>
               </div>
-              
-              <div className="pt-4 border-t">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Team Value</p>
-                    <p className="text-xl font-bold">£{optimalTeam.totalValue.toFixed(1)}m</p>
-                    <p className="text-xs text-muted-foreground">All 15 players</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Gameweek Range</p>
-                    <p className="text-xl font-bold">GW{selectedGameweek}</p>
-                    <p className="text-xs text-muted-foreground">Single gameweek optimization</p>
-                  </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Vice Captain (V)</div>
+                <div className="mt-2 flex items-center gap-1.5 text-2xl font-extrabold leading-tight">
+                  <Star className="h-5 w-5 shrink-0 text-sky-300" />
+                  <span className="truncate">{(optimalTeam.viceCaptain && (playerIdToWebName.get(optimalTeam.viceCaptain.playerId) || optimalTeam.viceCaptain.playerName)) || 'TBD'}</span>
+                </div>
+                <div className="mt-1.5 text-xs font-medium text-white/75">
+                  {optimalTeam.viceCaptain ? getGameweekPoints(optimalTeam.viceCaptain, selectedGameweek).toFixed(1) : '0.0'} pts
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-bold ring-1 ring-white/25">
+                Team value £{optimalTeam.totalValue.toFixed(1)}m · all 15 players
+              </span>
+              <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-bold ring-1 ring-white/25">
+                GW{selectedGameweek}
+              </span>
+            </div>
+          </HeroPanel>
 
           {/* Pitch View */}
-          <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle>Your Squad</CardTitle>
-              <CardDescription>
-                GW{selectedGameweek} — captain doubled, bench in substitution priority order
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {(() => {
-                const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
-                const starting = [...optimalTeam.starting11].sort((a, b) => {
-                  const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
-                  return order !== 0 ? order : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
-                });
-                const bench = optimalTeam.squad.filter(p => !optimalTeam.starting11.some(s => s.playerId === p.playerId));
-                const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
-                const benchOutfield = bench
-                  .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
-                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek));
-                const orderedBench = [...benchGK, ...benchOutfield];
+          <SectionCard
+            icon={Shirt}
+            title="Your Squad"
+            subtitle={`GW${selectedGameweek} — captain doubled, bench in substitution priority order`}
+            bodyClassName="p-0"
+          >
+            {(() => {
+              const POSITION_ORDER: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+              const starting = [...optimalTeam.starting11].sort((a, b) => {
+                const order = (POSITION_ORDER[a.position] || 5) - (POSITION_ORDER[b.position] || 5);
+                return order !== 0 ? order : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+              });
+              const bench = optimalTeam.squad.filter(p => !optimalTeam.starting11.some(s => s.playerId === p.playerId));
+              const benchGK = bench.filter(p => (POSITION_ORDER[p.position] || 5) === 1);
+              const benchOutfield = bench
+                .filter(p => (POSITION_ORDER[p.position] || 5) !== 1)
+                .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek));
+              const orderedBench = [...benchGK, ...benchOutfield];
 
-                const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
-                  toPitchPlayer(player, i + 1, player.playerId === optimalTeam.captain.playerId, player.playerId === optimalTeam.viceCaptain?.playerId, getGameweekPoints(player, selectedGameweek))
-                );
-                const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
-                  toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, selectedGameweek))
-                );
+              const pitchPlayers: PitchPlayer[] = starting.map((player, i) =>
+                toPitchPlayer(player, i + 1, player.playerId === optimalTeam.captain.playerId, player.playerId === optimalTeam.viceCaptain?.playerId, getGameweekPoints(player, selectedGameweek))
+              );
+              const benchPitchPlayers: PitchPlayer[] = orderedBench.map((player, i) =>
+                toPitchPlayer(player, 12 + i, false, false, getGameweekPoints(player, selectedGameweek))
+              );
 
-                return (
-                  <div className="p-2 sm:p-4">
-                    <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+              return (
+                <div className="p-2 sm:p-4">
+                  <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
+                </div>
+              );
+            })()}
+          </SectionCard>
 
           {/* Full Squad — price/points reference list */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Full Squad (15)</CardTitle>
-              <CardDescription>Price and GW{selectedGameweek} projected points for every player</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1.5">
-                {optimalTeam.squad
-                  .slice()
-                  .sort((a, b) => {
-                    const order: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
-                    const d = (order[a.position] || 5) - (order[b.position] || 5);
-                    return d !== 0 ? d : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
-                  })
-                  .map(player => {
-                    const isStarting = optimalTeam.starting11.some(s => s.playerId === player.playerId);
-                    const isCaptain = player.playerId === optimalTeam.captain.playerId;
-                    const isVice = player.playerId === optimalTeam.viceCaptain?.playerId;
-                    return (
-                      <div
-                        key={player.playerId}
-                        className={`flex items-center justify-between px-3 py-2 rounded-md border text-sm ${
-                          isCaptain ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800'
-                          : isVice ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
-                          : isStarting ? 'bg-muted/40' : 'bg-muted/10 opacity-75'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Badge className={getPositionColor(player.position)} variant="secondary">
-                            {getPositionShortForm(player.position)}
-                          </Badge>
-                          <span className="font-medium truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                          {isCaptain && <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />}
-                          {isVice && <Star className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
-                          <span className="text-muted-foreground truncate">{player.teamName}</span>
+          <SectionCard
+            icon={ListOrdered}
+            title="Full Squad (15)"
+            subtitle={`Price and GW${selectedGameweek} projected points for every player`}
+          >
+            {(() => {
+              const maxPts = Math.max(1, ...optimalTeam.squad.map(p => getGameweekPoints(p, selectedGameweek)));
+              return (
+                <div className="space-y-1.5">
+                  {optimalTeam.squad
+                    .slice()
+                    .sort((a, b) => {
+                      const order: Record<string, number> = { Goalkeeper: 1, GKP: 1, Defender: 2, DEF: 2, Midfielder: 3, MID: 3, Forward: 4, FWD: 4 };
+                      const d = (order[a.position] || 5) - (order[b.position] || 5);
+                      return d !== 0 ? d : getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+                    })
+                    .map(player => {
+                      const isStarting = optimalTeam.starting11.some(s => s.playerId === player.playerId);
+                      const isCaptain = player.playerId === optimalTeam.captain.playerId;
+                      const isVice = player.playerId === optimalTeam.viceCaptain?.playerId;
+                      const pos = asPos(getPositionShortForm(player.position));
+                      return (
+                        <div
+                          key={player.playerId}
+                          className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-2 text-sm ${
+                            isCaptain ? 'border-amber-400/50 bg-amber-500/10'
+                            : isVice ? 'border-sky-400/40 bg-sky-500/10'
+                            : isStarting ? 'border-gray-200 bg-gray-50/60'
+                            : 'border-dashed border-gray-300 opacity-80'
+                          }`}
+                        >
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <PosChip pos={pos} />
+                            <span className="truncate font-bold text-gray-900">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
+                            {isCaptain && <Crown className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+                            {isVice && <Star className="h-3.5 w-3.5 shrink-0 text-sky-500" />}
+                            <TeamChip className="truncate">{player.teamName}</TeamChip>
+                            {!isStarting && <Pill>Bench</Pill>}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-3">
+                            <XptsBar value={getGameweekPoints(player, selectedGameweek)} max={maxPts} tone={pos} label="pts" />
+                            {isCaptain && <Pill tone="amber">×2</Pill>}
+                            <span className="w-14 text-right font-semibold tabular-nums text-gray-600">£{player.price}m</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="font-medium">
-                            {isCaptain
-                              ? `${(getGameweekPoints(player, selectedGameweek) * 2).toFixed(1)} pts (×2)`
-                              : `${getGameweekPoints(player, selectedGameweek).toFixed(1)} pts`}
-                          </span>
-                          <span className="text-muted-foreground">£{player.price}m</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
+                      );
+                    })}
+                </div>
+              );
+            })()}
+          </SectionCard>
         </div>
       ) : (
           <OptimizerEmptyState label="freehit squad" />

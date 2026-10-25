@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw, Save, CheckCircle2 } from "lucide-react";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw, Save, CheckCircle2, SlidersHorizontal } from "lucide-react";
+import { HeroPanel, HeroStat, Pill, SectionCard } from "@/components/tool-ui";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1384,24 +1385,19 @@ export function WildcardOptimizer({
 
           return (
             <div className="space-y-4">
-              <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-purple-600 dark:text-purple-400">{gameweekTeam.formation}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="font-medium">{gameweekTeam.gameweekPoints.toFixed(1)} pts</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Crown className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
-                    <span className="font-medium">{playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Shield className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
-                    <span className="font-medium">{playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}</span>
-                  </div>
-                </div>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5">
+                <Pill tone="indigo" className="text-xs font-bold">{gameweekTeam.formation}</Pill>
+                <Pill tone="green" className="text-xs font-bold">{gameweekTeam.gameweekPoints.toFixed(1)} pts</Pill>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Crown className="h-3.5 w-3.5" />
+                  {playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs font-bold text-sky-800 dark:text-sky-300">
+                  <Shield className="h-3.5 w-3.5" />
+                  {playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}
+                </span>
               </div>
-              <div className="-mx-4 md:-mx-6">
+              <div className="-mx-4 overflow-hidden sm:mx-0 sm:rounded-2xl">
                 <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
               </div>
             </div>
@@ -1432,39 +1428,17 @@ export function WildcardOptimizer({
 
           return (
             <div className="space-y-4">
-              <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4">
-                <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span className="text-sm font-bold text-green-600">{team.totalPoints.toFixed(1)}</span>
-                      <span className="text-xs text-muted-foreground ml-1">pts</span>
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-blue-600">£{team.totalValue.toFixed(1)}m</span>
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-orange-600">{team.squad.length}</span>
-                      <span className="text-xs text-muted-foreground ml-1">players</span>
-                    </div>
-                  </div>
+              <HeroPanel className="!rounded-2xl !p-4 sm:!p-5">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <HeroStat label="Total points" value={team.totalPoints.toFixed(1)} />
+                  <HeroStat label="Team value" value={`£${team.totalValue.toFixed(1)}m`} />
+                  <HeroStat label="Squad size" value={team.squad.length} />
                 </div>
-                <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-green-600">{team.totalPoints.toFixed(1)}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
-                </div>
-                <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-blue-600">£{team.totalValue.toFixed(1)}m</div>
-                  <div className="text-sm text-muted-foreground">Team Value</div>
-                </div>
-                <div className="hidden md:block text-center">
-                  <div className="text-2xl font-bold text-orange-600">{team.squad.length}</div>
-                  <div className="text-sm text-muted-foreground">Squad Size</div>
-                </div>
-              </div>
+              </HeroPanel>
 
               {allowSaveAsDraft && (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <div className="text-sm text-purple-900 dark:text-purple-200">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3">
+                  <div className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
                     {savedDraftAt
                       ? <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-600" /> Saved as your GW1 team {new Date(savedDraftAt).toLocaleString()}</span>
                       : "Ready to use this squad as your GW1 team?"}
@@ -1499,7 +1473,7 @@ export function WildcardOptimizer({
                 </div>
               )}
 
-              <div className="-mx-4 md:-mx-6">
+              <div className="-mx-4 overflow-hidden sm:mx-0 sm:rounded-2xl">
                 <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
               </div>
             </div>
@@ -1507,33 +1481,27 @@ export function WildcardOptimizer({
         };
 
         const controlsCard = (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">{variant === 'embedded' ? 'Team Optimization' : 'Wildcard Optimization'}</CardTitle>
-                  <CardDescription>
-                    Optimize your {teamNoun} for maximum points across the next {gameweekHorizon} gameweeks
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRefreshData}
-                    disabled={isRefreshing || isLoading}
-                    className="shrink-0"
-                    data-testid="button-refresh-wildcard-data"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    <span className="ml-2 hidden sm:inline">Refresh</span>
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <SectionCard
+            icon={SlidersHorizontal}
+            title={variant === 'embedded' ? 'Team Optimization' : 'Wildcard Optimization'}
+            subtitle={`Optimize your ${teamNoun} for maximum points across the next ${gameweekHorizon} gameweeks`}
+            bodyClassName="space-y-4 p-4 sm:p-5"
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshData}
+                disabled={isRefreshing || isLoading}
+                className="shrink-0 rounded-xl"
+                data-testid="button-refresh-wildcard-data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="ml-2 hidden sm:inline">Refresh</span>
+              </Button>
+            }
+          >
               {/* Gameweek Horizon Selection */}
-              <div className="space-y-2 p-3 md:p-4 bg-muted/20 rounded-lg border">
+              <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50/60 p-3 md:p-4">
                 <Label htmlFor="gameweek-horizon" className="text-sm font-medium">
                   Optimization Horizon
                 </Label>
@@ -1560,7 +1528,7 @@ export function WildcardOptimizer({
               </div>
 
               {/* Optimization Mode - Mobile Optimized */}
-              <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
+              <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-3 md:p-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
                     <Label htmlFor="unlimited-budget" className="text-sm font-medium">
@@ -1572,9 +1540,9 @@ export function WildcardOptimizer({
                       onCheckedChange={(checked) => setUnlimitedBudget(!checked)}
                       data-testid="switch-unlimited-budget"
                     />
-                    <Badge variant={unlimitedBudget ? "secondary" : "default"} className="text-xs">
+                    <Pill tone={unlimitedBudget ? "gray" : "indigo"}>
                       {unlimitedBudget ? 'Off — Unlimited Budget' : 'On — Limited Budget'}
-                    </Badge>
+                    </Pill>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {unlimitedBudget
@@ -1604,10 +1572,10 @@ export function WildcardOptimizer({
               </div>
 
               {/* Player Inclusion/Exclusion - Mobile Optimized */}
-              <div className="space-y-4 p-3 md:p-4 bg-muted/20 rounded-lg border">
+              <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-3 md:p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4" />
-                  <h3 className="text-sm font-medium">Player Constraints</h3>
+                  <Users className="h-4 w-4 text-indigo-600" />
+                  <h3 className="text-sm font-bold text-gray-900">Player Constraints</h3>
                 </div>
 
                 {/* Players to Include */}
@@ -1620,7 +1588,7 @@ export function WildcardOptimizer({
                       <Badge
                         key={player.playerId}
                         variant="secondary"
-                        className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                        className="flex items-center gap-1 border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                       >
                         {playerIdToWebName.get(player.playerId) || player.playerName}
                         <X
@@ -1632,7 +1600,7 @@ export function WildcardOptimizer({
                   </div>
                   <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
+                      <Button variant="outline" size="sm" className="w-full justify-start rounded-xl bg-white">
                         <Plus className="h-4 w-4 mr-2" />
                         Add players to include
                       </Button>
@@ -1698,7 +1666,7 @@ export function WildcardOptimizer({
                       <Badge
                         key={player.playerId}
                         variant="secondary"
-                        className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
+                        className="flex items-center gap-1 border border-red-500/30 bg-red-500/15 text-red-800 dark:text-red-300"
                       >
                         {playerIdToWebName.get(player.playerId) || player.playerName}
                         <X
@@ -1710,7 +1678,7 @@ export function WildcardOptimizer({
                   </div>
                   <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
+                      <Button variant="outline" size="sm" className="w-full justify-start rounded-xl bg-white">
                         <X className="h-4 w-4 mr-2" />
                         Add players to exclude
                       </Button>
@@ -1771,7 +1739,7 @@ export function WildcardOptimizer({
                 <Button
                   onClick={optimizeTeam}
                   disabled={isOptimizing || isLoading || snapshots.length === 0}
-                  className="flex items-center gap-2"
+                  className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
                   data-testid="button-optimize-team"
                 >
                   {isOptimizing ? (
@@ -1792,8 +1760,7 @@ export function WildcardOptimizer({
                   )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
         );
 
         // Both variants share this layout: config on the left third, squad tabs (Set & Forget +
@@ -1807,37 +1774,30 @@ export function WildcardOptimizer({
             </div>
             {optimalTeam ? (
               <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Zap className="h-5 w-5" />
-                      Your Squad
-                    </CardTitle>
-                    <CardDescription>
-                      "Set & Forget" is your best {squadNoun} for the entire {gameweekRange} horizon. Each GW tab shows the best starting XI and captain pick for that specific gameweek.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard
+                  icon={Zap}
+                  title="Your Squad"
+                  subtitle={`"Set & Forget" is your best ${squadNoun} for the entire ${gameweekRange} horizon. Each GW tab shows the best starting XI and captain pick for that specific gameweek.`}
+                >
                     <Tabs defaultValue="set-forget" className="w-full">
-                      <TabsList className="flex w-full flex-wrap h-auto">
-                        <TabsTrigger value="set-forget">Set & Forget</TabsTrigger>
+                      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-gray-200 bg-gray-100 p-1">
+                        <TabsTrigger value="set-forget" className="rounded-lg px-3.5 py-1.5 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">Set & Forget</TabsTrigger>
                         {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                          <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                          <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()} className="rounded-lg px-3.5 py-1.5 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
                             GW{gameweekTeam.gameweek}
                           </TabsTrigger>
                         ))}
                       </TabsList>
-                      <TabsContent value="set-forget">
+                      <TabsContent value="set-forget" className="mt-4">
                         {renderAggregateSquad(optimalTeam)}
                       </TabsContent>
                       {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                        <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                        <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()} className="mt-4">
                           {renderGameweekPitch(gameweekTeam, optimalTeam.squad)}
                         </TabsContent>
                       ))}
                     </Tabs>
-                  </CardContent>
-                </Card>
+                </SectionCard>
               </div>
             ) : (
           <OptimizerEmptyState label="wildcard squad" />

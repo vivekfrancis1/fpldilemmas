@@ -235,7 +235,7 @@ export function PercentBar({ percent, label, tone = "indigo" }: { percent: numbe
 /** Panel that holds a tool's inputs (team ID, league ID...). */
 export function InputPanel({ icon: Icon, title, subtitle, children }: { icon: LucideIcon; title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <section className="mb-5 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm sm:p-5">
+    <section className="mb-5 rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.06] via-white to-violet-500/[0.04] p-4 shadow-sm dark:via-transparent sm:p-5">
       <div className="mb-3 flex items-center gap-3">
         <IconTile icon={Icon} />
         <div>

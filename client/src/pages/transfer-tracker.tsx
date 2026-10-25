@@ -1,13 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, TrendingDown, AlertTriangle, Search, BarChart3, ChevronUp, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Search, BarChart3, ChevronUp, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlayerNameCell, TeamBadge, PositionBadge, ValueCell } from "@/components/enhanced-table";
+import { PlayerNameCell } from "@/components/enhanced-table";
+import { EmptyNote, HeroPanel, HeroStat, InputPanel, PercentBar, Pill, SectionCard, SegmentedControl } from "@/components/tool-ui";
 import { BootstrapData } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -215,6 +213,14 @@ export default function TransferTracker() {
     return `£${(numPrice / 10).toFixed(1)}m`;
   };
 
+  const fmtNet = (n: number) =>
+    `${n > 0 ? "+" : ""}${Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(0)}k` : n.toLocaleString()}`;
+  const fmtPriceDelta = (n: number) => `${n > 0 ? "+" : ""}${(n / 10).toFixed(1)}`;
+  const tone = (n: number): "green" | "red" | "gray" => (n > 0 ? "green" : n < 0 ? "red" : "gray");
+
+  const transfers = Array.isArray(transferData) ? transferData : [];
+  const maxOwnership = Math.max(1, ...sortedAndFilteredTransfers.map((t: TransferData) => t.ownership_percentage || 0));
+
   return (
     <div className="fpl-page-container">
       {/* Unified Page Header */}
@@ -228,103 +234,73 @@ export default function TransferTracker() {
         </p>
       </div>
 
-      <div className="fpl-section-spacing">
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 px-1">
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-3 sm:pt-4">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-full mr-3">
-                  <TrendingUp className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="text-net-positive">
-                    {Array.isArray(transferData) ? transferData.filter((p: any) => p.net_transfers > 0).length : 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Net Positive Transfers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-3 sm:pt-4">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-full mr-3">
-                  <TrendingDown className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-red-600" data-testid="text-net-negative">
-                    {Array.isArray(transferData) ? transferData.filter((p: any) => p.net_transfers < 0).length : 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Net Negative Transfers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-sm border border-gray-100">
-            <CardContent className="pt-3 sm:pt-4">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-full mr-3">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="text-high-ownership">
-                    {Array.isArray(transferData) ? transferData.filter((p: any) => p.ownership_percentage > 10).length : 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">High Ownership Players</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm p-3 mb-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search players or teams..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-sm border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400"
-                  data-testid="input-search-players"
-                />
-              </div>
-            </div>
-            <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="w-full sm:w-36 h-9 text-sm border-gray-300 dark:border-gray-600" data-testid="select-position-filter">
-                <SelectValue placeholder="Position" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Positions</SelectItem>
-                {getPlayersByPosition().map(pos => (
-                  <SelectItem key={pos.id} value={pos.name}>
-                    {pos.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={transferTypeFilter} onValueChange={setTransferTypeFilter}>
-              <SelectTrigger className="w-full sm:w-36 h-9 text-sm border-gray-300 dark:border-gray-600" data-testid="select-transfer-type-filter">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Transfers</SelectItem>
-                <SelectItem value="in">Net In</SelectItem>
-                <SelectItem value="out">Net Out</SelectItem>
-                <SelectItem value="stable">Stable</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="fpl-section-spacing space-y-5">
+        <HeroPanel testId="transfer-summary">
+          <div className="grid gap-6 sm:grid-cols-3">
+            <HeroStat
+              label="Net positive transfers"
+              value={transfers.filter((p: any) => p.net_transfers > 0).length}
+              valueTestId="text-net-positive"
+              sub={<span className="inline-flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> More transfers in than out this season</span>}
+            />
+            <HeroStat
+              label="Net negative transfers"
+              value={transfers.filter((p: any) => p.net_transfers < 0).length}
+              valueTestId="text-net-negative"
+              sub={<span className="inline-flex items-center gap-1"><TrendingDown className="h-3.5 w-3.5" /> More transfers out than in this season</span>}
+            />
+            <HeroStat
+              label="High ownership players"
+              value={transfers.filter((p: any) => p.ownership_percentage > 10).length}
+              valueTestId="text-high-ownership"
+              sub="Owned by more than 10% of managers"
+            />
           </div>
-        </div>
+        </HeroPanel>
+
+        <InputPanel icon={SlidersHorizontal} title="Find players" subtitle="Search by player or club, then narrow by position and transfer direction">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-indigo-500" />
+            <Input
+              placeholder="Search players or teams..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-11 rounded-xl pl-10 text-base"
+              data-testid="input-search-players"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Position</span>
+              <SegmentedControl
+                ariaLabel="Position"
+                testIdPrefix="select-position-filter"
+                value={positionFilter}
+                onChange={setPositionFilter}
+                options={[{ value: "all", label: "All" }, ...getPlayersByPosition().map((p) => ({ value: p.name, label: p.name }))]}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Transfers</span>
+              <SegmentedControl
+                ariaLabel="Transfer direction"
+                testIdPrefix="select-transfer-type-filter"
+                value={transferTypeFilter}
+                onChange={setTransferTypeFilter}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "in", label: "Net in" },
+                  { value: "out", label: "Net out" },
+                  { value: "stable", label: "Stable" },
+                ]}
+              />
+            </div>
+          </div>
+        </InputPanel>
 
         {/* Error Display */}
         {transfersError && (
-          <Alert variant="destructive" className="mb-3 sm:mb-4">
+          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Unable to load transfer data from FPL API. Please check your connection and try again.
@@ -333,200 +309,184 @@ export default function TransferTracker() {
         )}
 
         {/* All Players Transfer Tracker */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              All Players Transfer Tracker ({Array.isArray(transferData) ? transferData.length : 0} players)
-            </CardTitle>
-            <CardDescription>
-              Season-to-date transfer activity, ownership levels, and comprehensive transfer analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {(isLoadingBootstrap || isLoadingTransfers) ? (
-              <div className="space-y-4">
-                {Array.from({ length: 10 }).map((_, index) => (
-                  <div key={index} className="animate-pulse">
-                    <div className="h-16 bg-gray-200 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            ) : sortedAndFilteredTransfers.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b bg-gray-50/80 dark:bg-gray-800/50">
-                      <th className="text-left py-2 px-3 sticky left-0 bg-gray-50/80 dark:bg-gray-800/50 z-10 border-r border-gray-200 dark:border-gray-700 min-w-[120px]">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">Player</div>
+        <SectionCard
+          icon={BarChart3}
+          title={`All Players Transfer Tracker (${transfers.length} players)`}
+          subtitle="Season-to-date transfer activity, ownership levels, and comprehensive transfer analysis"
+          bodyClassName="p-0"
+        >
+          {(isLoadingBootstrap || isLoadingTransfers) ? (
+            <div className="space-y-3 p-4 sm:p-5">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="h-14 rounded-xl bg-gray-200"></div>
+                </div>
+              ))}
+            </div>
+          ) : sortedAndFilteredTransfers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-gray-50/80 dark:bg-gray-800/50">
+                    <th className="text-left py-2 px-3 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 border-r border-gray-200 dark:border-gray-700 min-w-[120px]">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Player</div>
+                    </th>
+                    <th className="text-right py-2 px-2 min-w-[60px] hidden sm:table-cell">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Price</div>
+                    </th>
+                    <th className="text-right py-2 px-2 min-w-[150px]">
+                      <SortableHeader field="ownership_percentage" className="text-right font-semibold">
+                        Own %
+                      </SortableHeader>
+                    </th>
+
+                    {/* Gameweek Section */}
+                    <th className="text-center py-1 px-2 border-l-2 border-indigo-300 bg-indigo-500/10" colSpan={isMobile ? 2 : 3}>
+                      <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">This GW</div>
+                    </th>
+
+                    {/* Season Section — hidden on mobile */}
+                    {!isMobile && (
+                      <th className="text-center py-1 px-2 border-l-2 border-violet-300 bg-violet-500/10" colSpan={2}>
+                        <div className="text-xs font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wide">Season Totals</div>
                       </th>
-                      <th className="text-right py-2 px-2 min-w-[60px] hidden sm:table-cell">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">Price</div>
-                      </th>
-                      <th className="text-right py-2 px-2 min-w-[70px]">
-                        <SortableHeader field="ownership_percentage" className="text-right font-semibold">
-                          Own %
+                    )}
+                  </tr>
+                  <tr className="border-b bg-gray-50/40 dark:bg-gray-900/30">
+                    <th className="sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 border-r border-gray-200 dark:border-gray-700"></th>
+                    <th className="hidden sm:table-cell"></th>
+                    <th></th>
+
+                    {/* Gameweek Sub-headers */}
+                    <th className="text-right py-1 px-2 border-l border-indigo-200 min-w-[80px]">
+                      <SortableHeader field="net_transfers_event" className="text-right text-xs">
+                        Net Δ
+                      </SortableHeader>
+                    </th>
+                    {!isMobile && (
+                      <th className="text-right py-1 px-2 min-w-[60px]">
+                        <SortableHeader field="net_transfers_event_percentage" className="text-right text-xs">
+                          Net %
                         </SortableHeader>
                       </th>
-                      
-                      {/* Gameweek Section */}
-                      <th className="text-center py-1 px-2 border-l-2 border-green-200 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20" colSpan={isMobile ? 2 : 3}>
-                        <div className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">This GW</div>
-                      </th>
-                      
-                      {/* Season Section — hidden on mobile */}
-                      {!isMobile && (
-                        <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={2}>
-                          <div className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Season Totals</div>
-                        </th>
-                      )}
-                    </tr>
-                    <tr className="border-b bg-gray-25 dark:bg-gray-900/30">
-                      <th></th>
-                      <th className="hidden sm:table-cell"></th>
-                      <th></th>
-                      
-                      {/* Gameweek Sub-headers */}
-                      <th className="text-right py-1 px-2 border-l border-green-200 dark:border-green-700 min-w-[80px]">
-                        <SortableHeader field="net_transfers_event" className="text-right text-xs">
-                          Net Δ
-                        </SortableHeader>
-                      </th>
-                      {!isMobile && (
-                        <th className="text-right py-1 px-2 min-w-[60px]">
-                          <SortableHeader field="net_transfers_event_percentage" className="text-right text-xs">
-                            Net %
+                    )}
+                    <th className="text-right py-1 px-2 min-w-[70px]">
+                      <SortableHeader field="price_change_event" className="text-right text-xs">
+                        Price Δ
+                      </SortableHeader>
+                    </th>
+
+                    {/* Season Sub-headers — hidden on mobile */}
+                    {!isMobile && (
+                      <>
+                        <th className="text-right py-1 px-2 border-l border-violet-200 min-w-[80px]">
+                          <SortableHeader field="net_transfers" className="text-right text-xs">
+                            Net Transfers
                           </SortableHeader>
                         </th>
+                        <th className="text-right py-1 px-2 min-w-[70px]">
+                          <SortableHeader field="price_change_season" className="text-right text-xs">
+                            Price Δ
+                          </SortableHeader>
+                        </th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedAndFilteredTransfers.map((transfer: TransferData, index: number) => (
+                    <tr
+                      key={`${transfer.player_id}-${index}`}
+                      className="border-b border-gray-100 hover:bg-indigo-500/[0.04] transition-colors group"
+                      data-testid={`transfer-${transfer.player_id}`}
+                    >
+                      <td className="py-2 px-3 sticky left-0 bg-white dark:bg-gray-950 group-hover:bg-indigo-50 dark:group-hover:bg-gray-800 z-10 border-r border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                              transfer.net_transfers > 0
+                                ? "bg-emerald-500/15 text-emerald-600"
+                                : transfer.net_transfers < 0
+                                  ? "bg-red-500/15 text-red-600"
+                                  : "bg-gray-500/10 text-gray-400"
+                            }`}
+                          >
+                            {transfer.net_transfers > 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : transfer.net_transfers < 0 ? (
+                              <TrendingDown className="h-3 w-3" />
+                            ) : (
+                              <BarChart3 className="h-3 w-3" />
+                            )}
+                          </span>
+                          <PlayerNameCell
+                            name={transfer.player_name}
+                            position={transfer.position}
+                            team={transfer.team_name}
+                            compact={true}
+                            playerId={transfer.player_id}
+                          />
+                        </div>
+                      </td>
+                      {/* Price — hidden on mobile */}
+                      <td className="py-2 px-2 text-right hidden sm:table-cell">
+                        <span className="font-bold tabular-nums text-gray-900 dark:text-gray-100">
+                          {formatPrice(transfer.current_price)}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2">
+                        <PercentBar percent={((transfer.ownership_percentage || 0) / maxOwnership) * 100} label={`${transfer.ownership_percentage?.toFixed(1) || "0.0"}%`} />
+                      </td>
+
+                      {/* Gameweek section */}
+                      <td className="py-2 px-2 text-right border-l border-indigo-200 bg-indigo-500/[0.04]">
+                        <Pill tone={tone(transfer.net_transfers_event || 0)} className="text-xs">
+                          {fmtNet(transfer.net_transfers_event || 0)}
+                        </Pill>
+                      </td>
+                      {/* GW Net% — hidden on mobile */}
+                      {!isMobile && (
+                        <td className="py-2 px-2 text-right bg-indigo-500/[0.04]">
+                          <span className={`font-semibold text-xs tabular-nums ${
+                            (transfer.net_transfers_event_percentage || 0) > 0 ? "text-emerald-700 dark:text-emerald-400" :
+                            (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-500 dark:text-gray-400"
+                          }`}>
+                            {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(1)}%
+                          </span>
+                        </td>
                       )}
-                      <th className="text-right py-1 px-2 min-w-[70px]">
-                        <SortableHeader field="price_change_event" className="text-right text-xs">
-                          Price Δ
-                        </SortableHeader>
-                      </th>
-                      
-                      {/* Season Sub-headers — hidden on mobile */}
+                      <td className="py-2 px-2 text-right bg-indigo-500/[0.04]">
+                        <Pill tone={tone(transfer.price_change_event || 0)} className="text-xs font-bold">
+                          {fmtPriceDelta(transfer.price_change_event || 0)}
+                        </Pill>
+                      </td>
+
+                      {/* Season totals — hidden on mobile */}
                       {!isMobile && (
                         <>
-                          <th className="text-right py-1 px-2 border-l border-blue-200 dark:border-blue-700 min-w-[80px]">
-                            <SortableHeader field="net_transfers" className="text-right text-xs">
-                              Net Transfers
-                            </SortableHeader>
-                          </th>
-                          <th className="text-right py-1 px-2 min-w-[70px]">
-                            <SortableHeader field="price_change_season" className="text-right text-xs">
-                              Price Δ
-                            </SortableHeader>
-                          </th>
+                          <td className="py-2 px-2 text-right border-l border-violet-200 bg-violet-500/[0.04]">
+                            <Pill tone={tone(transfer.net_transfers || 0)} className="text-xs">
+                              {transfer.net_transfers ? fmtNet(transfer.net_transfers) : "0"}
+                            </Pill>
+                          </td>
+                          <td className="py-2 px-2 text-right bg-violet-500/[0.04]">
+                            <Pill tone={tone(transfer.price_change_season || 0)} className="text-xs font-bold">
+                              {fmtPriceDelta(transfer.price_change_season || 0)}
+                            </Pill>
+                          </td>
                         </>
                       )}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAndFilteredTransfers.map((transfer: TransferData, index: number) => (
-                      <tr 
-                        key={`${transfer.player_id}-${index}`}
-                        className="border-b hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group"
-                        data-testid={`transfer-${transfer.player_id}`}
-                      >
-                        <td className="py-2 px-3 sticky left-0 bg-white dark:bg-gray-950 group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/30 z-10 border-r border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center gap-1.5">
-                            {transfer.net_transfers > 0 ? (
-                              <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-                            ) : transfer.net_transfers < 0 ? (
-                              <TrendingDown className="h-3 w-3 text-red-600 flex-shrink-0" />
-                            ) : (
-                              <BarChart3 className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            )}
-                            <PlayerNameCell
-                              name={transfer.player_name}
-                              position={transfer.position}
-                              team={transfer.team_name}
-                              compact={true}
-                              playerId={transfer.player_id}
-                            />
-                          </div>
-                        </td>
-                        {/* Price — hidden on mobile */}
-                        <td className="py-2 px-2 text-right hidden sm:table-cell">
-                          <span className="font-semibold text-gray-900 dark:text-gray-100">
-                            {formatPrice(transfer.current_price)}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right">
-                          <span className="font-semibold text-gray-900 dark:text-gray-100">
-                            {transfer.ownership_percentage?.toFixed(1) || "0.0"}%
-                          </span>
-                        </td>
-                        
-                        {/* Gameweek section */}
-                        <td className="py-2 px-2 text-right border-l border-green-200 dark:border-green-700 bg-green-50/20 dark:bg-green-900/10">
-                          <span className={`font-semibold text-sm ${
-                            (transfer.net_transfers_event || 0) > 0 ? "text-green-700 dark:text-green-400" : 
-                            (transfer.net_transfers_event || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {(transfer.net_transfers_event || 0) > 0 ? "+" : ""}{Math.abs(transfer.net_transfers_event || 0) >= 1000 ? 
-                              `${((transfer.net_transfers_event || 0) / 1000).toFixed(0)}k` : 
-                              (transfer.net_transfers_event || 0).toLocaleString()}
-                          </span>
-                        </td>
-                        {/* GW Net% — hidden on mobile */}
-                        {!isMobile && (
-                          <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
-                            <span className={`font-semibold text-sm ${
-                              (transfer.net_transfers_event_percentage || 0) > 0 ? "text-green-700 dark:text-green-400" : 
-                              (transfer.net_transfers_event_percentage || 0) < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                            }`}>
-                              {(transfer.net_transfers_event_percentage || 0) > 0 ? "+" : ""}{(transfer.net_transfers_event_percentage || 0).toFixed(1)}%
-                            </span>
-                          </td>
-                        )}
-                        <td className="py-2 px-2 text-right bg-green-50/20 dark:bg-green-900/10">
-                          <span className={`font-bold text-sm px-1 py-0.5 rounded ${
-                            (transfer.price_change_event || 0) > 0 ? "text-green-800 dark:text-green-300 bg-green-100 dark:bg-green-800/30" : 
-                            (transfer.price_change_event || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
-                            "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
-                          }`}>
-                            {(transfer.price_change_event || 0) > 0 ? "+" : ""}{((transfer.price_change_event || 0) / 10).toFixed(1)}
-                          </span>
-                        </td>
-
-                        {/* Season totals — hidden on mobile */}
-                        {!isMobile && (
-                          <>
-                            <td className="py-2 px-2 text-right border-l border-blue-200 dark:border-blue-700 bg-blue-50/20 dark:bg-blue-900/10">
-                              <span className={`font-semibold text-sm ${
-                                transfer.net_transfers > 0 ? "text-blue-700 dark:text-blue-400" : 
-                                transfer.net_transfers < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                              }`}>
-                                {transfer.net_transfers > 0 ? "+" : ""}{Math.abs(transfer.net_transfers) >= 1000 ? 
-                                  `${(transfer.net_transfers / 1000).toFixed(0)}k` : 
-                                  transfer.net_transfers?.toLocaleString() || "0"}
-                              </span>
-                            </td>
-                            <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
-                              <span className={`font-bold text-sm px-1 py-0.5 rounded ${
-                                (transfer.price_change_season || 0) > 0 ? "text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/30" : 
-                                (transfer.price_change_season || 0) < 0 ? "text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-800/30" : 
-                                "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/30"
-                              }`}>
-                                {(transfer.price_change_season || 0) > 0 ? "+" : ""}{((transfer.price_change_season || 0) / 10).toFixed(1)}
-                              </span>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No transfer data found matching your filters.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-4 sm:p-5">
+              <EmptyNote icon={Search}>No transfer data found matching your filters.</EmptyNote>
+            </div>
+          )}
+        </SectionCard>
       </div>
     </div>
   );
