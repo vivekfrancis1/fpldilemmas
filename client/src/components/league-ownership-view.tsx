@@ -135,7 +135,7 @@ export default function LeagueOwnershipView({ leagueId, managerId }: { leagueId:
             ) : (
               <>
                 {data.you && (
-                  <SectionCard icon={Target} title="You versus your league" subtitle="Where your squad stands out, and the popular players you are missing" testId="you">
+                  <SectionCard icon={Target} title="You versus this league" subtitle="Where your squad stands out, and the popular players you are missing" testId="you">
                     {!data.you.hasFullSquad ? (
                       <p className="text-sm text-gray-500">We couldn't load a full 15-player squad for that team in GW{data.gameweek}.</p>
                     ) : (

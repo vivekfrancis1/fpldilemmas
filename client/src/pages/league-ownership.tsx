@@ -120,7 +120,7 @@ export default function LeagueOwnershipPage() {
           </div>
         </div>
 
-        <InputPanel icon={Search} title="Find your league" subtitle="Enter your team ID, then pick one of your leagues">
+        <InputPanel icon={Search} title="Choose a league" subtitle="Enter your team ID, then pick a league to compare against">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="manager-id" className="text-sm font-semibold">1. Your team ID</Label>
@@ -137,14 +137,14 @@ export default function LeagueOwnershipPage() {
               <p className="text-xs text-gray-500">The number in the URL when you open your team on the FPL site.</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="league-select" className="text-sm font-semibold">2. Your league</Label>
+              <Label htmlFor="league-select" className="text-sm font-semibold">2. League</Label>
               <Select
                 value={customMode ? "other" : leagues.some((l) => String(l.id) === selectedLeague) ? selectedLeague : ""}
                 onValueChange={chooseLeague}
                 disabled={!leagueList}
               >
                 <SelectTrigger id="league-select" className="h-11 rounded-xl text-base" data-testid="select-league">
-                  <SelectValue placeholder={leagueList ? "Choose a league" : leaguesLoading ? "Finding your leagues…" : "Enter your team ID first"} />
+                  <SelectValue placeholder={leagueList ? "Choose a league" : leaguesLoading ? "Finding leagues…" : "Enter your team ID first"} />
                 </SelectTrigger>
                 <SelectContent>
                   {leagues.map((l) => (
@@ -155,10 +155,10 @@ export default function LeagueOwnershipPage() {
               </Select>
               <p className="text-xs text-gray-500" data-testid="text-league-hint">
                 {leagueList
-                  ? "Private leagues only. Not listed? Choose “Another league”."
+                  ? "Your private leagues are listed first. For any other league, choose “Another league”."
                   : noLeagues
                     ? "We couldn't find leagues for that team ID. Check it, or enter a league ID below."
-                    : "Your private leagues appear here once your team ID is in."}
+                    : "Your leagues are listed once your team ID is in. You can also choose any other league."}
               </p>
             </div>
           </div>
