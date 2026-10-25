@@ -125,10 +125,10 @@ export default function PlayerComparisonModal({
 
   const getPositionColor = (elementType: number) => {
     switch (elementType) {
-      case 1: return "bg-green-100 text-green-800 border-green-200";
-      case 2: return "bg-blue-100 text-blue-800 border-blue-200";
-      case 3: return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case 4: return "bg-red-100 text-red-800 border-red-200";
+      case 1: return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30";
+      case 2: return "bg-sky-500/15 text-sky-800 dark:text-sky-300 border-sky-500/30";
+      case 3: return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30";
+      case 4: return "bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-500/30";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
@@ -250,7 +250,7 @@ export default function PlayerComparisonModal({
             <TabsContent key={season} value={season} className="mt-3 sm:mt-4">
               {loadingSeasons.includes(season) ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                   <span className="ml-3 text-gray-600">Loading {season} season data...</span>
                 </div>
               ) : (
@@ -266,11 +266,11 @@ export default function PlayerComparisonModal({
                             <p className="text-sm text-gray-600">{player.team_name}</p>
                           </div>
                           {historicalPlayer ? (
-                            <Badge variant="outline" className={`mt-2 bg-green-100 text-green-800 border-green-200 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
+                            <Badge variant="outline" className={`mt-2 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
                               Available
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className={`mt-2 bg-yellow-100 text-yellow-800 border-yellow-200 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
+                            <Badge variant="outline" className={`mt-2 bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30 ${isMobile ? 'mt-0 flex-shrink-0' : ''}`}>
                               Not Found
                             </Badge>
                           )}

@@ -3,9 +3,8 @@ import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2, Trophy, ChevronDown, ChevronUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Pill, SectionCard } from "@/components/tool-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData, CURRENT_SEASON } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -384,10 +383,10 @@ export default function TeamDetail() {
       { key: 'saves', label: 'Saves', shortLabel: 'Sav', group: 'performance', render: (r) => <span>{r.stats?.saves ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'saves') },
       { key: 'starts', label: 'Starts', group: 'performance', render: (r) => <span>{r.stats?.starts ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'starts') },
       { key: 'minutes', label: 'Minutes', shortLabel: 'Min', group: 'performance', render: (r) => <span>{r.stats?.minutes ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'minutes') },
-      { key: 'xg', label: 'xG', group: 'expected', render: (r) => <span className="text-purple-600">{r.stats ? formatValue(r.stats.expected_goals) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals') },
+      { key: 'xg', label: 'xG', group: 'expected', render: (r) => <span className="text-indigo-600 dark:text-indigo-300">{r.stats ? formatValue(r.stats.expected_goals) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals') },
       { key: 'xa', label: 'xA', group: 'expected', render: (r) => <span className="text-blue-600">{r.stats ? formatValue(r.stats.expected_assists) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_assists') },
       { key: 'xgc', label: 'xGC', group: 'expected', render: (r) => <span className="text-red-600">{r.stats ? formatValue(r.stats.expected_goals_conceded) : '-'}</span>, aggregate: (rows) => sumFloatStat(rows, 'expected_goals_conceded') },
-      { key: 'bonus', label: 'Bonus', group: 'bonus', render: (r) => <span className="text-purple-600 font-medium">{r.stats?.bonus ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bonus') },
+      { key: 'bonus', label: 'Bonus', group: 'bonus', render: (r) => <span className="text-indigo-600 dark:text-indigo-300 font-medium">{r.stats?.bonus ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bonus') },
       { key: 'bps', label: 'BPS', group: 'bonus', render: (r) => <span>{r.stats?.bps ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'bps') },
       { key: 'pen_saved', label: 'Pen Saved', group: 'discipline', render: (r) => <span>{r.stats?.penalties_saved ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_saved') },
       { key: 'pen_missed', label: 'Pen Missed', group: 'discipline', render: (r) => <span>{r.stats?.penalties_missed ?? '-'}</span>, aggregate: (rows) => sumStat(rows, 'penalties_missed') },
@@ -437,31 +436,25 @@ export default function TeamDetail() {
     );
 
     return (
-    <Card className="border-0 bg-white/80 backdrop-blur-sm">
-      <CardContent className="p-0">
-        <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
-          <div>
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              Gameweek Performance
-            </h3>
-            <p className="text-xs text-gray-600 mt-1">{rows.length} gameweeks • Latest first</p>
-          </div>
-          {isMobile && (
-            <button
-              onClick={() => setShowAdvancedGW(v => !v)}
-              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
-            >
-              {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {showAdvancedGW ? 'Fewer stats' : 'More stats'}
-            </button>
-          )}
-        </div>
-
+    <SectionCard
+      icon={Calendar}
+      title="Gameweek Performance"
+      subtitle={`${rows.length} gameweeks • Latest first`}
+      bodyClassName="p-0"
+      action={isMobile ? (
+        <button
+          onClick={() => setShowAdvancedGW(v => !v)}
+          className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-2.5 py-1 hover:bg-indigo-500/20 transition-colors"
+        >
+          {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          {showAdvancedGW ? 'Fewer stats' : 'More stats'}
+        </button>
+      ) : undefined}
+    >
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-center space-y-3">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
               <p className="text-sm text-gray-500">Loading team data...</p>
             </div>
           </div>
@@ -471,14 +464,14 @@ export default function TeamDetail() {
               <div className="px-4 py-8 text-center text-gray-500">No gameweek data available for this team</div>
             ) : (
               <>
-              <div className="p-3 space-y-3 bg-purple-50 border-b-2 border-purple-200">
+              <div className="p-3 space-y-3 bg-indigo-500/10 border-b-2 border-indigo-500/30">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-purple-800">Total</span>
-                  <div className="text-lg font-bold text-purple-800">
+                  <span className="font-bold text-indigo-800 dark:text-indigo-200">Total</span>
+                  <div className="text-lg font-bold text-indigo-800 dark:text-indigo-200">
                     {gwColumns.find(c => c.key === 'pts')?.aggregate?.(rows)} pts
                   </div>
                 </div>
-                {renderGroupedStats((col) => col.aggregate ? col.aggregate(rows) : '', 'text-purple-600', 'text-purple-800', 'text-purple-500')}
+                {renderGroupedStats((col) => col.aggregate ? col.aggregate(rows) : '', 'text-indigo-600 dark:text-indigo-300', 'text-indigo-800 dark:text-indigo-200', 'text-indigo-500')}
               </div>
               {rows.map((r) => (
                 <div key={r.gameweek} className="p-3 space-y-3">
@@ -500,9 +493,9 @@ export default function TeamDetail() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b sticky top-0">
                 <tr>
-                  <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[55px]">GW</th>
+                  <th className="px-2 py-2 text-left font-bold text-gray-700 min-w-[55px]">GW</th>
                   {gwColumns.map(col => (
-                    <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
+                    <th key={col.key} className="px-2 py-2 text-center font-bold text-gray-700 min-w-[50px] whitespace-nowrap">
                       {col.shortLabel || col.label}
                     </th>
                   ))}
@@ -517,10 +510,10 @@ export default function TeamDetail() {
                   </tr>
                 ) : (
                   <>
-                  <tr className="bg-purple-50 border-b-2 border-purple-200 font-bold">
-                    <td className="px-2 py-2.5 font-bold text-purple-800">Total</td>
+                  <tr className="bg-indigo-500/10 border-b-2 border-indigo-500/30 font-bold">
+                    <td className="px-2 py-2.5 font-bold text-indigo-800 dark:text-indigo-200">Total</td>
                     {gwColumns.map(col => (
-                      <td key={col.key} className="px-2 py-2.5 text-center font-bold text-purple-800">
+                      <td key={col.key} className="px-2 py-2.5 text-center font-bold text-indigo-800 dark:text-indigo-200">
                         {col.aggregate ? col.aggregate(rows) : ''}
                       </td>
                     ))}
@@ -539,8 +532,7 @@ export default function TeamDetail() {
             </table>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
     );
   };
 
@@ -553,9 +545,7 @@ export default function TeamDetail() {
         <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Card>
-          <CardContent className="p-8 text-center text-gray-500">Team not found</CardContent>
-        </Card>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500 shadow-sm">Team not found</div>
       </div>
     );
   }
@@ -566,8 +556,7 @@ export default function TeamDetail() {
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
-      <Card className="border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="p-4 sm:p-6">
+      <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.08] via-white to-violet-500/[0.05] p-4 shadow-sm dark:via-transparent sm:p-6">
           <div className="flex items-center gap-3 min-w-0">
             {teamCrestCode && (
               <img
@@ -580,43 +569,37 @@ export default function TeamDetail() {
               />
             )}
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{teamName}</h1>
+              <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 truncate">{teamName}</h1>
               {bootstrapTeam && (
                 <ShareGraphicLink className="mt-1.5" testId="link-share-image" href={teamGraphicLink({ template: "team-history", team: bootstrapTeam.id })} label="Share form" />
               )}
               {currentTeamStanding && (
-                <Badge variant="outline" className="text-xs mt-1">
-                  <Trophy className="h-3 w-3 mr-1" /> {currentTeamStanding.position}{currentTeamStanding.position === 1 ? 'st' : currentTeamStanding.position === 2 ? 'nd' : currentTeamStanding.position === 3 ? 'rd' : 'th'} in {CURRENT_SEASON}
-                </Badge>
+                <Pill tone="indigo" className="mt-1.5 gap-1 !text-xs !px-2.5 !py-1">
+                  <Trophy className="h-3 w-3" /> {currentTeamStanding.position}{currentTeamStanding.position === 1 ? 'st' : currentTeamStanding.position === 2 ? 'nd' : currentTeamStanding.position === 3 ? 'rd' : 'th'} in {CURRENT_SEASON}
+                </Pill>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
-      <Card className="border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                Season History
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
-            </div>
-            {isMobile && seasonHistory.length > 0 && (
-              <button
-                onClick={() => setShowAdvancedSeason(v => !v)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
-              >
-                {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
-              </button>
-            )}
-          </div>
+      <SectionCard
+        icon={Calendar}
+        title="Season History"
+        subtitle={`${seasonHistory.length} seasons`}
+        bodyClassName="p-0"
+        action={isMobile && seasonHistory.length > 0 ? (
+          <button
+            onClick={() => setShowAdvancedSeason(v => !v)}
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-2.5 py-1 hover:bg-indigo-500/20 transition-colors"
+          >
+            {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
+          </button>
+        ) : undefined}
+      >
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
             </div>
           ) : isMobile ? (
             <div className="divide-y divide-gray-100">
@@ -632,7 +615,7 @@ export default function TeamDetail() {
                     <div key={row.seasonName} className="p-3 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-900">{row.seasonName}</span>
-                        <div className="text-lg font-bold text-purple-800">{row.standing.points} pts</div>
+                        <div className="text-lg font-bold text-indigo-800 dark:text-indigo-200">{row.standing.points} pts</div>
                       </div>
                       <div className="space-y-3">
                         {seasonGroups.map(({ group, cols }, i) => (
@@ -665,9 +648,9 @@ export default function TeamDetail() {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[110px]">Season</th>
+                    <th className="px-2 py-2 text-left font-bold text-gray-700 min-w-[110px]">Season</th>
                     {SEASON_COLUMNS.map(col => (
-                      <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
+                      <th key={col.key} className="px-2 py-2 text-center font-bold text-gray-700 min-w-[50px] whitespace-nowrap">
                         {col.label}
                       </th>
                     ))}
@@ -694,13 +677,12 @@ export default function TeamDetail() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
 
       <Tabs value={activeGwTab} onValueChange={(v) => setActiveGwTab(v as "current" | "last")} className="w-full">
-        <TabsList>
-          <TabsTrigger value="current">{CURRENT_SEASON} (Current)</TabsTrigger>
-          <TabsTrigger value="last">{LAST_SEASON} Season</TabsTrigger>
+        <TabsList className="rounded-xl border border-gray-200 bg-gray-100 p-1 shadow-none">
+          <TabsTrigger value="current" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">{CURRENT_SEASON} (Current)</TabsTrigger>
+          <TabsTrigger value="last" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">{LAST_SEASON} Season</TabsTrigger>
         </TabsList>
         <TabsContent value="current" className="mt-4">
           {renderGameweekCard(currentGameweekRows, isCurrentFixturesLoading || isCurrentTeamGwStatsLoading)}

@@ -84,10 +84,10 @@ export default function PlayerGameweekModal({
 
   const getPositionColor = (elementType: number) => {
     switch (elementType) {
-      case 1: return "bg-yellow-100 text-yellow-800"; // GKP
-      case 2: return "bg-green-100 text-green-800";   // DEF
-      case 3: return "bg-blue-100 text-blue-800";     // MID
-      case 4: return "bg-red-100 text-red-800";       // FWD
+      case 1: return "bg-amber-500/15 text-amber-800 dark:text-amber-300"; // GKP
+      case 2: return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";   // DEF
+      case 3: return "bg-sky-500/15 text-sky-800 dark:text-sky-300";     // MID
+      case 4: return "bg-rose-500/15 text-rose-800 dark:text-rose-300";       // FWD
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -115,7 +115,7 @@ export default function PlayerGameweekModal({
   const getPointsColor = (points: number) => {
     if (points >= 10) return "text-green-700 font-bold";
     if (points >= 6) return "text-green-600 font-semibold";
-    if (points >= 3) return "text-blue-600 font-medium";
+    if (points >= 3) return "text-indigo-600 dark:text-indigo-300 font-medium";
     if (points >= 1) return "text-gray-700";
     return "text-gray-500";
   };
@@ -195,7 +195,7 @@ export default function PlayerGameweekModal({
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Bonus</div>
-                          <div className="font-medium text-purple-600">{gw.bonus}</div>
+                          <div className="font-medium text-indigo-600 dark:text-indigo-300">{gw.bonus}</div>
                         </div>
                       </div>
                       
@@ -272,14 +272,14 @@ export default function PlayerGameweekModal({
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue((gw.value || 0) / 10)}</td>
                             <td className={`px-2 py-3 text-center font-semibold ${getPointsColor(gw.total_points)}`}>{gw.total_points}</td>
                             <td className="px-2 py-3 text-center font-medium text-green-600">{gw.goals_scored}</td>
-                            <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</td>
-                            <td className="px-2 py-3 text-center font-medium text-blue-600">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</td>
+                            <td className="px-2 py-3 text-center font-medium text-indigo-600 dark:text-indigo-300">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</td>
+                            <td className="px-2 py-3 text-center font-medium text-indigo-600 dark:text-indigo-300">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-indigo-600">{gw.expected_goal_involvements ? formatValue(gw.expected_goal_involvements) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-red-600">{gw.expected_goals_conceded ? formatValue(gw.expected_goals_conceded) : '-'}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.minutes}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.saves}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.starts ?? '-'}</td>
-                            <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.bonus}</td>
+                            <td className="px-2 py-3 text-center font-medium text-indigo-600 dark:text-indigo-300">{gw.bonus}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.bps}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_saved || 0}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_missed || 0}</td>
@@ -309,7 +309,7 @@ export default function PlayerGameweekModal({
         <DrawerContent className="max-h-[95vh] overflow-y-auto">
           <DrawerHeader className="pb-4">
             <DrawerTitle className="flex items-center gap-3 text-lg">
-              <Calendar className="h-6 w-6 text-blue-600" />
+              <Calendar className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
               <div className="flex items-center gap-2 flex-wrap">
                 <span>{player.web_name}</span>
                 <Badge className={`text-xs font-medium ${getPositionColor(player.element_type)}`}>
@@ -334,7 +334,7 @@ export default function PlayerGameweekModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-lg">
-            <Calendar className="h-6 w-6 text-blue-600" />
+            <Calendar className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
             <div className="flex items-center gap-2">
               <span>{player.web_name}</span>
               <Badge className={`text-xs font-medium ${getPositionColor(player.element_type)}`}>

@@ -1,14 +1,13 @@
 import { useState, useMemo } from "react";
 import { useViewModeParam } from "@/hooks/use-view-mode-param";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { UserPlus, X, Save, CheckCircle2, Search } from "lucide-react";
+import { UserPlus, X, Save, CheckCircle2, Search, Users, LayoutGrid, ListFilter } from "lucide-react";
+import { Pill, PosChip, SectionCard, StatTile, asPos } from "@/components/tool-ui";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { LoadingExperience } from "@/components/loading-experience";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
@@ -276,10 +275,9 @@ export default function PickTeam() {
 
     return (
       <div className="space-y-4">
-        <div className="bg-muted/30 rounded-lg p-3 md:p-4 flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium text-purple-600 dark:text-purple-400">{lineup.formation}</span>
-          <span className="text-muted-foreground">•</span>
-          <span className="font-medium">{lineup.totalPoints.toFixed(1)} pts</span>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Pill tone="indigo" className="!text-xs !px-2.5 !py-1">{lineup.formation}</Pill>
+          <Pill tone="gray" className="!text-xs !px-2.5 !py-1">{lineup.totalPoints.toFixed(1)} pts</Pill>
         </div>
         <div className="-mx-4 md:-mx-6">
           <PitchView players={pitchPlayers} benchPlayers={benchPitchPlayers} />
@@ -334,62 +332,47 @@ export default function PickTeam() {
       </div>
 
       {projectionsError && (
-        <Card>
-          <CardContent className="py-8 text-center text-red-600">
-            Failed to load player data. Please try again.
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-8 text-center font-medium text-red-700 dark:text-red-300">
+          Failed to load player data. Please try again.
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Squad being built */}
         <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <CardTitle className="text-lg">Your Squad</CardTitle>
-                  <CardDescription>Pick players from the list on the right to fill your squad</CardDescription>
-                </div>
-                <Badge variant={isSquadComplete ? "default" : "secondary"}>{squad.length}/{SQUAD_SIZE} players</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-                <div className="p-2 bg-muted/30 rounded text-center">
-                  <div className={`text-lg font-bold ${remaining < 0 ? 'text-red-600' : 'text-blue-600'}`}>£{remaining.toFixed(1)}m</div>
-                  <div className="text-xs text-muted-foreground">Budget Left</div>
-                </div>
-                <div className="p-2 bg-muted/30 rounded text-center">
-                  <div className="text-lg font-bold text-green-600">£{spent.toFixed(1)}m</div>
-                  <div className="text-xs text-muted-foreground">Spent</div>
-                </div>
-                <div className="p-2 bg-muted/30 rounded text-center col-span-2 sm:col-span-1">
-                  <div className="text-lg font-bold text-orange-600">
-                    {POSITIONS.map(pos => `${positionCounts[pos]}/${POSITION_REQUIRED[pos]}`).join(' • ')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">GKP • DEF • MID • FWD</div>
+          <SectionCard
+            icon={Users}
+            title="Your Squad"
+            subtitle="Pick players from the list on the right to fill your squad"
+            bodyClassName="space-y-4 p-4 sm:p-5"
+            action={<Pill tone={isSquadComplete ? "green" : "gray"} className="!text-xs !px-2.5 !py-1">{squad.length}/{SQUAD_SIZE} players</Pill>}
+          >
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <StatTile tone="indigo" label="Budget Left" value={<span className={remaining < 0 ? 'text-red-600' : ''}>£{remaining.toFixed(1)}m</span>} />
+                <StatTile tone="green" label="Spent" value={`£${spent.toFixed(1)}m`} />
+                <div className="col-span-2 sm:col-span-1">
+                  <StatTile tone="amber" label="GKP • DEF • MID • FWD" value={POSITIONS.map(pos => `${positionCounts[pos]}/${POSITION_REQUIRED[pos]}`).join(' • ')} />
                 </div>
               </div>
 
               {squad.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {squad.map(p => (
-                    <Badge key={p.playerId} variant="secondary" className="flex items-center gap-1">
+                    <Pill key={p.playerId} tone="indigo" className="gap-1 !py-1">
                       {playerIdToWebName.get(p.playerId) || p.playerName}
                       <X className="h-3 w-3 cursor-pointer hover:text-red-600" onClick={() => removePlayer(p.playerId)} />
-                    </Badge>
+                    </Pill>
                   ))}
                 </div>
               )}
 
               {savedDraftAt && (
-                <div className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 className="h-4 w-4" /> Saved as your GW1 team {new Date(savedDraftAt).toLocaleString()}
                 </div>
               )}
               <Button
-                className="w-full sm:w-auto"
+                className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 font-bold text-white hover:from-indigo-500 hover:to-violet-500 sm:w-auto"
                 disabled={!isSquadComplete || remaining < 0}
                 onClick={() => {
                   if (spent > TOTAL_BUDGET) {
@@ -414,25 +397,21 @@ export default function PickTeam() {
                 <Save className="h-4 w-4 mr-1.5" />
                 {savedDraftAt ? "Update My GW1 Team" : "Save as My GW1 Team"}
               </Button>
-            </CardContent>
-          </Card>
+          </SectionCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Lineup</CardTitle>
-              <CardDescription>
-                {isSquadComplete
-                  ? `"Set & Forget" is your best XI across GW${startGameweek}-${endGameweek}. Each GW tab shows the best starting XI and captain for that specific gameweek.`
-                  : "Add at least 11 players (with a full goalkeeper + outfield spread) to see a suggested lineup."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard
+            icon={LayoutGrid}
+            title="Lineup"
+            subtitle={isSquadComplete
+              ? `"Set & Forget" is your best XI across GW${startGameweek}-${endGameweek}. Each GW tab shows the best starting XI and captain for that specific gameweek.`
+              : "Add at least 11 players (with a full goalkeeper + outfield spread) to see a suggested lineup."}
+          >
               {aggregateLineup ? (
                 <Tabs value={activeLineupTab} onValueChange={setActiveLineupTab} className="w-full">
-                  <TabsList className="flex w-full flex-wrap h-auto">
-                    <TabsTrigger value="set-forget">Set & Forget</TabsTrigger>
+                  <TabsList className="flex h-auto w-full flex-wrap rounded-xl border border-gray-200 bg-gray-100 p-1 shadow-none">
+                    <TabsTrigger value="set-forget" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">Set & Forget</TabsTrigger>
                     {gameweekList.map(gw => (
-                      <TabsTrigger key={gw} value={gw.toString()}>GW{gw}</TabsTrigger>
+                      <TabsTrigger key={gw} value={gw.toString()} className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">GW{gw}</TabsTrigger>
                     ))}
                   </TabsList>
                   <TabsContent value="set-forget">
@@ -449,29 +428,25 @@ export default function PickTeam() {
                   Your pitch will appear here once you've added enough players.
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         </div>
 
         {/* Player pool */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">All Players</CardTitle>
-              <CardDescription>Projected points for GW{startGameweek}-{endGameweek}</CardDescription>
-              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <SectionCard icon={ListFilter} title="All Players" subtitle={`Projected points for GW${startGameweek}-${endGameweek}`} bodyClassName="p-0">
+              <div className="flex flex-col sm:flex-row gap-2 border-b border-gray-100 p-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search player or team..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-8 h-9"
+                    className="pl-8 h-10 rounded-xl"
                     data-testid="input-pick-team-search"
                   />
                 </div>
                 <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="w-full sm:w-28 h-9" data-testid="select-pick-team-position">
+                  <SelectTrigger className="w-full sm:w-28 h-10 rounded-xl" data-testid="select-pick-team-position">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -483,8 +458,6 @@ export default function PickTeam() {
                   </SelectContent>
                 </Select>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
               <TooltipProvider>
                 <div className="max-h-[70vh] overflow-y-auto divide-y">
                   {filteredPool.length === 0 && (
@@ -497,19 +470,19 @@ export default function PickTeam() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{POSITION_SHORT[normalizePosition(player.position)]}</Badge>
+                            <PosChip pos={asPos(POSITION_SHORT[normalizePosition(player.position)])} className="shrink-0" />
                           </div>
                           <div className="text-xs text-muted-foreground truncate">{player.teamName} • £{player.price}m</div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-medium">{player.totalProjectedPoints.toFixed(1)} pts</div>
+                          <div className="font-bold tabular-nums">{player.totalProjectedPoints.toFixed(1)} pts</div>
                           <div className="text-xs text-muted-foreground">{player.ownership.toFixed(1)}% owned</div>
                         </div>
                         <Button
                           size="icon"
                           variant={check.allowed ? "default" : "outline"}
                           disabled={!check.allowed}
-                          className="h-8 w-8 shrink-0"
+                          className={`h-8 w-8 shrink-0 rounded-lg ${check.allowed ? "bg-gradient-to-br from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500" : ""}`}
                           onClick={() => addPlayer(player)}
                           data-testid={`button-add-player-${player.playerId}`}
                         >
@@ -527,8 +500,7 @@ export default function PickTeam() {
                   })}
                 </div>
               </TooltipProvider>
-            </CardContent>
-          </Card>
+          </SectionCard>
         </div>
       </div>
     </div>

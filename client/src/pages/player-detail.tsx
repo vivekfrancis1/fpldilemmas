@@ -5,9 +5,8 @@ import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
 import { playerGraphicLink } from "@shared/graphics-players";
 import { ShareGraphicLink } from "@/components/share-graphic-link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Pill, SectionCard } from "@/components/tool-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BootstrapData } from "@shared/schema";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -175,7 +174,7 @@ const SEASON_COLUMNS: SeasonColumnDef[] = [
   { key: 'a', label: 'A', group: 'performance', render: (s) => <span className="text-blue-600 font-medium">{s.assists}</span> },
   { key: 'cs', label: 'CS', group: 'performance', render: (s) => <span>{s.clean_sheets}</span> },
   { key: 'dc', label: 'DC', group: 'performance', render: (s) => <span>{s.defensive_contribution ?? '-'}</span> },
-  { key: 'xg', label: 'xG', group: 'expected', render: (s) => <span className="text-purple-600">{s.expected_goals ? formatValue(s.expected_goals) : '-'}</span> },
+  { key: 'xg', label: 'xG', group: 'expected', render: (s) => <span className="text-indigo-600 dark:text-indigo-300">{s.expected_goals ? formatValue(s.expected_goals) : '-'}</span> },
   { key: 'xa', label: 'xA', group: 'expected', render: (s) => <span className="text-blue-600">{s.expected_assists ? formatValue(s.expected_assists) : '-'}</span> },
   { key: 'xgi', label: 'xGI', group: 'expected', render: (s) => <span className="text-indigo-600">{s.expected_goal_involvements ? formatValue(s.expected_goal_involvements) : '-'}</span> },
   { key: 'xgc', label: 'xGC', group: 'expected', render: (s) => <span className="text-red-600">{s.expected_goals_conceded ? formatValue(s.expected_goals_conceded) : '-'}</span> },
@@ -186,7 +185,7 @@ const SEASON_COLUMNS: SeasonColumnDef[] = [
   { key: 'recoveries', label: 'Recoveries', group: 'performance', render: (s) => <span>{s.recoveries ?? '-'}</span> },
   { key: 'cbi', label: 'CBI', group: 'performance', render: (s) => <span>{s.clearances_blocks_interceptions ?? '-'}</span> },
   { key: 'starts', label: 'Starts', group: 'performance', render: (s) => <span>{s.starts ?? '-'}</span> },
-  { key: 'bonus', label: 'Bonus', group: 'bonus', render: (s) => <span className="text-purple-600 font-medium">{s.bonus}</span> },
+  { key: 'bonus', label: 'Bonus', group: 'bonus', render: (s) => <span className="text-indigo-600 dark:text-indigo-300 font-medium">{s.bonus}</span> },
   { key: 'bps', label: 'BPS', group: 'bonus', render: (s) => <span>{s.bps}</span> },
   { key: 'influence', label: 'Influence', group: 'bonus', render: (s) => <span>{formatValue(s.influence)}</span> },
   { key: 'creativity', label: 'Creativity', group: 'bonus', render: (s) => <span>{formatValue(s.creativity)}</span> },
@@ -378,7 +377,7 @@ export default function PlayerDetail() {
         label: 'xG',
         positions: [1, 2, 3, 4],
         group: 'expected',
-        render: (gw) => <span className="text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</span>,
+        render: (gw) => <span className="text-indigo-600 dark:text-indigo-300">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</span>,
         aggregate: (h) => sumFloatField(h, 'expected_goals'),
       },
       {
@@ -445,7 +444,7 @@ export default function PlayerDetail() {
         label: 'Bonus',
         positions: [1, 2, 3, 4],
         group: 'bonus',
-        render: (gw) => <span className="text-purple-600 font-medium">{gw.bonus}</span>,
+        render: (gw) => <span className="text-indigo-600 dark:text-indigo-300 font-medium">{gw.bonus}</span>,
         aggregate: (h) => sumField(h, 'bonus'),
       },
       {
@@ -602,33 +601,25 @@ export default function PlayerDetail() {
     );
 
     return (
-      <Card className="border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                Gameweek Performance
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">
-                {history.length} gameweeks • {gameweeksPlayed} appearances • Latest first
-              </p>
-            </div>
-            {isMobile && (
-              <button
-                onClick={() => setShowAdvancedGW(v => !v)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
-              >
-                {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                {showAdvancedGW ? 'Fewer stats' : 'More stats'}
-              </button>
-            )}
-          </div>
-
+      <SectionCard
+        icon={Calendar}
+        title="Gameweek Performance"
+        subtitle={`${history.length} gameweeks • ${gameweeksPlayed} appearances • Latest first`}
+        bodyClassName="p-0"
+        action={isMobile ? (
+          <button
+            onClick={() => setShowAdvancedGW(v => !v)}
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-2.5 py-1 hover:bg-indigo-500/20 transition-colors"
+          >
+            {showAdvancedGW ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showAdvancedGW ? 'Fewer stats' : 'More stats'}
+          </button>
+        ) : undefined}
+      >
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
                 <p className="text-sm text-gray-500">Loading player data...</p>
               </div>
             </div>
@@ -640,14 +631,14 @@ export default function PlayerDetail() {
                 </div>
               ) : (
                 <>
-                <div className="p-3 space-y-3 bg-purple-50 border-b-2 border-purple-200">
+                <div className="p-3 space-y-3 bg-indigo-500/10 border-b-2 border-indigo-500/30">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-purple-800">Total</span>
-                    <div className="text-lg font-bold text-purple-800">
+                    <span className="font-bold text-indigo-800 dark:text-indigo-200">Total</span>
+                    <div className="text-lg font-bold text-indigo-800 dark:text-indigo-200">
                       {columns.find(c => c.key === 'pts')?.aggregate?.(history)} pts
                     </div>
                   </div>
-                  {renderGroupedStats(mobileGroups, (col) => col.aggregate ? col.aggregate(history) : '', 'text-purple-600', 'text-purple-800', 'text-purple-500')}
+                  {renderGroupedStats(mobileGroups, (col) => col.aggregate ? col.aggregate(history) : '', 'text-indigo-600 dark:text-indigo-300', 'text-indigo-800 dark:text-indigo-200', 'text-indigo-500')}
                 </div>
                 {history.map((gw) => {
                   const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
@@ -678,9 +669,9 @@ export default function PlayerDetail() {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 border-b sticky top-0">
                   <tr>
-                    <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[55px]">GW</th>
+                    <th className="px-2 py-2 text-left font-bold text-gray-700 min-w-[55px]">GW</th>
                     {columns.map(col => (
-                      <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
+                      <th key={col.key} className="px-2 py-2 text-center font-bold text-gray-700 min-w-[50px] whitespace-nowrap">
                         {col.shortLabel || col.label}
                       </th>
                     ))}
@@ -695,10 +686,10 @@ export default function PlayerDetail() {
                     </tr>
                   ) : (
                     <>
-                    <tr className="bg-purple-50 border-b-2 border-purple-200 font-bold">
-                      <td className="px-2 py-2.5 font-bold text-purple-800">Total</td>
+                    <tr className="bg-indigo-500/10 border-b-2 border-indigo-500/30 font-bold">
+                      <td className="px-2 py-2.5 font-bold text-indigo-800 dark:text-indigo-200">Total</td>
                       {columns.map(col => (
-                        <td key={col.key} className="px-2 py-2.5 text-center font-bold text-purple-800">
+                        <td key={col.key} className="px-2 py-2.5 text-center font-bold text-indigo-800 dark:text-indigo-200">
                           {col.aggregate ? col.aggregate(history) : ''}
                         </td>
                       ))}
@@ -724,8 +715,7 @@ export default function PlayerDetail() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     );
   };
 
@@ -735,11 +725,9 @@ export default function PlayerDetail() {
         <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Card>
-          <CardContent className="p-8 text-center text-gray-500">
-            Player not found
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500 shadow-sm">
+          Player not found
+        </div>
       </div>
     );
   }
@@ -751,26 +739,25 @@ export default function PlayerDetail() {
       </Button>
 
       {player && (
-        <Card className="border-0 bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-4 sm:p-6">
+        <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-500/[0.08] via-white to-violet-500/[0.05] p-4 shadow-sm dark:via-transparent sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <JerseyIcon team={teamName} position={getPositionName(elementType)} className="h-14 w-14 sm:h-16 sm:w-16 object-contain shrink-0" />
                 <div className="min-w-0">
-                  <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                  <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 truncate">
                     {player.first_name} {player.second_name}
                   </h1>
                   <div className="text-sm text-gray-500 mt-0.5">
                     {teamName} · {getPositionName(elementType)}
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Badge variant="outline" className="text-xs font-medium">
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <Pill tone="indigo" className="!text-xs !px-2.5 !py-1">
                       £{((player.now_cost || 0) / 10).toFixed(1)}m
-                    </Badge>
+                    </Pill>
                     {player.selected_by_percent && (
-                      <Badge variant="outline" className="text-xs font-medium">
+                      <Pill tone="gray" className="!text-xs !px-2.5 !py-1">
                         {player.selected_by_percent}% owned
-                      </Badge>
+                      </Pill>
                     )}
                     <ShareGraphicLink testId="link-share-image" href={playerGraphicLink({ template: "player-history", player: playerId })} label="Share history" />
                   </div>
@@ -778,37 +765,30 @@ export default function PlayerDetail() {
               </div>
               {player.news && (
                 <div className="sm:ml-auto">
-                  <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                  <Pill tone="amber" className="!text-xs !px-2.5 !py-1 whitespace-normal">
                     {player.news}
-                  </Badge>
+                  </Pill>
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </section>
       )}
 
-      <Card className="border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg flex items-center justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                Season History
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">{seasonHistory.length} seasons</p>
-            </div>
-            {isMobile && seasonHistory.length > 0 && (
-              <button
-                onClick={() => setShowAdvancedSeason(v => !v)}
-                className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
-              >
-                {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
-              </button>
-            )}
-          </div>
-
+      <SectionCard
+        icon={Calendar}
+        title="Season History"
+        subtitle={`${seasonHistory.length} seasons`}
+        bodyClassName="p-0"
+        action={isMobile && seasonHistory.length > 0 ? (
+          <button
+            onClick={() => setShowAdvancedSeason(v => !v)}
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-2.5 py-1 hover:bg-indigo-500/20 transition-colors"
+          >
+            {showAdvancedSeason ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showAdvancedSeason ? 'Fewer stats' : 'More stats'}
+          </button>
+        ) : undefined}
+      >
           {isMobile ? (
             <div className="divide-y divide-gray-100">
               {seasonHistory.length === 0 ? (
@@ -825,7 +805,7 @@ export default function PlayerDetail() {
                     <div key={season.season_name} className="p-3 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-900">{season.season_name}</span>
-                        <div className="text-lg font-bold text-purple-800">{season.total_points} pts</div>
+                        <div className="text-lg font-bold text-indigo-800 dark:text-indigo-200">{season.total_points} pts</div>
                       </div>
                       <div className="space-y-3">
                         {seasonGroups.map(({ group, cols }, i) => (
@@ -858,9 +838,9 @@ export default function PlayerDetail() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[70px]">Season</th>
+                  <th className="px-2 py-2 text-left font-bold text-gray-700 min-w-[70px]">Season</th>
                   {SEASON_COLUMNS.map(col => (
-                    <th key={col.key} className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px] whitespace-nowrap">
+                    <th key={col.key} className="px-2 py-2 text-center font-bold text-gray-700 min-w-[50px] whitespace-nowrap">
                       {col.label}
                     </th>
                   ))}
@@ -894,13 +874,12 @@ export default function PlayerDetail() {
             </table>
           </div>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
 
       <Tabs value={activeGwTab} onValueChange={(v) => setActiveGwTab(v as "current" | "2025/26")} className="w-full">
-        <TabsList>
-          <TabsTrigger value="current">2026/27 (Current)</TabsTrigger>
-          <TabsTrigger value="2025/26">2025/26 Season</TabsTrigger>
+        <TabsList className="rounded-xl border border-gray-200 bg-gray-100 p-1 shadow-none">
+          <TabsTrigger value="current" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">2026/27 (Current)</TabsTrigger>
+          <TabsTrigger value="2025/26" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">2025/26 Season</TabsTrigger>
         </TabsList>
         <TabsContent value="current" className="mt-4">
           {renderGameweekCard(sortedHistory, isLoading)}

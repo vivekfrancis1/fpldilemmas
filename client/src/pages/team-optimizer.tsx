@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock, LayoutGrid, List } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,6 +13,7 @@ import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
+import { HeroPanel, HeroStat, InputPanel, Pill, PosChip, SectionCard, TeamChip, asPos } from "@/components/tool-ui";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -26,36 +25,36 @@ function PlayerAvailabilityBadge({ player }: { player: any }) {
     return null;
   }
 
-  let statusColor = 'text-yellow-600';
-  let statusBg = 'bg-yellow-50';
+  let statusColor = 'text-amber-700 dark:text-amber-300';
+  let statusBg = 'bg-amber-500/15';
   let statusIcon = Clock;
   let statusText = 'Doubtful';
-  let statusBorder = 'border-yellow-200';
+  let statusBorder = 'border-amber-500/30';
 
   if (status === 's' || status === 'suspended') {
-    statusColor = 'text-red-600';
-    statusBg = 'bg-red-50';
+    statusColor = 'text-red-700 dark:text-red-300';
+    statusBg = 'bg-red-500/15';
     statusIcon = XCircle;
     statusText = 'Suspended';
-    statusBorder = 'border-red-200';
+    statusBorder = 'border-red-500/30';
   } else if (status === 'i' || status === 'injured') {
-    statusColor = 'text-red-600';
-    statusBg = 'bg-red-50';
+    statusColor = 'text-red-700 dark:text-red-300';
+    statusBg = 'bg-red-500/15';
     statusIcon = Heart;
     statusText = 'Injured';
-    statusBorder = 'border-red-200';
+    statusBorder = 'border-red-500/30';
   } else if (status === 'd' || status === 'doubtful') {
-    statusColor = 'text-yellow-600';
-    statusBg = 'bg-yellow-50';
+    statusColor = 'text-amber-700 dark:text-amber-300';
+    statusBg = 'bg-amber-500/15';
     statusIcon = AlertTriangle;
     statusText = 'Doubtful';
-    statusBorder = 'border-yellow-200';
+    statusBorder = 'border-amber-500/30';
   } else if (status === 'u' || status === 'unavailable') {
-    statusColor = 'text-gray-600';
-    statusBg = 'bg-gray-50';
+    statusColor = 'text-gray-700 dark:text-gray-300';
+    statusBg = 'bg-gray-500/15';
     statusIcon = XCircle;
     statusText = 'Unavailable';
-    statusBorder = 'border-gray-200';
+    statusBorder = 'border-gray-500/30';
   }
 
   const StatusIcon = statusIcon;
@@ -883,28 +882,22 @@ export default function TeamOptimizer() {
               ? 'bg-white dark:bg-background' 
               : 'bg-gray-50/50 dark:bg-gray-900/30'
           }
-          hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-colors
+          hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-colors
         `}
       >
         <TableCell className="sticky left-0 z-10 py-2.5 sm:py-3">
           <div className={`flex items-center gap-2 sm:gap-3 ${isBench ? 'bg-gray-50/80 dark:bg-gray-800/50' : isEvenRow ? 'bg-white dark:bg-background' : 'bg-gray-50/50 dark:bg-gray-900/30'}`}>
-            <Badge className={`${position.color} text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 min-w-[32px] sm:min-w-[38px] text-center`}>
-              {position.label}
-            </Badge>
+            <PosChip pos={asPos(position.label)} className="min-w-[32px] justify-center sm:min-w-[38px]" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className={`font-semibold text-xs sm:text-sm truncate ${isBench ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
                   {player.web_name}
                 </span>
                 {pick.isCaptain && (
-                  <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 font-bold shadow-sm">
-                    C
-                  </Badge>
+                  <Pill tone="amber">C</Pill>
                 )}
                 {pick.isViceCaptain && (
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 border-yellow-400 text-yellow-600 dark:text-yellow-400 font-bold">
-                    V
-                  </Badge>
+                  <Pill tone="indigo">V</Pill>
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -932,12 +925,12 @@ export default function TeamOptimizer() {
           <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] px-2 py-1 rounded-md ${
             isBench 
               ? 'bg-gray-100 dark:bg-gray-700' 
-              : 'bg-purple-100 dark:bg-purple-900/50'
+              : 'bg-indigo-500/12'
           }`}>
             <span className={`font-bold text-sm sm:text-base ${
               isBench 
                 ? 'text-gray-500 dark:text-gray-400' 
-                : 'text-purple-700 dark:text-purple-300'
+                : 'text-indigo-700 dark:text-indigo-300'
             }`}>
               {points.toFixed(1)}
             </span>
@@ -951,17 +944,18 @@ export default function TeamOptimizer() {
     return (
       <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto pt-12">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4 mx-auto">
-                <Target className="h-8 w-8 text-purple-600" />
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+                <h1>Team Optimizer</h1>
               </div>
-              <CardTitle className="text-2xl">Team Optimizer</CardTitle>
-              <CardDescription>Auto-optimize your team lineup and get chip recommendations</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              <p className="fpl-page-subtitle">Auto-optimize your team lineup and get chip recommendations</p>
+            </div>
+          </div>
+          <InputPanel icon={Search} title="Find your team" subtitle="Enter your Manager ID or paste your FPL URL">
               <div>
-                <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="manager-id" className="mb-2 block text-sm font-semibold text-gray-700">
                   Manager ID
                 </label>
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -977,11 +971,11 @@ export default function TeamOptimizer() {
                     onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
                     data-testid="input-manager-id"
                     disabled={isLoadingTeam}
-                    className="flex-1"
+                    className="flex-1 h-10 rounded-xl"
                   />
                   <Button
                     onClick={handleSearch}
-                    className="flex items-center gap-2"
+                    className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
                     data-testid="button-search-manager"
                     disabled={!managerId.trim() || isLoadingTeam}
                   >
@@ -999,7 +993,7 @@ export default function TeamOptimizer() {
                         }
                       }}
                       variant="outline"
-                      className="w-full sm:w-auto" 
+                      className="h-10 w-full rounded-xl sm:w-auto" 
                       data-testid="button-load-last-manager"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
@@ -1008,8 +1002,7 @@ export default function TeamOptimizer() {
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </InputPanel>
         </div>
       </div>
     );
@@ -1018,12 +1011,12 @@ export default function TeamOptimizer() {
   if (isLoadingTeam) {
     return (
       <div className="min-h-screen p-4 flex items-center justify-center">
-        <Card className="p-8">
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             <p className="text-gray-600">Loading team data...</p>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -1072,44 +1065,43 @@ export default function TeamOptimizer() {
   return (
     <div className="min-h-screen dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 md:p-6">
       <div className="w-full space-y-3 sm:space-y-4 md:space-y-6">
-        {/* Header - Compact */}
-        <div className="text-center py-2 relative">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Team Optimizer
-          </h1>
-          <p className="text-xs text-gray-600 dark:text-gray-300 hidden sm:block">
-            Auto-optimized lineup and chip recommendations
-          </p>
+        {/* Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>Team Optimizer</h1>
+            </div>
+            <p className="fpl-page-subtitle hidden sm:block">Auto-optimized lineup and chip recommendations</p>
+          </div>
         </div>
 
-        {/* Manager Search Section - Compact */}
-        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
-          <CardContent className="p-2 sm:p-3">
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <Input
-                id="manager-id"
-                type="text"
-                placeholder="Enter Manager ID or FPL URL"
-                value={managerId}
-                onChange={(e) => setManagerId(e.target.value)}
-                className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                data-testid="input-manager-id"
-              />
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!managerId.trim()}
-                  className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  Search
-                </Button>
-                <FplConnectDialog />
-              </div>
+        {/* Manager Search Section */}
+        <InputPanel icon={Search} title="Manager" subtitle="Search another team or reconnect your FPL account">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <Input
+              id="manager-id"
+              type="text"
+              placeholder="Enter Manager ID or FPL URL"
+              value={managerId}
+              onChange={(e) => setManagerId(e.target.value)}
+              className="flex-1 h-10 rounded-xl text-sm"
+              data-testid="input-manager-id"
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSearch} 
+                disabled={!managerId.trim()}
+                className="flex-1 sm:flex-none h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 text-sm font-bold"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Search
+              </Button>
+              <FplConnectDialog />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </InputPanel>
 
         {/* Session expiry notification for logged-in users */}
         {useFallbackEndpoint && isOwnTeam && (() => {
@@ -1117,8 +1109,8 @@ export default function TeamOptimizer() {
           const upcomingGW = currentGW + 1;
           
           return (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-800">
+            <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+              <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
@@ -1136,8 +1128,8 @@ export default function TeamOptimizer() {
           const upcomingGW = currentGW + 1;
           
           return (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-800">
+            <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+              <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
@@ -1150,42 +1142,26 @@ export default function TeamOptimizer() {
         })()}
 
         {/* Summary Card - Total Points */}
-        <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Projected Points - Next 12 Gameweeks</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            {isOptimizing || optimizedLineups.size === 0 ? (
-              <div className="py-2 sm:py-4" data-testid="loader-optimizing-lineup">
-                <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white"></div>
-                  <div className="text-base sm:text-xl md:text-2xl font-semibold">Optimizing...</div>
-                </div>
-                <div className="text-purple-100 text-xs sm:text-sm text-center px-2">
-                  Finding best formations and captains
-                </div>
+        <HeroPanel className="!rounded-2xl !p-4 sm:!p-5">
+          {isOptimizing || optimizedLineups.size === 0 ? (
+            <div className="py-2 sm:py-4" data-testid="loader-optimizing-lineup">
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 mb-2">Projected Points - Next 12 Gameweeks</div>
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white"></div>
+                <div className="text-base sm:text-xl md:text-2xl font-semibold">Optimizing...</div>
               </div>
-            ) : (
-              <>
-                <div className="text-3xl sm:text-4xl md:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
-                <div className="text-purple-100 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
-                  Auto Optimized Lineup
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              <div className="text-white/75 text-xs sm:text-sm">
+                Finding best formations and captains
+              </div>
+            </div>
+          ) : (
+            <HeroStat label="Projected Points - Next 12 Gameweeks" value={total6GWPoints.toFixed(1)} sub="Auto Optimized Lineup" />
+          )}
+        </HeroPanel>
 
         {/* Points by Gameweek */}
         {!isOptimizing && optimizedLineups.size > 0 && nextGameweeks.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
-                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                <span className="truncate">Projected Points by Gameweek</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={TrendingUp} title="Projected Points by Gameweek" subtitle="Tap a gameweek to see its optimized lineup">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {nextGameweeks.map(gw => {
                   const gwLineup = optimizedLineups.get(gw.id);
@@ -1202,65 +1178,52 @@ export default function TeamOptimizer() {
                   }
 
                   return (
-                    <Card 
-                      key={gw.id} 
-                      className={`cursor-pointer transition-all min-h-[90px] sm:min-h-[100px] ${
-                        selectedGameweek === gw.id 
-                          ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' 
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-900'
+                    <button
+                      type="button"
+                      key={gw.id}
+                      className={`flex min-h-[90px] flex-col items-center justify-center rounded-xl border p-2 text-center transition-all sm:min-h-[100px] sm:p-3 ${
+                        selectedGameweek === gw.id
+                          ? 'border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/60'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 dark:hover:bg-gray-900'
                       }`}
                       onClick={() => setSelectedGameweek(gw.id)}
                       data-testid={`card-gameweek-${gw.id}`}
                     >
-                      <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
-                        <div className="text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">GW{gw.id}</div>
-                        <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 dark:text-purple-400 mb-0.5 sm:mb-1">{gwTotal.toFixed(1)}</div>
-                        {formation && (
-                          <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
-                            {formation}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                      <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-gray-500 mb-0.5 sm:mb-1">GW{gw.id}</div>
+                      <div className="text-base sm:text-lg md:text-xl font-extrabold tabular-nums text-indigo-600 dark:text-indigo-300 mb-0.5 sm:mb-1">{gwTotal.toFixed(1)}</div>
+                      {formation && <TeamChip>{formation}</TeamChip>}
+                    </button>
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
         )}
 
         {/* Optimized Lineup - Pitch/List View */}
         {selectedGameweek && optimizedLineups.get(selectedGameweek) && (
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg font-bold">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>GW{selectedGameweek} Optimized Lineup</span>
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const gwLineup = optimizedLineups.get(selectedGameweek);
-                    if (gwLineup?.starting11) {
-                      const formation = calculateFormation(gwLineup.starting11);
-                      const totalPoints = gwLineup.starting11.reduce((sum: number, p: any) => sum + (p.projectedPoints || 0), 0);
-                      return (
-                        <>
-                          <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-2 py-0.5">
-                            {formation}
-                          </Badge>
-                          <Badge className="bg-white text-purple-700 font-bold text-[10px] sm:text-xs px-2 py-0.5">
-                            {totalPoints.toFixed(1)} pts
-                          </Badge>
-                        </>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
+          <SectionCard
+            icon={Users}
+            title={`GW${selectedGameweek} Optimized Lineup`}
+            bodyClassName="p-0"
+            action={
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const gwLineup = optimizedLineups.get(selectedGameweek);
+                  if (gwLineup?.starting11) {
+                    const formation = calculateFormation(gwLineup.starting11);
+                    const totalPoints = gwLineup.starting11.reduce((sum: number, p: any) => sum + (p.projectedPoints || 0), 0);
+                    return (
+                      <>
+                        <Pill tone="gray" className="!text-xs !px-2.5 !py-1">{formation}</Pill>
+                        <Pill tone="indigo" className="!text-xs !px-2.5 !py-1 font-bold">{totalPoints.toFixed(1)} pts</Pill>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
+            }
+          >
               {/* Pitch View */}
               {(() => {
                 const gwLineup = optimizedLineups.get(selectedGameweek)!;
@@ -1281,7 +1244,7 @@ export default function TeamOptimizer() {
                     team_short_name: team?.short_name,
                     team_code: team?.code,
                     custom_badge_text: pick.projectedPoints?.toFixed(1) || '0',
-                    custom_badge_color: 'bg-purple-600',
+                    custom_badge_color: 'bg-indigo-600',
                     status: player?.status,
                     chance_of_playing: player?.chance_of_playing_next_round,
                     news: player?.news,
@@ -1317,9 +1280,8 @@ export default function TeamOptimizer() {
                   </div>
                 );
               })()}
-              
-            </CardContent>
-          </Card>
+
+          </SectionCard>
         )}
 
       </div>

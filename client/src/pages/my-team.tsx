@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Users, Target, Trophy, Star, DollarSign } from "lucide-react";
+import { Users, Target, Armchair } from "lucide-react";
+import { HeroPanel, HeroStat, InputPanel, Pill, PosChip, SectionCard, TeamChip, asPos } from "@/components/tool-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -299,46 +298,35 @@ export default function MyTeam() {
             </div>
 
             {/* Search Section */}
-            <Card className="bg-white shadow-sm border border-gray-100">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-emerald-600" />
-                  Manager Search
-                </CardTitle>
-                <CardDescription>
-                  Enter your FPL Manager ID to view your current team.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    data-testid="input-manager-id"
-                    placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
-                    value={managerId}
-                    onChange={(e) => {
-                      const extractedId = extractManagerId(e.target.value);
-                      setManagerId(extractedId);
-                    }}
-                    onKeyPress={handleKeyPress}
-                    className="flex-1 text-base"
-                  />
-                  <Button 
-                    data-testid="button-search-manager"
-                    onClick={handleSearch} 
-                    disabled={!managerId.trim() || isLoadingTeam}
-                    className="sm:px-6"
-                  >
-                    {isLoadingTeam ? "Loading..." : "Load Team"}
-                  </Button>
-                </div>
-                
-                {getManagerIdFromCache() && (
-                  <p className="mt-3 text-green-600 font-medium text-sm">
-                    ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <InputPanel icon={Target} title="Manager Search" subtitle="Enter your FPL Manager ID to view your current team.">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  data-testid="input-manager-id"
+                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
+                  value={managerId}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
+                  onKeyPress={handleKeyPress}
+                  className="flex-1 h-10 rounded-xl text-base"
+                />
+                <Button
+                  data-testid="button-search-manager"
+                  onClick={handleSearch}
+                  disabled={!managerId.trim() || isLoadingTeam}
+                  className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
+                >
+                  {isLoadingTeam ? "Loading..." : "Load Team"}
+                </Button>
+              </div>
+
+              {getManagerIdFromCache() && (
+                <p className="text-sm font-medium text-emerald-600">
+                  ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
+                </p>
+              )}
+            </InputPanel>
 
             {/* Error Display */}
             {teamError && (
@@ -349,312 +337,214 @@ export default function MyTeam() {
               </Alert>
             )}
 
-            {/* Team Overview Cards */}
+            {/* Team Overview */}
             {teamData && (
-              <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
-                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
-                        <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate" data-testid="text-formation">
-                          {getFormationString()}
-                        </p>
-                      </div>
-                      <div className="p-1.5 sm:p-2 bg-emerald-200 rounded-full flex-shrink-0">
-                        <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
-                        <p className="text-xl sm:text-2xl font-bold text-green-900 truncate" data-testid="text-squad-value">
-                          {formatPrice(getTotalTeamValue())}
-                        </p>
-                        {teamData.transfers && (
-                          <p className="text-xs text-green-600 mt-1 truncate">
-                            Bank: {formatPrice(teamData.transfers.bank)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="p-1.5 sm:p-2 bg-green-200 rounded-full flex-shrink-0">
-                        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
-                        <p className="text-xl sm:text-2xl font-bold text-blue-900 truncate" data-testid="text-transfers">
-                          {teamData.transfers ? `${teamData.transfers.made}/${teamData.transfers.limit}` : '0/1'}
-                        </p>
-                        {teamData.transfers && teamData.transfers.cost > 0 && (
-                          <p className="text-xs text-red-600 mt-1 truncate">
-                            Cost: -{teamData.transfers.cost} pts
-                          </p>
-                        )}
-                      </div>
-                      <div className="p-1.5 sm:p-2 bg-blue-200 rounded-full flex-shrink-0">
-                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
-                        <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate" data-testid="text-current-gw-points">
-                          {getCurrentGameweekPoints() !== null ? getCurrentGameweekPoints() : '-'}
-                        </p>
-                        <p className="text-xs text-orange-600 mt-1 truncate">GW {getCurrentGameweek()}</p>
-                      </div>
-                      <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
-                        <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
-                        <p className="text-xl sm:text-2xl font-bold text-indigo-900 truncate" data-testid="text-total-points">
-                          {getTotalPoints()}
-                        </p>
-                        <p className="text-xs text-indigo-600 mt-1 truncate">All gameweeks</p>
-                      </div>
-                      <div className="p-1.5 sm:p-2 bg-indigo-200 rounded-full flex-shrink-0">
-                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-700" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <HeroPanel className="!rounded-2xl !p-4 sm:!p-5" testId="my-team-hero">
+                <div className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+                  <HeroStat size="md" label="Formation" value={getFormationString()} valueTestId="text-formation" />
+                  <HeroStat
+                    size="md"
+                    label="Squad Value"
+                    value={formatPrice(getTotalTeamValue())}
+                    valueTestId="text-squad-value"
+                    sub={teamData.transfers ? `Bank: ${formatPrice(teamData.transfers.bank)}` : undefined}
+                  />
+                  <HeroStat
+                    size="md"
+                    label="Transfers"
+                    value={teamData.transfers ? `${teamData.transfers.made}/${teamData.transfers.limit}` : '0/1'}
+                    valueTestId="text-transfers"
+                    sub={teamData.transfers && teamData.transfers.cost > 0 ? `Cost: -${teamData.transfers.cost} pts` : undefined}
+                  />
+                  <HeroStat
+                    size="md"
+                    label="Current GW Points"
+                    value={getCurrentGameweekPoints() !== null ? getCurrentGameweekPoints() : '-'}
+                    valueTestId="text-current-gw-points"
+                    sub={`GW ${getCurrentGameweek()}`}
+                  />
+                  <HeroStat size="md" label="Total Points" value={getTotalPoints()} valueTestId="text-total-points" sub="All gameweeks" />
+                </div>
+              </HeroPanel>
             )}
 
             {/* Legend */}
             {teamData && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-blue-900 mb-2">Fixture Difficulty Legend:</h4>
-                    <div className="flex gap-2 items-center">
-                      {[1, 2, 3, 4, 5].map(diff => (
-                        <div key={diff} className="flex items-center gap-1">
-                          <div className={`w-3 h-3 rounded ${getDifficultyColor(diff)}`}></div>
-                          <span className="text-xs font-medium text-gray-700">{diff}</span>
-                        </div>
-                      ))}
-                    </div>
+              <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-gray-900">Fixture Difficulty Legend</h4>
+                  <div className="flex gap-2 items-center">
+                    {[1, 2, 3, 4, 5].map(diff => (
+                      <div key={diff} className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded ${getDifficultyColor(diff)}`}></div>
+                        <span className="text-xs font-semibold text-gray-700">{diff}</span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-sm text-blue-700">
-                    Each fixture shows opponent team (H for Home, A for Away) with difficulty rating from 1 (easiest) to 5 (hardest)
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Each fixture shows opponent team (H for Home, A for Away) with difficulty rating from 1 (easiest) to 5 (hardest)
+                </p>
+              </div>
             )}
 
             {/* Starting XI */}
             {teamData && (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="bg-white shadow-lg border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Starting XI
-                    </CardTitle>
-                    <CardDescription className="text-emerald-50">
-                      Your team for Gameweek {getCurrentGameweek()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="space-y-0">
-                      {/* Group by position */}
-                      {[1, 2, 3, 4].map(positionType => {
-                        const playersInPosition = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                          .filter(pick => {
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+                <SectionCard icon={Users} title="Starting XI" subtitle={`Your team for Gameweek ${getCurrentGameweek()}`} bodyClassName="p-0">
+                  <div className="space-y-0">
+                    {/* Group by position */}
+                    {[1, 2, 3, 4].map(positionType => {
+                      const playersInPosition = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                        .filter(pick => {
+                          const player = getPlayerById(pick.element);
+                          return player?.element_type === positionType;
+                        });
+
+                      if (playersInPosition.length === 0) return null;
+
+                      const positionName = getPositionName(positionType);
+                      const posKey = (["GKP", "DEF", "MID", "FWD"] as const)[positionType - 1];
+
+                      return (
+                        <div key={positionType} className="border-b border-gray-100 last:border-b-0">
+                          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-600">
+                            <PosChip pos={asPos(posKey)} />
+                            {positionName}s ({playersInPosition.length})
+                          </div>
+                          {playersInPosition.map((pick, index) => {
                             const player = getPlayerById(pick.element);
-                            return player?.element_type === positionType;
-                          });
-                        
-                        if (playersInPosition.length === 0) return null;
+                            if (!player) return null;
 
-                        const positionName = getPositionName(positionType);
-                        const positionColors = {
-                          1: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                          2: 'bg-blue-50 border-blue-200 text-blue-800',
-                          3: 'bg-green-50 border-green-200 text-green-800',
-                          4: 'bg-red-50 border-red-200 text-red-800'
-                        };
-
-                        return (
-                          <div key={positionType} className="border-b border-gray-100 last:border-b-0">
-                            <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-4`}>
-                              {positionName}s ({playersInPosition.length})
-                            </div>
-                            {playersInPosition.map((pick, index) => {
-                              const player = getPlayerById(pick.element);
-                              if (!player) return null;
-
-                              return (
-                                <div 
-                                  key={pick.element} 
-                                  className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
-                                    pick.is_captain ? 'bg-amber-50 border-amber-400' : 
-                                    pick.is_vice_captain ? 'bg-blue-50 border-blue-400' : 
-                                    'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  data-testid={`starting-player-${index}`}
-                                >
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                      {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-gray-900">{player.web_name}</span>
-                                        {pick.is_captain && (
-                                          <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
-                                        )}
-                                        {pick.is_vice_captain && (
-                                          <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
-                                        )}
-                                      </div>
-                                      <div className="space-y-2 mt-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
-                                          <span className="text-xs text-gray-500">Form: {player.form}</span>
-                                        </div>
-                                        
-                                        {/* Next 3 fixtures */}
-                                        <div className="space-y-1">
-                                          <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                          <div className="flex gap-1 flex-wrap">
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
-                                              <div 
-                                                key={idx}
-                                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
-                                                title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
-                                              >
-                                                <span className="truncate max-w-[40px]">{fixture.opponent}</span>
-                                                <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
-                                              </div>
-                                            ))}
-                                            {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                              <span className="text-xs text-gray-400">No upcoming fixtures</span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
+                            return (
+                              <div
+                                key={pick.element}
+                                className={`flex items-center justify-between gap-3 border-t border-gray-100 p-4 transition-colors hover:bg-gray-50 ${
+                                  pick.is_captain ? 'bg-amber-500/10 shadow-[inset_4px_0_0_0_theme(colors.amber.400)]' :
+                                  pick.is_vice_captain ? 'bg-indigo-500/10 shadow-[inset_4px_0_0_0_theme(colors.indigo.400)]' :
+                                  ''
+                                }`}
+                                data-testid={`starting-player-${index}`}
+                              >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/15 to-violet-500/15 text-sm font-bold text-indigo-700">
+                                    {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                   </div>
-                                  <div className="text-right space-y-1">
-                                    <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                                    <p className="text-sm text-gray-600">{player.total_points} pts</p>
-                                    <div className="text-xs text-gray-500">
-                                      <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-gray-900">{player.web_name}</span>
+                                      {pick.is_captain && <Pill tone="amber">C</Pill>}
+                                      {pick.is_vice_captain && <Pill tone="indigo">VC</Pill>}
+                                    </div>
+                                    <div className="space-y-2 mt-2">
+                                      <div className="flex items-center gap-2">
+                                        <TeamChip>{getTeamName(player)}</TeamChip>
+                                        <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                      </div>
+
+                                      {/* Next 3 fixtures */}
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-medium text-gray-500">Next 3 fixtures:</div>
+                                        <div className="flex gap-1 flex-wrap">
+                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
+                                            <div
+                                              key={idx}
+                                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                              title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                            >
+                                              <span className="truncate max-w-[40px]">{fixture.opponent}</span>
+                                              <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                            </div>
+                                          ))}
+                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
+                                            <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                                <div className="text-right space-y-1 shrink-0">
+                                  <p className="font-bold text-emerald-600">{formatPrice(player.now_cost)}</p>
+                                  <p className="text-sm font-semibold tabular-nums text-gray-700">{player.total_points} pts</p>
+                                  <div className="text-xs text-gray-500">
+                                    <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
 
                 {/* Bench */}
-                <Card className="bg-white shadow-lg border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Bench
-                    </CardTitle>
-                    <CardDescription className="text-gray-100">
-                      Substitute players
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="space-y-0">
-                      {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
-                        const player = getPlayerById(pick.element);
-                        if (!player) return null;
+                <SectionCard icon={Armchair} title="Bench" subtitle="Substitute players" bodyClassName="p-0">
+                  <div className="space-y-0">
+                    {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
 
-                        return (
-                          <div 
-                            key={pick.element} 
-                            className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-                            data-testid={`bench-player-${index}`}
-                          >
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                {pick.position - 11}
-                              </div>
-                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-                                {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-gray-800">{player.web_name}</span>
-                                  <Badge variant="outline" className="text-xs px-2 py-1">{getPositionName(player.element_type)}</Badge>
-                                </div>
-                                <div className="space-y-2 mt-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
-                                    <span className="text-xs text-gray-500">Form: {player.form}</span>
-                                  </div>
-                                  
-                                  {/* Next 3 fixtures */}
-                                  <div className="space-y-1">
-                                    <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                    <div className="flex gap-1 flex-wrap">
-                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
-                                        <div 
-                                          key={idx}
-                                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
-                                          title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
-                                        >
-                                          <span className="truncate max-w-[40px]">{fixture.opponent}</span>
-                                          <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
-                                        </div>
-                                      ))}
-                                      {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                        <span className="text-xs text-gray-400">No upcoming fixtures</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                      return (
+                        <div
+                          key={pick.element}
+                          className="flex items-center justify-between gap-3 p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                          data-testid={`bench-player-${index}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
+                              {pick.position - 11}
                             </div>
-                            <div className="text-right space-y-1">
-                              <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                              <p className="text-sm text-gray-600">{player.total_points} pts</p>
-                              <div className="text-xs text-gray-500">
-                                <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/15 to-violet-500/15 text-sm font-bold text-indigo-700">
+                              {player.web_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900">{player.web_name}</span>
+                                <PosChip pos={asPos((["GKP", "DEF", "MID", "FWD"] as const)[player.element_type - 1] ?? "MID")} />
+                              </div>
+                              <div className="space-y-2 mt-2">
+                                <div className="flex items-center gap-2">
+                                  <TeamChip>{getTeamName(player)}</TeamChip>
+                                  <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                </div>
+
+                                {/* Next 3 fixtures */}
+                                <div className="space-y-1">
+                                  <div className="text-xs font-medium text-gray-500">Next 3 fixtures:</div>
+                                  <div className="flex gap-1 flex-wrap">
+                                    {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
+                                      <div
+                                        key={idx}
+                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                        title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
+                                      >
+                                        <span className="truncate max-w-[40px]">{fixture.opponent}</span>
+                                        <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                      </div>
+                                    ))}
+                                    {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
+                                      <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                          <div className="text-right space-y-1 shrink-0">
+                            <p className="font-bold text-emerald-600">{formatPrice(player.now_cost)}</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-700">{player.total_points} pts</p>
+                            <div className="text-xs text-gray-500">
+                              <div>Sel: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
               </div>
             )}
           </div>

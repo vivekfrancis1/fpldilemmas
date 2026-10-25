@@ -1,8 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +9,7 @@ import { Users, BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, Ch
 import { Link, useLocation } from "wouter";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange, getChipLabel } from "@/lib/manager-standings-columns";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { Pill, RankBadge, SectionCard } from "@/components/tool-ui";
 
 interface LiveLeagueEntry {
   id: number;
@@ -425,7 +424,7 @@ export default function LeagueAnalysisPage() {
             <div className="font-medium flex items-center gap-2">
               {entry.player_name}
               {entry.rankChange !== 0 && renderRankChange(entry.rankChange)}
-              {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+              {isCurrentManager && <Pill tone="indigo">You</Pill>}
             </div>
             <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
           </div>
@@ -442,13 +441,8 @@ export default function LeagueAnalysisPage() {
       cardOrder: 2,
       sortable: true,
       render: (value, entry) => (
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-          entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-          entry.rank === 2 ? 'bg-gray-100 text-gray-800' :
-          entry.rank === 3 ? 'bg-orange-100 text-orange-800' :
-          'bg-blue-100 text-blue-800'
-        }`}>
-          {entry.rank}
+        <div className="flex items-center justify-center">
+          <RankBadge rank={entry.rank} />
         </div>
       )
     };
@@ -498,9 +492,7 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => {
         const label = entry.active_chip ? getChipLabel(entry.active_chip) : null;
         return label ? (
-          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-            {label}
-          </Badge>
+          <Pill tone="indigo">{label}</Pill>
         ) : <span className="text-gray-400">-</span>;
       }
     };
@@ -556,7 +548,7 @@ export default function LeagueAnalysisPage() {
               {entry.player_name}
               {entry.rank_change !== 0 && (
                 <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
-                  entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                  entry.rank_change > 0 ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15' : 'text-red-700 dark:text-red-300 bg-red-500/15'
                 }`}>
                   {entry.rank_change > 0 ? (
                     <>
@@ -571,7 +563,7 @@ export default function LeagueAnalysisPage() {
                   )}
                 </div>
               )}
-              {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+              {isCurrentManager && <Pill tone="indigo">You</Pill>}
             </div>
             <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
           </div>
@@ -588,13 +580,8 @@ export default function LeagueAnalysisPage() {
       cardOrder: 2,
       sortable: true,
       render: (value, entry) => (
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-          entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-          entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
-          entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
-          'bg-blue-100 text-blue-800'
-        }`}>
-          {entry.live_rank}
+        <div className="flex items-center justify-center">
+          <RankBadge rank={entry.live_rank} />
         </div>
       )
     };
@@ -624,7 +611,7 @@ export default function LeagueAnalysisPage() {
         <div>
           <span>{entry.live_points}</span>
           {entry.auto_sub_points > 0 && (
-            <span className="text-orange-600 text-xs ml-1">(+{entry.auto_sub_points})</span>
+            <span className="text-amber-600 text-xs ml-1">(+{entry.auto_sub_points})</span>
           )}
           {entry.bonus_points > 0 && liveStandingsData?.has_provisional_bonus && (
             <span className="text-green-600 text-xs ml-1">(+{entry.bonus_points})</span>
@@ -645,9 +632,7 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => {
         const label = entry.active_chip ? getChipLabel(entry.active_chip) : null;
         return label ? (
-          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-            {label}
-          </Badge>
+          <Pill tone="indigo">{label}</Pill>
         ) : <span className="text-gray-400">-</span>;
       }
     };
@@ -724,65 +709,58 @@ export default function LeagueAnalysisPage() {
     <div className="min-h-screen p-2 sm:p-4">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
             <Link href="/my-dashboard">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="rounded-xl">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
             </Link>
-            <div>
-              <h1 className="fpl-heading-page flex items-center gap-2 text-lg sm:text-xl">
-                <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
-                {decodeURIComponent(leagueName)}
-              </h1>
-              <p className="text-muted-foreground text-sm">League ID: {leagueId}</p>
+            <div className="fpl-page-title">
+              <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>{decodeURIComponent(leagueName)}</h1>
             </div>
+            <p className="fpl-page-subtitle">League ID: {leagueId}</p>
           </div>
         </div>
 
         {/* League Standings */}
-        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
-                {showLiveStandings ? 'Live Standings' : 'Current Standings'}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {showLiveStandings && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => refetchLive()}
-                    disabled={isLoadingLive}
-                    className="h-8"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isLoadingLive ? 'animate-spin' : ''}`} />
-                  </Button>
-                )}
+        <SectionCard
+          icon={BarChart3}
+          title={showLiveStandings ? 'Live Standings' : 'Current Standings'}
+          subtitle={showLiveStandings
+            ? liveStandingsData
+              ? `GW${liveStandingsData.current_gameweek} • Updated ${new Date(liveStandingsData.last_updated).toLocaleTimeString()}${liveStandingsData.is_gameweek_finished ? ' (GW Finished)' : ''}`
+              : 'Loading live standings...'
+            : `Showing ${topEntries.length === 100 ? 'top 100' : 'all'} managers${allEntries.length > 100 ? ` of ${allEntries.length} total members` : ''}`
+          }
+          bodyClassName="p-0"
+          action={
+            <div className="flex items-center gap-2">
+              {showLiveStandings && (
                 <Button
-                  variant={showLiveStandings ? "default" : "outline"}
+                  variant="ghost"
                   size="sm"
-                  className={`h-8 ${showLiveStandings ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
-                  onClick={() => setShowLiveStandings(!showLiveStandings)}
+                  onClick={() => refetchLive()}
+                  disabled={isLoadingLive}
+                  className="h-8 rounded-lg"
                 >
-                  <Activity className={`h-4 w-4 mr-1 ${showLiveStandings ? 'animate-pulse' : ''}`} />
-                  {showLiveStandings ? 'Live On' : 'Live Points'}
+                  <RefreshCw className={`h-4 w-4 ${isLoadingLive ? 'animate-spin' : ''}`} />
                 </Button>
-              </div>
+              )}
+              <Button
+                variant={showLiveStandings ? "default" : "outline"}
+                size="sm"
+                className={`h-8 rounded-lg font-bold ${showLiveStandings ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10'}`}
+                onClick={() => setShowLiveStandings(!showLiveStandings)}
+              >
+                <Activity className={`h-4 w-4 mr-1 ${showLiveStandings ? 'animate-pulse' : ''}`} />
+                {showLiveStandings ? 'Live On' : 'Live Points'}
+              </Button>
             </div>
-            <p className="text-muted-foreground text-sm">
-              {showLiveStandings 
-                ? liveStandingsData 
-                  ? `GW${liveStandingsData.current_gameweek} • Updated ${new Date(liveStandingsData.last_updated).toLocaleTimeString()}${liveStandingsData.is_gameweek_finished ? ' (GW Finished)' : ''}`
-                  : 'Loading live standings...'
-                : `Showing ${topEntries.length === 100 ? 'top 100' : 'all'} managers${allEntries.length > 100 ? ` of ${allEntries.length} total members` : ''}`
-              }
-            </p>
-          </CardHeader>
-          <CardContent className="p-0">
+          }
+        >
             {showLiveStandings ? (
               isLoadingLive ? (
                 <div className="p-4 space-y-2">
@@ -833,62 +811,51 @@ export default function LeagueAnalysisPage() {
                 getRowTestId={(entry, index) => `row-manager-${entry.entry}`}
               />
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
 
         {/* League Comparison: your team against this league's squads */}
         {isClassicLeague && (
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg" data-testid="card-league-comparison">
-            <CardHeader className="pb-3">
-              <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                League Comparison
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">Compare your team with this league: what it owns and captains, its template XI, and your differentials and threats.</p>
-            </CardHeader>
-            <CardContent>
+          <SectionCard
+            icon={Users}
+            title="League Comparison"
+            subtitle="Compare your team with this league: what it owns and captains, its template XI, and your differentials and threats."
+            testId="card-league-comparison"
+          >
               <LeagueOwnershipView key={`${leagueId}:${managerId}`} leagueId={leagueId} managerId={managerId} />
-            </CardContent>
-          </Card>
+          </SectionCard>
         )}
 
         {isClassicLeague && (
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                  <History className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Previous Seasons
-                </CardTitle>
-                <Select
-                  value={selectedSeason}
-                  onValueChange={(v) => setSelectedSeason(v)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select Season" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(pastSeasonsData?.seasons || []).map((season) => (
-                      <SelectItem key={season} value={season}>
-                        {season}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {selectedSeason
-                  ? `${selectedSeason} season — ${historicalStandings.filter(m => m.played).length} of ${historicalStandings.length} managers played`
-                  : 'Select a season to view how league members performed in past FPL seasons'}
-              </p>
-              <p className="text-muted-foreground text-xs italic mt-1">
+          <SectionCard
+            icon={History}
+            title="Previous Seasons"
+            subtitle={selectedSeason
+              ? `${selectedSeason} season — ${historicalStandings.filter(m => m.played).length} of ${historicalStandings.length} managers played`
+              : 'Select a season to view how league members performed in past FPL seasons'}
+            action={
+              <Select
+                value={selectedSeason}
+                onValueChange={(v) => setSelectedSeason(v)}
+              >
+                <SelectTrigger className="w-[180px] rounded-xl">
+                  <SelectValue placeholder="Select Season" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(pastSeasonsData?.seasons || []).map((season) => (
+                    <SelectItem key={season} value={season}>
+                      {season}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          >
+              <p className="text-muted-foreground text-xs italic mb-3">
                 Based on the current league member list, not the actual members of this league in that season.
               </p>
-            </CardHeader>
-            <CardContent>
               {isPastSeasonsLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                  <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
                   <span className="ml-3 text-muted-foreground">Loading historical data...</span>
                 </div>
               ) : !selectedSeason ? (
@@ -903,7 +870,7 @@ export default function LeagueAnalysisPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-gray-50/80">
+                      <tr className="border-b bg-gray-50">
                         <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
                         <th
                           className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
@@ -952,19 +919,12 @@ export default function LeagueAnalysisPage() {
                         return (
                           <tr
                             key={entry.managerId}
-                            className={`border-b hover:bg-gray-50/50 transition-colors cursor-pointer ${isCurrentManager ? 'bg-blue-50/50' : ''}`}
+                            className={`border-b hover:bg-gray-50/50 transition-colors cursor-pointer ${isCurrentManager ? 'bg-indigo-500/10' : ''}`}
                             onClick={() => navigate(`/manager-team/${entry.managerId}`)}
                           >
                             <td className="px-1.5 sm:px-3 py-1 sm:py-2">
                               {entry.played ? (
-                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-xs font-semibold ${
-                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                                  index === 1 ? 'bg-gray-100 text-gray-800' :
-                                  index === 2 ? 'bg-orange-100 text-orange-800' :
-                                  'bg-blue-50 text-blue-700'
-                                }`}>
-                                  {index + 1}
-                                </div>
+                                <RankBadge rank={index + 1} />
                               ) : (
                                 <span className="text-gray-400 text-xs">-</span>
                               )}
@@ -972,7 +932,7 @@ export default function LeagueAnalysisPage() {
                             <td className="px-1.5 sm:px-3 py-1 sm:py-2">
                               <div className="font-medium flex items-center gap-1 sm:gap-2 text-sm">
                                 <span className="truncate max-w-[90px] sm:max-w-none">{entry.playerName}</span>
-                                {isCurrentManager && <Badge className="bg-blue-600 text-[10px] sm:text-xs shrink-0">You</Badge>}
+                                {isCurrentManager && <Pill tone="indigo" className="shrink-0">You</Pill>}
                               </div>
                               <div className="text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-none">{entry.entryName}</div>
                             </td>
@@ -993,8 +953,7 @@ export default function LeagueAnalysisPage() {
                   </table>
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         )}
       </div>
     </div>

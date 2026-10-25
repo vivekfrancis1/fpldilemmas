@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +16,7 @@ import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonBadge } from "@/components/season-badge";
+import { InputPanel, Pill, SectionCard, StatTile } from "@/components/tool-ui";
 import { getPreseasonDraft } from "@/lib/preseason-draft-cache";
 import { draftToFplPicks } from "@/lib/draft-to-fpl-picks";
 import { apiRequest } from "@/lib/queryClient";
@@ -790,48 +789,48 @@ export default function TransferRecommendations() {
   return (
     <div className="min-h-screen p-4">
       <div className="w-full space-y-4 sm:space-y-6">
-        {/* Header - Compact */}
-        <div className="text-center py-2">
-          <div className="inline-flex items-center justify-center w-10 h-10 bg-orange-100 rounded-full mb-2">
-            <ArrowRightLeft className="h-5 w-5 text-orange-600" />
+        {/* Header */}
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <ArrowRightLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>Transfer Recommendations</h1><SeasonBadge />
+            </div>
+            <p className="fpl-page-subtitle hidden sm:block">Maximize your projected points for remaining gameweeks</p>
           </div>
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1><SeasonBadge />
-          <p className="text-xs text-gray-600 hidden sm:block">Maximize your projected points for remaining gameweeks</p>
         </div>
 
-        {/* Manager Search Section - Compact */}
-        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
-          <CardContent className="p-2 sm:p-3">
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <Input
-                id="manager-id"
-                type="text"
-                placeholder="Enter Manager ID or FPL URL"
-                value={managerId}
-                onChange={(e) => {
-                  const extractedId = extractManagerId(e.target.value);
-                  setManagerId(extractedId);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
-                className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                data-testid="input-manager-id"
-                disabled={isLoadingRecommendations}
-              />
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!managerId.trim() || isLoadingRecommendations}
-                  className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  {isLoadingRecommendations ? "..." : "Search"}
-                </Button>
-                <FplConnectDialog />
-              </div>
+        {/* Manager Search Section */}
+        <InputPanel icon={Search} title="Find your team" subtitle="Enter your Manager ID or paste your FPL URL">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <Input
+              id="manager-id"
+              type="text"
+              placeholder="Enter Manager ID or FPL URL"
+              value={managerId}
+              onChange={(e) => {
+                const extractedId = extractManagerId(e.target.value);
+                setManagerId(extractedId);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
+              className="flex-1 h-10 rounded-xl text-sm"
+              data-testid="input-manager-id"
+              disabled={isLoadingRecommendations}
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSearch} 
+                disabled={!managerId.trim() || isLoadingRecommendations}
+                className="flex-1 sm:flex-none h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 text-sm font-bold"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {isLoadingRecommendations ? "..." : "Search"}
+              </Button>
+              <FplConnectDialog />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </InputPanel>
 
         {/* Session expiry notification for logged-in users */}
         {useFallbackEndpoint && isOwnTeam && !pendingDraftFallback && (() => {
@@ -839,8 +838,8 @@ export default function TransferRecommendations() {
           const upcomingGW = currentGW + 1;
           
           return (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-800">
+            <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+              <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
@@ -864,8 +863,8 @@ export default function TransferRecommendations() {
           const upcomingGW = currentGW + 1;
 
           return (
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-800">
+            <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+              <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
@@ -881,8 +880,8 @@ export default function TransferRecommendations() {
           );
         })()}
         {isOwnTeam && shouldUseAuthenticatedEndpoint && (
-          <Alert className="bg-green-50 border-green-200">
-            <AlertDescription className="text-sm text-green-800">
+          <Alert className="rounded-xl border-emerald-500/30 bg-emerald-500/10">
+            <AlertDescription className="text-sm text-emerald-800 dark:text-emerald-200">
               <div className="flex items-start gap-2">
                 <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div>Live data — connected to your FPL account, showing your team as it stands right now.</div>
@@ -893,9 +892,9 @@ export default function TransferRecommendations() {
 
         {/* Using the saved pre-season draft instead of a real (not-yet-available) squad */}
         {usingDraftFallback && !recommendationsError && (
-          <Alert className="bg-purple-50 border-purple-200">
-            <AlertCircle className="h-4 w-4 text-purple-700" />
-            <AlertDescription className="text-purple-800">
+          <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+            <AlertCircle className="h-4 w-4 text-indigo-700 dark:text-indigo-300" />
+            <AlertDescription className="text-indigo-800 dark:text-indigo-200">
               Manager {searchedId}'s GW1 squad isn't available from FPL yet — showing recommendations
               based on your saved GW1 draft instead (from My Dashboard or Pick Team).
             </AlertDescription>
@@ -934,49 +933,32 @@ export default function TransferRecommendations() {
 
         {/* No search yet state */}
         {!searchedId && !isLoadingRecommendations && (
-          <Card>
-            <CardContent className="pt-3 sm:pt-4">
-              <div className="text-center py-8">
-                <ArrowRightLeft className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">Enter your FPL Manager ID to view transfer recommendations</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="text-center py-8">
+              <ArrowRightLeft className="h-12 w-12 text-indigo-300 mx-auto mb-3" />
+              <p className="text-gray-600">Enter your FPL Manager ID to view transfer recommendations</p>
+            </div>
+          </div>
         )}
 
         {/* Transfer Recommendations */}
         {searchedId && !isLoadingRecommendations && adjustedRecommendations && adjustedRecommendations.gameweeks && Object.keys(adjustedRecommendations.gameweeks).length > 0 && (
-          <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                Transfer Recommendations
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Maximize your projected points for remaining gameweeks
-              </CardDescription>
+          <SectionCard icon={ArrowRightLeft} title="Transfer Recommendations" subtitle="Maximize your projected points for remaining gameweeks">
               {/* Position Filter Toggle */}
-              <div className="flex items-center gap-2 pt-3">
+              <div className="flex items-center gap-2 pb-3">
                 <Filter className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-600">Position:</span>
+                <span className="text-xs font-semibold text-gray-600">Position:</span>
                 <ToggleGroup 
                   type="multiple" 
                   value={positionFilter} 
                   onValueChange={setPositionFilter}
                   className="flex flex-wrap gap-1"
                 >
-                  <ToggleGroupItem value="GKP" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
-                    GKP
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="DEF" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
-                    DEF
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="MID" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
-                    MID
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="FWD" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
-                    FWD
-                  </ToggleGroupItem>
+                  {["GKP", "DEF", "MID", "FWD"].map((pos) => (
+                    <ToggleGroupItem key={pos} value={pos} size="sm" className="text-xs px-2.5 py-1 h-7 rounded-lg font-bold data-[state=on]:bg-indigo-500/15 data-[state=on]:text-indigo-700 dark:data-[state=on]:text-indigo-300">
+                      {pos}
+                    </ToggleGroupItem>
+                  ))}
                 </ToggleGroup>
                 {positionFilter.length > 0 && (
                   <button 
@@ -988,7 +970,7 @@ export default function TransferRecommendations() {
                 )}
               </div>
               {/* Uniqueness Toggles */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center gap-4 pb-4">
                 <div className="flex items-center gap-2">
                   <Switch 
                     id="unique-out-toggle"
@@ -1012,17 +994,15 @@ export default function TransferRecommendations() {
                   </label>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
               <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full" onValueChange={setSelectedGameweek}>
                 <div className="relative mb-4">
-                  <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
+                  <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:-mx-5 sm:px-5">
                     <TabsList className="inline-flex w-auto min-w-full h-auto gap-2 bg-transparent">
                       {Object.keys(adjustedRecommendations.gameweeks).map((gw) => (
                         <TabsTrigger
                           key={gw}
                           value={gw}
-                          className="text-sm py-2.5 px-4 min-w-[80px] data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900"
+                          className="text-sm py-2.5 px-4 min-w-[80px] rounded-xl font-bold data-[state=active]:bg-indigo-500/15 data-[state=active]:text-indigo-700 dark:data-[state=active]:text-indigo-300"
                           data-testid={`tab-transfer-gw-${gw}`}
                         >
                           GW{gw}
@@ -1070,40 +1050,40 @@ export default function TransferRecommendations() {
                         const hitsApplicable = hitsTaken > 0;
                         
                         return (
-                        <div className="flex flex-wrap gap-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3" data-testid={`finance-summary-gw${gw}`}>
+                        <div className="flex flex-wrap gap-3 rounded-xl border border-gray-200 bg-gray-500/5 p-3" data-testid={`finance-summary-gw${gw}`}>
                           <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                             <div>
-                              <div className="text-xs text-gray-500">Cash in Bank</div>
-                              <div className="text-sm font-bold text-green-700" data-testid={`cash-in-bank-gw${gw}`}>
+                              <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Cash in Bank</div>
+                              <div className="text-sm font-extrabold text-gray-900" data-testid={`cash-in-bank-gw${gw}`}>
                                 £{(getRunningBankForGW(gw) / 10).toFixed(1)}m
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 border-l border-green-300 pl-3">
-                            <ArrowRightLeft className="h-4 w-4 text-green-600" />
+                          <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                            <ArrowRightLeft className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                             <div>
-                              <div className="text-xs text-gray-500">Free Transfers at Start</div>
-                              <div className="text-sm font-bold text-green-700">
+                              <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Free Transfers at Start</div>
+                              <div className="text-sm font-extrabold text-gray-900">
                                 {freeTransfersAtStart}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 border-l border-green-300 pl-3">
-                            <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                          <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                            <ArrowRightLeft className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                             <div>
-                              <div className="text-xs text-gray-500">Transfers Made</div>
-                              <div className={`text-sm font-bold ${hitsApplicable ? 'text-red-600' : 'text-blue-700'}`}>
+                              <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Transfers Made</div>
+                              <div className={`text-sm font-bold ${hitsApplicable ? 'text-red-600' : 'text-gray-900'}`}>
                                 {transfersMade}
                                 {hitsApplicable && <span className="text-xs ml-1">(-{hitsTaken}pts)</span>}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 border-l border-green-300 pl-3">
-                            <ArrowRightLeft className="h-4 w-4 text-green-600" />
+                          <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                            <ArrowRightLeft className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                             <div>
-                              <div className="text-xs text-gray-500">Free Transfers Left</div>
-                              <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
+                              <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Free Transfers Left</div>
+                              <div className="text-sm font-extrabold text-gray-900" data-testid={`free-transfers-gw${gw}`}>
                                 {freeTransfersRemaining}
                               </div>
                             </div>
@@ -1123,23 +1103,23 @@ export default function TransferRecommendations() {
                       }));
                       const remaining = gwData.wildcardSquad.budget - gwData.wildcardSquad.totalCost;
                       return (
-                        <div className="mb-4 p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg shadow-sm" data-testid={`wildcard-squad-gw${gw}`}>
+                        <div className="mb-4 p-3 sm:p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10" data-testid={`wildcard-squad-gw${gw}`}>
                           <div className="flex items-center gap-2 mb-3 flex-wrap">
-                            <div className="w-7 h-7 bg-amber-100 rounded-full flex items-center justify-center">
-                              <Crown className="h-4 w-4 text-amber-600" />
+                            <div className="h-8 w-8 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                              <Crown className="h-4 w-4 text-amber-700 dark:text-amber-300" />
                             </div>
-                            <h3 className="text-base font-bold text-amber-800">Wildcard Squad Rebuild</h3>
-                            <Badge className="bg-amber-100 text-amber-800 border-amber-300 ml-auto">
+                            <h3 className="text-base font-bold text-gray-900">Wildcard Squad Rebuild</h3>
+                            <Pill tone="amber" className="ml-auto !text-xs !px-2.5 !py-1">
                               {gwData.wildcardSquad.totalProjectedPoints.toFixed(1)} pts (6 GWs)
-                            </Badge>
+                            </Pill>
                           </div>
-                          <p className="text-xs text-amber-700 mb-3">
+                          <p className="text-xs text-gray-600 mb-3">
                             Your Wildcard is active — transfers are unlimited this gameweek, so here's the best full 15-man squad your budget can build.
                           </p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {squadByPosition.map(({ elementType, label, players }) => (
-                              <div key={elementType} className="bg-white/70 rounded-md border border-amber-200 p-2">
-                                <div className="text-xs font-semibold text-amber-700 mb-1">{label}</div>
+                              <div key={elementType} className="bg-white rounded-xl border border-gray-200 p-2">
+                                <div className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">{label}</div>
                                 <div className="space-y-1">
                                   {players.map((p: any) => (
                                     <div key={p.id} className="flex items-center justify-between gap-1 text-xs">
@@ -1151,7 +1131,7 @@ export default function TransferRecommendations() {
                               </div>
                             ))}
                           </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 border-t border-amber-200 pt-2">
+                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 border-t border-amber-500/30 pt-2">
                             <span>Budget: £{(gwData.wildcardSquad.budget / 10).toFixed(1)}m</span>
                             <span>Spent: £{(gwData.wildcardSquad.totalCost / 10).toFixed(1)}m</span>
                             <span>Remaining: £{(remaining / 10).toFixed(1)}m</span>
@@ -1163,9 +1143,9 @@ export default function TransferRecommendations() {
                       <div className="space-y-3">
                         {/* Check if this is a roll transfer recommendation */}
                         {gwData.recommendations[0]?.type === 'roll' ? (
-                          <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg" data-testid={`roll-transfer-gw${gw}`}>
-                            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                              <ArrowRightLeft className="h-8 w-8 text-blue-600" />
+                          <div className="flex flex-col items-center justify-center p-6 sm:p-8 rounded-2xl border border-indigo-500/30 bg-indigo-500/10" data-testid={`roll-transfer-gw${gw}`}>
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-500/15 rounded-2xl mb-4">
+                              <ArrowRightLeft className="h-8 w-8 text-indigo-600 dark:text-indigo-300" />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900">Roll Transfer</h3>
                           </div>
@@ -1174,7 +1154,7 @@ export default function TransferRecommendations() {
                             {/* Applied Transfers Section */}
                             {getAppliedTransfersForGW(gw).length > 0 && (
                               <div className="mb-4">
-                                <h3 className="text-base font-semibold text-green-700 mb-2 flex items-center gap-2">
+                                <h3 className="text-base font-bold text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-2">
                                   <Check className="h-4 w-4" />
                                   Applied Transfers ({getAppliedTransfersForGW(gw).length})
                                 </h3>
@@ -1182,26 +1162,26 @@ export default function TransferRecommendations() {
                                   {getAppliedTransfersForGW(gw).map((rec: any, index: number) => (
                                     <div
                                       key={`applied-${rec.playerOut.id}-${rec.playerIn.id}`}
-                                      className="p-2 sm:p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg shadow-sm"
+                                      className="p-2 sm:p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10"
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-3 flex-wrap flex-1">
                                           <div className="flex items-center gap-1.5">
-                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">OUT</Badge>
+                                            <Pill tone="red">OUT</Pill>
                                             <span className="text-sm font-medium">{rec.playerOut.webName}</span>
                                           </div>
                                           <ArrowRightLeft className="h-4 w-4 text-gray-400" />
                                           <div className="flex items-center gap-1.5">
-                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">IN</Badge>
+                                            <Pill tone="green">IN</Pill>
                                             <span className="text-sm font-medium">{rec.playerIn.webName}</span>
                                           </div>
-                                          <span className="text-xs text-green-600 font-semibold">+{(rec.fourGWPointsGain || 0).toFixed(1)} pts</span>
+                                          <span className="text-xs text-emerald-600 font-bold">+{(rec.fourGWPointsGain || 0).toFixed(1)} pts</span>
                                         </div>
                                         <Button
                                           variant="ghost"
                                           size="sm"
                                           onClick={() => removeAppliedTransfer(gw, index)}
-                                          className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          className="h-7 px-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-500/10"
                                         >
                                           <X className="h-4 w-4" />
                                           <span className="hidden sm:inline ml-1">Remove</span>
@@ -1256,10 +1236,9 @@ export default function TransferRecommendations() {
                               if ((finalRecommendations.length === 0 || (finalRecommendations.length === 1 && finalRecommendations[0].type === 'roll')) 
                                   && isRollGW && appliedTransfersInGW.length === 0) {
                                 return (
-                                  <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm mt-4">
-                                    <CardContent className="pt-8 pb-10">
+                                  <div className="mt-4 rounded-2xl border border-gray-200 bg-white px-4 pb-10 pt-8 shadow-sm">
                                       <div className="text-center py-6">
-                                        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-indigo-100">
+                                        <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-indigo-500/20">
                                           <ArrowRightLeft className="h-8 w-8 text-indigo-600" />
                                         </div>
                                         <h3 className="text-xl font-bold text-gray-900 mb-3">Roll Your Transfer</h3>
@@ -1267,15 +1246,14 @@ export default function TransferRecommendations() {
                                           Your current team is perfectly optimized for GW{gw}. No transfers are recommended this week - save your free transfer to have more flexibility next week!
                                         </p>
                                       </div>
-                                    </CardContent>
-                                  </Card>
+                                  </div>
                                 );
                               }
                               
                               // Show message if filter returns no results
                               if (availableRecommendations.length === 0 && positionFilter.length > 0 && appliedTransfersInGW.length === 0) {
                                 return (
-                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-500/5 border border-dashed border-gray-300 rounded-xl">
                                     No {positionFilter.join('/')} transfer recommendations for this gameweek
                                   </div>
                                 );
@@ -1283,7 +1261,7 @@ export default function TransferRecommendations() {
 
                               if (finalRecommendations.length === 0 && getAppliedTransfersForGW(gw).length > 0) {
                                 return (
-                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-500/5 border border-dashed border-gray-300 rounded-xl">
                                     No more affordable transfer recommendations available
                                   </div>
                                 );
@@ -1353,37 +1331,37 @@ export default function TransferRecommendations() {
                                           const totalGain = comboToShow.reduce((s: number, c: any) => s + (c.fourGWPointsGain || 0), 0);
                                           return (
                                             <div key={`combo-size-${size}`} className="mb-4">
-                                              <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg shadow-sm">
+                                              <div className="p-3 sm:p-4 rounded-2xl border border-indigo-500/40 bg-indigo-500/10">
                                                 <div className="flex items-center gap-2 mb-3">
-                                                  <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
-                                                    <Target className="h-4 w-4 text-purple-600" />
+                                                  <div className="h-8 w-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                                    <Target className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                                                   </div>
-                                                  <h3 className="text-base font-bold text-purple-800">Best {comboToShow.length}-Transfer Combo</h3>
-                                                  <Badge className="bg-purple-100 text-purple-800 border-purple-300 ml-auto">
+                                                  <h3 className="text-base font-bold text-gray-900">Best {comboToShow.length}-Transfer Combo</h3>
+                                                  <Pill tone="indigo" className="ml-auto !text-xs !px-2.5 !py-1">
                                                     +{totalGain.toFixed(1)} pts (6 GWs)
-                                                  </Badge>
+                                                  </Pill>
                                                 </div>
                                                 <div className="space-y-2">
                                                   {comboToShow.map((combo: any, idx: number) => (
-                                                    <div key={`combo-${combo.playerOut.id}-${combo.playerIn.id}`} className="p-2 bg-white/70 rounded-md border border-purple-200">
+                                                    <div key={`combo-${combo.playerOut.id}-${combo.playerIn.id}`} className="p-2 bg-white rounded-xl border border-gray-200">
                                                       <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-bold text-purple-600 w-4">{idx + 1}.</span>
-                                                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">OUT</Badge>
+                                                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300 w-4">{idx + 1}.</span>
+                                                        <Pill tone="red">OUT</Pill>
                                                         <span className="text-sm font-medium">{combo.playerOut.webName}</span>
                                                         <span className="text-xs text-gray-500">£{(combo.playerOut.sellingPrice / 10).toFixed(1)}m</span>
                                                         <span className="text-xs text-gray-500">({(combo.playerOut.fourGWPoints || 0).toFixed(1)} pts)</span>
                                                         <ArrowRightLeft className="h-3.5 w-3.5 text-gray-400" />
-                                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">IN</Badge>
+                                                        <Pill tone="green">IN</Pill>
                                                         <span className="text-sm font-medium">{combo.playerIn.webName}</span>
                                                         <span className="text-xs text-gray-500">£{(combo.playerIn.nowCost / 10).toFixed(1)}m</span>
                                                         <span className="text-xs text-gray-500">({(combo.playerIn.fourGWPoints || 0).toFixed(1)} pts)</span>
-                                                        <span className="text-xs font-semibold text-green-600 ml-auto">+{(combo.fourGWPointsGain || 0).toFixed(1)}</span>
+                                                        <span className="text-xs font-bold text-emerald-600 ml-auto">+{(combo.fourGWPointsGain || 0).toFixed(1)}</span>
                                                       </div>
                                                     </div>
                                                   ))}
                                                 </div>
                                                 <div className="mt-3 flex items-center justify-between">
-                                                  <span className="text-xs text-purple-600">
+                                                  <span className="text-xs text-gray-600">
                                                     Combined net cost: £{(comboToShow.reduce((sum: number, c: any) => sum + c.playerIn.nowCost - c.playerOut.sellingPrice, 0) / 10).toFixed(1)}m
                                                   </span>
                                                   <Button
@@ -1394,7 +1372,7 @@ export default function TransferRecommendations() {
                                                         applyTransfer(gw, combo);
                                                       });
                                                     }}
-                                                    className="h-8 px-3 bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100 hover:border-purple-400"
+                                                    className="h-8 px-3 rounded-lg border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-bold hover:bg-indigo-500/20"
                                                   >
                                                     <Plus className="h-3.5 w-3.5 mr-1" />
                                                     Apply All
@@ -1409,7 +1387,7 @@ export default function TransferRecommendations() {
                                   })()}
                                   {finalRecommendations.length > 0 && (
                                 <div>
-                                  <h3 className="text-base font-semibold text-gray-700 mb-2">
+                                  <h3 className="text-base font-bold text-gray-900 mb-2">
                                     Transfer Recommendations
                                   </h3>
                                   <div className="space-y-2">
@@ -1422,19 +1400,17 @@ export default function TransferRecommendations() {
                                       return (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className={`p-2 sm:p-3 rounded-lg shadow-sm space-y-2 transition-colors ${
+                                        className={`p-2 sm:p-3 rounded-xl space-y-2 transition-colors ${
                                           isTopRecommendation 
-                                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:border-green-500' 
-                                            : 'bg-gradient-to-r from-orange-50 to-white border border-orange-200 hover:border-orange-300'
+                                            ? 'bg-emerald-500/10 border border-emerald-500/40 hover:border-emerald-500/70' 
+                                            : 'bg-white border border-gray-200 hover:border-indigo-300'
                                         }`}
                                         data-testid={`transfer-recommendation-gw${gw}-${index}`}
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="space-y-1 flex-1">
                                             <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
-                                                OUT
-                                              </Badge>
+                                              <Pill tone="red" className="shrink-0">OUT</Pill>
                                               <div className="flex items-center gap-1.5 flex-wrap">
                                                 <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
@@ -1445,9 +1421,7 @@ export default function TransferRecommendations() {
                                               </div>
                                             </div>
                                             <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
-                                                IN
-                                              </Badge>
+                                              <Pill tone="green" className="shrink-0">IN</Pill>
                                               <div className="flex items-center gap-1.5 flex-wrap">
                                                 <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
@@ -1462,25 +1436,25 @@ export default function TransferRecommendations() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => applyTransfer(gw, rec)}
-                                            className="h-8 px-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 shrink-0"
+                                            className="h-8 px-3 rounded-lg border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold hover:bg-emerald-500/20 shrink-0"
                                           >
                                             <Plus className="h-3.5 w-3.5 mr-1" />
                                             Apply
                                           </Button>
                                         </div>
-                                        <div className={`grid grid-cols-3 sm:grid-cols-3 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-green-300' : 'border-orange-200'}`}>
+                                        <div className={`grid grid-cols-3 sm:grid-cols-3 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-emerald-500/30' : 'border-gray-200'}`}>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">Next 6 GWs</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${index}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Next 6 GWs</div>
+                                            <div className="text-sm font-extrabold text-emerald-600" data-testid={`points-gain-4gw-${gw}-${index}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Cost</div>
                                             <div className={`text-xs sm:text-sm font-semibold ${netCost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
                                               {netCost < 0 ? '- ' : ''}{(Math.abs(netCost) / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-wide text-gray-500">ITB After</div>
                                             <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
                                               £{(itbAfterThisTransfer / 10).toFixed(1)}m
                                             </div>
@@ -1508,49 +1482,23 @@ export default function TransferRecommendations() {
                   );
                 })}
               </Tabs>
-            </CardContent>
-          </Card>
+          </SectionCard>
         )}
 
         {/* Optimized Team After Transfers */}
         {searchedId && !isLoadingRecommendations && optimizedTeam && selectedGameweek && (
-          <Card className="border-green-200 bg-gradient-to-br from-green-50/50 to-white">
-            <CardHeader className="px-3 sm:px-6">
-              <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base sm:text-lg">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  Updated Team - GW{selectedGameweek}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-100 text-green-800 border-green-300">
-                    Optimized Lineup
-                  </Badge>
-                </div>
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Team with primary transfers applied and optimized for maximum points
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-6">
+          <SectionCard
+            icon={Users}
+            title={`Updated Team - GW${selectedGameweek}`}
+            subtitle="Team with primary transfers applied and optimized for maximum points"
+            action={<Pill tone="green" className="!text-xs !px-2.5 !py-1">Optimized Lineup</Pill>}
+          >
               {/* Summary Stats */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 mb-6">
-                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Formation</div>
-                  <div className="text-xl sm:text-2xl font-bold text-green-600">
-                    {optimizedTeam.formation?.name || 'N/A'}
-                  </div>
-                </div>
-                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Projected Points</div>
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                    {optimizedTeam.totalPoints.toFixed(1)}
-                  </div>
-                </div>
-                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border col-span-2 md:col-span-1">
-                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Total Players</div>
-                  <div className="text-xl sm:text-2xl font-bold text-purple-600">
-                    {optimizedTeam.lineup.length}
-                  </div>
+                <StatTile tone="green" label="Formation" value={optimizedTeam.formation?.name || 'N/A'} />
+                <StatTile tone="indigo" label="Projected Points" value={optimizedTeam.totalPoints.toFixed(1)} />
+                <div className="col-span-2 md:col-span-1">
+                  <StatTile tone="amber" label="Total Players" value={optimizedTeam.lineup.length} />
                 </div>
               </div>
 
@@ -1571,7 +1519,7 @@ export default function TransferRecommendations() {
                     team_short_name: team?.short_name,
                     team_code: team?.code,
                     custom_badge_text: (pick.projectedPoints || 0).toFixed(1),
-                    custom_badge_color: isTransferredIn ? 'bg-green-600' : 'bg-purple-600',
+                    custom_badge_color: isTransferredIn ? 'bg-emerald-600' : 'bg-indigo-600',
                     status: player?.status,
                     chance_of_playing: player?.chance_of_playing_next_round,
                     news: player?.news,
@@ -1608,31 +1556,28 @@ export default function TransferRecommendations() {
                 );
               })()}
 
-            </CardContent>
-          </Card>
+          </SectionCard>
         )}
 
         {/* No recommendations available state or Roll Transfer suggestion */}
         {searchedId && !isLoadingRecommendations && adjustedRecommendations && 
           (!adjustedRecommendations.gameweeks || !selectedGameweek || !adjustedRecommendations.gameweeks[selectedGameweek]) && (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm mt-6">
-            <CardContent className="pt-8 pb-10">
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white px-4 pb-10 pt-8 shadow-sm">
               <div className="text-center py-6 sm:py-10">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-indigo-100">
-                  <ArrowRightLeft className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-600" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-indigo-500/20">
+                  <ArrowRightLeft className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-600 dark:text-indigo-300" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Roll Your Transfer</h3>
                 <p className="text-gray-600 max-w-md mx-auto px-4 leading-relaxed">
                   Your current team is perfectly optimized for GW{selectedGameweek}. No transfers are recommended this week - save your free transfer to have more flexibility next week!
                 </p>
                 <div className="mt-8">
-                  <Badge variant="outline" className="px-3 py-1 text-xs font-medium border-indigo-200 text-indigo-700 bg-indigo-50/50">
+                  <Pill tone="indigo" className="!text-xs !px-3 !py-1">
                     GW{selectedGameweek} Strategy: Save FT
-                  </Badge>
+                  </Pill>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
     </div>

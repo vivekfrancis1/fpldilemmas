@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Target, Search, SlidersHorizontal, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isSeasonEnded, computeCurrentGameweek } from "@shared/gameweek-utils";
 import { SeasonEndedNotice } from "@/components/season-ended-notice";
 import { SeasonBadge } from "@/components/season-badge";
+import { InputPanel, Pill, PosChip, SectionCard, TeamChip, asPos } from "@/components/tool-ui";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -29,36 +28,36 @@ function PlayerAvailabilityBadge({ player }: { player: any }) {
     return null;
   }
 
-  let statusColor = 'text-yellow-600';
-  let statusBg = 'bg-yellow-50';
+  let statusColor = 'text-amber-700 dark:text-amber-300';
+  let statusBg = 'bg-amber-500/15';
   let statusIcon = Clock;
   let statusText = 'Doubtful';
-  let statusBorder = 'border-yellow-200';
+  let statusBorder = 'border-amber-500/30';
 
   if (status === 's' || status === 'suspended') {
-    statusColor = 'text-red-600';
-    statusBg = 'bg-red-50';
+    statusColor = 'text-red-700 dark:text-red-300';
+    statusBg = 'bg-red-500/15';
     statusIcon = XCircle;
     statusText = 'Suspended';
-    statusBorder = 'border-red-200';
+    statusBorder = 'border-red-500/30';
   } else if (status === 'i' || status === 'injured') {
-    statusColor = 'text-red-600';
-    statusBg = 'bg-red-50';
+    statusColor = 'text-red-700 dark:text-red-300';
+    statusBg = 'bg-red-500/15';
     statusIcon = Heart;
     statusText = 'Injured';
-    statusBorder = 'border-red-200';
+    statusBorder = 'border-red-500/30';
   } else if (status === 'd' || status === 'doubtful') {
-    statusColor = 'text-yellow-600';
-    statusBg = 'bg-yellow-50';
+    statusColor = 'text-amber-700 dark:text-amber-300';
+    statusBg = 'bg-amber-500/15';
     statusIcon = AlertTriangle;
     statusText = 'Doubtful';
-    statusBorder = 'border-yellow-200';
+    statusBorder = 'border-amber-500/30';
   } else if (status === 'u' || status === 'unavailable') {
-    statusColor = 'text-gray-600';
-    statusBg = 'bg-gray-50';
+    statusColor = 'text-gray-700 dark:text-gray-300';
+    statusBg = 'bg-gray-500/15';
     statusIcon = XCircle;
     statusText = 'Unavailable';
-    statusBorder = 'border-gray-200';
+    statusBorder = 'border-gray-500/30';
   }
 
   const StatusIcon = statusIcon;
@@ -511,29 +510,20 @@ export default function ProjectedPoints() {
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
               <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 flex-wrap">
-                <Badge className={`text-[9px] sm:text-[10px] px-1 py-0 h-3.5 sm:h-4 ${
-                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                  position === 'DEF' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  position === 'MID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                }`}>
-                  {position}
-                </Badge>
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 h-3.5 sm:h-4 text-gray-600 dark:text-gray-400">
-                  {teamName}
-                </Badge>
+                <PosChip pos={asPos(position)} />
+                <TeamChip>{teamName}</TeamChip>
               </div>
             </div>
             <div className="flex items-center gap-0.5 flex-shrink-0">
               {isCaptain && (
-                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-1 py-0 h-4 sm:h-5 flex items-center gap-0.5">
+                <span title="Captain"><Pill tone="amber" className="gap-0.5 !px-1.5">
                   <Crown className="h-2.5 w-2.5" />
-                </Badge>
+                </Pill></span>
               )}
               {isViceCaptain && (
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 h-4 sm:h-5 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
+                <span title="Vice-captain"><Pill tone="indigo" className="gap-0.5 !px-1.5">
                   <Crown className="h-2.5 w-2.5" />
-                </Badge>
+                </Pill></span>
               )}
               <div className="hidden sm:block">
                 <PlayerAvailabilityBadge player={player} />
@@ -554,14 +544,14 @@ export default function ProjectedPoints() {
             }`}
           >
             <span className={`font-semibold text-xs sm:text-sm ${
-              proj.gw === selectedGameweek ? 'text-purple-600 dark:text-purple-400 font-bold' : 'text-gray-700 dark:text-gray-300'
+              proj.gw === selectedGameweek ? 'text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-700 dark:text-gray-300'
             }`}>
               {proj.points.toFixed(1)}
             </span>
           </TableCell>
         ))}
         <TableCell className="text-center sticky right-0 bg-white dark:bg-background py-2 sm:py-3 px-1 sm:px-2">
-          <span className="font-bold text-purple-600 dark:text-purple-400 text-xs sm:text-sm">
+          <span className="font-extrabold text-indigo-600 dark:text-indigo-300 text-xs sm:text-sm">
             {projections.reduce((sum, p) => sum + p.points, 0).toFixed(1)}
           </span>
         </TableCell>
@@ -573,42 +563,44 @@ export default function ProjectedPoints() {
     return (
       <div className="min-h-screen p-4">
         <div className="w-full space-y-4 sm:space-y-6">
-          {/* Header - Compact */}
-          <div className="text-center py-2">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">My Team Projected Points</h1>
-            <p className="text-xs text-gray-600 hidden sm:block">View projected points for your current FPL team</p>
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+                <h1>My Team Projected Points</h1>
+              </div>
+              <p className="fpl-page-subtitle hidden sm:block">View projected points for your current FPL team</p>
+            </div>
           </div>
 
-          {/* Manager Search Section - Compact */}
-          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                <Input
-                  id="manager-id"
-                  type="text"
-                  placeholder="Enter Manager ID or FPL URL"
-                  value={managerId}
-                  onChange={(e) => {
-                    const extractedId = extractManagerId(e.target.value);
-                    setManagerId(extractedId);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
-                  className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                  data-testid="input-manager-id"
-                  disabled={isLoadingTeam}
-                />
-                <Button
-                  onClick={handleSearch}
-                  disabled={!managerId.trim() || isLoadingTeam}
-                  className="h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  {isLoadingTeam ? "..." : "Search"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Manager Search Section */}
+          <InputPanel icon={Search} title="Find your team" subtitle="Enter your Manager ID or paste your FPL URL">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <Input
+                id="manager-id"
+                type="text"
+                placeholder="Enter Manager ID or FPL URL"
+                value={managerId}
+                onChange={(e) => {
+                  const extractedId = extractManagerId(e.target.value);
+                  setManagerId(extractedId);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
+                className="flex-1 h-10 rounded-xl text-sm"
+                data-testid="input-manager-id"
+                disabled={isLoadingTeam}
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={!managerId.trim() || isLoadingTeam}
+                className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 text-sm font-bold"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {isLoadingTeam ? "..." : "Search"}
+              </Button>
+            </div>
+          </InputPanel>
         </div>
       </div>
     );
@@ -618,9 +610,14 @@ export default function ProjectedPoints() {
     return (
       <div className="min-h-screen p-4">
         <div className="w-full space-y-4 sm:space-y-6">
-          <div className="text-center py-2">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">My Team Projected Points</h1>
-            <p className="text-xs text-gray-600 hidden sm:block">View projected points for your current FPL team</p>
+          <div className="fpl-page-header">
+            <div className="fpl-page-header-content">
+              <div className="fpl-page-title">
+                <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+                <h1>My Team Projected Points</h1>
+              </div>
+              <p className="fpl-page-subtitle hidden sm:block">View projected points for your current FPL team</p>
+            </div>
           </div>
           <SeasonEndedNotice />
         </div>
@@ -631,12 +628,12 @@ export default function ProjectedPoints() {
   if (isLoadingTeam || isLoadingProjections) {
     return (
       <div className="min-h-screen p-4 flex items-center justify-center">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-3 sm:pt-4">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div>
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
-                <Target className="h-8 w-8 text-purple-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600"></div>
+                <Target className="h-8 w-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -652,8 +649,8 @@ export default function ProjectedPoints() {
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -685,17 +682,18 @@ export default function ProjectedPoints() {
     <div className="min-h-screen dark:from-gray-950 dark:to-gray-900 p-2 sm:p-4">
       <div className="w-full space-y-3 sm:space-y-6">
         {/* Header */}
-        <div className="text-center py-2 sm:py-0">
-          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 dark:bg-purple-900 rounded-full mb-2 sm:mb-4">
-            <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 dark:text-purple-400" />
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Target className="h-5 w-5 sm:h-6 sm:w-6" />
+              <h1>My Team Projected Points<SeasonBadge /></h1>
+            </div>
+            <p className="fpl-page-subtitle">View your current team's projected performance</p>
           </div>
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2 px-2">My Team Projected Points<SeasonBadge /></h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 px-2">View your current team's projected performance</p>
         </div>
 
         {/* Controls */}
-        <Card>
-          <CardContent className="pt-4 sm:pt-6">
+        <InputPanel icon={SlidersHorizontal} title="Team & gameweeks" subtitle="Choose a manager and the gameweek range to project">
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end">
                 <div className="flex-1">
@@ -708,14 +706,14 @@ export default function ProjectedPoints() {
                       setManagerId(extractedId);
                     }}
                     placeholder="Paste URL or Manager ID"
-                    className="text-sm sm:text-base min-h-10 sm:min-h-11"
+                    className="text-sm sm:text-base min-h-10 sm:min-h-11 rounded-xl"
                     data-testid="input-manager-id"
                     disabled={isLoadingTeam}
                   />
                 </div>
                 <Button 
                   onClick={handleSearch} 
-                  className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" 
+                  className="w-full sm:w-auto min-h-10 sm:min-h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm sm:text-base" 
                   data-testid="button-search-manager"
                   disabled={!managerId.trim() || isLoadingTeam}
                 >
@@ -731,8 +729,8 @@ export default function ProjectedPoints() {
                 const upcomingGW = currentGW + 1;
                 
                 return (
-                  <Alert className="bg-blue-50 border-blue-200">
-                    <AlertDescription className="text-sm text-blue-800">
+                  <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+                    <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
@@ -750,8 +748,8 @@ export default function ProjectedPoints() {
                 const upcomingGW = currentGW + 1;
                 
                 return (
-                  <Alert className="bg-blue-50 border-blue-200">
-                    <AlertDescription className="text-sm text-blue-800">
+                  <Alert className="rounded-xl border-indigo-500/30 bg-indigo-500/10">
+                    <AlertDescription className="text-sm text-indigo-800 dark:text-indigo-200">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
@@ -764,7 +762,7 @@ export default function ProjectedPoints() {
               })()}
               
               {searchedId && (
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4 flex-wrap">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t border-gray-200 pt-4 flex-wrap">
                   <div className="flex-1">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Start Gameweek
@@ -783,7 +781,7 @@ export default function ProjectedPoints() {
                         }
                       }}
                     >
-                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11" data-testid="select-start-gameweek">
+                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11 rounded-xl" data-testid="select-start-gameweek">
                         <SelectValue placeholder="Select start GW" />
                       </SelectTrigger>
                       <SelectContent>
@@ -818,7 +816,7 @@ export default function ProjectedPoints() {
                         }
                       }}
                     >
-                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11" data-testid="select-end-gameweek">
+                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11 rounded-xl" data-testid="select-end-gameweek">
                         <SelectValue placeholder="Select end GW" />
                       </SelectTrigger>
                       <SelectContent>
@@ -845,7 +843,7 @@ export default function ProjectedPoints() {
                           setEndGameweek(Math.min(available[0] + 5, available[available.length - 1]));
                         }
                       }}
-                      className="min-h-10 sm:min-h-11 text-xs sm:text-sm"
+                      className="min-h-10 sm:min-h-11 rounded-xl text-xs sm:text-sm font-bold"
                       data-testid="button-reset-6gw"
                     >
                       Reset to 6 GW
@@ -854,18 +852,10 @@ export default function ProjectedPoints() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </InputPanel>
 
         {/* Current Team */}
-        <Card>
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg md:text-xl">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-              <span>Current Team</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
+        <SectionCard icon={Users} title="Current Team" subtitle="Projected points per gameweek" bodyClassName="px-2 py-3 sm:px-5 sm:py-4">
             <div className="overflow-x-auto -mx-2 sm:-mx-6 px-2 sm:px-6">
               <Table>
                 <TableHeader>
@@ -967,8 +957,7 @@ export default function ProjectedPoints() {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+        </SectionCard>
 
       </div>
     </div>
