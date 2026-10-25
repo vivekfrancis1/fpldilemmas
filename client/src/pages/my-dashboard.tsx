@@ -5,6 +5,7 @@ import { isNetworkLevelError } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -343,6 +344,10 @@ export default function MyDashboard() {
   const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
   // League picked for the ownership analysis in the Leagues tab (defaults to the first private league)
   const [ownershipLeagueId, setOwnershipLeagueId] = useState<string | null>(null);
+  // "Another league": a league the manager is not in, entered by its ID
+  const [ownershipCustomMode, setOwnershipCustomMode] = useState(false);
+  const [ownershipCustomInput, setOwnershipCustomInput] = useState("");
+  const [ownershipCustomId, setOwnershipCustomId] = useState("");
   
   // Player points breakdown modal state
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any | null>(null);
@@ -2300,8 +2305,19 @@ export default function MyDashboard() {
                 const privateLeagues = (leaguesData?.classic ?? [])
                   .filter((l) => l.league_type === 'x' && l.id > 1000 && l.entry_rank > 0)
                   .sort((a, b) => a.entry_rank - b.entry_rank);
-                if (privateLeagues.length === 0) return null;
-                const shownId = privateLeagues.some((l) => String(l.id) === ownershipLeagueId) ? ownershipLeagueId! : String(privateLeagues[0].id);
+                const listedId = privateLeagues.some((l) => String(l.id) === ownershipLeagueId) ? ownershipLeagueId! : privateLeagues[0] ? String(privateLeagues[0].id) : "";
+                const shownId = ownershipCustomMode ? ownershipCustomId : listedId;
+                const chooseOwnershipLeague = (v: string) => {
+                  if (v === "other") {
+                    setOwnershipCustomMode(true);
+                    return;
+                  }
+                  setOwnershipCustomMode(false);
+                  setOwnershipLeagueId(v);
+                };
+                const showCustomLeague = () => {
+                  if (/^\d+$/.test(ownershipCustomInput.trim())) setOwnershipCustomId(ownershipCustomInput.trim());
+                };
                 return (
                   <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg" data-testid="card-league-ownership">
                     <CardHeader className="p-4 sm:p-6">
@@ -2312,18 +2328,45 @@ export default function MyDashboard() {
                         League Ownership
                       </CardTitle>
                       <CardDescription>Who your league owns and captains, its template XI, and your differentials and threats.</CardDescription>
-                      <Select value={shownId} onValueChange={setOwnershipLeagueId}>
-                        <SelectTrigger className="mt-2 h-10 w-full sm:w-[320px]" data-testid="select-ownership-league"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {privateLeagues.map((l) => (
-                            <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="mt-2 space-y-1.5">
+                        <Label htmlFor="ownership-league" className="text-sm font-semibold">League</Label>
+                        <Select value={ownershipCustomMode ? "other" : listedId} onValueChange={chooseOwnershipLeague}>
+                          <SelectTrigger id="ownership-league" className="h-10 w-full sm:w-[320px]" data-testid="select-ownership-league"><SelectValue placeholder="Choose a league" /></SelectTrigger>
+                          <SelectContent>
+                            {privateLeagues.map((l) => (
+                              <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
+                            ))}
+                            <SelectItem value="other">Another league (enter its ID)…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {ownershipCustomMode && (
+                        <div className="mt-2 space-y-1.5">
+                          <Label htmlFor="ownership-league-id" className="text-sm font-semibold">League ID</Label>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:w-[320px]">
+                            <Input
+                              id="ownership-league-id"
+                              value={ownershipCustomInput}
+                              onChange={(e) => setOwnershipCustomInput(e.target.value.replace(/\D/g, ""))}
+                              onKeyDown={(e) => e.key === "Enter" && showCustomLeague()}
+                              placeholder="e.g. 123456"
+                              inputMode="numeric"
+                              className="h-10"
+                              data-testid="input-ownership-league-id"
+                            />
+                            <Button onClick={showCustomLeague} disabled={!/^\d+$/.test(ownershipCustomInput.trim())} className="h-10 bg-gradient-to-r from-indigo-600 to-violet-600 font-bold text-white hover:from-indigo-500 hover:to-violet-500" data-testid="button-ownership-load">
+                              Show league
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500">The number in the URL when you open the league's standings page on the FPL site.</p>
+                        </div>
+                      )}
                     </CardHeader>
-                    <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-                      <LeagueOwnershipView key={`${shownId}:${searchedId}`} leagueId={shownId} managerId={searchedId} />
-                    </CardContent>
+                    {shownId && (
+                      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+                        <LeagueOwnershipView key={`${shownId}:${searchedId}`} leagueId={shownId} managerId={searchedId} />
+                      </CardContent>
+                    )}
                   </Card>
                 );
               })()}
