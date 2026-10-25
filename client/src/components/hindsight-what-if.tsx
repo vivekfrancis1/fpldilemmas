@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Lightbulb } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pill, SectionCard } from "@/components/tool-ui";
+import { ShareImageButton } from "@/components/share-image-button";
+import { shareFileName, whatIfCard } from "@shared/share-cards";
 import { CHIP_LABEL, useSeason, type SeasonPlayer } from "@/components/hindsight-season";
 
 type Scenario = "set-and-forget" | "captain" | "vice" | "form-captain" | "keeper" | "rotation" | "chips" | "hits" | "wildcard" | "freehit";
@@ -160,7 +162,11 @@ export function WhatIfView({ managerId }: { managerId: string }) {
       {!current && !error && <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">{isFetching || season.isLoading ? "Working it out…" : "Choose a scenario above."}</div>}
 
       {current && !error && (
-        <SectionCard icon={Lightbulb} title={SCENARIOS.find((s) => s.id === scenario)!.title} subtitle={SCENARIOS.find((s) => s.id === scenario)!.question} bodyClassName="p-0" testId="what-if-result">
+        <SectionCard icon={Lightbulb} title={SCENARIOS.find((s) => s.id === scenario)!.title} subtitle={SCENARIOS.find((s) => s.id === scenario)!.question}
+          bodyClassName="p-0"
+          testId="what-if-result"
+          action={<ShareImageButton getCard={() => whatIfCard(current)} fileName={shareFileName(["what-if", scenario, scenario === "rotation" ? position : ""])} />}
+        >
           <div className="space-y-3 p-4 sm:p-5">
             <Result scenario={scenario} d={current} />
           </div>

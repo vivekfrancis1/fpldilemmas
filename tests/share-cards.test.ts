@@ -10,6 +10,8 @@ import {
   shareFileName,
   statusLabel,
   thingsToCheckCard,
+  whatIfCard,
+  signedPoints,
   truncateName,
 } from "../shared/share-cards";
 
@@ -253,5 +255,139 @@ describe("thingsToCheckCard", () => {
     const rows = c.sections.flatMap((s) => s.rows);
     expect(rows).toHaveLength(11);
     expect(rows[10]).toEqual({ left: "+2 more", right: "" });
+  });
+});
+
+describe("signedPoints", () => {
+  it("uses a real minus sign, an explicit plus and a plain zero", () => {
+    expect(signedPoints(6)).toBe("+6");
+    expect(signedPoints(-6)).toBe("−6");
+    expect(signedPoints(0)).toBe("0");
+  });
+});
+
+describe("whatIfCard", () => {
+  const allRows = (c: ReturnType<typeof whatIfCard>) => c.sections.flatMap((s) => s.rows);
+  const text = (c: ReturnType<typeof whatIfCard>) => JSON.stringify(c);
+  const weeks = (n: number, f: (gw: number) => any) => Array.from({ length: n }, (_, i) => f(i + 1));
+
+  const setAndForget = (n: number, hitsSaved = 0): any => ({
+    scenario: "set-and-forget",
+    fromGameweek: 1,
+    squad: [],
+    rows: weeks(n, (gw) => ({ gameweek: gw, actualBest: 60, fixedBest: 60 - gw, delta: -gw })),
+    totals: { actualBest: 60 * n, fixedBest: 60 * n, delta: -51, hitsSaved, netDelta: -51 + hitsSaved },
+  });
+
+  it("every card is titled What if, written in the first person and says it is hindsight, not advice", () => {
+    const cards = [
+      whatIfCard(setAndForget(3)),
+      whatIfCard({ scenario: "captain", player: { id: 1, name: "Haaland" }, rows: [], totals: { delta: 0, weeksApplied: 0, weeksAlready: 0, weeksNotInXI: 0, weeksNotInSquad: 0 } } as any),
+      whatIfCard({ scenario: "vice", rows: [], totals: { delta: 0, weeksApplied: 0, weeksNotInXI: 0 } } as any),
+      whatIfCard({ scenario: "form-captain", rows: [], totals: { delta: 0, weeksApplied: 0, weeksAlready: 0 } } as any),
+      whatIfCard({ scenario: "keeper", keeper: { id: 1, name: "Raya" }, startedCounts: [], rows: [], totals: { delta: 0, weeksChanged: 0 } } as any),
+      whatIfCard({ scenario: "rotation", position: "DEF", core: [], rows: [], totals: { delta: 0, weeksChanged: 0 } } as any),
+      whatIfCard({ scenario: "chips", chips: [], totals: { gain: 0, missed: 0 } } as any),
+      whatIfCard({ scenario: "hits", horizon: 4, rows: [], totals: { hits: 0, cost: 0, net: 0, worthIt: 0 } } as any),
+      whatIfCard({ scenario: "wildcard", horizon: 4, chips: [], totals: { delta: 0 } } as any),
+      whatIfCard({ scenario: "freehit", horizon: 1, chips: [], totals: { delta: 0 } } as any),
+    ];
+    for (const c of cards) {
+      expect(c.title.startsWith("What if · ")).toBe(true);
+      expect(c.subtitle).toMatch(/\b(I|I'd|my)\b/);
+      expect(c.footer.toLowerCase()).toContain("hindsight");
+      expect(c.footer).toContain("fpldilemmas.com");
+      expect(allRows(c).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("set and forget: the headline difference, the gameweek it starts from, and transfer costs saved only when there are some", () => {
+    const c = whatIfCard(setAndForget(4));
+    expect(c.title).toBe("What if · Set and forget");
+    expect(c.subtitle).toContain("GW1");
+    expect(allRows(c)).toContainEqual({ left: "Best XI points vs my real squads", right: "−51" });
+    expect(text(c)).not.toContain("Transfer costs saved");
+    const withHits = whatIfCard(setAndForget(4, 8));
+    expect(allRows(withHits)).toContainEqual({ left: "Transfer costs saved", right: "+8" });
+    expect(allRows(withHits)).toContainEqual({ left: "Overall", right: "−43" });
+  });
+
+  it("a long season is capped to the biggest weeks, in gameweek order, with a count of the rest", () => {
+    const c = whatIfCard(setAndForget(30));
+    const weekRows = c.sections.find((s) => s.heading === "Gameweek by gameweek")!.rows;
+    expect(weekRows.length).toBeLessThanOrEqual(8);
+    const shown = weekRows.filter((r) => r.left.startsWith("GW"));
+    const gws = shown.map((r) => Number(r.left.match(/^GW(\d+)/)![1]));
+    expect([...gws].sort((a, b) => a - b)).toEqual(gws);
+    expect(Math.min(...gws)).toBeGreaterThanOrEqual(24); // the largest |delta| are the late weeks in this data
+    expect(weekRows[weekRows.length - 1].left).toMatch(/^\+\d+ more gameweeks$/);
+    expect(allRows(c).length).toBeLessThanOrEqual(14);
+  });
+
+  it("captain: names the player and lists only the weeks it changed something", () => {
+    const c = whatIfCard({
+      scenario: "captain",
+      player: { id: 1, name: "Haaland" },
+      rows: [
+        { gameweek: 1, status: "applied", playerPoints: 11, captainPoints: 2, delta: 9 },
+        { gameweek: 2, status: "already", playerPoints: 8, captainPoints: 8, delta: 0 },
+        { gameweek: 3, status: "not-in-squad", playerPoints: null, captainPoints: 5, delta: 0 },
+      ],
+      totals: { delta: 9, weeksApplied: 1, weeksAlready: 1, weeksNotInXI: 0, weeksNotInSquad: 1 },
+    } as any);
+    expect(c.subtitle).toBe("What if I'd captained Haaland every week?");
+    expect(allRows(c)).toContainEqual({ left: "Points vs my real captains", right: "+9" });
+    expect(allRows(c).some((r) => r.left.startsWith("GW1") && r.right === "+9")).toBe(true);
+    expect(allRows(c).some((r) => r.left.startsWith("GW3"))).toBe(false);
+  });
+
+  it("chips: points my chips gave, what the best weeks would have given, and a friendly note when none were played", () => {
+    const c = whatIfCard({
+      scenario: "chips",
+      chips: [{ chip: "bboost", usedGameweek: 1, gain: 11, best: { gameweek: 2, gain: 15 }, missed: 4 }],
+      totals: { gain: 11, missed: 4 },
+    } as any);
+    expect(allRows(c)).toContainEqual({ left: "Points my chips gave me", right: "11" });
+    expect(allRows(c)).toContainEqual({ left: "Best weeks available would have given", right: "15" });
+    expect(text(c)).toContain("Bench Boost");
+    expect(text(whatIfCard({ scenario: "chips", chips: [], totals: { gain: 0, missed: 0 } } as any))).toContain("No Bench Boost or Triple Captain played yet");
+  });
+
+  it("hits: how many, what they cost, the net, and players in and out", () => {
+    const c = whatIfCard({
+      scenario: "hits",
+      horizon: 4,
+      rows: [{ gameweek: 5, cost: 4, bought: [{ id: 1, name: "Palmer" }], sold: [{ id: 2, name: "Saka" }], pointsBought: 20, pointsSold: 9, net: 7, weeksCounted: 4, partial: false }],
+      totals: { hits: 1, cost: 4, net: 7, worthIt: 1 },
+    } as any);
+    expect(allRows(c)).toContainEqual({ left: "Hits taken", right: "1 (−4)" });
+    expect(allRows(c)).toContainEqual({ left: "Net after the hits", right: "+7" });
+    expect(text(c)).toContain("Palmer");
+    expect(text(c)).toContain("Saka");
+  });
+
+  it("wildcard and free hit: named correctly, with a note when the chip was not played", () => {
+    expect(whatIfCard({ scenario: "wildcard", horizon: 4, chips: [], totals: { delta: 0 } } as any).title).toBe("What if · No Wildcard");
+    expect(whatIfCard({ scenario: "freehit", horizon: 1, chips: [], totals: { delta: 0 } } as any).title).toBe("What if · No Free Hit");
+    expect(text(whatIfCard({ scenario: "freehit", horizon: 1, chips: [], totals: { delta: 0 } } as any))).toContain("No Free Hit played yet");
+  });
+
+  it("rotation rows name only the players who differ, not the whole lineup", () => {
+    const p = (id: number, name: string) => ({ id, name, points: 1 });
+    const c = whatIfCard({
+      scenario: "rotation",
+      position: "DEF",
+      core: [],
+      rows: [{ gameweek: 2, status: "changed", started: [p(1, "Gabriel"), p(2, "Saliba"), p(3, "Timber")], instead: [p(1, "Gabriel"), p(2, "Saliba"), p(4, "Van Hecke")], delta: 8 }],
+      totals: { delta: 8, weeksChanged: 1 },
+    } as any);
+    const row = allRows(c).find((r) => r.left.startsWith("GW2"))!;
+    expect(row.left).toBe("GW2 · Van Hecke for Timber");
+    expect(row.right).toBe("+8");
+  });
+
+  it("rotation and keeper: say so when nothing would have changed", () => {
+    expect(text(whatIfCard({ scenario: "rotation", position: "MID", core: [], rows: [], totals: { delta: 0, weeksChanged: 0 } } as any))).toContain("I already started the same midfielders every week");
+    expect(text(whatIfCard({ scenario: "keeper", keeper: { id: 1, name: "Raya" }, startedCounts: [], rows: [], totals: { delta: 0, weeksChanged: 0 } } as any))).toContain("I started Raya every week he was in my squad");
   });
 });
