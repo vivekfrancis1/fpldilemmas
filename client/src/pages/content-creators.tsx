@@ -60,6 +60,7 @@ import {
   Loader2 as Loader2Icon,
   PieChart,
 } from "lucide-react";
+import { EmptyNote, HeroPanel, HeroStat, Pill, RankBadge, SectionCard } from "@/components/tool-ui";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
 import { getSharedColumns, getPositionColumn, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig, getChipLabel } from "@/lib/manager-standings-columns";
 import { CURRENT_SEASON } from "@shared/schema";
@@ -255,7 +256,7 @@ function getPositionName(elementType: number): string {
 function getPositionColor(elementType: number): string {
   const colors: { [key: number]: string } = {
     1: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    2: "bg-blue-100 text-blue-800 border-blue-200",
+    2: "bg-indigo-100 text-indigo-800 border-indigo-200",
     3: "bg-green-100 text-green-800 border-green-200",
     4: "bg-red-100 text-red-800 border-red-200"
   };
@@ -301,7 +302,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
                 href={`https://x.com/${creator.twitterHandle.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                className="text-xs text-indigo-600 hover:underline flex items-center gap-1"
                 data-testid={`link-creator-twitter-${creator.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -338,7 +339,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     render: (value, creator) => (
       <div className="text-center">
         {creator.active_chip && getChipLabel(creator.active_chip) ? (
-          <span className="text-xs font-medium px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{getChipLabel(creator.active_chip)}</span>
+          <span className="text-xs font-medium px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded">{getChipLabel(creator.active_chip)}</span>
         ) : (
           <span className="text-gray-300">-</span>
         )}
@@ -932,6 +933,12 @@ export default function ContentCreators() {
     );
   }
 
+  const shellTab = "rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]";
+  const headTh = "px-2 sm:px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-gray-500";
+  const trackedTotals = creatorRows.map(c => c.latestTracking?.overallPoints).filter((v): v is number => typeof v === "number" && v > 0);
+  const leaderPoints = trackedTotals.length > 0 ? Math.max(...trackedTotals) : null;
+  const leader = leaderPoints === null ? null : creatorRows.find(c => c.latestTracking?.overallPoints === leaderPoints);
+
   return (
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area fpl-section-spacing">
@@ -953,350 +960,316 @@ export default function ContentCreators() {
           <SeasonSelector value={viewSeason} onChange={setViewSeason} />
         </div>
 
-        {/* Controls */}
-        <div className="fpl-controls">
-          <div className="fpl-controls-left">
-            <Button
-              onClick={() => refreshDataMutation.mutate()}
-              disabled={refreshDataMutation.isPending}
-              className="fpl-button-primary"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshDataMutation.isPending ? 'animate-spin' : ''}`} />
-              {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
-            </Button>
-            <Link href="/">
-              <Button variant="outline" className="fpl-button-secondary">
-                <Home className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-          <div className="fpl-controls-right">
-            <p className="fpl-text-muted">
-              Click column headers to sort • Showing {sortedCreators?.length || 0} creators
-            </p>
-          </div>
-        </div>
-
         {/* Tabs for Content Creators and Team Analysis */}
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "creators" | "team-analysis")}
-          className="space-y-3 sm:space-y-4"
+          className="space-y-4"
         >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="creators" data-testid="tab-creators">Content Creators</TabsTrigger>
-            <TabsTrigger value="team-analysis" data-testid="tab-team-analysis">Team Analysis</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none">
+            <TabsTrigger value="creators" className={shellTab} data-testid="tab-creators">Content Creators</TabsTrigger>
+            <TabsTrigger value="team-analysis" className={shellTab} data-testid="tab-team-analysis">Team Analysis</TabsTrigger>
           </TabsList>
 
           {/* Content Creators Tab */}
-          <TabsContent value="creators">
+          <TabsContent value="creators" className="space-y-5">
             {viewSeason === CURRENT_SEASON ? (
               <>
-              <MyTeamPlacementPanel my={my} members={placementMembers} groupLabel="the content creators" />
-              <div className="fpl-table-container">
-                <ResponsiveTable
-                  data={sortedCreators || []}
-                  columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
-                  compact={true}
-                  mobileCompactTable={true}
-                  mobileCardTitle={(creator) => creator.name}
-                  loading={isLoading}
-                  emptyMessage="No content creators available"
-                  highlightRow={(creator) => creator.managerId === my.entry?.managerId}
-                  onRowClick={(creator) => {
-                    navigate(creator.id === MY_TEAM_ROW_ID ? `/manager-team/${creator.managerId}` : `/content-creators/${creator.id}/team`);
-                  }}
-                  onSort={handleSort}
-                  sortField={sortBy}
-                  sortDirection={sortOrder}
-                  className="hover:shadow-sm"
-                  stickyHeader={true}
-                  enableHorizontalScroll={true}
-                  getRowTestId={(creator, index) => `row-creator-${creator.id || index}`}
-                  data-testid="content-creators-table"
-                />
-              </div>
+                <HeroPanel testId="content-creators-summary">
+                  <div className="grid gap-6 sm:grid-cols-3">
+                    <HeroStat label="Creators" value={creatorRows.length} sub="FPL content creators tracked" />
+                    <HeroStat
+                      label="Leader"
+                      value={leaderPoints !== null ? leaderPoints.toLocaleString() : "-"}
+                      sub={leader ? `${leader.name} · total points` : "Waiting for live data"}
+                    />
+                    <HeroStat
+                      label="Gameweek"
+                      value={currentGameweek ? `GW${currentGameweek}` : "-"}
+                      sub={upcomingGameweek ? `Next up: GW${upcomingGameweek}` : undefined}
+                    />
+                  </div>
+                </HeroPanel>
+
+                <MyTeamPlacementPanel my={my} members={placementMembers} groupLabel="the content creators" />
+
+                <SectionCard
+                  icon={Users}
+                  title="Content Creators"
+                  subtitle={`Click a column to sort, click a row to open that creator's team • Showing ${sortedCreators?.length || 0} creators`}
+                  bodyClassName="p-0"
+                  testId="content-creators-card"
+                  action={
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={() => refreshDataMutation.mutate()}
+                        disabled={refreshDataMutation.isPending}
+                        className="h-9 gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${refreshDataMutation.isPending ? 'animate-spin' : ''}`} />
+                        {refreshDataMutation.isPending ? 'Refreshing...' : 'Refresh FPL Data'}
+                      </Button>
+                      <Link href="/">
+                        <Button variant="outline" className="h-9 gap-2 rounded-xl font-semibold">
+                          <Home className="h-4 w-4" />
+                          Back to Home
+                        </Button>
+                      </Link>
+                    </div>
+                  }
+                >
+                  <ResponsiveTable
+                    data={sortedCreators || []}
+                    columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                    compact={true}
+                    mobileCompactTable={true}
+                    mobileCardTitle={(creator) => creator.name}
+                    loading={isLoading}
+                    emptyMessage="No content creators available"
+                    highlightRow={(creator) => creator.managerId === my.entry?.managerId}
+                    onRowClick={(creator) => {
+                      navigate(creator.id === MY_TEAM_ROW_ID ? `/manager-team/${creator.managerId}` : `/content-creators/${creator.id}/team`);
+                    }}
+                    onSort={handleSort}
+                    sortField={sortBy}
+                    sortDirection={sortOrder}
+                    className="hover:shadow-sm"
+                    stickyHeader={true}
+                    enableHorizontalScroll={true}
+                    getRowTestId={(creator, index) => `row-creator-${creator.id || index}`}
+                    data-testid="content-creators-table"
+                  />
+                </SectionCard>
               </>
             ) : (
-              <Card className="border-0 shadow-lg" data-testid="content-creators-final-standings">
-                <CardHeader className="pb-3">
-                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {viewSeason} Final Standings
-                  </CardTitle>
-                  <p className="text-muted-foreground text-sm">
-                    Season-end totals for each creator. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isSeasonStandingsLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2Icon className="h-8 w-8 animate-spin text-purple-600" />
-                      <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50/80">
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground">Creator</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Total Pts</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Overall Rank</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Top %</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(seasonStandingsData?.managers || []).map((m) => (
-                            <tr key={m.id} className="border-b hover:bg-gray-50/50" data-testid={`row-final-standing-${m.id}`}>
-                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 font-medium">{m.name}</td>
-                              {m.confirmed ? (
-                                <>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.totalPoints?.toLocaleString()}</td>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.fplRank?.toLocaleString()}</td>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.rankPercentage}%</td>
-                                </>
-                              ) : (
-                                <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground italic" colSpan={3}>
-                                  ID not yet confirmed for 2026/27
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Previous Seasons */}
-            <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg mt-6">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                    <History className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Previous Seasons
-                  </CardTitle>
-                  <Select value={selectedSeason} onValueChange={(v) => setSelectedSeason(v)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Season" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(pastSeasonsData?.seasons || []).map((season: string) => (
-                        <SelectItem key={season} value={season}>{season}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  {selectedSeason
-                    ? `${selectedSeason} season — ${historicalStandings.filter((m: any) => m.played).length} of ${historicalStandings.length} creators played`
-                    : 'Select a season to view past performance'}
-                </p>
-              </CardHeader>
-              <CardContent>
-                {isPastSeasonsLoading ? (
+              <SectionCard
+                icon={Trophy}
+                title={`${viewSeason} Final Standings`}
+                subtitle="Season-end totals for each creator. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending."
+                bodyClassName="p-0"
+                testId="content-creators-final-standings"
+              >
+                {isSeasonStandingsLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2Icon className="h-8 w-8 animate-spin text-purple-600" />
-                    <span className="ml-3 text-muted-foreground">Loading historical data...</span>
-                  </div>
-                ) : !selectedSeason ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Choose a season from the dropdown above.
-                  </div>
-                ) : historicalStandings.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No data available for {selectedSeason}.
+                    <Loader2Icon className="h-8 w-8 animate-spin text-indigo-600" />
+                    <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-gray-50/80">
-                          <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'player_name') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('player_name');
-                                setHistoricalSortDirection('asc');
-                              }
-                            }}
-                          >
-                            Creator {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
-                          </th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'total_points') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('total_points');
-                                setHistoricalSortDirection('desc');
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
-                          </th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'rank') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('rank');
-                                setHistoricalSortDirection('asc');
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
-                          </th>
+                        <tr className="border-b border-gray-100 bg-gray-50/80">
+                          <th className={`${headTh} text-left`}>Creator</th>
+                          <th className={`${headTh} text-right`}>Total Pts</th>
+                          <th className={`${headTh} text-right`}>Overall Rank</th>
+                          <th className={`${headTh} text-right`}>Top %</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {historicalStandings.map((entry: any, index: number) => (
-                          <tr
-                            key={entry.managerId}
-                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
-                            onClick={() => navigate(`/manager-team/${entry.managerId}`)}
-                          >
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5">
-                              {entry.played ? (
-                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-xs font-semibold ${
-                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                                  index === 1 ? 'bg-gray-100 text-gray-800' :
-                                  index === 2 ? 'bg-orange-100 text-orange-800' :
-                                  'bg-blue-50 text-blue-700'
-                                }`}>
-                                  {index + 1}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 text-xs">-</span>
-                              )}
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5">
-                              <div className="font-medium truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5 text-right font-mono font-semibold text-xs sm:text-sm">
-                              {entry.played ? entry.totalPoints?.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">Did not play</span>
-                              )}
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2.5 text-right font-mono text-sm">
-                              {entry.played && entry.rank ? entry.rank.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">N/A</span>
-                              )}
-                            </td>
+                        {(seasonStandingsData?.managers || []).map((m) => (
+                          <tr key={m.id} className="border-b border-gray-100 last:border-0 hover:bg-indigo-500/[0.04]" data-testid={`row-final-standing-${m.id}`}>
+                            <td className="px-2 sm:px-3 py-2 font-semibold text-gray-900">{m.name}</td>
+                            {m.confirmed ? (
+                              <>
+                                <td className="px-2 sm:px-3 py-2 text-right font-bold tabular-nums">{m.totalPoints?.toLocaleString()}</td>
+                                <td className="px-2 sm:px-3 py-2 text-right tabular-nums">{m.fplRank?.toLocaleString()}</td>
+                                <td className="px-2 sm:px-3 py-2 text-right tabular-nums">{m.rankPercentage}%</td>
+                              </>
+                            ) : (
+                              <td className="px-2 sm:px-3 py-2 text-muted-foreground italic" colSpan={3}>
+                                ID not yet confirmed for 2026/27
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </SectionCard>
+            )}
+
+            {/* Previous Seasons */}
+            <SectionCard
+              icon={History}
+              title="Previous Seasons"
+              subtitle={
+                selectedSeason
+                  ? `${selectedSeason} season — ${historicalStandings.filter((m: any) => m.played).length} of ${historicalStandings.length} creators played`
+                  : 'Select a season to view past performance'
+              }
+              bodyClassName="p-0"
+              testId="content-creators-previous-seasons"
+              action={
+                <Select value={selectedSeason} onValueChange={(v) => setSelectedSeason(v)}>
+                  <SelectTrigger className="h-9 w-[150px] rounded-xl">
+                    <SelectValue placeholder="Select Season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(pastSeasonsData?.seasons || []).map((season: string) => (
+                      <SelectItem key={season} value={season}>{season}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            >
+              {isPastSeasonsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2Icon className="h-8 w-8 animate-spin text-indigo-600" />
+                  <span className="ml-3 text-muted-foreground">Loading historical data...</span>
+                </div>
+              ) : !selectedSeason ? (
+                <div className="p-4 sm:p-5">
+                  <EmptyNote icon={History}>Choose a season from the dropdown above.</EmptyNote>
+                </div>
+              ) : historicalStandings.length === 0 ? (
+                <div className="p-4 sm:p-5">
+                  <EmptyNote icon={History}>No data available for {selectedSeason}.</EmptyNote>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50/80">
+                        <th className={`${headTh} text-left w-8 sm:w-12`}>#</th>
+                        <th
+                          className={`${headTh} text-left cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'player_name') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('player_name');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          Creator {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                        <th
+                          className={`${headTh} text-right cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'total_points') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('total_points');
+                              setHistoricalSortDirection('desc');
+                            }
+                          }}
+                        >
+                          <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                        </th>
+                        <th
+                          className={`${headTh} text-right cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'rank') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('rank');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicalStandings.map((entry: any, index: number) => (
+                        <tr
+                          key={entry.managerId}
+                          className="border-b border-gray-100 last:border-0 hover:bg-indigo-500/[0.04] transition-colors cursor-pointer"
+                          onClick={() => navigate(`/manager-team/${entry.managerId}`)}
+                        >
+                          <td className="px-2 sm:px-3 py-2">
+                            {entry.played ? <RankBadge rank={index + 1} /> : <span className="text-gray-400 text-xs">-</span>}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2">
+                            <div className="font-semibold text-gray-900 truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-right font-bold tabular-nums text-xs sm:text-sm">
+                            {entry.played ? entry.totalPoints?.toLocaleString() : (
+                              <span className="text-gray-400 text-xs font-normal">Did not play</span>
+                            )}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-right tabular-nums text-sm">
+                            {entry.played && entry.rank ? entry.rank.toLocaleString() : (
+                              <span className="text-gray-400 text-xs">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </SectionCard>
           </TabsContent>
 
           {/* Team Analysis Tab */}
           <TabsContent value="team-analysis">
             {/* Status Overview */}
-            <Card className="mb-3 sm:mb-4">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{validTeamsCount}</div>
-                    <div className="text-sm text-gray-600">Teams Loaded</div>
+            <HeroPanel className="mb-4 sm:mb-5" testId="content-creators-team-status">
+              <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+                <HeroStat size="md" label="Teams loaded" value={validTeamsCount} />
+                <HeroStat size="md" label="Loading" value={teamsLoading ? 'Loading...' : 0} />
+                <HeroStat size="md" label="Errors" value={creatorsTeamData.filter(m => !m.success).length} />
+                <HeroStat size="md" label="Total creators" value={creators?.length || 0} />
+              </div>
+              {validTeamsCount > 0 && creators && (
+                <div className="mt-5">
+                  <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.25)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(validTeamsCount / creators.length) * 100}%`, backgroundColor: "rgba(255,255,255,0.85)" }} />
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{teamsLoading ? 'Loading...' : 0}</div>
-                    <div className="text-sm text-gray-600">Loading</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{creatorsTeamData.filter(m => !m.success).length}</div>
-                    <div className="text-sm text-gray-600">Errors</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{creators?.length || 0}</div>
-                    <div className="text-sm text-gray-600">Total Creators</div>
-                  </div>
+                  <p className="mt-1.5 text-center text-xs font-medium text-white/80">
+                    Analysis based on {validTeamsCount} of {creators.length} teams
+                  </p>
                 </div>
-                {validTeamsCount > 0 && creators && (
-                  <div className="mt-4">
-                    <Progress value={(validTeamsCount / creators.length) * 100} className="h-2" />
-                    <p className="text-sm text-gray-600 mt-1 text-center">
-                      Analysis based on {validTeamsCount} of {creators.length} teams
-                    </p>
-                  </div>
-                )}
-                <div className="mt-4 flex justify-center">
-                  <Button
-                    onClick={refreshTeamData}
-                    disabled={isTeamDataRefreshing}
-                    variant="outline"
-                    className="hover:bg-blue-50"
-                    data-testid="button-refresh-team-analysis"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isTeamDataRefreshing ? 'animate-spin' : ''}`} />
-                    {isTeamDataRefreshing ? 'Refreshing...' : 'Refresh Team Data'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              )}
+              <div className="mt-5 flex justify-center">
+                <Button
+                  onClick={refreshTeamData}
+                  disabled={isTeamDataRefreshing}
+                  className="h-9 gap-2 rounded-xl border border-white/30 font-bold text-white hover:opacity-90"
+                  style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
+                  data-testid="button-refresh-team-analysis"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isTeamDataRefreshing ? 'animate-spin' : ''}`} />
+                  {isTeamDataRefreshing ? 'Refreshing...' : 'Refresh Team Data'}
+                </Button>
+              </div>
+            </HeroPanel>
 
             {validTeamsCount === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-semibold mb-2">Loading Team Data...</h3>
-                  <p className="text-gray-600 mb-4">
-                    Fetching team information for all content creators. This may take a moment.
-                  </p>
-                  <Button onClick={refreshTeamData} variant="outline" disabled={isTeamDataRefreshing}>
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isTeamDataRefreshing ? 'animate-spin' : ''}`} />
-                    {isTeamDataRefreshing ? 'Loading...' : 'Retry Loading'}
-                  </Button>
-                </CardContent>
-              </Card>
+              <SectionCard icon={Activity} title="Loading Team Data..." subtitle="Fetching team information for all content creators. This may take a moment.">
+                <Button onClick={refreshTeamData} variant="outline" disabled={isTeamDataRefreshing} className="h-9 gap-2 rounded-xl font-semibold">
+                  <RefreshCw className={`h-4 w-4 ${isTeamDataRefreshing ? 'animate-spin' : ''}`} />
+                  {isTeamDataRefreshing ? 'Loading...' : 'Retry Loading'}
+                </Button>
+              </SectionCard>
             ) : (
               <Tabs
                 value={activeSubTab}
                 onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
-                className="space-y-3 sm:space-y-4"
+                className="space-y-4"
               >
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-                  <TabsTrigger value="players" data-testid="tab-players">Players</TabsTrigger>
-                  <TabsTrigger value="captains" data-testid="tab-captains">Captains</TabsTrigger>
-                  <TabsTrigger value="formations" data-testid="tab-formations">Formations</TabsTrigger>
-                  <TabsTrigger value="budget" data-testid="tab-budget">Budget</TabsTrigger>
+                <TabsList className="flex w-full justify-start overflow-x-auto h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none">
+                  <TabsTrigger value="overview" className={`${shellTab} min-w-fit px-3`} data-testid="tab-overview">Overview</TabsTrigger>
+                  <TabsTrigger value="players" className={`${shellTab} min-w-fit px-3`} data-testid="tab-players">Players</TabsTrigger>
+                  <TabsTrigger value="captains" className={`${shellTab} min-w-fit px-3`} data-testid="tab-captains">Captains</TabsTrigger>
+                  <TabsTrigger value="formations" className={`${shellTab} min-w-fit px-3`} data-testid="tab-formations">Formations</TabsTrigger>
+                  <TabsTrigger value="budget" className={`${shellTab} min-w-fit px-3`} data-testid="tab-budget">Budget</TabsTrigger>
                 </TabsList>
 
                 {/* Overview Tab */}
                 <TabsContent value="overview">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Most Popular Players */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Most Popular Players
-                        </CardTitle>
-                        <CardDescription>
-                          Players owned by the most content creators
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={Users} title="Most Popular Players" subtitle="Players owned by the most content creators">
                         <div className="space-y-3">
                           {getMostOwnedPlayers.slice(0, 8).map((player, index) => (
                             <div key={player.id} className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                  {index + 1}
-                                </div>
+                                <RankBadge rank={index + 1} />
                                 <div>
                                   <div className="font-medium">{player.web_name}</div>
                                   <div className="text-xs text-gray-600">
@@ -1311,21 +1284,10 @@ export default function ContentCreators() {
                             </div>
                           ))}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
 
                     {/* Formation Analysis */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <PieChart className="h-5 w-5" />
-                          Popular Formations
-                        </CardTitle>
-                        <CardDescription>
-                          Formation preferences among content creators
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={PieChart} title="Popular Formations" subtitle="Formation preferences among content creators">
                         <div className="space-y-4">
                           {getFormationAnalysis.slice(0, 5).map((formation, index) => (
                             <div key={formation.formation}>
@@ -1339,21 +1301,10 @@ export default function ContentCreators() {
                             </div>
                           ))}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
 
                     {/* Chip Usage */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Star className="h-5 w-5" />
-                          Active Chips
-                        </CardTitle>
-                        <CardDescription>
-                          Chip usage in current gameweek
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={Star} title="Active Chips" subtitle="Chip usage in current gameweek">
                         <div className="space-y-3">
                           {getChipAnalysis.activeChips.length > 0 ? (
                             getChipAnalysis.activeChips.map((chip: { chip: string; count: number; percentage: number }) => (
@@ -1383,61 +1334,40 @@ export default function ContentCreators() {
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
 
                     {/* Budget Overview */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5" />
-                          Budget Analysis
-                        </CardTitle>
-                        <CardDescription>
-                          Team value and budget statistics
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={DollarSign} title="Budget Analysis" subtitle="Team value and budget statistics">
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center p-3 bg-blue-50 rounded-lg">
-                            <div className="text-lg font-semibold text-blue-700">£{getBudgetAnalysis.avgValue.toFixed(1)}m</div>
-                            <div className="text-sm text-blue-600">Avg Team Value</div>
+                          <div className="text-center p-3 bg-indigo-50 rounded-lg">
+                            <div className="text-lg font-semibold text-indigo-700">£{getBudgetAnalysis.avgValue.toFixed(1)}m</div>
+                            <div className="text-sm text-indigo-600">Avg Team Value</div>
                           </div>
                           <div className="text-center p-3 bg-green-50 rounded-lg">
                             <div className="text-lg font-semibold text-green-700">£{getBudgetAnalysis.avgBank.toFixed(1)}m</div>
                             <div className="text-sm text-green-600">Avg Bank</div>
                           </div>
-                          <div className="text-center p-3 bg-purple-50 rounded-lg">
-                            <div className="text-lg font-semibold text-purple-700">£{getBudgetAnalysis.maxValue.toFixed(1)}m</div>
-                            <div className="text-sm text-purple-600">Highest Value</div>
+                          <div className="text-center p-3 bg-violet-50 rounded-lg">
+                            <div className="text-lg font-semibold text-violet-700">£{getBudgetAnalysis.maxValue.toFixed(1)}m</div>
+                            <div className="text-sm text-violet-600">Highest Value</div>
                           </div>
                           <div className="text-center p-3 bg-orange-50 rounded-lg">
                             <div className="text-lg font-semibold text-orange-700">£{getBudgetAnalysis.minValue.toFixed(1)}m</div>
                             <div className="text-sm text-orange-600">Lowest Value</div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
                   </div>
                 </TabsContent>
 
                 {/* Players Tab */}
                 <TabsContent value="players">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Player Ownership Analysis</CardTitle>
-                      <CardDescription>
-                        Complete breakdown of player ownership among content creators
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                  <SectionCard icon={Users} title="Player Ownership Analysis" subtitle="Complete breakdown of player ownership among content creators">
                       <div className="space-y-4">
                         {getMostOwnedPlayers.map((player, index) => (
                           <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <div className="flex items-center gap-4">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                {index + 1}
-                              </div>
+                              <RankBadge rank={index + 1} />
                               <div className="flex items-center gap-3">
                                 {getPositionIcon(player.element_type)}
                                 <div>
@@ -1464,34 +1394,24 @@ export default function ContentCreators() {
                                 <div className="text-xs text-gray-600">Points</div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-blue-600">{player.ownershipPercent}%</div>
+                                <div className="font-semibold text-indigo-600">{player.ownershipPercent}%</div>
                                 <div className="text-xs text-gray-600">{player.ownership}/{validTeamsCount} creators</div>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </SectionCard>
                 </TabsContent>
 
                 {/* Captains Tab */}
                 <TabsContent value="captains">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Captaincy Analysis</CardTitle>
-                      <CardDescription>
-                        Captain and vice-captain choices among content creators
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                  <SectionCard icon={Crown} title="Captaincy Analysis" subtitle="Captain and vice-captain choices among content creators">
                       <div className="space-y-4">
                         {getCaptaincyAnalysis.map((player, index) => (
                           <div key={player.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
                             <div className="flex items-center gap-4">
-                              <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                {index + 1}
-                              </div>
+                              <RankBadge rank={index + 1} />
                               <div className="flex items-center gap-3">
                                 <Crown className="h-5 w-5 text-yellow-600" />
                                 <div>
@@ -1519,91 +1439,65 @@ export default function ContentCreators() {
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </SectionCard>
                 </TabsContent>
 
                 {/* Formations Tab */}
                 <TabsContent value="formations">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Formation Analysis</CardTitle>
-                      <CardDescription>
-                        Popular formation choices and their distribution
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                  <SectionCard icon={PieChart} title="Formation Analysis" subtitle="Popular formation choices and their distribution">
                       <div className="space-y-3 sm:space-y-4">
                         {getFormationAnalysis.map((formation, index) => (
-                          <div key={formation.formation} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div key={formation.formation} className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
                             <div className="flex justify-between items-center mb-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                  {index + 1}
-                                </div>
+                                <RankBadge rank={index + 1} />
                                 <div>
-                                  <div className="text-xl font-bold text-blue-700">{formation.formation}</div>
-                                  <div className="text-sm text-blue-600">Formation</div>
+                                  <div className="text-xl font-bold text-indigo-700">{formation.formation}</div>
+                                  <div className="text-sm text-indigo-600">Formation</div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-2xl font-bold text-blue-700">{formation.percentage}%</div>
-                                <div className="text-sm text-blue-600">{formation.count} / {validTeamsCount} creators</div>
+                                <div className="text-2xl font-bold text-indigo-700">{formation.percentage}%</div>
+                                <div className="text-sm text-indigo-600">{formation.count} / {validTeamsCount} creators</div>
                               </div>
                             </div>
                             <Progress value={formation.percentage} className="h-3" />
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </SectionCard>
                 </TabsContent>
 
                 {/* Budget Tab */}
                 <TabsContent value="budget">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Budget Statistics</CardTitle>
-                        <CardDescription>
-                          Team value and bank balance analysis
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={DollarSign} title="Budget Statistics" subtitle="Team value and bank balance analysis">
                         <div className="space-y-4">
-                          <div className="p-4 bg-blue-50 rounded-lg">
-                            <div className="text-2xl font-bold text-blue-700">£{getBudgetAnalysis.avgValue.toFixed(1)}m</div>
-                            <div className="text-blue-600">Average Team Value</div>
+                          <div className="p-4 bg-indigo-50 rounded-lg">
+                            <div className="text-2xl font-bold text-indigo-700">£{getBudgetAnalysis.avgValue.toFixed(1)}m</div>
+                            <div className="text-indigo-600">Average Team Value</div>
                           </div>
                           <div className="p-4 bg-green-50 rounded-lg">
                             <div className="text-2xl font-bold text-green-700">£{getBudgetAnalysis.avgBank.toFixed(1)}m</div>
                             <div className="text-green-600">Average Bank Balance</div>
                           </div>
-                          <div className="p-4 bg-purple-50 rounded-lg">
-                            <div className="text-2xl font-bold text-purple-700">£{getBudgetAnalysis.maxValue.toFixed(1)}m</div>
-                            <div className="text-purple-600">Highest Team Value</div>
+                          <div className="p-4 bg-violet-50 rounded-lg">
+                            <div className="text-2xl font-bold text-violet-700">£{getBudgetAnalysis.maxValue.toFixed(1)}m</div>
+                            <div className="text-violet-600">Highest Team Value</div>
                           </div>
                           <div className="p-4 bg-orange-50 rounded-lg">
                             <div className="text-2xl font-bold text-orange-700">£{getBudgetAnalysis.minValue.toFixed(1)}m</div>
                             <div className="text-orange-600">Lowest Team Value</div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
 
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Budget Distribution</CardTitle>
-                        <CardDescription>
-                          How content creators allocate their budget
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                    <SectionCard icon={DollarSign} title="Budget Distribution" subtitle="How content creators allocate their budget">
                         <div className="space-y-4">
-                          <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                            <DollarSign className="h-12 w-12 mx-auto mb-3 text-blue-600" />
-                            <div className="text-lg font-semibold text-blue-700">Budget Management</div>
-                            <div className="text-sm text-blue-600 mt-2">
+                          <div className="text-center p-6 bg-gradient-to-br from-indigo-50 to-indigo-50 rounded-lg border border-indigo-200">
+                            <DollarSign className="h-12 w-12 mx-auto mb-3 text-indigo-600" />
+                            <div className="text-lg font-semibold text-indigo-700">Budget Management</div>
+                            <div className="text-sm text-indigo-600 mt-2">
                               Content creators maintain an average of £{getBudgetAnalysis.avgBank.toFixed(1)}m in the bank
                             </div>
                           </div>
@@ -1620,8 +1514,7 @@ export default function ContentCreators() {
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </SectionCard>
                   </div>
                 </TabsContent>
               </Tabs>

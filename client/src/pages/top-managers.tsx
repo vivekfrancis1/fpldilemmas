@@ -38,6 +38,7 @@ import { TOP_MANAGERS as TOP_MANAGERS_BASE } from "@shared/top-managers";
 import { CURRENT_SEASON } from "@shared/schema";
 import { ELITE_GROUPS, type EliteGroupId } from "@shared/elite-groups";
 import { SeasonBadge } from "@/components/season-badge";
+import { EmptyNote, HeroPanel, HeroStat, Pill, RankBadge, SectionCard } from "@/components/tool-ui";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
 import { positionsByTotal } from "@shared/group-placement";
 import { MyTeamPlacementPanel, YouBadge, useMyEntry, withMyTeam, type MyEntry } from "@/components/my-team-placement";
@@ -126,7 +127,7 @@ const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Reco
     render: (value, manager) => (
       <div className="text-center">
         {manager.active_chip && getChipLabel(manager.active_chip) ? (
-          <span className="text-xs font-medium px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{getChipLabel(manager.active_chip)}</span>
+          <Pill tone="indigo">{getChipLabel(manager.active_chip)}</Pill>
         ) : (
           <span className="text-gray-300">-</span>
         )}
@@ -483,6 +484,13 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
     );
   }
 
+  const shellTabsList = "grid w-full grid-cols-2 h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none";
+  const shellTab = "rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]";
+  const headTh = "px-2 sm:px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-gray-500";
+  const trackedTotals = managersWithData.map(m => m.latestTracking?.overallPoints).filter((v): v is number => typeof v === "number" && v > 0);
+  const leaderPoints = trackedTotals.length > 0 ? Math.max(...trackedTotals) : null;
+  const leader = leaderPoints === null ? null : managersWithData.find(m => m.latestTracking?.overallPoints === leaderPoints);
+
   return (
     <div className="fpl-page-wrapper">
       <div className="fpl-container fpl-content-area">
@@ -506,252 +514,252 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-3 sm:space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="managers" data-testid="tab-managers">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "managers" | "team-analysis")} className="space-y-4">
+          <TabsList className={shellTabsList}>
+            <TabsTrigger value="managers" className={shellTab} data-testid="tab-managers">
               <Crown className="h-4 w-4 mr-2" />
               Managers
             </TabsTrigger>
-            <TabsTrigger value="team-analysis" data-testid="tab-team-analysis">
+            <TabsTrigger value="team-analysis" className={shellTab} data-testid="tab-team-analysis">
               <BarChart3 className="h-4 w-4 mr-2" />
               Team Analysis
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="managers">
+          <TabsContent value="managers" className="space-y-5">
             {viewSeason === CURRENT_SEASON ? (
               <>
+                <HeroPanel testId="top-managers-summary">
+                  <div className="grid gap-6 sm:grid-cols-3">
+                    <HeroStat
+                      label="Managers"
+                      value={managersWithData.length}
+                      sub={eliteGroup ? `Members of ${eliteGroup.name}` : "The all time Top 100"}
+                    />
+                    <HeroStat
+                      label="Leader"
+                      value={leaderPoints !== null ? leaderPoints.toLocaleString() : "-"}
+                      sub={leader ? `${leader.name} · total points` : "Waiting for live data"}
+                    />
+                    <HeroStat
+                      label="Gameweek"
+                      value={currentGameweek ? `GW${currentGameweek}` : "-"}
+                      sub={upcomingGameweek ? `Next up: GW${upcomingGameweek}` : undefined}
+                    />
+                  </div>
+                </HeroPanel>
+
                 <MyTeamPlacementPanel my={my} members={placementMembers} groupLabel={eliteGroup ? eliteGroup.name : "the All time Top 100"} />
 
-                {/* Controls */}
-                <div className="fpl-controls">
-                  <div className="fpl-controls-right">
+                {/* Managers Table */}
+                <SectionCard
+                  icon={Crown}
+                  title="Managers"
+                  subtitle="Click a column to sort, click a row to open that manager's team"
+                  bodyClassName="p-0"
+                  testId="top-managers-card"
+                  action={
                     <Button
                       onClick={forceRefresh}
                       disabled={isRefreshing}
-                      variant="outline"
-                      className="hover:bg-blue-50"
+                      className="h-9 gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
                       data-testid="button-refresh-data"
                     >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                       {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
                     </Button>
-                  </div>
-                </div>
-
-                {/* Managers Table */}
-                <Card className="border-0 shadow-lg">
-                  <CardContent className="p-0">
-                    <ResponsiveTable
-                      data={sortedManagersData}
-                      columns={getTopManagerRowColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
-                      compact={true}
-                      mobileCompactTable={true}
-                      mobileCardTitle={(manager) => manager.name}
-                      loading={isRefreshing}
-                      emptyMessage="No manager data available"
-                      highlightRow={(manager) => manager.managerId === my.entry?.managerId}
-                      onRowClick={(manager) => {
-                        navigate(group || manager.rank === 0 ? `/manager-team/${manager.managerId}` : `/top-managers/${manager.rank}/team`);
-                      }}
-                      onSort={handleSort}
-                      sortField={sortField}
-                      sortDirection={sortDirection}
-                      className="hover:shadow-sm"
-                      stickyHeader={true}
-                      enableHorizontalScroll={true}
-                      getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
-                      data-testid="top-managers-table"
-                    />
-                  </CardContent>
-                </Card>
+                  }
+                >
+                  <ResponsiveTable
+                    data={sortedManagersData}
+                    columns={getTopManagerRowColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
+                    compact={true}
+                    mobileCompactTable={true}
+                    mobileCardTitle={(manager) => manager.name}
+                    loading={isRefreshing}
+                    emptyMessage="No manager data available"
+                    highlightRow={(manager) => manager.managerId === my.entry?.managerId}
+                    onRowClick={(manager) => {
+                      navigate(group || manager.rank === 0 ? `/manager-team/${manager.managerId}` : `/top-managers/${manager.rank}/team`);
+                    }}
+                    onSort={handleSort}
+                    sortField={sortField}
+                    sortDirection={sortDirection}
+                    className="hover:shadow-sm"
+                    stickyHeader={true}
+                    enableHorizontalScroll={true}
+                    getRowTestId={(manager, index) => `row-manager-${manager.rank || index}`}
+                    data-testid="top-managers-table"
+                  />
+                </SectionCard>
               </>
             ) : (
-              <Card className="border-0 shadow-lg" data-testid="top-managers-final-standings">
-                <CardHeader className="pb-3">
-                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {viewSeason} Final Standings
-                  </CardTitle>
-                  <p className="text-muted-foreground text-sm">
-                    Season-end totals for each manager. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isSeasonStandingsLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                      <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50/80">
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground">Manager</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Total Pts</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Overall Rank</th>
-                            <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground">Top %</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(seasonStandingsData?.managers || []).map((m) => (
-                            <tr key={m.managerId} className="border-b hover:bg-gray-50/50" data-testid={`row-final-standing-${m.rank}`}>
-                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground">{m.rank}</td>
-                              <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 font-medium">{m.name}</td>
-                              {m.confirmed ? (
-                                <>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.totalPoints?.toLocaleString()}</td>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.fplRank?.toLocaleString()}</td>
-                                  <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right">{m.rankPercentage}%</td>
-                                </>
-                              ) : (
-                                <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-muted-foreground italic" colSpan={3}>
-                                  ID not yet confirmed for 2026/27
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Previous Seasons */}
-            <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
-                    <History className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Previous Seasons
-                  </CardTitle>
-                  <Select value={selectedSeason} onValueChange={(v) => setSelectedSeason(v)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Season" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(pastSeasonsData?.seasons || []).map((season: string) => (
-                        <SelectItem key={season} value={season}>{season}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  {selectedSeason
-                    ? `${selectedSeason} season — ${historicalStandings.filter((m: any) => m.played).length} of ${historicalStandings.length} managers played`
-                    : 'Select a season to view past performance'}
-                </p>
-              </CardHeader>
-              <CardContent>
-                {isPastSeasonsLoading ? (
+              <SectionCard
+                icon={Trophy}
+                title={`${viewSeason} Final Standings`}
+                subtitle="Season-end totals for each manager. Some 2026/27 manager IDs haven't been reconfirmed yet after FPL's account renumbering, so a few rows are still pending."
+                bodyClassName="p-0"
+                testId="top-managers-final-standings"
+              >
+                {isSeasonStandingsLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                    <span className="ml-3 text-muted-foreground">Loading historical data...</span>
-                  </div>
-                ) : !selectedSeason ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Choose a season from the dropdown above.
-                  </div>
-                ) : historicalStandings.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No data available for {selectedSeason}.
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                    <span className="ml-3 text-muted-foreground">Loading {viewSeason} standings...</span>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-gray-50/80">
-                          <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground w-8 sm:w-12">#</th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'player_name') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('player_name');
-                                setHistoricalSortDirection('asc');
-                              }
-                            }}
-                          >
-                            Manager {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
-                          </th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'total_points') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('total_points');
-                                setHistoricalSortDirection('desc');
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
-                          </th>
-                          <th
-                            className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
-                            onClick={() => {
-                              if (historicalSortField === 'rank') {
-                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                              } else {
-                                setHistoricalSortField('rank');
-                                setHistoricalSortDirection('asc');
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
-                          </th>
+                        <tr className="border-b border-gray-100 bg-gray-50/80">
+                          <th className={`${headTh} text-left w-8 sm:w-12`}>#</th>
+                          <th className={`${headTh} text-left`}>Manager</th>
+                          <th className={`${headTh} text-right`}>Total Pts</th>
+                          <th className={`${headTh} text-right`}>Overall Rank</th>
+                          <th className={`${headTh} text-right`}>Top %</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {historicalStandings.map((entry: any, index: number) => (
-                          <tr
-                            key={entry.managerId}
-                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
-                            onClick={() => navigate(`/manager-team/${entry.managerId}`)}
-                          >
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2">
-                              {entry.played ? (
-                                <div className={`flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-xs font-semibold ${
-                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                                  index === 1 ? 'bg-gray-100 text-gray-800' :
-                                  index === 2 ? 'bg-orange-100 text-orange-800' :
-                                  'bg-blue-50 text-blue-700'
-                                }`}>
-                                  {index + 1}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 text-xs">-</span>
-                              )}
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2">
-                              <div className="font-medium text-sm truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono font-semibold text-xs sm:text-sm">
-                              {entry.played ? entry.totalPoints?.toLocaleString() : (
-                                <span className="text-gray-400 text-[10px] sm:text-xs">Did not play</span>
-                              )}
-                            </td>
-                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-right font-mono text-xs sm:text-sm">
-                              {entry.played && entry.rank ? entry.rank.toLocaleString() : (
-                                <span className="text-gray-400 text-[10px] sm:text-xs">N/A</span>
-                              )}
-                            </td>
+                        {(seasonStandingsData?.managers || []).map((m) => (
+                          <tr key={m.managerId} className="border-b border-gray-100 last:border-0 hover:bg-indigo-500/[0.04]" data-testid={`row-final-standing-${m.rank}`}>
+                            <td className="px-2 sm:px-3 py-2"><RankBadge rank={m.rank} /></td>
+                            <td className="px-2 sm:px-3 py-2 font-semibold text-gray-900">{m.name}</td>
+                            {m.confirmed ? (
+                              <>
+                                <td className="px-2 sm:px-3 py-2 text-right font-bold tabular-nums">{m.totalPoints?.toLocaleString()}</td>
+                                <td className="px-2 sm:px-3 py-2 text-right tabular-nums">{m.fplRank?.toLocaleString()}</td>
+                                <td className="px-2 sm:px-3 py-2 text-right tabular-nums">{m.rankPercentage}%</td>
+                              </>
+                            ) : (
+                              <td className="px-2 sm:px-3 py-2 text-muted-foreground italic" colSpan={3}>
+                                ID not yet confirmed for 2026/27
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </SectionCard>
+            )}
+
+            {/* Previous Seasons */}
+            <SectionCard
+              icon={History}
+              title="Previous Seasons"
+              subtitle={
+                selectedSeason
+                  ? `${selectedSeason} season — ${historicalStandings.filter((m: any) => m.played).length} of ${historicalStandings.length} managers played`
+                  : 'Select a season to view past performance'
+              }
+              bodyClassName="p-0"
+              testId="top-managers-previous-seasons"
+              action={
+                <Select value={selectedSeason} onValueChange={(v) => setSelectedSeason(v)}>
+                  <SelectTrigger className="h-9 w-[150px] rounded-xl">
+                    <SelectValue placeholder="Select Season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(pastSeasonsData?.seasons || []).map((season: string) => (
+                      <SelectItem key={season} value={season}>{season}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              }
+            >
+              {isPastSeasonsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                  <span className="ml-3 text-muted-foreground">Loading historical data...</span>
+                </div>
+              ) : !selectedSeason ? (
+                <div className="p-4 sm:p-5">
+                  <EmptyNote icon={History}>Choose a season from the dropdown above.</EmptyNote>
+                </div>
+              ) : historicalStandings.length === 0 ? (
+                <div className="p-4 sm:p-5">
+                  <EmptyNote icon={History}>No data available for {selectedSeason}.</EmptyNote>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50/80">
+                        <th className={`${headTh} text-left w-8 sm:w-12`}>#</th>
+                        <th
+                          className={`${headTh} text-left cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'player_name') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('player_name');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          Manager {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                        <th
+                          className={`${headTh} text-right cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'total_points') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('total_points');
+                              setHistoricalSortDirection('desc');
+                            }
+                          }}
+                        >
+                          <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                        </th>
+                        <th
+                          className={`${headTh} text-right cursor-pointer hover:text-gray-900`}
+                          onClick={() => {
+                            if (historicalSortField === 'rank') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('rank');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicalStandings.map((entry: any, index: number) => (
+                        <tr
+                          key={entry.managerId}
+                          className="border-b border-gray-100 last:border-0 hover:bg-indigo-500/[0.04] transition-colors cursor-pointer"
+                          onClick={() => navigate(`/manager-team/${entry.managerId}`)}
+                        >
+                          <td className="px-2 sm:px-3 py-2">
+                            {entry.played ? <RankBadge rank={index + 1} /> : <span className="text-gray-400 text-xs">-</span>}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2">
+                            <div className="font-semibold text-sm text-gray-900 truncate max-w-[110px] sm:max-w-none">{entry.playerName}</div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-right font-bold tabular-nums text-xs sm:text-sm">
+                            {entry.played ? entry.totalPoints?.toLocaleString() : (
+                              <span className="text-gray-400 text-[10px] sm:text-xs font-normal">Did not play</span>
+                            )}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-right tabular-nums text-xs sm:text-sm">
+                            {entry.played && entry.rank ? entry.rank.toLocaleString() : (
+                              <span className="text-gray-400 text-[10px] sm:text-xs">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </SectionCard>
 
             {/* Footer */}
-            <div className="text-center py-4 border-t border-gray-200">
+            <div className="text-center py-2">
               {eliteGroup ? (
                 <p className="text-sm text-gray-600">
                   Members of the {eliteGroup.season} {eliteGroup.name} classic league on the official FPL site, read live
@@ -763,7 +771,7 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
                   href="https://www.fplresearch.com/" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline"
+                  className="text-indigo-600 hover:text-indigo-800 underline"
                 >
                   FPL Research
                 </a>{' '}

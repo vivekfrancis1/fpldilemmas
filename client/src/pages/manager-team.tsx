@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HeroPanel, HeroStat, IconTile, PosChip, SectionCard, asPos } from "@/components/tool-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -177,7 +178,7 @@ function getPositionColor(position: string | undefined) {
     case 'goalkeeper':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'defender':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
     case 'midfielder':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'forward':
@@ -847,164 +848,63 @@ export default function ManagerTeam() {
   return (
     <div className="w-full py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="hover:bg-blue-50"
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 rounded-xl font-semibold"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
         </div>
-        
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
+
+        <HeroPanel testId="team-hero">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white sm:h-14 sm:w-14 sm:text-lg" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
               <Users className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
                 {managerName}'s Team
               </h1>
-              <p className="text-muted-foreground text-lg">
+              <p className="text-sm font-medium text-white/80">
                 {teamData?.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
                 {teamData?.message && ` • ${teamData.message}`}
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1">
+          <div className="mt-3 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
               <Trophy className="h-3 w-3" />
               Manager ID: {managerId}
-            </Badge>
+            </span>
           </div>
-        </div>
+
+          {/* Team Statistics */}
+          {teamData?.entry_history && (
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-5">
+              <HeroStat size="md" label="GW Pts" value={teamData.entry_history.points} />
+              <HeroStat size="md" label="Total" value={teamData.entry_history.total_points} />
+              <HeroStat size="md" label="Rank" value={<>#{teamData.entry_history.overall_rank?.toLocaleString()}</>} />
+              <HeroStat size="md" label="Squad" value={`£${(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m`} />
+              <HeroStat size="md" label="Bank" value={`£${((teamData.entry_history.bank || 0) / 10).toFixed(1)}m`} />
+            </div>
+          )}
+
+          {/* General Info Fallback */}
+          {managerInfo && !teamData?.entry_history && (
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4">
+              <HeroStat size="md" label="Total Points" value={managerInfo.summary_overall_points} />
+              <HeroStat size="md" label="Overall Rank" value={<>#{managerInfo.summary_overall_rank?.toLocaleString()}</>} />
+              <HeroStat size="md" label="Team Name" value={<span className="block truncate text-xl sm:text-2xl">{managerInfo.name}</span>} />
+              <HeroStat size="md" label="Manager" value={<span className="block truncate text-xl sm:text-2xl">{managerInfo.player_first_name} {managerInfo.player_last_name}</span>} />
+            </div>
+          )}
+        </HeroPanel>
       </div>
-
-      {/* Team Statistics */}
-      {teamData?.entry_history && (
-        <div className="grid grid-cols-5 gap-0.5 sm:gap-4">
-          <Card className="border-l-2 sm:border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">GW Pts</div>
-                </div>
-                <Trophy className="hidden sm:block h-8 w-8 text-blue-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Total</div>
-                </div>
-                <Star className="hidden sm:block h-8 w-8 text-green-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-purple-700 truncate">
-                    #{teamData.entry_history.overall_rank?.toLocaleString()}
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Rank</div>
-                </div>
-                <Crown className="hidden sm:block h-8 w-8 text-purple-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-orange-700 truncate">
-                    £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Squad</div>
-                </div>
-                <DollarSign className="hidden sm:block h-8 w-8 text-orange-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-yellow-700 truncate">
-                    £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Bank</div>
-                </div>
-                <Wallet className="hidden sm:block h-8 w-8 text-yellow-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* General Info Fallback */}
-      {managerInfo && !teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-2 sm:p-4">
-              <div className="flex items-center justify-between gap-1">
-                <div className="min-w-0 flex-1">
-                  <div className="text-lg sm:text-2xl font-bold text-green-700">{managerInfo.summary_overall_points}</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Total Points</div>
-                </div>
-                <Star className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-2 sm:p-4">
-              <div className="flex items-center justify-between gap-1">
-                <div className="min-w-0 flex-1">
-                  <div className="text-lg sm:text-2xl font-bold text-purple-700 truncate">
-                    #{managerInfo.summary_overall_rank?.toLocaleString()}
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Overall Rank</div>
-                </div>
-                <Crown className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-2 sm:p-4">
-              <div className="flex items-center justify-between gap-1">
-                <div className="min-w-0 flex-1">
-                  <div className="text-base sm:text-xl font-bold text-blue-700 truncate">{managerInfo.name}</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Team Name</div>
-                </div>
-                <Trophy className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-gray-500 bg-gradient-to-r from-gray-50 to-white">
-            <CardContent className="p-2 sm:p-4">
-              <div className="flex items-center justify-between gap-1">
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm sm:text-lg font-bold text-gray-700 truncate">
-                    {managerInfo.player_first_name} {managerInfo.player_last_name}
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Manager</div>
-                </div>
-                <Users className="h-5 w-5 sm:h-8 sm:w-8 text-gray-500 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Main Content Tabs */}
       <Tabs
@@ -1012,25 +912,25 @@ export default function ManagerTeam() {
         onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "history" | "chips")}
         className="space-y-3 sm:space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1 h-auto">
-          <TabsTrigger value="team" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+        <TabsList className="flex w-full justify-start overflow-x-auto h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none">
+          <TabsTrigger value="team" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <Users className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Team
           </TabsTrigger>
-          <TabsTrigger value="transfers" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+          <TabsTrigger value="transfers" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <ArrowLeftRight className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Transfers
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+          <TabsTrigger value="performance" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             <span className="hidden sm:inline">Performance</span>
             <span className="sm:hidden">Perf</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+          <TabsTrigger value="history" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             History
           </TabsTrigger>
-          <TabsTrigger value="chips" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+          <TabsTrigger value="chips" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <Star className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Chips
           </TabsTrigger>
@@ -1047,11 +947,11 @@ export default function ManagerTeam() {
             <>
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Team Squad</h2>
+                  <h2 className="flex items-center gap-3 text-lg font-bold text-gray-900 sm:text-xl"><IconTile icon={Users} />Team Squad</h2>
                   <Button
                     variant={showLivePoints ? "default" : "outline"}
                     size="sm"
-                    className={showLivePoints ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                    className={showLivePoints ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""}
                     onClick={() => setShowLivePoints(v => !v)}
                   >
                     <Zap className="h-4 w-4 mr-1.5" />
@@ -1077,7 +977,7 @@ export default function ManagerTeam() {
 
                 {/* Pitch View */}
                   <div className="-mx-2 sm:mx-0">
-                    <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                       <CardContent className="p-2 sm:p-6">
                         <PitchView 
                           players={showLivePoints ? effectivePitchPlayers : pitchPlayers}
@@ -1096,15 +996,7 @@ export default function ManagerTeam() {
         </TabsContent>
 
         <TabsContent value="transfers" className="space-y-3 sm:space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ArrowLeftRight className="h-5 w-5" />
-                Transfer History
-              </CardTitle>
-              <CardDescription>All transfers made this season (excluding Free Hit and Wildcard gameweeks)</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={ArrowLeftRight} title="Transfer History" subtitle="All transfers made this season (excluding Free Hit and Wildcard gameweeks)">
               {isLoadingTransfers || historyLoading ? (
                 <div className="space-y-2">
                   {[...Array(3)].map((_, i) => (
@@ -1169,11 +1061,11 @@ export default function ManagerTeam() {
                         
                         return (
                           <div key={gw} className="border rounded-lg overflow-hidden">
-                            <div className={`px-3 py-2 flex items-center gap-2 ${isWildcard ? 'bg-purple-50' : 'bg-gray-50'}`}>
+                            <div className={`px-3 py-2 flex items-center gap-2 ${isWildcard ? 'bg-violet-50' : 'bg-gray-50'}`}>
                               <span className="font-medium text-sm">Gameweek {gw}</span>
                               <span className="text-xs text-gray-500">({transfers.length} transfer{transfers.length > 1 ? 's' : ''})</span>
                               {isWildcard && (
-                                <Badge className="text-[10px] px-1.5 py-0.5 bg-purple-600 text-white">
+                                <Badge className="text-[10px] px-1.5 py-0.5 bg-violet-600 text-white">
                                   Wildcard
                                 </Badge>
                               )}
@@ -1207,20 +1099,11 @@ export default function ManagerTeam() {
                   </div>
                 );
               })()}
-            </CardContent>
-          </Card>
+            </SectionCard>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-3 sm:space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Gameweek History
-              </CardTitle>
-              <CardDescription>Points and rank progression by gameweek</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={BarChart3} title="Gameweek History" subtitle="Points and rank progression by gameweek">
               {historyLoading ? (
                 <Skeleton className="h-64 w-full" />
               ) : managerHistory?.current && managerHistory.current.length > 0 ? (
@@ -1299,20 +1182,11 @@ export default function ManagerTeam() {
               ) : (
                 <p className="text-gray-500">No gameweek history available</p>
               )}
-            </CardContent>
-          </Card>
+            </SectionCard>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-3 sm:space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Season History
-              </CardTitle>
-              <CardDescription>Performance across previous seasons</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={Calendar} title="Season History" subtitle="Performance across previous seasons">
               {historyLoading ? (
                 <Skeleton className="h-64 w-full" />
               ) : (managerHistory?.past && managerHistory.past.length > 0) || managerHistory?.current ? (
@@ -1343,12 +1217,12 @@ export default function ManagerTeam() {
                       const allSeasons = currentSeason ? [currentSeason, ...pastSeasons] : pastSeasons;
                       
                       return allSeasons.map((season: any, index: number) => (
-                        <TableRow key={index} className={season.isCurrent ? "bg-blue-50" : ""}>
+                        <TableRow key={index} className={season.isCurrent ? "bg-indigo-50" : ""}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               {season.season_name}
                               {season.isCurrent && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 border-blue-300">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 border-indigo-300">
                                   Current
                                 </Badge>
                               )}
@@ -1364,20 +1238,11 @@ export default function ManagerTeam() {
               ) : (
                 <p className="text-gray-500">No season history available</p>
               )}
-            </CardContent>
-          </Card>
+            </SectionCard>
         </TabsContent>
 
         <TabsContent value="chips" className="space-y-3 sm:space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5" />
-                Chips Used
-              </CardTitle>
-              <CardDescription>Special chips played this season</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={Star} title="Chips Used" subtitle="Special chips played this season">
               {managerHistory?.chips && managerHistory.chips.length > 0 ? (
                 <div className="space-y-2">
                   {managerHistory.chips.map((chip, index) => (
@@ -1390,8 +1255,7 @@ export default function ManagerTeam() {
               ) : (
                 <p className="text-gray-500">No chips used yet this season</p>
               )}
-            </CardContent>
-          </Card>
+            </SectionCard>
         </TabsContent>
       </Tabs>
 

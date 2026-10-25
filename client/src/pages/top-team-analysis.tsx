@@ -43,6 +43,7 @@ import {
   Activity,
   PieChart,
 } from "lucide-react";
+import { PercentBar, PosChip, RankBadge, SectionCard, TeamChip, asPos } from "@/components/tool-ui";
 
 // Types
 interface TeamPick {
@@ -149,7 +150,7 @@ function getPositionName(elementType: number): string {
 function getPositionColor(elementType: number): string {
   const colors: { [key: number]: string } = {
     1: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    2: "bg-blue-100 text-blue-800 border-blue-200",
+    2: "bg-indigo-100 text-indigo-700 border-indigo-200",
     3: "bg-green-100 text-green-800 border-green-200",
     4: "bg-red-100 text-red-800 border-red-200"
   };
@@ -416,11 +417,11 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
               <Button
                 onClick={refreshAllData}
                 disabled={isRefreshing}
-                variant="outline"
                 size="sm"
+                className="h-9 gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 font-bold text-white hover:from-indigo-500 hover:to-violet-500"
                 data-testid="button-refresh-analysis"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh Analysis'}
               </Button>
             </div>
@@ -430,55 +431,36 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
 
 
         {validTeamsCount === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold mb-2">Loading Team Data...</h3>
-              <p className="text-gray-600 mb-4">
-                Fetching team information for all {groupSize} managers. This may take a moment.
-              </p>
-              <Button onClick={refreshAllData} variant="outline" disabled={isRefreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Loading...' : 'Retry Loading'}
-              </Button>
-            </CardContent>
-          </Card>
+          <SectionCard icon={Activity} title="Loading Team Data..." subtitle={`Fetching team information for all ${groupSize} managers. This may take a moment.`}>
+            <Button onClick={refreshAllData} variant="outline" disabled={isRefreshing} className="h-9 gap-2 rounded-xl font-semibold">
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Loading...' : 'Retry Loading'}
+            </Button>
+          </SectionCard>
         ) : (
           <Tabs
             value={activeSubTab}
             onValueChange={(v) => setActiveSubTab(v as "overview" | "players" | "captains" | "formations" | "budget")}
-            className="space-y-3 sm:space-y-4"
+            className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1">
-              <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs sm:text-sm px-2 py-2">Overview</TabsTrigger>
-              <TabsTrigger value="players" data-testid="tab-players" className="text-xs sm:text-sm px-2 py-2">Players</TabsTrigger>
-              <TabsTrigger value="captains" data-testid="tab-captains" className="text-xs sm:text-sm px-2 py-2">Captains</TabsTrigger>
-              <TabsTrigger value="formations" data-testid="tab-formations" className="text-xs sm:text-sm px-2 py-2">Forms</TabsTrigger>
-              <TabsTrigger value="budget" data-testid="tab-budget" className="text-xs sm:text-sm px-2 py-2">Budget</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none">
+              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]">Overview</TabsTrigger>
+              <TabsTrigger value="players" data-testid="tab-players" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]">Players</TabsTrigger>
+              <TabsTrigger value="captains" data-testid="tab-captains" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]">Captains</TabsTrigger>
+              <TabsTrigger value="formations" data-testid="tab-formations" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]">Forms</TabsTrigger>
+              <TabsTrigger value="budget" data-testid="tab-budget" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 font-bold transition-all duration-200 text-xs sm:text-sm min-h-[34px]">Budget</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Most Popular Players */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Most Popular Players
-                    </CardTitle>
-                    <CardDescription>
-                      Players owned by the most {groupLabel} managers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={Users} title="Most Popular Players" subtitle={<>Players owned by the most {groupLabel} managers</>}>
                     <div className="space-y-3">
                       {getMostOwnedPlayers.slice(0, 8).map((player, index) => (
                         <div key={player.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                              {index + 1}
-                            </div>
+                            <RankBadge rank={index + 1} />
                             <div>
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-xs text-gray-600">
@@ -493,21 +475,10 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </SectionCard>
 
                 {/* Formation Analysis */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PieChart className="h-5 w-5" />
-                      Popular Formations
-                    </CardTitle>
-                    <CardDescription>
-                      Formation preferences among {groupLabel} managers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={PieChart} title="Popular Formations" subtitle={<>Formation preferences among {groupLabel} managers</>}>
                     <div className="space-y-4">
                       {getFormationAnalysis.slice(0, 5).map((formation, index) => (
                         <div key={formation.formation}>
@@ -517,25 +488,14 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                               {formation.count} managers ({formation.percentage}%)
                             </span>
                           </div>
-                          <Progress value={formation.percentage} className="h-2" />
+                          <PercentBar percent={formation.percentage} label={`${formation.percentage}%`} />
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </SectionCard>
 
                 {/* Chip Usage */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Star className="h-5 w-5" />
-                      Active Chips
-                    </CardTitle>
-                    <CardDescription>
-                      Chip usage in current gameweek
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={Star} title="Active Chips" subtitle="Chip usage in current gameweek">
                     {(() => {
                       const chipData = getChipAnalysis;
                       return (
@@ -570,28 +530,17 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
+                  </SectionCard>
 
                 {/* Budget Overview */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Budget Overview
-                    </CardTitle>
-                    <CardDescription>
-                      Team values and remaining budget
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={DollarSign} title="Budget Overview" subtitle="Team values and remaining budget">
                     {(() => {
                       const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
-                              <div className="text-2xl font-bold text-blue-600">
+                              <div className="text-2xl font-bold text-indigo-600">
                                 £{budgetData.avgValue.toFixed(1)}m
                               </div>
                               <div className="text-sm text-gray-600">Avg Team Value</div>
@@ -616,92 +565,68 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
+                  </SectionCard>
               </div>
             </TabsContent>
 
             {/* Players Tab */}
             <TabsContent value="players">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Player Ownership Analysis</CardTitle>
-                  <CardDescription>
-                    All players owned by {groupLabel} managers, sorted by popularity
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
+              <SectionCard icon={Users} title="Player Ownership Analysis" subtitle={<>All players owned by {groupLabel} managers, sorted by popularity</>} bodyClassName="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                      <TableRow>
-                        <TableHead>Rank</TableHead>
-                        <TableHead>Player</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Team</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Ownership</TableHead>
-                        <TableHead>%</TableHead>
+                      <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Rank</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Player</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Position</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Team</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Price</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Ownership</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">%</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getMostOwnedPlayers.map((player, index) => (
                         <TableRow key={player.id} data-testid={`row-player-${player.id}`}>
                           <TableCell>
-                            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                              {index + 1}
-                            </div>
+                            <RankBadge rank={index + 1} />
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">{player.web_name}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getPositionColor(player.element_type)}>
-                              {getPositionIcon(player.element_type)}
-                              <span className="ml-1">{getPositionName(player.element_type)}</span>
-                            </Badge>
+                            <PosChip pos={asPos(getPositionName(player.element_type))} />
                           </TableCell>
                           <TableCell>
-                            {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}
+                            <TeamChip>{bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}</TeamChip>
                           </TableCell>
                           <TableCell className="font-mono">{formatPrice(player.now_cost)}</TableCell>
                           <TableCell className="font-semibold">{player.ownership}/{validTeams.length}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={player.ownershipPercent} className="h-2 flex-1" />
-                              <span className="text-sm font-semibold w-10">{player.ownershipPercent}%</span>
-                            </div>
+                            <PercentBar percent={player.ownershipPercent} label={`${player.ownershipPercent}%`} />
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                   </div>
-                </CardContent>
-              </Card>
+                </SectionCard>
             </TabsContent>
 
             {/* Captains Tab */}
             <TabsContent value="captains">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Captaincy Analysis</CardTitle>
-                  <CardDescription>
-                    Captain and vice-captain choices among {groupLabel} managers
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
+              <SectionCard icon={Crown} title="Captaincy Analysis" subtitle={<>Captain and vice-captain choices among {groupLabel} managers</>} bodyClassName="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                      <TableRow>
-                        <TableHead>Player</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Team</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Captain</TableHead>
-                        <TableHead>Vice Captain</TableHead>
-                        <TableHead>Total</TableHead>
+                      <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Player</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Position</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Team</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Price</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Captain</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Vice Captain</TableHead>
+                        <TableHead className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -711,13 +636,10 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                             <div className="font-medium">{player.web_name}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getPositionColor(player.element_type)}>
-                              {getPositionIcon(player.element_type)}
-                              <span className="ml-1">{getPositionName(player.element_type)}</span>
-                            </Badge>
+                            <PosChip pos={asPos(getPositionName(player.element_type))} />
                           </TableCell>
                           <TableCell>
-                            {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}
+                            <TeamChip>{bootstrapData?.teams.find(t => t.id === player.team)?.short_name || 'Unknown'}</TeamChip>
                           </TableCell>
                           <TableCell className="font-mono">{formatPrice(player.now_cost)}</TableCell>
                           <TableCell>
@@ -743,38 +665,28 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                     </TableBody>
                   </Table>
                   </div>
-                </CardContent>
-              </Card>
+                </SectionCard>
             </TabsContent>
 
             {/* Formations Tab */}
             <TabsContent value="formations">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Formation Distribution</CardTitle>
-                    <CardDescription>
-                      Tactical setups preferred by {groupLabel} managers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={PieChart} title="Formation Distribution" subtitle={<>Tactical setups preferred by {groupLabel} managers</>}>
                     <div className="space-y-4">
                       {getFormationAnalysis.map((formation, index) => (
                         <div key={formation.formation} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                {index + 1}
-                              </div>
+                              <RankBadge rank={index + 1} />
                               <h3 className="font-semibold text-lg">{formation.formation}</h3>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-2xl text-blue-600">{formation.count}</div>
+                              <div className="font-bold text-2xl text-indigo-600">{formation.count}</div>
                               <div className="text-sm text-gray-600">managers</div>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Progress value={formation.percentage} className="h-3" />
+                            <PercentBar percent={formation.percentage} label={`${formation.percentage}%`} />
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Popularity</span>
                               <span className="font-semibold">{formation.percentage}%</span>
@@ -783,17 +695,9 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </SectionCard>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Formation Insights</CardTitle>
-                    <CardDescription>
-                      Analysis of tactical preferences
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={BarChart3} title="Formation Insights" subtitle="Analysis of tactical preferences">
                     {(() => {
                       const formations = getFormationAnalysis;
                       const totalManagers = formations.reduce((sum, f) => sum + f.count, 0);
@@ -802,8 +706,8 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                       
                       return (
                         <div className="space-y-3 sm:space-y-4">
-                          <div className="text-center p-4 bg-blue-50 rounded-lg">
-                            <div className="text-2xl font-bold text-blue-600 mb-1">
+                          <div className="text-center p-4 bg-indigo-500/10 rounded-lg">
+                            <div className="text-2xl font-bold text-indigo-600 mb-1">
                               {mostPopular?.formation || 'N/A'}
                             </div>
                             <div className="text-sm text-gray-600">Most Popular Formation</div>
@@ -818,7 +722,7 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                               <div className="text-sm text-gray-600">Different Formations</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-xl font-bold text-purple-600">{totalManagers}</div>
+                              <div className="text-xl font-bold text-violet-600">{totalManagers}</div>
                               <div className="text-sm text-gray-600">Total Analyzed</div>
                             </div>
                           </div>
@@ -833,28 +737,20 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
+                  </SectionCard>
               </div>
             </TabsContent>
 
             {/* Budget Tab */}
             <TabsContent value="budget">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Team Values</CardTitle>
-                    <CardDescription>
-                      Squad value distribution among {groupLabel} managers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={DollarSign} title="Team Values" subtitle={<>Squad value distribution among {groupLabel} managers</>}>
                     {(() => {
                       const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-3 sm:space-y-4">
-                          <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                            <div className="text-3xl font-bold text-blue-600 mb-2">
+                          <div className="text-center p-6 bg-gradient-to-r from-indigo-500/10 to-violet-500/10 rounded-lg">
+                            <div className="text-3xl font-bold text-indigo-600 mb-2">
                               £{budgetData.avgValue.toFixed(1)}m
                             </div>
                             <div className="text-gray-600">Average Team Value</div>
@@ -875,7 +771,7 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                             </div>
                           </div>
 
-                          <div className="p-4 bg-yellow-50 rounded-lg">
+                          <div className="p-4 bg-amber-500/10 rounded-lg">
                             <div className="flex justify-between items-center">
                               <span className="font-medium">Value Range:</span>
                               <span className="font-semibold">
@@ -886,22 +782,14 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
+                  </SectionCard>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Budget Management</CardTitle>
-                    <CardDescription>
-                      Remaining budget and transfer strategies
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={DollarSign} title="Budget Management" subtitle="Remaining budget and transfer strategies">
                     {(() => {
                       const budgetData = getBudgetAnalysis;
                       return (
                         <div className="space-y-3 sm:space-y-4">
-                          <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                          <div className="text-center p-6 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 rounded-lg">
                             <div className="text-3xl font-bold text-green-600 mb-2">
                               £{budgetData.avgBank.toFixed(1)}m
                             </div>
@@ -931,9 +819,9 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                               </div>
                             </div>
 
-                            <div className="p-4 bg-blue-50 rounded-lg">
-                              <h4 className="font-semibold text-blue-800 mb-2">Strategy Note</h4>
-                              <p className="text-sm text-blue-700">
+                            <div className="p-4 bg-indigo-500/10 rounded-lg">
+                              <h4 className="font-semibold text-indigo-700 mb-2">Strategy Note</h4>
+                              <p className="text-sm text-indigo-700">
                                 Managers keeping £{budgetData.avgBank.toFixed(1)}m in bank on average, 
                                 suggesting {budgetData.avgBank > 1 ? 'conservative' : 'aggressive'} transfer planning.
                               </p>
@@ -942,8 +830,7 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
+                  </SectionCard>
               </div>
             </TabsContent>
           </Tabs>

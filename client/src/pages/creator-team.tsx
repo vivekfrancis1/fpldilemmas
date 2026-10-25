@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HeroPanel, HeroStat, IconTile, PosChip, SectionCard, asPos } from "@/components/tool-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -152,7 +153,7 @@ function getPositionColor(position: string) {
     case 'goalkeeper':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'defender':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
     case 'midfielder':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'forward':
@@ -674,170 +675,65 @@ export default function CreatorTeam() {
   return (
     <div className="w-full py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-2 sm:space-y-3 md:space-y-4">
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/content-creators">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="hover:bg-blue-50"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" className="h-9 gap-2 rounded-xl font-semibold">
+              <ArrowLeft className="h-4 w-4" />
               Back to Creators
             </Button>
           </Link>
         </div>
-        
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+
+        <HeroPanel testId="team-hero">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white sm:h-14 sm:w-14 sm:text-lg" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
               {(teamData?.creator || creatorInfo?.name || 'Creator').charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
                 {teamData?.creator || creatorInfo?.name || 'Creator'}'s Team
               </h1>
-              <p className="text-muted-foreground text-lg">
+              <p className="text-sm font-medium text-white/80">
                 {teamData?.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
               </p>
             </div>
           </div>
-          
           {creatorInfo?.platform && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="flex items-center gap-1">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
                 {creatorInfo.platform === 'youtube' && <Youtube className="h-3 w-3" />}
                 {creatorInfo.platform === 'twitter' && <Users className="h-3 w-3" />}
                 {creatorInfo.platform}
-              </Badge>
+              </span>
               {creatorInfo.handle && (
-                <span className="text-sm text-muted-foreground">@{creatorInfo.handle}</span>
+                <span className="text-sm text-white/80">@{creatorInfo.handle}</span>
               )}
             </div>
           )}
-        </div>
+
+          {/* Team Statistics */}
+          {teamData?.entry_history && (
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-5">
+              <HeroStat size="md" label="GW Pts" value={teamData.entry_history.points} />
+              <HeroStat size="md" label="Total" value={teamData.entry_history.total_points} />
+              <HeroStat size="md" label="Rank" value={<>#{teamData.entry_history.overall_rank != null ? teamData.entry_history.overall_rank.toLocaleString() : 'N/A'}</>} />
+              <HeroStat size="md" label="Squad" value={`£${(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m`} />
+              <HeroStat size="md" label="Bank" value={`£${((teamData.entry_history.bank || 0) / 10).toFixed(1)}m`} />
+            </div>
+          )}
+
+          {/* General Info Fallback */}
+          {teamData?.general_info && !teamData.entry_history && (
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-4">
+              <HeroStat size="md" label="Total Points" value={teamData.general_info.summary_overall_points} />
+              <HeroStat size="md" label="Overall Rank" value={<>#{teamData.general_info.summary_overall_rank?.toLocaleString()}</>} />
+              <HeroStat size="md" label="Team Name" value={<span className="block truncate text-xl sm:text-2xl">{teamData.general_info.name}</span>} />
+              <HeroStat size="md" label="Manager" value={<span className="block truncate text-xl sm:text-2xl">{teamData.general_info.player_first_name} {teamData.general_info.player_last_name}</span>} />
+            </div>
+          )}
+        </HeroPanel>
       </div>
-
-      {/* Team Statistics */}
-      {teamData?.entry_history && (
-        <div className="grid grid-cols-5 gap-0.5 sm:gap-4">
-          <Card className="border-l-2 sm:border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-blue-700 truncate">{teamData.entry_history.points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">GW Pts</div>
-                </div>
-                <Trophy className="hidden sm:block h-8 w-8 text-blue-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-green-700 truncate">{teamData.entry_history.total_points}</div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Total</div>
-                </div>
-                <Star className="hidden sm:block h-8 w-8 text-green-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-purple-700 truncate">
-                    #{teamData.entry_history.overall_rank != null ? teamData.entry_history.overall_rank.toLocaleString() : 'N/A'}
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Rank</div>
-                </div>
-                <Crown className="hidden sm:block h-8 w-8 text-purple-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-orange-700 truncate">
-                    £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Squad</div>
-                </div>
-                <DollarSign className="hidden sm:block h-8 w-8 text-orange-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-2 sm:border-l-4 border-l-teal-500 bg-gradient-to-r from-teal-50 to-white">
-            <CardContent className="p-1 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-xs sm:text-2xl font-bold text-teal-700 truncate">
-                    £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
-                  </div>
-                  <div className="text-[9px] sm:text-sm text-muted-foreground leading-none sm:leading-tight">Bank</div>
-                </div>
-                <DollarSign className="hidden sm:block h-8 w-8 text-teal-500 shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* General Info Fallback */}
-      {teamData?.general_info && !teamData.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{teamData.general_info.summary_overall_points}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
-                </div>
-                <Star className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.general_info.summary_overall_rank != null ? teamData.general_info.summary_overall_rank.toLocaleString() : 'N/A'}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Overall Rank</div>
-                </div>
-                <Crown className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xl font-bold text-blue-700">{teamData.general_info.name}</div>
-                  <div className="text-sm text-muted-foreground">Team Name</div>
-                </div>
-                <Trophy className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-gray-500 bg-gradient-to-r from-gray-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-bold text-gray-700">
-                    {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Manager</div>
-                </div>
-                <Users className="h-8 w-8 text-gray-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Main Content Tabs */}
       <Tabs
@@ -845,20 +741,20 @@ export default function CreatorTeam() {
         onValueChange={(v) => setActiveTab(v as "team" | "transfers" | "performance" | "chips")}
         className="space-y-3 sm:space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-lg p-1">
-          <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+        <TabsList className="flex w-full justify-start overflow-x-auto h-auto p-1 rounded-xl border border-gray-200 bg-gray-100 shadow-none">
+          <TabsTrigger value="team" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <Users className="h-4 w-4" />
             Team
           </TabsTrigger>
-          <TabsTrigger value="transfers" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="transfers" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <ArrowLeftRight className="h-4 w-4" />
             Transfers
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="performance" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <BarChart3 className="h-4 w-4" />
             Performance
           </TabsTrigger>
-          <TabsTrigger value="chips" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="chips" className="flex min-w-fit items-center justify-center gap-1 sm:gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm py-1.5 px-1 sm:px-3 font-bold text-xs sm:text-sm min-h-[34px]">
             <Star className="h-4 w-4" />
             Chips
           </TabsTrigger>
@@ -870,11 +766,11 @@ export default function CreatorTeam() {
             <>
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xl font-semibold">Team Squad</h2>
+                  <h2 className="flex items-center gap-3 text-lg font-bold text-gray-900 sm:text-xl"><IconTile icon={Users} />Team Squad</h2>
                   <Button
                     size="sm"
                     variant={showLivePoints ? "default" : "outline"}
-                    className={showLivePoints ? "bg-green-600 hover:bg-green-700 text-white gap-1.5" : "gap-1.5"}
+                    className={showLivePoints ? "bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5" : "gap-1.5"}
                     onClick={() => setShowLivePoints(v => !v)}
                   >
                     <Zap className="h-3.5 w-3.5" />
@@ -898,7 +794,7 @@ export default function CreatorTeam() {
 
                 {/* Pitch View */}
                   <div className="-mx-2 sm:mx-0">
-                    <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                       <CardContent className="p-2 sm:p-6">
                         <PitchView 
                           players={showLivePoints ? effectivePitchPlayers : pitchPlayers}
@@ -917,14 +813,7 @@ export default function CreatorTeam() {
           {(captain || viceCaptain) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {captain && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center text-lg">
-                      <Crown className="h-5 w-5 mr-2 text-yellow-600" />
-                      Captain
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={Crown} title="Captain">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{captain.player_name}</p>
@@ -934,19 +823,11 @@ export default function CreatorTeam() {
                         {captain.position}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                  </SectionCard>
               )}
               
               {viceCaptain && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center text-lg">
-                      <Crown className="h-5 w-5 mr-2 text-gray-600" />
-                      Vice Captain
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <SectionCard icon={Crown} title="Vice Captain">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{viceCaptain.player_name}</p>
@@ -956,8 +837,7 @@ export default function CreatorTeam() {
                         {viceCaptain.position}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                  </SectionCard>
               )}
                 </div>
               )}
@@ -973,19 +853,7 @@ export default function CreatorTeam() {
               ))}
             </div>
           ) : transfersData && transfersData.length > 0 ? (
-            <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-800">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <ArrowLeftRight className="h-5 w-5 text-orange-600" />
-                  </div>
-                  Transfer History
-                </CardTitle>
-                <CardDescription className="text-orange-700">
-                  All transfers made this season with player prices and gameweek details
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <SectionCard icon={ArrowLeftRight} title="Transfer History" subtitle="All transfers made this season with player prices and gameweek details">
                 {(() => {
                   const chipGWs = new Set(
                     (managerHistory?.chips || [])
@@ -1099,8 +967,7 @@ export default function CreatorTeam() {
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
+              </SectionCard>
           ) : (
             <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
               <CardContent className="text-center py-8">
@@ -1226,11 +1093,11 @@ export default function CreatorTeam() {
               {/* Performance Summary */}
               {(filteredManagerHistory || filteredCreatorHistory) && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
+                  <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-r from-indigo-50 to-white">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-2xl font-bold text-blue-700">
+                          <div className="text-2xl font-bold text-indigo-700">
                             {filteredCreatorHistory && filteredCreatorHistory.length > 0
                               ? Math.round(
                                   filteredCreatorHistory.reduce((sum, track) => sum + track.gameweekPoints, 0) / 
@@ -1246,7 +1113,7 @@ export default function CreatorTeam() {
                           </div>
                           <div className="text-sm text-muted-foreground">Avg Points/GW</div>
                         </div>
-                        <BarChart3 className="h-8 w-8 text-blue-500" />
+                        <BarChart3 className="h-8 w-8 text-indigo-500" />
                       </div>
                     </CardContent>
                   </Card>
@@ -1268,11 +1135,11 @@ export default function CreatorTeam() {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
+                  <Card className="border-l-4 border-l-violet-500 bg-gradient-to-r from-violet-50 to-white">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-2xl font-bold text-purple-700">
+                          <div className="text-2xl font-bold text-violet-700">
                             #{filteredCreatorHistory && filteredCreatorHistory.length > 0
                               ? Math.min(...filteredCreatorHistory.map(track => track.overallRank).filter(r => r != null))?.toLocaleString() ?? 'N/A'
                               : filteredManagerHistory && filteredManagerHistory.length > 0
@@ -1282,7 +1149,7 @@ export default function CreatorTeam() {
                           </div>
                           <div className="text-sm text-muted-foreground">Best Rank</div>
                         </div>
-                        <Crown className="h-8 w-8 text-purple-500" />
+                        <Crown className="h-8 w-8 text-violet-500" />
                       </div>
                     </CardContent>
                   </Card>
@@ -1356,17 +1223,7 @@ export default function CreatorTeam() {
 
 
         <TabsContent value="chips" className="space-y-3 sm:space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5" />
-                Chip Usage Summary
-              </CardTitle>
-              <CardDescription>
-                Complete overview of FPL chip usage for this content creator
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SectionCard icon={Star} title="Chip Usage Summary" subtitle="Complete overview of FPL chip usage for this content creator">
               {historyLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -1467,8 +1324,7 @@ export default function CreatorTeam() {
                   </TableBody>
                 </Table>
               )}
-            </CardContent>
-          </Card>
+            </SectionCard>
         </TabsContent>
       </Tabs>
 
