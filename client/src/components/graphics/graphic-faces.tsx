@@ -213,6 +213,21 @@ function RankMedal({ rank, theme, px }: { rank: number; theme: GraphicTheme; px:
   );
 }
 
+/** The soft shadow a player's shirt casts on the pitch. */
+function GroundShadow({ jersey }: { jersey: number }) {
+  return <div style={{ position: "absolute", left: "8%", right: "8%", bottom: -jersey * 0.02, height: jersey * 0.2, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 70%)" }} />;
+}
+
+/** A jersey standing in a glow of the club colour. */
+function GlowJersey({ team, position, px, theme, spread = 0.2, alpha = 0.8 }: { team: string; position: string; px: number; theme: GraphicTheme; spread?: number; alpha?: number }) {
+  return (
+    <div style={{ position: "relative", width: px, height: px, flexShrink: 0 }}>
+      <div style={{ position: "absolute", inset: -px * spread, borderRadius: "50%", background: `radial-gradient(circle, ${clubTint(team, theme, alpha)} 0%, transparent 68%)` }} />
+      <div style={{ position: "relative" }}><Jersey team={team} position={position} px={px} /></div>
+    </div>
+  );
+}
+
 function FixtureBox({ items, theme, font }: { items: Array<{ opponent: string; isHome: boolean; difficulty: number }>; theme: GraphicTheme; font: number }) {
   if (!items.length) {
     return (
@@ -593,7 +608,7 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
   const warn = p.flag !== null;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.1 }}>
-      <Jersey team={p.teamShort} position={p.position} px={jersey} />
+      <div style={{ position: "relative", width: jersey, height: jersey }}><GroundShadow jersey={jersey} /><div style={{ position: "relative" }}><Jersey team={p.teamShort} position={p.position} px={jersey} /></div></div>
       <div
         style={{
           maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "2px 12px", borderRadius: 999, fontSize: nameFont, fontWeight: 800, lineHeight: 1.25,
@@ -611,7 +626,7 @@ function LineupTokenView({ p, jersey, nameFont, minFont }: { p: LineupToken; jer
   );
 }
 
-function Pitch<T extends { id: number }>({ rows, renderToken, night }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode; night?: boolean }) {
+function Pitch<T extends { id: number }>({ rows, renderToken, night, badge, watermark }: { rows: Array<{ position: string; players: T[] }>; renderToken: (p: T) => ReactNode; night?: boolean; badge?: ReactNode; watermark?: string }) {
   const line = "rgba(255,255,255,0.45)";
   // goalkeeper at the top, then defenders, midfielders and the attack at the bottom (rows come in that order). The team now
   // faces down the page, so its left is the viewer's right: each row comes in left-to-right order and is drawn mirrored.
@@ -622,14 +637,16 @@ function Pitch<T extends { id: number }>({ rows, renderToken, night }: { rows: A
         position: "relative", flex: 1, minHeight: 0, borderRadius: 20, overflow: "hidden", border: `3px solid ${line}`,
         background: night
           ? "radial-gradient(ellipse at 50% 38%, rgba(190,255,210,0.22) 0%, transparent 62%), repeating-linear-gradient(180deg, #0f5a2b 0px, #0f5a2b 70px, #146a33 70px, #146a33 140px)"
-          : "repeating-linear-gradient(180deg, #1e7a3b 0px, #1e7a3b 70px, #23893f 70px, #23893f 140px)",
-        boxShadow: night ? "inset 0 0 90px 10px rgba(0,0,0,0.55), 0 20px 50px -20px rgba(0,0,0,0.7)" : undefined,
+          : "radial-gradient(ellipse at 50% 38%, rgba(220,255,225,0.16) 0%, transparent 62%), repeating-linear-gradient(180deg, #1e7a3b 0px, #1e7a3b 70px, #23893f 70px, #23893f 140px)",
+        boxShadow: night ? "inset 0 0 90px 10px rgba(0,0,0,0.55), 0 20px 50px -20px rgba(0,0,0,0.7)" : "inset 0 0 70px 4px rgba(0,0,0,0.38), 0 20px 50px -22px rgba(0,0,0,0.7)",
       }}
     >
+      {watermark && <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", textAlign: "center", fontSize: 300, fontWeight: 900, lineHeight: 1, letterSpacing: -10, color: "#ffffff", opacity: 0.07 }}>{watermark}</div>}
       <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 3, background: line }} />
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 150, height: 150, marginLeft: -75, marginTop: -75, borderRadius: "50%", border: `3px solid ${line}`, boxSizing: "border-box" }} />
       <div style={{ position: "absolute", left: "27%", right: "27%", top: 0, height: "14%", border: `3px solid ${line}`, borderTop: "none", boxSizing: "border-box" }} />
       <div style={{ position: "absolute", left: "27%", right: "27%", bottom: 0, height: "14%", border: `3px solid ${line}`, borderBottom: "none", boxSizing: "border-box" }} />
+      {badge && <div style={{ position: "absolute", right: 14, top: 12, zIndex: 2 }}>{badge}</div>}
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "8px 14px" }}>
         {ordered.map((r) => (
           <div key={r.position} style={{ display: "flex", justifyContent: "space-evenly", alignItems: "flex-start", gap: 6 }}>
@@ -662,7 +679,10 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
       ? `Not enough expected-minutes data for ${lineup.teamName} in ${gwLabel} yet.`
       : null;
 
-  const pitch = <Pitch rows={lineup.rows} renderToken={(p) => <LineupTokenView p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />} />;
+  const formationBadge = lineup.formation && !land ? (
+    <div style={{ fontSize: tall ? 34 : 28, fontWeight: 900, padding: "4px 20px", borderRadius: 999, background: "rgba(0,0,0,0.55)", color: "#ffffff", border: `2px solid ${AMBER}`, letterSpacing: 1 }}>{lineup.formation}</div>
+  ) : undefined;
+  const pitch = <Pitch rows={lineup.rows} badge={formationBadge} watermark={lineup.teamShort} renderToken={(p) => <LineupTokenView p={p} jersey={jersey} nameFont={nameFont} minFont={minFont} />} />;
   // An edited lineup is the poster's own view: say so loudly, so nobody takes it for our prediction.
   const editedBanner = lineup.edited && (
     <div
@@ -680,7 +700,7 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
       <div style={{ fontSize: land ? 15 : 19, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 6 : 10 }}>ALSO IN CONTENTION</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: land ? 6 : 10, flexDirection: land ? "column" : "row" }}>
         {lineup.bench.map((p) => (
-          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, background: theme.panel, borderRadius: 999, padding: land ? "4px 12px" : "6px 16px", fontSize: land ? 16 : 22, fontWeight: 800 }}>
+          <div key={p.id} style={{ ...clubPanel(theme, lineup.teamShort, 0.3, { borderRadius: 999, boxShadow: "none" }), display: "flex", alignItems: "center", gap: 8, padding: land ? "4px 12px" : "6px 16px", fontSize: land ? 16 : 22, fontWeight: 800 }}>
             <span>{p.flag ? "⚠ " : ""}{p.name}</span>
             <span style={{ color: p.flag ? AMBER : theme.muted, fontWeight: 700 }}>{p.role ?? p.position}{p.chance !== null ? ` · ${p.chance}%` : ""}</span>
           </div>
@@ -709,8 +729,8 @@ function LineupFace({ spec, theme, lineup, gwLabel }: { spec: GraphicSpec; theme
           </div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
             {editedBanner}
-            <div style={{ ...panel(theme), padding: "12px 16px", flexShrink: 0 }}>
-              <div style={{ fontSize: 34, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{lineup.formation}</div>
+            <div style={{ ...clubPanel(theme, lineup.teamShort, 0.45), padding: "12px 16px", flexShrink: 0 }}>
+              <div style={{ fontSize: 44, fontWeight: 900, color: theme.accent, lineHeight: 1, letterSpacing: -1 }}>{lineup.formation}</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: theme.muted, marginTop: 4 }}>{lineup.edited ? "Formation chosen by the poster" : lineup.doubleGameweek ? "Double gameweek: likeliest XI across both matches" : "Most likely formation"}</div>
             </div>
             {bench}
@@ -741,7 +761,8 @@ function RevealTokenView({ p, jersey, nameFont, fixFont }: { p: RevealToken; jer
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2 }}>
       <div style={{ position: "relative", width: jersey, height: jersey }}>
-        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        <GroundShadow jersey={jersey} />
+        <div style={{ position: "relative" }}><Jersey team={p.teamShort} position={p.position} px={jersey} /></div>
         {badge && (
           <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: badge.bg, color: badge.fg, border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {badge.text}
@@ -861,7 +882,7 @@ function StatTile({ theme, size, label, value, sub, badge, basis, big }: { theme
   const f = tileFonts(size);
   const valueFont = big ? Math.round(f.value * 1.35) : f.value;
   return (
-    <div style={{ ...panel(theme, { borderRadius: 16 }), flex: basis ? `0 0 ${basis}` : 1, minWidth: 0, padding: f.pad, boxSizing: "border-box" }}>
+    <div style={{ ...panel(theme, { borderRadius: 16, borderTop: `4px solid ${big ? theme.accent : theme.panelBorder}` }), flex: basis ? `0 0 ${basis}` : 1, minWidth: 0, padding: f.pad, boxSizing: "border-box" }}>
       <div style={{ fontSize: f.label, fontWeight: 800, letterSpacing: 1.2, color: theme.muted, textTransform: "uppercase", ...ellipsis }}>{label}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
         {badge && (
@@ -930,7 +951,8 @@ function GwTokenView({ p, jersey, nameFont, ptsFont }: { p: MyGameweekToken; jer
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2, opacity: p.counted ? 1 : 0.8 }} data-testid={`gw-token-${p.id}`}>
       <div style={{ position: "relative", width: jersey, height: jersey }}>
-        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        <GroundShadow jersey={jersey} />
+        <div style={{ position: "relative" }}><Jersey team={p.teamShort} position={p.position} px={jersey} /></div>
         {badge && (
           <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: badge.bg, color: badge.fg, border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {badge.text}
@@ -1040,8 +1062,11 @@ function CoverFace({ spec, theme, cover }: { spec: GraphicSpec; theme: GraphicTh
     <div style={{ display: "flex", alignItems: "flex-end", justifyContent: land ? "center" : "space-evenly", gap: land ? 8 : 16, flexShrink: 0 }}>
       {cover.players.map((p) => (
         <div key={p.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}>
-          <Jersey team={p.teamShort} position={p.position} px={jersey} />
-          <div style={{ marginTop: -4, background: "#ffffff", color: "#111827", borderRadius: 10, padding: land ? "3px 14px" : "5px 20px", fontSize: land ? 20 : tall ? 34 : 28, fontWeight: 900, textTransform: "uppercase", maxWidth: jersey * 1.5, ...ellipsis }}>
+          <div style={{ position: "relative", width: jersey, height: jersey }}>
+            <GroundShadow jersey={jersey} />
+            <div style={{ position: "relative" }}><Jersey team={p.teamShort} position={p.position} px={jersey} /></div>
+          </div>
+          <div style={{ marginTop: -4, background: "#ffffff", color: "#111827", borderRadius: 10, borderBottom: `${land ? 5 : 8}px solid ${theme.accent}`, padding: land ? "3px 14px" : "5px 20px", fontSize: land ? 20 : tall ? 34 : 28, fontWeight: 900, textTransform: "uppercase", maxWidth: jersey * 1.5, boxShadow: "0 10px 24px -8px rgba(0,0,0,0.5)", ...ellipsis }}>
             {p.name}
           </div>
         </div>
@@ -1052,8 +1077,10 @@ function CoverFace({ spec, theme, cover }: { spec: GraphicSpec; theme: GraphicTh
   return (
     <Frame spec={spec} theme={theme} subtitle="" gwLabel={null} bare>
       {/* decorative stripes behind everything */}
-      <div style={{ position: "absolute", right: land ? 40 : -60, top: -120, width: land ? 300 : 460, height: 1900, background: theme.accent, opacity: 0.1, transform: "rotate(18deg)", zIndex: 0 }} />
-      <div style={{ position: "absolute", right: land ? 360 : 340, top: -120, width: land ? 80 : 120, height: 1900, background: theme.accent, opacity: 0.06, transform: "rotate(18deg)", zIndex: 0 }} />
+      <div style={{ position: "absolute", right: land ? 40 : -60, top: -120, width: land ? 300 : 460, height: 1900, background: `linear-gradient(180deg, ${theme.accent}, ${withAlpha(theme.accent, 0.2)})`, opacity: 0.16, transform: "rotate(18deg)", zIndex: 0 }} />
+      <div style={{ position: "absolute", right: land ? 360 : 340, top: -120, width: land ? 80 : 120, height: 1900, background: theme.accent, opacity: 0.09, transform: "rotate(18deg)", zIndex: 0 }} />
+      {/* a spotlight behind the players */}
+      {n > 0 && <div style={{ position: "absolute", right: land ? -60 : "50%", bottom: land ? "50%" : -140, width: land ? 760 : 1000, height: land ? 760 : 1000, marginRight: land ? 0 : -500, marginBottom: land ? -380 : 0, borderRadius: "50%", background: `radial-gradient(circle, ${withAlpha(theme.accent, 0.3)} 0%, transparent 65%)`, zIndex: 0 }} />}
       <div style={{ position: "relative", zIndex: 1, flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column", alignItems: land ? "center" : "stretch", gap: land ? 24 : 18, paddingBottom: land ? 8 : 16 }}>
         <div style={{ flex: land ? "1 1 58%" : 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>{text}</div>
         {land ? (players ? <div style={{ flex: "1 1 42%", minWidth: 0 }}>{players}</div> : null) : players}
@@ -1076,7 +1103,7 @@ function NewsFace({ spec, theme, news }: { spec: GraphicSpec; theme: GraphicThem
   );
   const player = (
     <div style={{ display: "flex", flexDirection: land ? "column" : "row", alignItems: "center", gap: land ? 8 : 24, textAlign: land ? "center" : "left", minWidth: 0 }}>
-      <Jersey team={news.player.teamShort} position={news.player.position} px={land ? 190 : tall ? 170 : 130} />
+      <GlowJersey team={news.player.teamShort} position={news.player.position} px={land ? 190 : tall ? 170 : 130} theme={theme} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: land ? 34 : tall ? 54 : 46, fontWeight: 900, lineHeight: 1.05, textTransform: "uppercase", overflowWrap: "anywhere" }}>{news.player.fullName}</div>
         <div style={{ fontSize: land ? 20 : 28, fontWeight: 700, color: theme.muted, marginTop: 6 }}>{news.player.teamName} · {news.player.position}</div>
@@ -1084,8 +1111,8 @@ function NewsFace({ spec, theme, news }: { spec: GraphicSpec; theme: GraphicThem
     </div>
   );
   const quote = (
-    <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-      <div aria-hidden="true" style={{ position: "absolute", left: -10, top: land ? -40 : -70, fontSize: land ? 260 : 380, lineHeight: 1, fontWeight: 900, color: theme.accent, opacity: 0.28, fontFamily: "Georgia, 'Times New Roman', serif" }}>“</div>
+    <div style={{ ...panel(theme, { borderLeft: `${land ? 8 : 12}px solid ${theme.accent}`, borderRadius: 28 }), position: "relative", overflow: "hidden", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: land ? "20px 30px" : "30px 44px", boxSizing: "border-box" }}>
+      <div aria-hidden="true" style={{ position: "absolute", left: 10, top: land ? -40 : -70, fontSize: land ? 260 : 380, lineHeight: 1, fontWeight: 900, color: theme.accent, opacity: 0.28, fontFamily: "Georgia, 'Times New Roman', serif" }}>“</div>
       <div style={{ position: "relative", fontSize: font, fontWeight: 800, lineHeight: 1.25, overflowWrap: "anywhere" }}>
         {news.kind === "custom" ? `“${news.quote}”` : news.kind === "official" ? news.quote : "No news to show for this player yet."}
       </div>
