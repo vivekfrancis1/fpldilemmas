@@ -249,6 +249,8 @@ export interface GraphicSpec {
   date: string;
   /** Team Reveal / My Gameweek: the manager's FPL team id (0 = none), for their transfers, points and ranks. */
   entry: number;
+  /** Team Reveal: the money in the bank the manager declared, in tenths of a million (null = not declared). */
+  bank: number | null;
   /** Team Reveal: the 15 squad ids (order kept), the bench ids among them, captain / vice (0 = none), chip, manager name. */
   squad: number[];
   bench: number[];
@@ -295,6 +297,8 @@ export const CHIP_LABELS: Record<Exclude<ChipId, "">, string> = { wildcard: "Wil
 export const SQUAD_SIZE = 15;
 export const BENCH_PLAYERS = 4;
 export const MAX_MANAGER_NAME = 40;
+/** The most money in the bank a team can have (tenths of a million): £100.0m. */
+export const MAX_BANK = 1000;
 export const MAX_SUBTITLE = 80;
 export const MAX_TAG = 24;
 export const MAX_QUOTE = 280;
@@ -321,6 +325,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   chip: "",
   manager: "",
   entry: 0,
+  bank: null,
   subtitle: "",
   tag: "",
   quote: "",
@@ -422,6 +427,7 @@ export function decodeSpec(search: string): GraphicSpec {
     chip: (CHIP_IDS as string[]).includes(chipRaw) ? (chipRaw as ChipId) : "",
     manager: (q.get("mgr") ?? "").slice(0, MAX_MANAGER_NAME),
     entry: intOrNull(q.get("en")) ?? 0,
+    bank: (() => { const b = intOrNull(q.get("bk")); return b !== null && b <= MAX_BANK ? b : null; })(),
     subtitle: (q.get("sub") ?? "").slice(0, MAX_SUBTITLE),
     tag: (q.get("tag") ?? "").slice(0, MAX_TAG),
     quote: (q.get("q") ?? "").slice(0, MAX_QUOTE),
@@ -465,6 +471,7 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.chip) add("chip", spec.chip);
   if (spec.manager) add("mgr", spec.manager.slice(0, MAX_MANAGER_NAME));
   if (spec.entry > 0) add("en", String(spec.entry));
+  if (spec.bank !== null && spec.bank >= 0 && spec.bank <= MAX_BANK) add("bk", String(spec.bank));
   if (spec.subtitle) add("sub", spec.subtitle.slice(0, MAX_SUBTITLE));
   if (spec.tag) add("tag", spec.tag.slice(0, MAX_TAG));
   if (spec.quote) add("q", spec.quote.slice(0, MAX_QUOTE));
@@ -1833,7 +1840,7 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       if (!reveal.complete) return done(`${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: squad not finished yet`, data.gwLabel);
       const st = data.stats;
       const extra = st
-        ? `${st.transfers.length === 0 ? ", no transfers" : `, ${plural(st.transfers.length, "transfer", "transfers")}`}${st.transferCost ? ` (-${st.transferCost})` : ""}${st.overallRank !== null ? `, overall rank ${formatFull(st.overallRank)}` : ""}`
+        ? `${st.transfers === null ? "" : st.transfers.length === 0 ? ", no transfers" : `, ${plural(st.transfers.length, "transfer", "transfers")}`}${st.transferCost ? ` (-${st.transferCost})` : ""}${st.bank !== null ? `, £${(st.bank / 10).toFixed(1)}m in the bank` : ""}${st.overallRank !== null ? `, overall rank ${formatFull(st.overallRank)}` : ""}`
         : "";
       return done(
         `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}${extra}`,

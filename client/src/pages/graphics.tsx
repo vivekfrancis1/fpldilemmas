@@ -135,11 +135,13 @@ const TEMPLATE_GROUPS: Array<{ id: TemplateGroupId; label: string; tile: string;
 const groupOfTemplate = (id: string): TemplateGroupId => TEMPLATE_GROUPS.find((g) => g.id !== "all" && g.templates.includes(id))?.id ?? "players";
 const ACTIVE_CHIP = "border-transparent bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { useAuth } from "@/hooks/useAuth";
+import { SQUAD_FORMATIONS, benchForFormation, formationOfSquad, parseBankInput, squadFromMyTeam } from "@shared/graphics-manager";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
 import { FORMATIONS } from "@shared/formations";
 import { arrangeInFormation, rankForSlot, replaceSlot, type EditPlayer } from "@shared/lineup-edit";
-import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, managerDataFromBodies, managerRequests, matchModelGameweek, resolveGameweeks, resolveStartedGw, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, loadManagerData, longDate, makeGraphicDataContext, managerRequests, matchModelGameweek, resolveGameweeks, resolveStartedGw, resolveTotwGw, type LiveElement, type ManagerGraphicData, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 import { selectableGameweeks } from "@shared/league-ownership";
@@ -419,7 +421,7 @@ function MyGameweekControls({ spec, update, startedGameweeks, finishedGameweeks,
 }
 
 function SquadBuilder({
-  spec, update, elements, teamShortById, xptsById, gameweek, gameweekOptions,
+  spec, update, elements, teamShortById, xptsById, gameweek, gameweekOptions, knownBank,
 }: {
   spec: GraphicSpec;
   update: (patch: Partial<GraphicSpec>) => void;
@@ -428,6 +430,8 @@ function SquadBuilder({
   xptsById: Map<number, number | null>;
   gameweek: number;
   gameweekOptions: number[];
+  /** The bank FPL recorded for the team after the previous gameweek (tenths of a million), when the team is known. */
+  knownBank: number | null;
 }) {
   const [query, setQuery] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -441,6 +445,33 @@ function SquadBuilder({
   const autoManagerRef = useRef<string>("");
   const byId = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
   const counts = squadCounts(elements, spec.squad);
+
+  // A logged-in manager with a connected FPL account gets their own team (with the transfers already made for the coming
+  // gameweek) without typing anything. Anyone else builds it themselves, starting from their team ID's previous gameweek.
+  const { user } = useAuth();
+  const { data: fplStatus, isLoading: fplStatusLoading } = useQuery<{ connected: boolean; fplManagerId?: number }>({
+    queryKey: ["/api/fpl/status"],
+    enabled: !!user,
+    retry: false,
+  });
+  const accountId = fplStatus?.connected && fplStatus.fplManagerId ? fplStatus.fplManagerId : 0;
+  const accountPending = !!user && fplStatusLoading;
+  const accountTriedRef = useRef<boolean>(spec.squad.length > 0);
+
+  // the money in the bank, typed in £m
+  const [bankText, setBankText] = useState(() => (spec.bank !== null ? (spec.bank / 10).toFixed(1) : ""));
+  const bankInvalid = parseBankInput(bankText) === undefined;
+  useEffect(() => {
+    // a bank filled in for the person (from their account, or the link) shows in the box
+    if (spec.bank !== parseBankInput(bankText) && parseBankInput(bankText) !== undefined) setBankText(spec.bank !== null ? (spec.bank / 10).toFixed(1) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec.bank]);
+  const changeBank = (text: string) => {
+    setBankText(text);
+    const tenths = parseBankInput(text);
+    if (tenths !== undefined) update({ bank: tenths });
+  };
+  const currentFormation = formationOfSquad(elements, spec.squad, spec.bench);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -560,11 +591,52 @@ function SquadBuilder({
   };
   const loadFromId = () => loadSquad(extractManagerId(idText));
 
+  const loadAccount = async () => {
+    if (!accountId) return;
+    loadedIdRef.current = String(accountId); // the ID flow below must not load the same team again
+    setLoad({ busy: true, error: null, info: null });
+    try {
+      const res = await fetch("/api/fpl/my-team");
+      const mine = res.ok ? squadFromMyTeam(await res.json().catch(() => null)) : null;
+      if (!mine) {
+        // an expired FPL connection, or the team is not available: carry on with the team ID flow
+        setIdText(String(accountId));
+        setLoad({ busy: false, error: "We couldn't read your team from your FPL account (the connection may have expired). Loading it from your team ID instead.", info: null });
+        loadedIdRef.current = "";
+        void loadSquad(String(accountId), true);
+        return;
+      }
+      const patch: Partial<GraphicSpec> = { squad: mine.squad, bench: mine.bench, captain: mine.captain, vice: mine.vice, chip: mine.chip, bank: mine.bank, entry: accountId };
+      if (!spec.manager.trim() || spec.manager === autoManagerRef.current) {
+        try {
+          const info = await (await fetch(`/api/manager/${accountId}`)).json();
+          const name = `${info?.player_first_name ?? ""} ${info?.player_last_name ?? ""}`.trim().slice(0, MAX_MANAGER_NAME);
+          patch.manager = name;
+          autoManagerRef.current = name;
+        } catch {
+          /* the name is optional */
+        }
+      }
+      update(patch);
+      setIdText(String(accountId));
+      saveToolManagerId(String(accountId));
+      setNote(null);
+      setLoad({ busy: false, error: null, info: "Loaded your current FPL team, including any transfers you have already made for this gameweek. Change anything below." });
+    } catch {
+      setLoad({ busy: false, error: "Couldn't load your FPL team right now. Please try again.", info: null });
+    }
+  };
+
   // Once a team ID is known (saved from another tool, or typed here) its squad is picked automatically; a new ID replaces it
   // (a short pause after typing, so half-typed IDs are not looked up). Nothing happens without an ID: no random squad.
   const firstCheckRef = useRef(true);
   useEffect(() => {
-    if (!elements.length) return;
+    if (!elements.length || accountPending) return;
+    if (accountId && !accountTriedRef.current) {
+      accountTriedRef.current = true;
+      void loadAccount();
+      return;
+    }
     const id = extractManagerId(idText);
     // the saved ID is used straight away when the template opens; a typed ID after a short pause
     const delay = firstCheckRef.current ? 0 : 800;
@@ -573,7 +645,7 @@ function SquadBuilder({
     const t = setTimeout(() => void loadSquad(id, true), delay);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idText, elements.length]);
+  }, [idText, elements.length, accountId, accountPending]);
 
   const toggleBtn = (active: boolean) =>
     `rounded-md border px-2 py-1 text-xs font-bold leading-none ${active ? ACTIVE_CHIP : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`;
@@ -585,11 +657,32 @@ function SquadBuilder({
           <Input value={idText} onChange={(e) => setIdText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadFromId(); }} inputMode="numeric" placeholder="Team ID or team link" data-testid="input-fpl-id" />
           <Button type="button" variant="outline" onClick={loadFromId} disabled={load.busy} data-testid="button-load-fpl">{load.busy ? "Loading…" : "Load"}</Button>
         </div>
-        {!extractManagerId(idText) && spec.squad.length === 0 && (
+        {accountId > 0 && (
+          <Button type="button" variant="outline" size="sm" className="mt-1" onClick={() => void loadAccount()} disabled={load.busy} data-testid="button-load-account">
+            Use my FPL team (with this week's transfers)
+          </Button>
+        )}
+        {!extractManagerId(idText) && spec.squad.length === 0 && !accountId && (
           <p className="text-xs text-indigo-700" role="status" data-testid="id-prompt">Enter your FPL team ID and your squad is picked for you. It is remembered for the other tools too.</p>
         )}
         {load.error && <p className="text-xs text-red-600" role="alert" data-testid="load-error">{load.error}</p>}
         {load.info && <p className="text-xs text-emerald-700" role="status" data-testid="load-info">{load.info}</p>}
+      </Field>
+
+      <Field label="Money in the bank (optional)">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">£</span>
+          <Input value={bankText} onChange={(e) => changeBank(e.target.value)} inputMode="decimal" placeholder="e.g. 0.5" className="max-w-[8rem]" aria-invalid={bankInvalid} data-testid="input-bank" />
+          <span className="text-sm text-gray-500">m</span>
+        </div>
+        {bankInvalid && <p className="text-xs text-red-600" role="alert" data-testid="bank-error">Enter an amount like 0.5 (steps of £0.1m, up to £100m).</p>}
+        {!bankInvalid && spec.bank === null && knownBank !== null && (
+          <p className="text-xs text-gray-600" data-testid="bank-hint">
+            Your bank after the last gameweek was £{(knownBank / 10).toFixed(1)}m; your transfers may have changed it.{" "}
+            <button type="button" className="font-semibold text-indigo-700 underline" onClick={() => changeBank((knownBank / 10).toFixed(1))} data-testid="button-use-known-bank">Use it</button>
+          </p>
+        )}
+        <p className="text-xs text-gray-500">Shown on the graphic once you enter it. Leave it empty to leave it off.</p>
       </Field>
 
       <Field label={`Squad (${spec.squad.length}/${SQUAD_SIZE})`}>
@@ -646,6 +739,28 @@ function SquadBuilder({
                 </div>
               );
             })}
+          </div>
+        )}
+        {spec.squad.length === SQUAD_SIZE && (
+          <div className="grid grid-cols-2 gap-3" data-testid="formation-field">
+            <Field label="Formation">
+              <SimpleSelect
+                value={currentFormation ?? "custom"}
+                onChange={(f) => {
+                  if (f === "custom") return;
+                  const bench = benchForFormation({ elements, squad: spec.squad, xptsById, formation: f, currentBench: spec.bench });
+                  if (!bench) return;
+                  // the armband cannot stay with a player who is now on the bench: it goes to the best starter left
+                  const starters = spec.squad.filter((id) => !bench.includes(id)).sort((a, b) => (xptsById.get(b) ?? -1) - (xptsById.get(a) ?? -1) || a - b);
+                  const captain = bench.includes(spec.captain) ? starters.find((id) => id !== spec.vice) ?? 0 : spec.captain;
+                  const vice = bench.includes(spec.vice) ? starters.find((id) => id !== captain) ?? 0 : spec.vice;
+                  update({ bench, captain, vice });
+                  setNote(`Formation ${f}: the best players at each position start, the rest are on the bench.`);
+                }}
+                options={[...(currentFormation ? [] : [{ value: "custom", label: "Your own bench" }]), ...SQUAD_FORMATIONS.map((f) => ({ value: f, label: f }))]}
+                testId="select-formation"
+              />
+            </Field>
           </div>
         )}
         {spec.squad.length === SQUAD_SIZE && (
@@ -863,29 +978,20 @@ export default function GraphicsPage() {
   // Team Reveal / My Gameweek: the manager's picks, transfers and (for the reveal) previous gameweek's picks. Picks that are not
   // out yet, or a failed request, are not errors: the figures are left off.
   const managerReq = useMemo(() => managerRequests(spec, { defaultRange, startedGameweeks }), [spec.template, spec.entry, spec.from, defaultRange, startedGameweeks]);
-  const { data: managerBodies } = useQuery<{ picks: any; previous: any; transfers: any }>({
+  const { data: managerQueryData } = useQuery<ManagerGraphicData | null>({
     queryKey: ["graphic-manager", ...managerReq.urls],
     enabled: managerReq.urls.length > 0,
     staleTime: 60 * 1000,
     retry: false,
-    queryFn: async () => {
-      const get = async (url: string | null) => {
-        if (!url) return null;
-        try {
-          const r = await fetch(url);
-          return r.ok ? await r.json() : null;
-        } catch {
-          return null;
-        }
-      };
-      const [picks, previous, transfers] = await Promise.all([get(managerReq.picks), get(managerReq.previous), get(managerReq.transfers)]);
-      return { picks, previous, transfers };
-    },
+    // never undefined (react-query rejects it); every request inside may fail without failing the whole
+    queryFn: async () =>
+      (await loadManagerData(spec, { defaultRange, startedGameweeks }, async (url) => {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })) ?? null,
   });
-  const managerData = useMemo(
-    () => (managerReq.gameweek > 0 && managerBodies ? managerDataFromBodies(spec, managerReq.gameweek, managerBodies) : undefined),
-    [managerReq.gameweek, managerBodies, spec.entry],
-  );
+  const managerData = managerReq.gameweek > 0 ? managerQueryData ?? undefined : undefined;
 
   // Player History: FPL's match history of the chosen player (the same request the player page makes)
   const historyPlayerId = spec.template === "player-history" ? spec.players[0] : undefined;
@@ -1617,6 +1723,7 @@ export default function GraphicsPage() {
                   xptsById={squadXptsById}
                   gameweek={lineupGw}
                   gameweekOptions={openGameweeks.includes(lineupGw) ? openGameweeks : [...openGameweeks, lineupGw].sort((a, b) => a - b)}
+                  knownBank={managerData?.previousPicks?.entry_history?.bank ?? null}
                 />
               )}
 

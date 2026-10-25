@@ -40,6 +40,7 @@ import {
   buildStatLeaders,
   buildTeamOfTheWeek,
   buildTeamReveal,
+  squadFromPicks,
   buildTransferTrends,
   gameweekLabel,
   type GraphicData,
@@ -113,8 +114,12 @@ export interface ManagerGraphicData {
   /** The gameweek the data is for (Team Reveal's gameweek, or My Gameweek's). */
   gameweek: number;
   picks: EntryPicksInput | null;
+  /** The previous gameweek's picks: the overall points and rank are read from them. */
   previousPicks: EntryPicksInput | null;
-  transfers: TransferInput[];
+  /** The squad the manager started this gameweek from: the previous gameweek's, or the one before a Free Hit; null when unknown. */
+  basePicks: EntryPicksInput | null;
+  /** FPL's own transfer list; null when it could not be loaded. */
+  transfers: TransferInput[] | null;
 }
 
 export interface ResolvedGameweeks {
@@ -222,10 +227,16 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
         elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,
         gameweek: lineupGw, fixtures: fixtures as any, teamShortById,
       });
-      const m = ctx.manager;
-      const stats = spec.entry > 0 && m && m.entry === spec.entry && m.gameweek === lineupGw
-        ? buildRevealStats({ elements, teamShortById, gameweek: lineupGw, transfers: m.transfers, currentPicks: m.picks, previousPicks: m.previousPicks })
-        : null;
+      const m = ctx.manager && spec.entry > 0 && ctx.manager.entry === spec.entry && ctx.manager.gameweek === lineupGw ? ctx.manager : null;
+      const stats = buildRevealStats({
+        elements, teamShortById, gameweek: lineupGw,
+        transfers: m ? m.transfers : null,
+        squad: spec.squad,
+        baseSquad: m?.basePicks && m.basePicks.picks.length === 15 ? squadFromPicks(m.basePicks.picks).squad : null,
+        bank: spec.bank,
+        currentPicks: m?.picks ?? null,
+        previousPicks: m?.previousPicks ?? null,
+      });
       return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw), stats }, problem: null };
     }
     case "my-gameweek": {
@@ -488,21 +499,39 @@ export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext):
  * The requests for the manager a Team Reveal or My Gameweek names (none without a team ID). Picks that are not out yet and a
  * failed transfers request are not errors: the graphic leaves those figures off, so these are loaded without failing the rest.
  */
-export function managerRequests(spec: Pick<GraphicSpec, "template" | "entry" | "from">, ctx: Pick<GraphicDataContext, "defaultRange" | "startedGameweeks">): { gameweek: number; urls: string[]; picks: string; previous: string | null; transfers: string | null } {
-  const none = { gameweek: 0, urls: [], picks: "", previous: null, transfers: null };
+export function managerRequests(spec: Pick<GraphicSpec, "template" | "entry" | "from">, ctx: Pick<GraphicDataContext, "defaultRange" | "startedGameweeks">): { gameweek: number; urls: string[]; picks: string; previous: string | null; transfers: string | null; beforePrevious: string | null } {
+  const none = { gameweek: 0, urls: [], picks: "", previous: null, transfers: null, beforePrevious: null };
   if (spec.entry <= 0 || (spec.template !== "team-reveal" && spec.template !== "my-gameweek")) return none;
   const gw = spec.template === "my-gameweek" ? resolveStartedGw(spec, ctx.startedGameweeks) : spec.from || ctx.defaultRange.from;
   if (gw <= 0) return none;
   const picks = `/api/entry/${spec.entry}/event/${gw}/picks`;
   const previous = spec.template === "team-reveal" && gw > 1 ? `/api/entry/${spec.entry}/event/${gw - 1}/picks` : null;
   const transfers = spec.template === "team-reveal" ? `/api/manager/${spec.entry}/transfers` : null;
-  return { gameweek: gw, urls: [picks, previous, transfers].filter((u): u is string => !!u), picks, previous, transfers };
+  // only asked for when the previous gameweek turns out to be a Free Hit: the squad before it is the one the manager started from
+  const beforePrevious = previous && gw > 2 ? `/api/entry/${spec.entry}/event/${gw - 2}/picks` : null;
+  return { gameweek: gw, urls: [picks, previous, transfers].filter((u): u is string => !!u), picks, previous, transfers, beforePrevious };
 }
 
 /** What a manager request returned, as the graphic reads it: anything that is not the expected shape is "not available". */
-export function managerDataFromBodies(spec: Pick<GraphicSpec, "entry">, gameweek: number, bodies: { picks: any; previous: any; transfers: any }): ManagerGraphicData {
+export function managerDataFromBodies(spec: Pick<GraphicSpec, "entry">, gameweek: number, bodies: { picks: any; previous: any; transfers: any; beforePrevious?: any }): ManagerGraphicData {
   const asPicks = (b: any): EntryPicksInput | null => (b && Array.isArray(b.picks) ? (b as EntryPicksInput) : null);
-  return { entry: spec.entry, gameweek, picks: asPicks(bodies.picks), previousPicks: asPicks(bodies.previous), transfers: Array.isArray(bodies.transfers) ? bodies.transfers : [] };
+  const previousPicks = asPicks(bodies.previous);
+  // a Free Hit squad is not the one the manager carries on with: the transfers are measured from the squad before it
+  const basePicks = previousPicks?.active_chip === "freehit" ? asPicks(bodies.beforePrevious) : previousPicks;
+  return { entry: spec.entry, gameweek, picks: asPicks(bodies.picks), previousPicks, basePicks, transfers: Array.isArray(bodies.transfers) ? bodies.transfers : null };
+}
+
+/**
+ * The manager's data for a Team Reveal or My Gameweek, loaded the same way for the page and the Gameweek pack. Every request is
+ * allowed to fail (picks are not out before the deadline); the squad before a Free Hit is only fetched when it is needed.
+ */
+export async function loadManagerData(spec: Pick<GraphicSpec, "template" | "entry" | "from">, ctx: Pick<GraphicDataContext, "defaultRange" | "startedGameweeks">, fetchJson: JsonFetcher): Promise<ManagerGraphicData | undefined> {
+  const r = managerRequests(spec, ctx);
+  if (r.gameweek === 0) return undefined;
+  const tolerant = (url: string | null) => (url ? fetchJson(url).catch(() => null) : Promise.resolve(null));
+  const [picks, previous, transfers] = await Promise.all([tolerant(r.picks), tolerant(r.previous), tolerant(r.transfers)]);
+  const beforePrevious = previous?.active_chip === "freehit" ? await tolerant(r.beforePrevious) : null;
+  return managerDataFromBodies(spec, r.gameweek, { picks, previous, transfers, beforePrevious });
 }
 
 /**
@@ -514,8 +543,8 @@ export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext
   const urls = graphicDataRequests(spec, ctx);
   if (urls.length === 0) return ctx;
   const manager = managerRequests(spec, ctx);
-  const optional = new Set(manager.urls);
-  const bodies = await Promise.all(urls.map((u) => (optional.has(u) ? fetchJson(u).catch(() => null) : fetchJson(u))));
+  const managerUrls = new Set(manager.urls);
+  const [managerData, ...bodies] = await Promise.all([loadManagerData(spec, ctx, fetchJson), ...urls.map((u) => (managerUrls.has(u) ? Promise.resolve(null) : fetchJson(u)))]);
   const byUrl = new Map(urls.map((u, i) => [u, bodies[i]]));
   const next: GraphicDataContext = { ...ctx };
   const modelGw = matchModelGameweek(spec, ctx.fixtures);
@@ -541,13 +570,7 @@ export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext
     const gw = resolveStartedGw(spec, ctx.startedGameweeks);
     if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
   }
-  if (manager.gameweek > 0) {
-    next.manager = managerDataFromBodies(spec, manager.gameweek, {
-      picks: byUrl.get(manager.picks),
-      previous: manager.previous ? byUrl.get(manager.previous) : null,
-      transfers: manager.transfers ? byUrl.get(manager.transfers) : null,
-    });
-  }
+  if (managerData) next.manager = managerData;
   if (spec.template === "player-history" && spec.players[0]) {
     next.playerHistory = { playerId: spec.players[0], history: byUrl.get(`/api/element-summary/${spec.players[0]}`)?.history ?? [] };
   }

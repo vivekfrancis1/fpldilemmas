@@ -3,7 +3,7 @@
 // (this gameweek's transfers, overall points and rank). Everything is FPL's own data for the manager: nothing is modelled,
 // a figure FPL does not have is null and left off the graphic, never shown as 0.
 
-import { BENCH_PLAYERS, CHIP_LABELS, POSITION_BY_TYPE, SQUAD_SIZE, type GraphicElement, type GraphicPosition } from "./graphics";
+import { BENCH_PLAYERS, CHIP_IDS, CHIP_LABELS, MAX_BANK, POSITION_BY_TYPE, SQUAD_QUOTA, SQUAD_SIZE, squadFromPicks, type ChipId, type GraphicElement, type GraphicPosition } from "./graphics";
 import type { LiveScorerInput } from "./graphics-players";
 
 /** The part of FPL's `entry/{id}/event/{gw}/picks` response the graphics read. */
@@ -21,6 +21,8 @@ export interface EntryPicksInput {
     event_transfers: number;
     event_transfers_cost: number;
     points_on_bench: number;
+    /** The bank at the end of the gameweek, in tenths of a million. */
+    bank?: number;
   };
   picks: Array<{ element: number; position: number; multiplier: number; is_captain: boolean; is_vice_captain: boolean }>;
 }
@@ -183,36 +185,78 @@ export interface RevealTransfer {
 }
 
 export interface RevealStats {
-  /** The transfers made for this gameweek, in the order they were made. */
-  transfers: RevealTransfer[];
+  /** The transfers made for this gameweek; null when nothing tells us (no starting squad and no FPL team to ask). */
+  transfers: RevealTransfer[] | null;
   /** The points hit for this gameweek; null until FPL has this gameweek's picks. */
   transferCost: number | null;
   /** Where the manager stood after the previous gameweek; null in gameweek 1 or when FPL has no figure. */
   overallPoints: number | null;
   overallRank: number | null;
+  /** The money in the bank the manager declared, in tenths of a million; null when not declared. */
+  bank: number | null;
+}
+
+const byPositionOrder = (elements: Map<number, GraphicElement>) => (a: number, b: number) =>
+  (elements.get(a)?.element_type ?? 9) - (elements.get(b)?.element_type ?? 9);
+
+/**
+ * The swaps between a starting squad and the squad now: the players who left matched with the players who came in, position
+ * by position (a squad always has 2/5/5/3, so each position has as many in as out). Null unless both are 15 known players.
+ */
+function transfersBetween(elements: GraphicElement[], teamShortById: Map<number, string>, base: number[], squad: number[]): RevealTransfer[] | null {
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const known = (ids: number[]) => ids.length === SQUAD_SIZE && new Set(ids).size === SQUAD_SIZE && ids.every((id) => byId.has(id));
+  if (!known(base) || !known(squad)) return null;
+  const out = base.filter((id) => !squad.includes(id)).sort(byPositionOrder(byId));
+  const into = squad.filter((id) => !base.includes(id)).sort(byPositionOrder(byId));
+  const pairs: RevealTransfer[] = [];
+  for (const type of [1, 2, 3, 4]) {
+    const outs = out.filter((id) => byId.get(id)!.element_type === type);
+    const ins = into.filter((id) => byId.get(id)!.element_type === type);
+    for (let i = 0; i < Math.min(outs.length, ins.length); i++) {
+      const o = byId.get(outs[i])!;
+      const n = byId.get(ins[i])!;
+      pairs.push({ inName: n.web_name, inTeam: teamShortById.get(n.team) ?? "", outName: o.web_name, outTeam: teamShortById.get(o.team) ?? "" });
+    }
+  }
+  return pairs;
 }
 
 export function buildRevealStats(input: {
   elements: GraphicElement[];
   teamShortById: Map<number, string>;
   gameweek: number;
-  transfers: TransferInput[];
+  /** FPL's own transfer list for the team; null when there is no team to ask. */
+  transfers: TransferInput[] | null;
+  /** The squad being drawn, and the squad it started from (the previous gameweek's), to work the transfers out from. */
+  squad: number[];
+  baseSquad: number[] | null;
+  /** The money in the bank the manager declared (tenths of a million). */
+  bank: number | null;
   /** This gameweek's picks; null before they are out (the deadline has not passed). */
   currentPicks: EntryPicksInput | null;
   /** The previous gameweek's picks, for the overall figures. */
   previousPicks: EntryPicksInput | null;
 }): RevealStats {
-  const { elements, teamShortById, gameweek, transfers, currentPicks, previousPicks } = input;
+  const { elements, teamShortById, gameweek, transfers, squad, baseSquad, bank, currentPicks, previousPicks } = input;
   const byId = new Map(elements.map((e) => [e.id, e]));
   const describe = (id: number) => {
     const e = byId.get(id);
     return e ? { name: e.web_name, team: teamShortById.get(e.team) ?? "" } : null;
   };
-  const made: RevealTransfer[] = [];
-  for (const t of [...transfers].filter((x) => x.event === gameweek).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))) {
-    const incoming = describe(t.element_in);
-    const outgoing = describe(t.element_out);
-    if (incoming && outgoing) made.push({ inName: incoming.name, inTeam: incoming.team, outName: outgoing.name, outTeam: outgoing.team });
+  let made: RevealTransfer[] | null;
+  if (baseSquad) {
+    // the squad on show may have been changed by the manager, which FPL's list cannot know about
+    made = transfersBetween(elements, teamShortById, baseSquad, squad);
+  } else if (transfers) {
+    made = [];
+    for (const t of [...transfers].filter((x) => x.event === gameweek).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))) {
+      const incoming = describe(t.element_in);
+      const outgoing = describe(t.element_out);
+      if (incoming && outgoing) made.push({ inName: incoming.name, inTeam: incoming.team, outName: outgoing.name, outTeam: outgoing.team });
+    }
+  } else {
+    made = null;
   }
   const previous = gameweek > 1 ? previousPicks?.entry_history : undefined;
   return {
@@ -220,5 +264,88 @@ export function buildRevealStats(input: {
     transferCost: currentPicks?.entry_history ? currentPicks.entry_history.event_transfers_cost : null,
     overallPoints: previous ? previous.total_points : null,
     overallRank: positiveOrNull(previous?.overall_rank),
+    bank: typeof bank === "number" && bank >= 0 ? bank : null,
   };
+}
+
+// ---------- Team Reveal: choosing the formation ----------
+
+/** The formations a starting XI can take (3-5 defenders, 2-5 midfielders, 1-3 forwards). */
+export const SQUAD_FORMATIONS: readonly string[] = ["4-4-2", "4-3-3", "3-5-2", "3-4-3", "4-5-1", "5-3-2", "5-4-1", "5-2-3"];
+
+const isFullSquad = (elements: GraphicElement[], squad: number[]): boolean => {
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  if (squad.length !== SQUAD_SIZE || new Set(squad).size !== SQUAD_SIZE || !squad.every((id) => byId.has(id))) return false;
+  const n = (type: number) => squad.filter((id) => byId.get(id)!.element_type === type).length;
+  return n(1) === SQUAD_QUOTA.GKP && n(2) === SQUAD_QUOTA.DEF && n(3) === SQUAD_QUOTA.MID && n(4) === SQUAD_QUOTA.FWD;
+};
+
+/** "4-4-2" for the XI left when `bench` is taken out of `squad`; null when the squad or the bench is not a legal one. */
+export function formationOfSquad(elements: GraphicElement[], squad: number[], bench: number[]): string | null {
+  if (!isFullSquad(elements, squad) || bench.length !== BENCH_PLAYERS || new Set(bench).size !== BENCH_PLAYERS || !bench.every((id) => squad.includes(id))) return null;
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const xi = squad.filter((id) => !bench.includes(id));
+  const n = (type: number) => xi.filter((id) => byId.get(id)!.element_type === type).length;
+  const f = `${n(2)}-${n(3)}-${n(4)}`;
+  return n(1) === 1 && SQUAD_FORMATIONS.includes(f) ? f : null;
+}
+
+/**
+ * The bench that makes the XI the chosen formation: the best players by expected points at each position start (those already
+ * starting win a tie), the rest go to the bench, the goalkeeper first and the outfield best first. The goalkeeper already on
+ * the bench stays there. Null for an unknown formation or a squad that is not a legal 15.
+ */
+export function benchForFormation(input: {
+  elements: GraphicElement[];
+  squad: number[];
+  xptsById: Map<number, number | null>;
+  formation: string;
+  currentBench: number[];
+}): number[] | null {
+  const { elements, squad, xptsById, formation, currentBench } = input;
+  if (!SQUAD_FORMATIONS.includes(formation) || !isFullSquad(elements, squad)) return null;
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const [d, m, f] = formation.split("-").map(Number);
+  const xp = (id: number) => xptsById.get(id) ?? -1;
+  const benched = new Set(currentBench);
+  const rank = (a: number, b: number) => xp(b) - xp(a) || Number(benched.has(a)) - Number(benched.has(b)) || a - b;
+  const ofType = (type: number) => squad.filter((id) => byId.get(id)!.element_type === type);
+
+  const keepers = ofType(1);
+  const onBench = keepers.filter((id) => benched.has(id));
+  const benchKeeper = onBench.length === 1 ? onBench[0] : [...keepers].sort(rank)[1];
+
+  const outfieldBench: number[] = [];
+  for (const [type, starters] of [[2, d], [3, m], [4, f]] as const) {
+    outfieldBench.push(...[...ofType(type)].sort(rank).slice(starters));
+  }
+  outfieldBench.sort((a, b) => xp(b) - xp(a) || a - b);
+  return [benchKeeper, ...outfieldBench];
+}
+
+// ---------- Team Reveal: money in the bank, and a logged-in manager's own team ----------
+
+/**
+ * The money in the bank as typed in £m ("0.5", "£1.2m", "0,5") in tenths of a million. Empty is "not declared" (null); anything
+ * that is not a possible amount (negative, not a multiple of £0.1m, more than a team can hold) is undefined.
+ */
+export function parseBankInput(text: string): number | null | undefined {
+  const cleaned = text.trim().replace(/^£/, "").replace(/m$/i, "").trim().replace(",", ".");
+  if (cleaned === "") return null;
+  if (!/^\d{0,3}(\.\d)?$/.test(cleaned) || cleaned === ".") return undefined;
+  const tenths = Math.round(parseFloat(cleaned) * 10);
+  return Number.isFinite(tenths) && tenths >= 0 && tenths <= MAX_BANK ? tenths : undefined;
+}
+
+/**
+ * A logged-in manager's own team from FPL's `my-team` (the working team, with any transfers made for the coming gameweek
+ * already in it): the squad, bench, captain and vice, the chip if one is active and the bank FPL reports. Null unless it is
+ * a 15-player team.
+ */
+export function squadFromMyTeam(body: any): { squad: number[]; bench: number[]; captain: number; vice: number; bank: number | null; chip: ChipId } | null {
+  const picks = body && Array.isArray(body.picks) ? body.picks : null;
+  if (!picks || picks.length !== SQUAD_SIZE) return null;
+  const bank = body.transfers && typeof body.transfers.bank === "number" && body.transfers.bank >= 0 ? body.transfers.bank : null;
+  const chip = CHIP_IDS.includes(body.active_chip) ? (body.active_chip as ChipId) : "";
+  return { ...squadFromPicks(picks), bank, chip };
 }

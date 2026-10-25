@@ -1,12 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
+  benchForFormation,
   buildMyGameweek,
   buildRevealStats,
+  formationOfSquad,
+  parseBankInput,
+  squadFromMyTeam,
+  SQUAD_FORMATIONS,
   type EntryPicksInput,
 } from "../shared/graphics-manager";
 import { DEFAULT_SPEC, GRAPHIC_TEMPLATES, buildCaption, decodeSpec, encodeSpec, isEmptyGraphic, type GraphicElement, type GraphicSpec } from "../shared/graphics";
 import type { LiveScorerInput } from "../shared/graphics-players";
-import { computeGraphicData, graphicDataRequests, loadGraphicData, makeGraphicDataContext, managerRequests } from "../client/src/lib/graphic-data";
+import { computeGraphicData, graphicDataRequests, loadGraphicData, loadManagerData, makeGraphicDataContext, managerDataFromBodies, managerRequests } from "../client/src/lib/graphic-data";
 
 const teamShortById = new Map<number, string>([[1, "ARS"], [2, "MCI"], [3, "LIV"]]);
 const NAMES: Record<number, string> = {
@@ -19,6 +24,11 @@ const typeOf = (id: number) => (id <= 2 ? 1 : id <= 7 ? 2 : id <= 12 ? 3 : 4);
 const elements: GraphicElement[] = Object.entries(NAMES).map(([id, name]) => ({
   id: Number(id), web_name: name, team: ((Number(id) - 1) % 3) + 1, element_type: typeOf(Number(id)), now_cost: 60, selected_by_percent: "5.0",
 }));
+
+elements.push(
+  { id: 16, web_name: "Foden", team: 2, element_type: 3, now_cost: 80, selected_by_percent: "5.0" },
+  { id: 17, web_name: "Watkins", team: 3, element_type: 4, now_cost: 90, selected_by_percent: "5.0" },
+);
 
 const live = (id: number, total_points: number, minutes = 90): LiveScorerInput => ({
   id, stats: { total_points, minutes, goals_scored: 0, assists: 0, bonus: 0 }, explain: [],
@@ -142,7 +152,12 @@ describe("buildMyGameweek", () => {
 describe("buildRevealStats", () => {
   const tr = (element_in: number, element_out: number, event: number, time = "2026-10-20T10:00:00Z") => ({ element_in, element_out, event, time });
   const history = (over: Partial<NonNullable<EntryPicksInput["entry_history"]>> = {}) => ({ event: 7, points: 55, total_points: 612, rank: 10, overall_rank: 45_678, event_transfers: 0, event_transfers_cost: 0, points_on_bench: 3, ...over });
-  const input = { elements, teamShortById, gameweek: 8, transfers: [] as ReturnType<typeof tr>[], currentPicks: null as EntryPicksInput | null, previousPicks: null as EntryPicksInput | null };
+  const input = {
+    elements, teamShortById, gameweek: 8,
+    transfers: [] as ReturnType<typeof tr>[] | null,
+    squad: [] as number[], baseSquad: null as number[] | null, bank: null as number | null,
+    currentPicks: null as EntryPicksInput | null, previousPicks: null as EntryPicksInput | null,
+  };
 
   it("lists only the transfers made for this gameweek, with who went out and who came in", () => {
     const s = buildRevealStats({ ...input, transfers: [tr(13, 14, 7), tr(9, 8, 8), tr(10, 11, 8, "2026-10-21T09:00:00Z")] });
@@ -173,6 +188,43 @@ describe("buildRevealStats", () => {
     expect(buildRevealStats(input)).toMatchObject({ overallPoints: null, overallRank: null });
   });
 
+  describe("transfers worked out from the starting squad (a squad the manager has changed)", () => {
+    const changed = SQUAD_ORDER.map((id) => (id === 8 ? 16 : id === 14 ? 17 : id)); // Saka -> Foden, Isak -> Watkins
+
+    it("compares the squad with the starting squad, one swap per position, defenders first then midfielders then forwards", () => {
+      const s = buildRevealStats({ ...input, squad: changed, baseSquad: SQUAD_ORDER });
+      expect(s.transfers).toEqual([
+        { inName: "Foden", inTeam: "MCI", outName: "Saka", outTeam: "MCI" },
+        { inName: "Watkins", inTeam: "LIV", outName: "Isak", outTeam: "MCI" },
+      ]);
+    });
+
+    it("beats FPL's own transfer list, which cannot know about the manager's edits", () => {
+      const s = buildRevealStats({ ...input, squad: changed, baseSquad: SQUAD_ORDER, transfers: [tr(9, 8, 8)] });
+      expect(s.transfers?.map((x) => x.inName)).toEqual(["Foden", "Watkins"]);
+    });
+
+    it("the same players in a different order, captain or bench are not transfers", () => {
+      expect(buildRevealStats({ ...input, squad: [...SQUAD_ORDER].reverse(), baseSquad: SQUAD_ORDER }).transfers).toEqual([]);
+    });
+
+    it("a squad that is not 15 players gives no transfers rather than a wrong list", () => {
+      expect(buildRevealStats({ ...input, squad: changed.slice(0, 14), baseSquad: SQUAD_ORDER }).transfers).toBeNull();
+    });
+  });
+
+  it("without a starting squad it uses FPL's transfer list when there is one, and otherwise knows nothing (null, not none)", () => {
+    expect(buildRevealStats({ ...input, transfers: [tr(9, 8, 8)] }).transfers).toHaveLength(1);
+    expect(buildRevealStats({ ...input, transfers: [] }).transfers).toEqual([]);
+    expect(buildRevealStats({ ...input, transfers: null }).transfers).toBeNull();
+  });
+
+  it("carries the money in the bank the manager declared, and null when not declared", () => {
+    expect(buildRevealStats({ ...input, bank: 5 }).bank).toBe(5);
+    expect(buildRevealStats({ ...input, bank: 0 }).bank).toBe(0);
+    expect(buildRevealStats(input).bank).toBeNull();
+  });
+
   it("ignores transfer players that are not in the player list", () => {
     const s = buildRevealStats({ ...input, transfers: [tr(999, 8, 8), tr(9, 8, 8)] });
     expect(s.transfers.map((t) => t.inName)).toEqual(["Salah"]);
@@ -192,6 +244,16 @@ describe("My Gameweek and Team Reveal in the template list and the spec link", (
     expect(decodeSpec(encodeSpec({ ...spec, entry: 0 })).entry).toBe(0);
     expect(decodeSpec("t=my-gameweek&en=abc").entry).toBe(0);
     expect(encodeSpec({ ...DEFAULT_SPEC, entry: 0 })).toBe("");
+  });
+
+  it("the declared bank survives the link: 0 is a real value, nothing declared is null, and impossible values are dropped", () => {
+    const spec: GraphicSpec = { ...DEFAULT_SPEC, template: "team-reveal" };
+    expect(decodeSpec(encodeSpec({ ...spec, bank: 5 })).bank).toBe(5);
+    expect(decodeSpec(encodeSpec({ ...spec, bank: 0 })).bank).toBe(0);
+    expect(decodeSpec(encodeSpec({ ...spec, bank: null })).bank).toBeNull();
+    expect(decodeSpec("t=team-reveal&bk=5000").bank).toBeNull();
+    expect(decodeSpec("t=team-reveal&bk=x").bank).toBeNull();
+    expect(encodeSpec({ ...DEFAULT_SPEC })).toBe("");
   });
 });
 
@@ -317,9 +379,64 @@ describe("Team Reveal manager figures", () => {
     expect(data.stats).toMatchObject({ transferCost: 4, overallPoints: 612, overallRank: 45_678 });
   });
 
-  it("without a team id the reveal has no manager figures, and still draws", () => {
+  it("without a team id the reveal has no transfers or overall figures (unknown, not zero), and still draws", () => {
     const { data } = computeGraphicData({ ...spec, entry: 0 }, ctxFor({ fixtures: [] }));
-    expect(data?.kind === "team-reveal" && data.stats === null).toBe(true);
+    expect(data?.kind).toBe("team-reveal");
+    if (data?.kind !== "team-reveal") return;
+    expect(data.stats).toMatchObject({ transfers: null, transferCost: null, overallPoints: null, overallRank: null, bank: null });
+  });
+
+  it("the money in the bank the manager declares is on the reveal, with or without a team id", () => {
+    for (const entry of [0, 368240]) {
+      const { data } = computeGraphicData({ ...spec, entry, bank: 5 }, ctxFor({ fixtures: [], manager: entry ? manager({ gameweek: 9 }) : undefined }));
+      expect(data?.kind === "team-reveal" && data.stats?.bank).toBe(5);
+    }
+  });
+
+  it("transfers are worked out from the squad the manager started from, so a squad they changed shows their own transfers", () => {
+    const changed = SQUAD_ORDER.map((id) => (id === 8 ? 16 : id)); // Saka -> Foden
+    const m = manager({ gameweek: 9, basePicks: picksFor(), previousPicks: picksFor(), transfers: [tr(9, 8, 9)] });
+    const { data } = computeGraphicData({ ...spec, squad: changed }, ctxFor({ manager: m, fixtures: [] }));
+    expect(data?.kind === "team-reveal" && data.stats?.transfers).toEqual([{ inName: "Foden", inTeam: "MCI", outName: "Saka", outTeam: "MCI" }]);
+  });
+
+  it("when the previous gameweek was a Free Hit the transfers are measured from the squad before it", () => {
+    const fh = picksFor({ active_chip: "freehit" });
+    const before = picksFor();
+    expect(managerDataFromBodies(spec, 9, { picks: null, previous: fh, transfers: [], beforePrevious: before }).basePicks).toBe(before);
+    expect(managerDataFromBodies(spec, 9, { picks: null, previous: fh, transfers: [], beforePrevious: null }).basePicks).toBeNull();
+    // the overall figures still come from the Free Hit gameweek itself
+    expect(managerDataFromBodies(spec, 9, { picks: null, previous: fh, transfers: [], beforePrevious: before }).previousPicks).toBe(fh);
+    const normal = picksFor();
+    expect(managerDataFromBodies(spec, 9, { picks: null, previous: normal, transfers: [] }).basePicks).toBe(normal);
+  });
+
+  it("the squad before a Free Hit is only fetched when the previous gameweek was one", async () => {
+    const calls: string[] = [];
+    const run = async (previousChip: string | null) => {
+      calls.length = 0;
+      return loadManagerData(spec, ctxFor(), async (url) => {
+        calls.push(url);
+        if (url.endsWith("/event/8/picks")) return picksFor({ active_chip: previousChip });
+        if (url.endsWith("/event/7/picks")) return picksFor();
+        if (url.endsWith("/transfers")) return [];
+        throw new Error("404");
+      });
+    };
+    const normal = await run(null);
+    expect(calls.some((u) => u.endsWith("/event/7/picks"))).toBe(false);
+    expect(normal?.basePicks?.active_chip).toBeNull();
+    const afterFh = await run("freehit");
+    expect(calls.some((u) => u.endsWith("/event/7/picks"))).toBe(true);
+    expect(afterFh?.basePicks?.active_chip).toBeNull(); // the gameweek 7 squad
+  });
+
+  it("the caption gives the bank when declared", () => {
+    const { data } = computeGraphicData({ ...spec, bank: 5 }, ctxFor({ fixtures: [] }));
+    if (data?.kind !== "team-reveal") throw new Error("expected team-reveal");
+    const complete = { ...data, reveal: { ...data.reveal, complete: true, formation: "4-4-2" } };
+    expect(buildCaption(complete, spec)).toContain("£0.5m in the bank");
+    expect(buildCaption({ ...complete, stats: { ...complete.stats!, bank: null } }, spec)).not.toContain("bank");
   });
 
   it("the caption mentions the transfers and overall rank only when there are figures", () => {
@@ -332,5 +449,115 @@ describe("Team Reveal manager figures", () => {
     expect(withStats).toContain("overall rank 45,678");
     expect(buildCaption({ ...complete, stats: null }, spec)).not.toContain("transfer");
     expect(withStats.length).toBeLessThanOrEqual(256);
+  });
+});
+
+describe("formations for a squad", () => {
+  const xpts = new Map<number, number | null>(Object.keys(NAMES).map((k) => [Number(k), Number(k) % 7]));
+  const xptsOf = (ids: number[]) => ids.map((id) => xpts.get(id) ?? 0);
+
+  it("lists the eight legal formations of a starting XI", () => {
+    expect([...SQUAD_FORMATIONS].sort()).toEqual(["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"]);
+  });
+
+  it("reads the formation of the XI from the bench", () => {
+    expect(formationOfSquad(elements, SQUAD_ORDER, [2, 7, 12, 15])).toBe("4-4-2");
+    expect(formationOfSquad(elements, SQUAD_ORDER, [2, 7, 12, 3])).toBe("3-4-3"); // two defenders on the bench
+    expect(formationOfSquad(elements, SQUAD_ORDER, [2, 1, 7, 12])).toBeNull(); // two goalkeepers on the bench leaves no keeper in the XI
+    expect(formationOfSquad(elements, SQUAD_ORDER, [])).toBeNull();
+  });
+
+  it("picks the best players for the chosen formation and puts the rest on the bench, goalkeeper first", () => {
+    const bench = benchForFormation({ elements, squad: SQUAD_ORDER, xptsById: xpts, formation: "3-5-2", currentBench: [2, 7, 12, 15] });
+    expect(bench).toHaveLength(4);
+    expect(bench![0]).toBe(2); // the goalkeeper already on the bench stays there
+    // 3-5-2 from 5 DEF, 5 MID, 3 FWD benches 2 defenders and 1 forward; the 5 midfielders all start
+    const benched = bench!.slice(1);
+    expect(benched.filter((id) => typeOf(id) === 2)).toHaveLength(2);
+    expect(benched.filter((id) => typeOf(id) === 3)).toHaveLength(0);
+    expect(benched.filter((id) => typeOf(id) === 4)).toHaveLength(1);
+    // the outfield bench is ordered best first
+    expect(xptsOf(benched)).toEqual([...xptsOf(benched)].sort((a, b) => b - a));
+  });
+
+  it("benches the weakest at each position", () => {
+    const squadDefs = [3, 4, 5, 6, 7];
+    const bench = benchForFormation({ elements, squad: SQUAD_ORDER, xptsById: xpts, formation: "3-5-2", currentBench: [2, 7, 12, 15] })!;
+    const benchedDefs = bench.filter((id) => squadDefs.includes(id));
+    const startingDefs = squadDefs.filter((id) => !benchedDefs.includes(id));
+    expect(Math.min(...xptsOf(startingDefs))).toBeGreaterThanOrEqual(Math.max(...xptsOf(benchedDefs)));
+  });
+
+  it("the same formation gives a legal bench: 1 goalkeeper and 3 outfield players", () => {
+    for (const f of SQUAD_FORMATIONS) {
+      const bench = benchForFormation({ elements, squad: SQUAD_ORDER, xptsById: xpts, formation: f, currentBench: [2, 7, 12, 15] });
+      expect(bench, f).not.toBeNull();
+      expect(bench!.filter((id) => typeOf(id) === 1), f).toHaveLength(1);
+      expect(formationOfSquad(elements, SQUAD_ORDER, bench!), f).toBe(f);
+    }
+  });
+
+  it("gives nothing for an unknown formation or a squad that is not 15 players", () => {
+    expect(benchForFormation({ elements, squad: SQUAD_ORDER, xptsById: xpts, formation: "2-4-4", currentBench: [] })).toBeNull();
+    expect(benchForFormation({ elements, squad: SQUAD_ORDER.slice(0, 14), xptsById: xpts, formation: "4-4-2", currentBench: [] })).toBeNull();
+  });
+});
+
+describe("parseBankInput (money in the bank, typed in £m)", () => {
+  it("reads pounds and pence of a million into tenths", () => {
+    expect(parseBankInput("0.5")).toBe(5);
+    expect(parseBankInput("2")).toBe(20);
+    expect(parseBankInput("12.3")).toBe(123);
+    expect(parseBankInput("0")).toBe(0);
+    expect(parseBankInput(".5")).toBe(5);
+  });
+
+  it("accepts the £ sign, an m, spaces and a comma for the point", () => {
+    expect(parseBankInput(" £0.5m ")).toBe(5);
+    expect(parseBankInput("0,5")).toBe(5);
+    expect(parseBankInput("1.0M")).toBe(10);
+  });
+
+  it("empty means not declared (null); anything that is not a money amount is invalid (undefined)", () => {
+    expect(parseBankInput("")).toBeNull();
+    expect(parseBankInput("   ")).toBeNull();
+    expect(parseBankInput("abc")).toBeUndefined();
+    expect(parseBankInput("-1")).toBeUndefined();
+    expect(parseBankInput("0.55")).toBeUndefined(); // FPL prices are in tenths
+    expect(parseBankInput("100.1")).toBeUndefined(); // more than a team can hold
+    expect(parseBankInput("1.2.3")).toBeUndefined();
+  });
+});
+
+describe("squadFromMyTeam (a logged-in manager's own FPL team, with this week's transfers already in it)", () => {
+  const body = (over: Record<string, unknown> = {}) => ({
+    picks: SQUAD_ORDER.map((element, i) => ({ element, position: i + 1, selling_price: 60, purchase_price: 60, multiplier: i < 11 ? 1 : 0, is_captain: element === 9, is_vice_captain: element === 13 })),
+    chips: [],
+    active_chip: null,
+    transfers: { cost: 4, status: "cost", limit: 1, made: 2, bank: 5, value: 1000 },
+    ...over,
+  });
+
+  it("gives the squad, bench, captain and vice from the picks, and the bank FPL reports", () => {
+    const r = squadFromMyTeam(body());
+    expect(r).toEqual({ squad: SQUAD_ORDER, bench: [2, 7, 12, 15], captain: 9, vice: 13, bank: 5, chip: "" });
+  });
+
+  it("carries a chip that is active for the gameweek", () => {
+    expect(squadFromMyTeam(body({ active_chip: "wildcard" }))?.chip).toBe("wildcard");
+    expect(squadFromMyTeam(body({ active_chip: "3xc" }))?.chip).toBe("3xc");
+    expect(squadFromMyTeam(body({ active_chip: "somethingnew" }))?.chip).toBe("");
+  });
+
+  it("a bank FPL did not report is null, never 0", () => {
+    expect(squadFromMyTeam(body({ transfers: undefined }))?.bank).toBeNull();
+    expect(squadFromMyTeam(body({ transfers: { bank: "x" } }))?.bank).toBeNull();
+    expect(squadFromMyTeam(body({ transfers: { bank: 0 } }))?.bank).toBe(0);
+  });
+
+  it("is nothing when the response is not a 15-player team", () => {
+    expect(squadFromMyTeam(null)).toBeNull();
+    expect(squadFromMyTeam({})).toBeNull();
+    expect(squadFromMyTeam(body({ picks: body().picks.slice(0, 14) }))).toBeNull();
   });
 });
