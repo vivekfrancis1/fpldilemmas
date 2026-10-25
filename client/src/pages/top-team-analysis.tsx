@@ -410,7 +410,7 @@ export default function TopTeamAnalysis({ group }: { group?: EliteGroupId } = {}
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <BarChart3 />
-              <h1>{group ? `${groupLabel} Team Analysis` : "Top Managers Team Analysis"}</h1>
+              <h1>{group ? `${groupLabel} Team Analysis` : "All Time Top 100 Team Analysis"}</h1>
             </div>
             <div className="fpl-page-actions">
               <Button
