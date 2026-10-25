@@ -376,7 +376,7 @@ function MyGameweekControls({ spec, update, startedGameweeks, finishedGameweeks,
         autoNameRef.current = name;
       }
       update(patch);
-      saveToolManagerId(id); // so Rate My Team, Hindsight, League Ownership and Player Plot open on the same team
+      saveToolManagerId(id); // so Rate My Team, Hindsight, League Comparison and Player Plot open on the same team
       setState({ busy: false, error: null, info: name ? `Showing ${name}${info?.name ? ` (${info.name})` : ""}.` : "Team loaded." });
     } catch {
       setState({ busy: false, error: "Couldn't load that team right now. Please try again.", info: null });
@@ -435,7 +435,7 @@ function SquadBuilder({
 }) {
   const [query, setQuery] = useState("");
   const [note, setNote] = useState<string | null>(null);
-  // the team ID is shared with Rate My Team, Hindsight, League Ownership and Player Plot: pre-filled once entered anywhere
+  // the team ID is shared with Rate My Team, Hindsight, League Comparison and Player Plot: pre-filled once entered anywhere
   const [idText, setIdText] = useState(() => (spec.entry > 0 ? String(spec.entry) : readToolManagerId()));
   const [load, setLoad] = useState<LoadState>({ busy: false, error: null, info: null });
   // the ID whose squad is in the builder (or was already tried), so an unchanged ID is never loaded twice; a squad that came
@@ -575,7 +575,7 @@ function SquadBuilder({
         autoManagerRef.current = managerName;
       }
       update(patch);
-      saveToolManagerId(id); // so Rate My Team, Hindsight, League Ownership and Player Plot open on the same team
+      saveToolManagerId(id); // so Rate My Team, Hindsight, League Comparison and Player Plot open on the same team
       const from = body.resolvedGameweek ?? body.gameweek;
       setNote(null);
       setLoad({

@@ -147,14 +147,14 @@ export default function RateMyTeam() {
                   sub="Your points as a share of the best possible team's points"
                 />
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Rank vs All-time Top 100 Managers' Projected Points</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">Position among All-time Top 100 Managers' Projected Points</div>
                   {data.rank.rank === null ? (
                     <div className="mt-2 text-sm text-white/85">No All-time Top 100 squads loaded right now.</div>
                   ) : (
                     <>
                       <div className="mt-1 text-4xl font-extrabold leading-none tabular-nums sm:text-5xl" data-testid="text-rank">
                         {data.rank.rank}
-                        <span className="ml-1.5 text-base font-semibold text-white/70">of {data.rank.fieldSize}</span>
+                        <span className="ml-1.5 text-base font-semibold text-white/70">of {data.rank.fieldSize + 1}</span>
                       </div>
                       {data.rank.best !== null && data.rank.best > 0 && (
                         <div className="mt-3">

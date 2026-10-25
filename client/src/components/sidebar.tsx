@@ -40,6 +40,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PRIMARY_NAV_ITEMS } from "@/components/primary-nav-items";
+
+// The four bottom-bar tabs are repeated at the top of the menu, under their full page names.
+const PRIMARY_LINK_LABELS: Record<string, string> = {
+  "/match-predictions": "Match Predictions",
+  "/player-total-points": "Player Points Projections",
+  "/fixtures": "Fixture Analyzer",
+  "/recent-price-changes": "Price Changes",
+};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -122,7 +131,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "My FPL",
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck, description: "Projected points, Top 100 rank and best upgrades for your squad", popular: false },
+        { path: "/rate-my-team", label: "Rate My Team", icon: ClipboardCheck, description: "Projected points, position among the Top 100 and best upgrades for your squad", popular: false },
         { path: "/hindsight", label: "Hindsight", icon: History, description: "Your points versus the best XI from your 15", popular: false },
         { path: "/league-comparison", label: "League Comparison", icon: Users, description: "A league's standings, where your team places, and what it owns and captains", popular: false },
         { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
@@ -218,6 +227,27 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
+        </div>
+
+        {/* Quick links to the four main pages (same as the bottom bar) */}
+        <div className="px-2 sm:px-3 md:px-6 pt-2 sm:pt-3 space-y-1" data-testid="sidebar-primary-links">
+          {PRIMARY_NAV_ITEMS.map((item) => {
+            const isCurrentPage = item.match.includes(location);
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} onClick={handleNavItemClick}>
+                <div className={`group flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 sm:py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+                  isCurrentPage
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-purple-100 hover:bg-white/5 hover:text-white'
+                }`}>
+                  <Icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${isCurrentPage ? 'text-fpl-green' : 'text-purple-300 group-hover:text-purple-200'}`} />
+                  <p className="text-xs sm:text-sm font-medium truncate">{PRIMARY_LINK_LABELS[item.href] ?? item.label}</p>
+                </div>
+              </Link>
+            );
+          })}
+          <div className="border-b border-purple-400/20 pt-1" />
         </div>
 
         {/* Navigation — collapsed to just category headers by default (one open at a time), so
