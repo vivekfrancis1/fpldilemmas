@@ -30,7 +30,8 @@ import {
   type PriceChangeContent,
   type SizeId,
 } from "@shared/graphics";
-import { contrastRatio, formatGoals } from "@shared/graphics";
+import { contrastRatio, formatFull, formatGoals } from "@shared/graphics";
+import type { MyGameweekContent, MyGameweekToken, RevealStats } from "@shared/graphics-manager";
 import { TEAM_METRICS, type TableContent, type TeamHistoryContent, type TeamProjectionsContent } from "@shared/graphics-teams";
 import type { GwPointsContent, GwPointsRow, PlayerHistoryContent, PlayerProjectionRow, PlayerProjectionsContent, TopScorersContent } from "@shared/graphics-players";
 import type { MatchFormEntry, MatchPredictionsContent, MatchPreviewContent, MatchPreviewSide, MatchReportContent, MatchResultsContent } from "@shared/graphics-matches";
@@ -56,6 +57,17 @@ const METRICS: Record<SizeId, Metrics> = {
   portrait: { pad: 56, title: 62, sub: 28, gap: 26 },
   landscape: { pad: 40, title: 42, sub: 22, gap: 14 },
 };
+
+/** #rrggbb plus an alpha (0 to 1); anything else is returned unchanged. */
+function withAlpha(hex: string, alpha: number): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  return `${hex}${Math.round(Math.min(1, Math.max(0, alpha)) * 255).toString(16).padStart(2, "0")}`;
+}
+
+/** Dark text on a pale background: the Light theme. */
+function isLightTheme(theme: GraphicTheme): boolean {
+  return contrastRatio(theme.text, "#ffffff") > 7;
+}
 
 const ellipsis: CSSProperties = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 };
 
@@ -93,21 +105,32 @@ function Frame({
   const m = METRICS[spec.size];
   const footer = footerHeight(spec.size);
   const land = spec.size === "landscape";
+  const light = isLightTheme(theme);
   return (
     <div
       style={{
         width, height, boxSizing: "border-box", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative",
-        background: `linear-gradient(160deg, ${theme.bg} 0%, ${theme.bg2} 100%)`, color: theme.text, fontFamily: FONT,
+        background: [
+          `radial-gradient(circle at 100% 0%, ${withAlpha(theme.accent, light ? 0.20 : 0.24)} 0%, transparent 46%)`,
+          `radial-gradient(circle at 0% 100%, ${withAlpha(theme.accent, light ? 0.12 : 0.13)} 0%, transparent 42%)`,
+          `linear-gradient(160deg, ${theme.bg} 0%, ${theme.bg2} 100%)`,
+        ].join(", "),
+        color: theme.text, fontFamily: FONT,
       }}
     >
-      <div style={{ height: 8, background: theme.accent, flexShrink: 0 }} />
-      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: `${m.pad - 14}px ${m.pad}px 0` }}>
+      {/* fine dot texture, so large flat areas still feel finished */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(${theme.panelBorder} 1.3px, transparent 1.6px)`, backgroundSize: "34px 34px", opacity: 0.4 }} />
+      <div style={{ height: 10, background: `linear-gradient(90deg, ${theme.accent} 0%, ${withAlpha(theme.accent, 0.35)} 100%)`, flexShrink: 0, position: "relative" }} />
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: `${m.pad - 14}px ${m.pad}px 0`, position: "relative" }}>
         {!bare && (
           <>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 20, flexShrink: 0 }}>
               <div style={{ fontSize: m.title, fontWeight: 900, lineHeight: 1.1, textTransform: "uppercase", letterSpacing: 0.5, ...ellipsis }}>{resolveHeadlineText(spec)}</div>
             </div>
-            <div style={{ fontSize: m.sub, color: theme.muted, fontWeight: 600, marginTop: land ? 4 : 8, flexShrink: 0, ...ellipsis }}>{subtitle}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: land ? 4 : 8, flexShrink: 0 }}>
+              <span style={{ width: land ? 34 : 44, height: 6, borderRadius: 3, background: theme.accent, flexShrink: 0 }} />
+              <span style={{ fontSize: m.sub, color: theme.muted, fontWeight: 600, ...ellipsis }}>{subtitle}</span>
+            </div>
           </>
         )}
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: bare ? 0 : m.gap }}>{children}</div>
@@ -115,9 +138,10 @@ function Frame({
       <div
         style={{
           height: footer, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24,
-          padding: `0 ${m.pad}px`, boxSizing: "border-box",
+          padding: `0 ${m.pad}px`, boxSizing: "border-box", position: "relative",
         }}
       >
+        <div style={{ position: "absolute", top: 0, left: m.pad, right: m.pad, height: 1, background: `linear-gradient(90deg, ${theme.panelBorder}, transparent)` }} />
         <span
           style={
             spec.handle
@@ -146,7 +170,16 @@ function resolveHeadlineText(spec: GraphicSpec): string {
 }
 
 function panel(theme: GraphicTheme, extra: CSSProperties = {}): CSSProperties {
-  return { background: theme.panel, border: `1px solid ${theme.panelBorder}`, borderRadius: 20, ...extra };
+  const light = isLightTheme(theme);
+  return {
+    backgroundColor: theme.panel,
+    // a faint sheen from the top-left, like frosted glass; a soft lift underneath
+    backgroundImage: light ? "linear-gradient(150deg, rgba(255,255,255,0.7), rgba(255,255,255,0))" : "linear-gradient(150deg, rgba(255,255,255,0.11), rgba(255,255,255,0))",
+    border: `1px solid ${theme.panelBorder}`,
+    borderRadius: 20,
+    boxShadow: light ? "0 10px 24px -14px rgba(15,23,42,0.28)" : "0 12px 28px -14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10)",
+    ...extra,
+  };
 }
 
 function FixtureBox({ items, theme, font }: { items: Array<{ opponent: string; isHome: boolean; difficulty: number }>; theme: GraphicTheme; font: number }) {
@@ -623,14 +656,17 @@ function RevealTokenView({ p, jersey, nameFont, fixFont }: { p: RevealToken; jer
   );
 }
 
-function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme: GraphicTheme; reveal: TeamRevealContent; gwLabel: string }) {
+function RevealFace({ spec, theme, reveal, gwLabel, stats }: { spec: GraphicSpec; theme: GraphicTheme; reveal: TeamRevealContent; gwLabel: string; stats?: RevealStats | null }) {
   const land = spec.size === "landscape";
   const tall = spec.size === "portrait";
-  const jersey = land ? 52 : tall ? 104 : 66;
-  const nameFont = land ? 15 : tall ? 24 : 20;
-  const fixFont = land ? 13 : tall ? 20 : 17;
+  // with the manager's figures (captain tiles, transfers, overall) there is less room for the pitch, so the players are drawn smaller
+  const withStats = !!stats;
+  const jersey = land ? (withStats ? 44 : 52) : tall ? (withStats ? 88 : 104) : withStats ? 48 : 66;
+  const nameFont = land ? (withStats ? 13 : 15) : tall ? (withStats ? 21 : 24) : withStats ? 17 : 20;
+  const fixFont = land ? (withStats ? 11 : 13) : tall ? (withStats ? 17 : 20) : withStats ? 14 : 17;
   const manager = spec.manager.trim();
-  const subtitle = [manager, gwLabel, reveal.formation].filter(Boolean).join(" · ");
+  // with the manager's figures the squad value moves up here and the chip into the transfers panel, to leave room for the pitch
+  const subtitle = [manager, gwLabel, reveal.formation, stats ? `Squad ${reveal.squadValue}` : null].filter(Boolean).join(" · ");
   const token = (p: RevealToken) => <RevealTokenView p={p} jersey={jersey} nameFont={nameFont} fixFont={fixFont} />;
   const pitch = <Pitch rows={reveal.rows} renderToken={token} />;
   const captain = reveal.rows.flatMap((r) => r.players).concat(reveal.bench).find((p) => p.isCaptain);
@@ -657,6 +693,16 @@ function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme
     </div>
   );
 
+  const tiles = stats ? (
+    <div style={{ display: "flex", gap: land ? 8 : 12, flexShrink: 0, flexWrap: land ? "wrap" : "nowrap" }}>
+      <StatTile theme={theme} size={spec.size} label="Captain" value={captain?.name ?? "—"} badge="C" basis={land ? "calc(50% - 4px)" : undefined} />
+      <StatTile theme={theme} size={spec.size} label="Vice-captain" value={vice?.name ?? "—"} badge="V" basis={land ? "calc(50% - 4px)" : undefined} />
+      {stats.overallPoints !== null && <StatTile theme={theme} size={spec.size} label="Overall points" value={formatFull(stats.overallPoints)} basis={land ? "calc(50% - 4px)" : undefined} />}
+      {stats.overallRank !== null && <StatTile theme={theme} size={spec.size} label="Overall rank" value={formatFull(stats.overallRank)} basis={land ? "calc(50% - 4px)" : undefined} />}
+    </div>
+  ) : null;
+  const transfers = stats ? <TransfersPanel stats={stats} theme={theme} size={spec.size} chipLabel={reveal.chipLabel} /> : null;
+
   return (
     <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
       {!reveal.complete ? (
@@ -668,10 +714,12 @@ function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme
         <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
           <div style={{ flex: "0 0 62%", display: "flex", minWidth: 0, minHeight: 0 }}>{pitch}</div>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>{chip}{value}</div>
+            {!stats && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>{chip}{value}</div>}
+            {tiles}
+            {transfers}
             {bench}
             <div style={{ flex: 1 }} />
-            {(captain || vice) && (
+            {!stats && (captain || vice) && (
               <div style={{ fontSize: 15, fontWeight: 700, color: theme.muted, flexShrink: 0 }}>
                 {captain ? `Captain: ${captain.name}` : ""}{captain && vice ? " · " : ""}{vice ? `Vice: ${vice.name}` : ""}
               </div>
@@ -680,14 +728,164 @@ function RevealFace({ spec, theme, reveal, gwLabel }: { spec: GraphicSpec; theme
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {!stats && <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flexShrink: 0 }}>
             {chip}{value}
-            {(captain || vice) && (
+            {!stats && (captain || vice) && (
               <span style={{ fontSize: 20, fontWeight: 700, color: theme.muted }}>
                 {captain ? `C: ${captain.name}` : ""}{captain && vice ? " · " : ""}{vice ? `V: ${vice.name}` : ""}
               </span>
             )}
+          </div>}
+          {tiles}
+          {pitch}
+          {transfers}
+          {bench}
+        </div>
+      )}
+    </Frame>
+  );
+}
+
+// ---------- the manager's figures: tiles, transfers (Team Reveal) and My Gameweek ----------
+
+const tileFonts = (size: SizeId) => (size === "landscape" ? { label: 11, value: 22, pad: "6px 10px" } : size === "portrait" ? { label: 15, value: 36, pad: "10px 14px" } : { label: 14, value: 30, pad: "8px 12px" });
+
+function StatTile({ theme, size, label, value, sub, badge, basis, big }: { theme: GraphicTheme; size: SizeId; label: string; value: string; sub?: string | null; badge?: "C" | "V"; basis?: string; big?: boolean }) {
+  const f = tileFonts(size);
+  const valueFont = big ? Math.round(f.value * 1.35) : f.value;
+  return (
+    <div style={{ ...panel(theme, { borderRadius: 16 }), flex: basis ? `0 0 ${basis}` : 1, minWidth: 0, padding: f.pad, boxSizing: "border-box" }}>
+      <div style={{ fontSize: f.label, fontWeight: 800, letterSpacing: 1.2, color: theme.muted, textTransform: "uppercase", ...ellipsis }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        {badge && (
+          <span style={{ flexShrink: 0, width: valueFont * 0.8, height: valueFont * 0.8, borderRadius: "50%", background: badge === "C" ? "#facc15" : "#e5e7eb", color: badge === "C" ? "#713f12" : "#111827", fontSize: valueFont * 0.48, fontWeight: 900, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{badge}</span>
+        )}
+        <div style={{ fontSize: valueFont, fontWeight: 900, lineHeight: 1.1, color: big ? theme.accent : theme.text, ...ellipsis }}>{value}</div>
+      </div>
+      {sub && <div style={{ fontSize: f.label + 2, fontWeight: 700, color: theme.muted, ...ellipsis }}>{sub}</div>}
+    </div>
+  );
+}
+
+/** This gameweek's transfers, in the order they were made, with the points hit when FPL has it. */
+function TransfersPanel({ stats, theme, size, chipLabel }: { stats: RevealStats; theme: GraphicTheme; size: SizeId; chipLabel?: string | null }) {
+  const land = size === "landscape";
+  const limit = size === "portrait" ? 4 : land ? 2 : 3;
+  const shown = stats.transfers.slice(0, limit);
+  const font = land ? 14 : size === "portrait" ? 24 : 20;
+  const hit = stats.transferCost ? `-${stats.transferCost} pts` : null;
+  return (
+    <div style={{ ...panel(theme, { borderRadius: 16 }), padding: land ? "6px 10px" : "10px 16px", flexShrink: 0 }} data-testid="reveal-transfers">
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: land ? 11 : 15, fontWeight: 800, letterSpacing: 1.2, color: theme.muted, textTransform: "uppercase" }}>
+        <span>{`Transfers${stats.transfers.length ? ` (${stats.transfers.length})` : ""}`}</span>
+        <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {hit && <span style={{ color: theme.bad }}>{hit}</span>}
+          {chipLabel && <span style={{ background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "1px 10px" : "2px 14px", fontWeight: 900, letterSpacing: 1 }}>{chipLabel}</span>}
+        </span>
+      </div>
+      {stats.transfers.length === 0 ? (
+        <div style={{ fontSize: font, fontWeight: 800, marginTop: 2 }}>No transfers this gameweek</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: land ? 1 : 3, marginTop: 2 }}>
+          {shown.map((t, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: font, fontWeight: 800, lineHeight: 1.2, ...ellipsis }}>
+              <span style={{ color: theme.bad }}>{t.outName}</span>
+              <span style={{ color: theme.muted }}>→</span>
+              <span style={{ color: theme.good }}>{t.inName}</span>
+              <span style={{ fontSize: font - 4, color: theme.muted, fontWeight: 700 }}>{t.outTeam} → {t.inTeam}</span>
+            </div>
+          ))}
+          {stats.transfers.length > shown.length && (
+            <div style={{ fontSize: font - 2, fontWeight: 700, color: theme.muted }}>+{stats.transfers.length - shown.length} more</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- My Gameweek ----------
+
+function GwTokenView({ p, jersey, nameFont, ptsFont }: { p: MyGameweekToken; jersey: number; nameFont: number; ptsFont: number }) {
+  const badge = p.isCaptain ? { text: "C", bg: "#facc15", fg: "#713f12" } : p.isVice ? { text: "V", bg: "#e5e7eb", fg: "#111827" } : null;
+  const badgePx = Math.round(jersey * 0.42);
+  const pts = p.points;
+  const plate = !p.counted || pts === null ? { bg: "rgba(0,0,0,0.6)", fg: "#ffffff" } : pts >= 9 ? { bg: "#16a34a", fg: "#ffffff" } : pts <= 0 ? { bg: "#dc2626", fg: "#ffffff" } : { bg: "rgba(0,0,0,0.72)", fg: "#ffffff" };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0, flex: 1, maxWidth: jersey * 2.2, opacity: p.counted ? 1 : 0.8 }} data-testid={`gw-token-${p.id}`}>
+      <div style={{ position: "relative", width: jersey, height: jersey }}>
+        <Jersey team={p.teamShort} position={p.position} px={jersey} />
+        {badge && (
+          <div style={{ position: "absolute", left: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: badge.bg, color: badge.fg, border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.55), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {badge.text}
           </div>
+        )}
+        {p.subbedIn && (
+          <div style={{ position: "absolute", right: -badgePx * 0.35, top: 0, width: badgePx, height: badgePx, borderRadius: "50%", background: "#16a34a", color: "#ffffff", border: "3px solid #ffffff", boxSizing: "border-box", fontSize: Math.round(badgePx * 0.5), fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }} title="Came on from the bench">
+            ▲
+          </div>
+        )}
+      </div>
+      <div style={{ maxWidth: "100%", boxSizing: "border-box", marginTop: 2, padding: "1px 10px", borderRadius: "8px 8px 0 0", fontSize: nameFont, fontWeight: 800, lineHeight: 1.25, background: "rgba(255,255,255,0.96)", color: "#111827", ...ellipsis }}>{p.name}</div>
+      <div style={{ minWidth: "70%", boxSizing: "border-box", padding: "1px 8px", borderRadius: "0 0 8px 8px", fontSize: ptsFont, fontWeight: 900, lineHeight: 1.2, textAlign: "center", background: plate.bg, color: plate.fg }}>
+        {pts === null ? "–" : pts}
+      </div>
+    </div>
+  );
+}
+
+function MyGameweekFace({ spec, theme, mine, gwLabel, subtitle }: { spec: GraphicSpec; theme: GraphicTheme; mine: MyGameweekContent; gwLabel: string; subtitle: string }) {
+  const land = spec.size === "landscape";
+  const tall = spec.size === "portrait";
+  const jersey = land ? 46 : tall ? 92 : 58;
+  const nameFont = land ? 13 : tall ? 22 : 18;
+  const ptsFont = land ? 16 : tall ? 30 : 24;
+  const token = (p: MyGameweekToken) => <GwTokenView p={p} jersey={jersey} nameFont={nameFont} ptsFont={ptsFont} />;
+  const pitch = <Pitch rows={mine.rows} renderToken={token} />;
+  const basis = land ? "calc(50% - 4px)" : undefined;
+
+  const tiles = (
+    <div style={{ display: "flex", gap: land ? 8 : 12, flexShrink: 0, flexWrap: land ? "wrap" : "nowrap" }}>
+      {mine.gwPoints !== null && (
+        <StatTile theme={theme} size={spec.size} label={`${gwLabel} points`} value={String(mine.gwPoints)} sub={mine.transferCost ? `after a -${mine.transferCost} hit` : null} basis={basis} big />
+      )}
+      {mine.gwRank !== null && <StatTile theme={theme} size={spec.size} label={`${gwLabel} rank`} value={formatFull(mine.gwRank)} basis={basis} />}
+      {mine.overallPoints !== null && <StatTile theme={theme} size={spec.size} label="Overall points" value={formatFull(mine.overallPoints)} basis={basis} />}
+      {mine.overallRank !== null && <StatTile theme={theme} size={spec.size} label="Overall rank" value={formatFull(mine.overallRank)} basis={basis} />}
+    </div>
+  );
+  const chip = mine.chipLabel && (
+    <span style={{ alignSelf: "flex-start", background: theme.accent, color: theme.bg, borderRadius: 999, padding: land ? "4px 14px" : "6px 18px", fontSize: land ? 16 : 22, fontWeight: 900, letterSpacing: 1 }}>
+      {mine.chipLabel.toUpperCase()}
+    </span>
+  );
+  const bench = (
+    <div style={{ ...panel(theme), padding: land ? "8px 12px" : "10px 14px", flexShrink: 0 }}>
+      <div style={{ fontSize: land ? 13 : 17, fontWeight: 800, letterSpacing: 1.5, color: theme.muted, marginBottom: land ? 4 : 6 }}>BENCH</div>
+      <div style={{ display: "flex", flexWrap: land ? "wrap" : "nowrap", gap: land ? 8 : 10, justifyContent: "space-around" }}>
+        {mine.bench.map((p) => (
+          <div key={p.id} style={{ flex: land ? "0 0 46%" : 1, minWidth: 0, display: "flex", justifyContent: "center" }}>{token(p)}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <Frame spec={spec} theme={theme} subtitle={subtitle} gwLabel={gwLabel}>
+      {land ? (
+        <div style={{ display: "flex", gap: 18, flex: 1, minHeight: 0 }}>
+          <div style={{ flex: "0 0 58%", display: "flex", minWidth: 0, minHeight: 0 }}>{pitch}</div>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+            {chip}
+            {tiles}
+            <div style={{ flex: 1 }} />
+            {bench}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minHeight: 0 }}>
+          {chip}
+          {tiles}
           {pitch}
           {bench}
         </div>
@@ -1884,7 +2082,8 @@ export function GraphicCanvas({ spec, theme, data }: { spec: GraphicSpec; theme:
     case "fixtures-comparison": return <FixturesFace spec={spec} theme={theme} grid={data.grid} gwLabel={data.gwLabel} />;
     case "price-change": return <PriceFace spec={spec} theme={theme} prices={data.prices} dateLabel={data.dateLabel} />;
     case "predicted-lineup": return <LineupFace spec={spec} theme={theme} lineup={data.lineup} gwLabel={data.gwLabel} />;
-    case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} />;
+    case "team-reveal": return <RevealFace spec={spec} theme={theme} reveal={data.reveal} gwLabel={data.gwLabel} stats={data.stats} />;
+    case "my-gameweek": return <MyGameweekFace spec={spec} theme={theme} mine={data.mine} gwLabel={data.gwLabel} subtitle={data.subtitle} />;
     case "cover": return <CoverFace spec={spec} theme={theme} cover={data.cover} />;
     case "player-news": return <NewsFace spec={spec} theme={theme} news={data.news} />;
     case "captain-picks": return <CaptainFace spec={spec} theme={theme} rows={data.rows} gwLabel={data.gwLabel} subtitle={data.subtitle} />;

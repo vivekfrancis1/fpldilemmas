@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, Table2, Activity, BarChart2, ClipboardList, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, CalendarClock, CalendarRange, Check, Crown, GitCompareArrows, Image as ImageIcon, ImagePlus, Link2, Newspaper, Search, Shirt, SlidersHorizontal, Sparkles, TrendingUp, Trophy, Package, Download, ClipboardCopy, HeartPulse, UserRound, Users, X, Target, ListChecks, Eye, FileText, Medal, LineChart, ListOrdered, Table2, Activity, BarChart2, ClipboardList, ClipboardCheck, type LucideIcon } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { getDefaultGameweekRange } from "@shared/gameweek-utils";
 import {
@@ -95,6 +95,7 @@ const TEMPLATE_ICON: Record<string, LucideIcon> = {
   "top-differentials": Sparkles,
   "predicted-lineup": Shirt,
   "team-reveal": Users,
+  "my-gameweek": ClipboardCheck,
   cover: ImageIcon,
   "player-news": Newspaper,
   "captain-picks": Crown,
@@ -122,7 +123,7 @@ import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
 import { defaultSelectionPatch, needsDefaults } from "@shared/graphic-defaults";
 import { FORMATIONS } from "@shared/formations";
 import { arrangeInFormation, rankForSlot, replaceSlot, type EditPlayer } from "@shared/lineup-edit";
-import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, matchModelGameweek, resolveGameweeks, resolveStartedGw, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
+import { DETAILED_POSITIONS_URL, computeGraphicData, detailedPositionsFromResponse, loadGraphicData, longDate, makeGraphicDataContext, managerDataFromBodies, managerRequests, matchModelGameweek, resolveGameweeks, resolveStartedGw, resolveTotwGw, type LiveElement, type PlayerProjection } from "@/lib/graphic-data";
 import { prepareFontEmbedCSS, renderToPng } from "@/lib/render-png";
 import { createZip } from "@shared/zip";
 import { selectableGameweeks } from "@shared/league-ownership";
@@ -132,7 +133,7 @@ const POSITIONS: Array<GraphicPosition | "ALL"> = ["ALL", "GKP", "DEF", "MID", "
 const OWNERSHIP_OPTIONS = [1, 2, 3, 5, 10, 15, 20];
 const POSITION_BY_TYPE: Record<number, GraphicPosition> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
 // Templates about one gameweek keep it in `from` (and `to`) of the link, so it is not carried into other templates' ranges.
-const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers", "gw-points", "projected-table"];
+const SINGLE_GAMEWEEK: TemplateId[] = ["predicted-lineup", "team-reveal", "my-gameweek", "captain-picks", "team-of-the-week", "match-predictions", "match-results", "match-preview", "match-report", "gw-top-scorers", "gw-points", "projected-table"];
 const MATCH_TEMPLATES: TemplateId[] = ["match-predictions", "match-results", "match-preview", "match-report"];
 const TOP_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -321,6 +322,86 @@ const POSITION_ORDER: GraphicPosition[] = ["GKP", "DEF", "MID", "FWD"];
 
 type LoadState = { busy: boolean; error: string | null; info: string | null };
 
+/**
+ * My Gameweek: the team ID (shared with the other tools) and the gameweek. The team's name is filled in as the manager name,
+ * which can be changed. Once an ID is known the graphic is drawn straight away.
+ */
+function MyGameweekControls({ spec, update, startedGameweeks, finishedGameweeks, gameweek }: {
+  spec: GraphicSpec;
+  update: (patch: Partial<GraphicSpec>) => void;
+  startedGameweeks: number[];
+  finishedGameweeks: number[];
+  gameweek: number;
+}) {
+  const [idText, setIdText] = useState(() => (spec.entry > 0 ? String(spec.entry) : readToolManagerId()));
+  const [state, setState] = useState<LoadState>({ busy: false, error: null, info: null });
+  const autoNameRef = useRef("");
+
+  const apply = async (raw: string) => {
+    const id = extractManagerId(raw);
+    if (!id || id === "0") {
+      setState({ busy: false, error: "Enter your FPL team ID, or paste your team link from the FPL site.", info: null });
+      return;
+    }
+    setState({ busy: true, error: null, info: null });
+    try {
+      const res = await fetch(`/api/manager/${id}`);
+      if (!res.ok) {
+        setState({ busy: false, error: res.status === 404 ? "No FPL team was found with that ID." : "Couldn't load that team right now. Please try again.", info: null });
+        return;
+      }
+      const info = await res.json().catch(() => ({}));
+      const name = `${info?.player_first_name ?? ""} ${info?.player_last_name ?? ""}`.trim().slice(0, MAX_MANAGER_NAME);
+      const patch: Partial<GraphicSpec> = { entry: parseInt(id, 10) };
+      if (!spec.manager.trim() || spec.manager === autoNameRef.current) {
+        patch.manager = name;
+        autoNameRef.current = name;
+      }
+      update(patch);
+      saveToolManagerId(id); // so Rate My Team, Hindsight, League Ownership and Player Plot open on the same team
+      setState({ busy: false, error: null, info: name ? `Showing ${name}${info?.name ? ` (${info.name})` : ""}.` : "Team loaded." });
+    } catch {
+      setState({ busy: false, error: "Couldn't load that team right now. Please try again.", info: null });
+    }
+  };
+
+  // a saved ID is used as soon as the template opens
+  const triedRef = useRef(false);
+  useEffect(() => {
+    if (triedRef.current) return;
+    triedRef.current = true;
+    if (spec.entry > 0) return;
+    const saved = extractManagerId(readToolManagerId());
+    if (saved && saved !== "0") void apply(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-3" data-testid="my-gameweek-controls">
+      <Field label="Your FPL team ID">
+        <div className="flex gap-2">
+          <Input value={idText} onChange={(e) => setIdText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void apply(idText); }} inputMode="numeric" placeholder="Team ID or team link" data-testid="input-my-gw-id" />
+          <Button type="button" variant="outline" onClick={() => void apply(idText)} disabled={state.busy} data-testid="button-my-gw-load">{state.busy ? "Loading…" : "Load"}</Button>
+        </div>
+        {state.error && <p className="text-xs text-red-600" role="alert" data-testid="my-gw-error">{state.error}</p>}
+        {state.info && <p className="text-xs text-emerald-700" role="status" data-testid="my-gw-info">{state.info}</p>}
+      </Field>
+      <Field label="Gameweek">
+        <SimpleSelect
+          value={String(gameweek || "")}
+          onChange={(v) => update({ from: parseInt(v, 10), to: parseInt(v, 10) })}
+          options={[...startedGameweeks].reverse().map((gw) => ({ value: String(gw), label: finishedGameweeks.includes(gw) ? `GW${gw}` : `GW${gw} (live)` }))}
+          testId="select-my-gw"
+        />
+      </Field>
+      <Field label="Name on the graphic (optional)">
+        <Input value={spec.manager} maxLength={MAX_MANAGER_NAME} onChange={(e) => update({ manager: e.target.value })} placeholder="Your name or team name" data-testid="input-my-gw-name" />
+      </Field>
+      <p className="text-xs text-gray-500">Your team as FPL scored it: each player's points (the captain's doubled), automatic substitutions, your gameweek points and rank, and your overall points and rank. A live gameweek's figures can still change.</p>
+    </div>
+  );
+}
+
 function SquadBuilder({
   spec, update, elements, teamShortById, xptsById, gameweek, gameweekOptions,
 }: {
@@ -335,7 +416,7 @@ function SquadBuilder({
   const [query, setQuery] = useState("");
   const [note, setNote] = useState<string | null>(null);
   // the team ID is shared with Rate My Team, Hindsight, League Ownership and Player Plot: pre-filled once entered anywhere
-  const [idText, setIdText] = useState(() => readToolManagerId());
+  const [idText, setIdText] = useState(() => (spec.entry > 0 ? String(spec.entry) : readToolManagerId()));
   const [load, setLoad] = useState<LoadState>({ busy: false, error: null, info: null });
   // the ID whose squad is in the builder (or was already tried), so an unchanged ID is never loaded twice; a squad that came
   // from the link counts as "already chosen" and is not replaced just because an ID is saved
@@ -426,7 +507,7 @@ function SquadBuilder({
         return;
       }
       const loaded = squadFromPicks(picks);
-      const patch: Partial<GraphicSpec> = { ...loaded };
+      const patch: Partial<GraphicSpec> = { ...loaded, entry: /^\d+$/.test(id) ? parseInt(id, 10) : 0 };
       // FPL's own bench and captain are used; if the picks lack them, fall back to our suggestion from expected points
       if (!loaded.captain || loaded.bench.length !== BENCH_PLAYERS) {
         const suggested = suggestSquadSetup({ elements, squad: loaded.squad, xptsById });
@@ -755,12 +836,39 @@ export default function GraphicsPage() {
   // Player Points works for any gameweek that has started, the live one included
   const startedGameweeks = useMemo(() => selectableGameweeks((bootstrap?.events ?? []) as Array<{ id: number; finished?: boolean; deadline_time?: string | null }>), [bootstrap?.events]);
   const pointsGw = resolveStartedGw(spec, startedGameweeks);
-  const liveGw = spec.template === "gw-points" ? pointsGw : totwGw;
+  const liveGw = spec.template === "gw-points" || spec.template === "my-gameweek" ? pointsGw : totwGw;
   const { data: liveData, isLoading: liveLoading } = useQuery<{ elements: LiveElement[] }>({
     queryKey: [`/api/event/${liveGw}/live`],
-    staleTime: spec.template === "gw-points" && !finishedGameweeks.includes(liveGw) ? 60 * 1000 : 5 * 60 * 1000,
-    enabled: (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers" || spec.template === "gw-points") && liveGw > 0,
+    staleTime: (spec.template === "gw-points" || spec.template === "my-gameweek") && !finishedGameweeks.includes(liveGw) ? 60 * 1000 : 5 * 60 * 1000,
+    enabled: (spec.template === "team-of-the-week" || spec.template === "gw-top-scorers" || spec.template === "gw-points" || spec.template === "my-gameweek") && liveGw > 0,
   });
+
+  // Team Reveal / My Gameweek: the manager's picks, transfers and (for the reveal) previous gameweek's picks. Picks that are not
+  // out yet, or a failed request, are not errors: the figures are left off.
+  const managerReq = useMemo(() => managerRequests(spec, { defaultRange, startedGameweeks }), [spec.template, spec.entry, spec.from, defaultRange, startedGameweeks]);
+  const { data: managerBodies } = useQuery<{ picks: any; previous: any; transfers: any }>({
+    queryKey: ["graphic-manager", ...managerReq.urls],
+    enabled: managerReq.urls.length > 0,
+    staleTime: 60 * 1000,
+    retry: false,
+    queryFn: async () => {
+      const get = async (url: string | null) => {
+        if (!url) return null;
+        try {
+          const r = await fetch(url);
+          return r.ok ? await r.json() : null;
+        } catch {
+          return null;
+        }
+      };
+      const [picks, previous, transfers] = await Promise.all([get(managerReq.picks), get(managerReq.previous), get(managerReq.transfers)]);
+      return { picks, previous, transfers };
+    },
+  });
+  const managerData = useMemo(
+    () => (managerReq.gameweek > 0 && managerBodies ? managerDataFromBodies(spec, managerReq.gameweek, managerBodies) : undefined),
+    [managerReq.gameweek, managerBodies, spec.entry],
+  );
 
   // Player History: FPL's match history of the chosen player (the same request the player page makes)
   const historyPlayerId = spec.template === "player-history" ? spec.players[0] : undefined;
@@ -870,8 +978,9 @@ export default function GraphicsPage() {
       playerHistory: historyPlayerId && historyData?.history ? { playerId: historyPlayerId, history: historyData.history } : undefined,
       teamData: teamUrl && teamResponse ? { url: teamUrl, data: teamResponse } : undefined,
       detailedPositions,
+      manager: managerData,
     }),
-    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData, teamUrl, teamResponse, detailedPositions],
+    [bootstrap, projections, fixtures, liveData, pricesLoading, priceChanges, matchModel, matchGw, historyPlayerId, historyData, teamUrl, teamResponse, detailedPositions, managerData],
   );
   const { data, problem } = useMemo(() => computeGraphicData(spec, dataContext), [spec, dataContext]);
 
@@ -1039,6 +1148,7 @@ export default function GraphicsPage() {
     spec.template === "price-change" ? [priceContent.date ?? ""]
     : spec.template === "predicted-lineup" ? [teamShortById.get(spec.teams[0]) ?? "", `gw${lineupGw}`]
     : spec.template === "team-reveal" ? [spec.manager || "squad", `gw${lineupGw}`]
+    : spec.template === "my-gameweek" ? [spec.manager || "team", `gw${pointsGw}`]
     : spec.template === "player-news" ? selectedElements.map((e) => e.web_name)
     : spec.template === "captain-picks" ? [`gw${lineupGw}`]
     : spec.template === "fixture-ticker" ? [gwLabel]
@@ -1304,6 +1414,10 @@ export default function GraphicsPage() {
                   )}
                   <p className="text-xs text-gray-500">FPL's own points for the gameweek, with the scoring that made them. A live gameweek's points can still change (bonus is confirmed after the last match). The captain is marked; points are not doubled. Up to {BENCH_PLAYERS} players can go on the bench.</p>
                 </div>
+              )}
+
+              {spec.template === "my-gameweek" && (
+                <MyGameweekControls spec={spec} update={update} startedGameweeks={startedGameweeks} finishedGameweeks={finishedGameweeks} gameweek={pointsGw} />
               )}
 
               {spec.template === "team-projections" && (

@@ -61,6 +61,7 @@ import {
   type MatchFixtureInput,
   type MatchModelInput,
 } from "@shared/graphics-matches";
+import { buildMyGameweek, buildRevealStats, type EntryPicksInput, type TransferInput } from "@shared/graphics-manager";
 
 // Turns a graphic's settings plus the site's data into what gets drawn. Used by the page (the live preview) and by the
 // Gameweek pack, so a pack image is exactly what the single graphic would be.
@@ -101,8 +102,19 @@ export interface GraphicDataContext {
   nextGameweek: number;
   /** Team graphics: the response of the one request `teamGraphicUrl` names for the graphic, with that URL; undefined while loading. */
   teamData?: { url: string; data: any[] };
+  /** Team Reveal / My Gameweek: FPL's data for the manager the graphic names; undefined while loading. Pieces FPL does not have (picks before the deadline) are null / empty. */
+  manager?: ManagerGraphicData;
   /** Predicted Lineup: detailed position codes by FPL player id, main position first; undefined while loading (empty = none known). */
   detailedPositions?: Map<number, string[]>;
+}
+
+export interface ManagerGraphicData {
+  entry: number;
+  /** The gameweek the data is for (Team Reveal's gameweek, or My Gameweek's). */
+  gameweek: number;
+  picks: EntryPicksInput | null;
+  previousPicks: EntryPicksInput | null;
+  transfers: TransferInput[];
 }
 
 export interface ResolvedGameweeks {
@@ -210,7 +222,23 @@ export function computeGraphicData(spec: GraphicSpec, ctx: GraphicDataContext): 
         elements, squad: spec.squad, bench: spec.bench, captain: spec.captain, vice: spec.vice, chip: spec.chip,
         gameweek: lineupGw, fixtures: fixtures as any, teamShortById,
       });
-      return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw) }, problem: null };
+      const m = ctx.manager;
+      const stats = spec.entry > 0 && m && m.entry === spec.entry && m.gameweek === lineupGw
+        ? buildRevealStats({ elements, teamShortById, gameweek: lineupGw, transfers: m.transfers, currentPicks: m.picks, previousPicks: m.previousPicks })
+        : null;
+      return { data: { kind: "team-reveal", reveal, gwLabel: gameweekLabel(lineupGw, lineupGw), stats }, problem: null };
+    }
+    case "my-gameweek": {
+      if (spec.entry <= 0) return { data: null, problem: "Enter your FPL team ID on the left to see your gameweek." };
+      if (pointsGw === 0) return { data: null, problem: "No gameweek has started yet, so there is no gameweek to show." };
+      const m = ctx.manager;
+      if (!ctx.liveElements || !m || m.entry !== spec.entry || m.gameweek !== pointsGw) return { data: null, problem: null };
+      if (!m.picks) return { data: null, problem: `We couldn't get that team's picks for GW${pointsGw}. Check the team ID.` };
+      const finished = ctx.finishedGameweeks.includes(pointsGw);
+      const mine = buildMyGameweek({ elements, live: ctx.liveElements, teamShortById, gameweek: pointsGw, finished, picks: m.picks });
+      if (!mine.complete) return { data: null, problem: `We couldn't read that team's GW${pointsGw} squad.` };
+      const label = gameweekLabel(pointsGw, pointsGw);
+      return { data: { kind: "my-gameweek", mine, gwLabel: label, subtitle: [spec.manager.trim(), label, finished ? null : "live, bonus not yet confirmed"].filter(Boolean).join(" · ") }, problem: null };
     }
     case "captain-picks": {
       if (!fixtures || !projections) return { data: null, problem: null };
@@ -383,6 +411,7 @@ export function makeGraphicDataContext(input: {
   playerHistory?: { playerId: number; history: HistoryRowInput[] };
   teamData?: { url: string; data: any[] };
   detailedPositions?: Map<number, string[]>;
+  manager?: ManagerGraphicData;
 }): GraphicDataContext {
   const { bootstrap } = input;
   const teams = bootstrap?.teams ?? [];
@@ -407,6 +436,7 @@ export function makeGraphicDataContext(input: {
     nextGameweek: events.find((e) => e.is_next)?.id ?? 39,
     teamData: input.teamData,
     detailedPositions: input.detailedPositions,
+    manager: input.manager,
   };
 }
 
@@ -444,9 +474,35 @@ export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext):
     const gw = resolveStartedGw(spec, ctx.startedGameweeks);
     if (gw > 0) urls.push(`/api/event/${gw}/live`);
   }
+  if (spec.template === "my-gameweek") {
+    const gw = resolveStartedGw(spec, ctx.startedGameweeks);
+    if (gw > 0) urls.push(`/api/event/${gw}/live`);
+  }
+  urls.push(...managerRequests(spec, ctx).urls);
   if (spec.template === "player-history" && spec.players[0]) urls.push(`/api/element-summary/${spec.players[0]}`);
   if (spec.template === "predicted-lineup") urls.push(DETAILED_POSITIONS_URL);
   return urls;
+}
+
+/**
+ * The requests for the manager a Team Reveal or My Gameweek names (none without a team ID). Picks that are not out yet and a
+ * failed transfers request are not errors: the graphic leaves those figures off, so these are loaded without failing the rest.
+ */
+export function managerRequests(spec: Pick<GraphicSpec, "template" | "entry" | "from">, ctx: Pick<GraphicDataContext, "defaultRange" | "startedGameweeks">): { gameweek: number; urls: string[]; picks: string; previous: string | null; transfers: string | null } {
+  const none = { gameweek: 0, urls: [], picks: "", previous: null, transfers: null };
+  if (spec.entry <= 0 || (spec.template !== "team-reveal" && spec.template !== "my-gameweek")) return none;
+  const gw = spec.template === "my-gameweek" ? resolveStartedGw(spec, ctx.startedGameweeks) : spec.from || ctx.defaultRange.from;
+  if (gw <= 0) return none;
+  const picks = `/api/entry/${spec.entry}/event/${gw}/picks`;
+  const previous = spec.template === "team-reveal" && gw > 1 ? `/api/entry/${spec.entry}/event/${gw - 1}/picks` : null;
+  const transfers = spec.template === "team-reveal" ? `/api/manager/${spec.entry}/transfers` : null;
+  return { gameweek: gw, urls: [picks, previous, transfers].filter((u): u is string => !!u), picks, previous, transfers };
+}
+
+/** What a manager request returned, as the graphic reads it: anything that is not the expected shape is "not available". */
+export function managerDataFromBodies(spec: Pick<GraphicSpec, "entry">, gameweek: number, bodies: { picks: any; previous: any; transfers: any }): ManagerGraphicData {
+  const asPicks = (b: any): EntryPicksInput | null => (b && Array.isArray(b.picks) ? (b as EntryPicksInput) : null);
+  return { entry: spec.entry, gameweek, picks: asPicks(bodies.picks), previousPicks: asPicks(bodies.previous), transfers: Array.isArray(bodies.transfers) ? bodies.transfers : [] };
 }
 
 /**
@@ -457,7 +513,9 @@ export function graphicDataRequests(spec: GraphicSpec, ctx: GraphicDataContext):
 export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext, fetchJson: JsonFetcher): Promise<GraphicDataContext> {
   const urls = graphicDataRequests(spec, ctx);
   if (urls.length === 0) return ctx;
-  const bodies = await Promise.all(urls.map((u) => fetchJson(u)));
+  const manager = managerRequests(spec, ctx);
+  const optional = new Set(manager.urls);
+  const bodies = await Promise.all(urls.map((u) => (optional.has(u) ? fetchJson(u).catch(() => null) : fetchJson(u))));
   const byUrl = new Map(urls.map((u, i) => [u, bodies[i]]));
   const next: GraphicDataContext = { ...ctx };
   const modelGw = matchModelGameweek(spec, ctx.fixtures);
@@ -478,6 +536,17 @@ export async function loadGraphicData(spec: GraphicSpec, ctx: GraphicDataContext
   if (spec.template === "gw-points") {
     const gw = resolveStartedGw(spec, ctx.startedGameweeks);
     if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
+  }
+  if (spec.template === "my-gameweek") {
+    const gw = resolveStartedGw(spec, ctx.startedGameweeks);
+    if (gw > 0) next.liveElements = byUrl.get(`/api/event/${gw}/live`)?.elements ?? [];
+  }
+  if (manager.gameweek > 0) {
+    next.manager = managerDataFromBodies(spec, manager.gameweek, {
+      picks: byUrl.get(manager.picks),
+      previous: manager.previous ? byUrl.get(manager.previous) : null,
+      transfers: manager.transfers ? byUrl.get(manager.transfers) : null,
+    });
   }
   if (spec.template === "player-history" && spec.players[0]) {
     next.playerHistory = { playerId: spec.players[0], history: byUrl.get(`/api/element-summary/${spec.players[0]}`)?.history ?? [] };

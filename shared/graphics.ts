@@ -10,12 +10,13 @@ import { layoutLineup, sharedSlotLosers } from "./lineup-layout";
 import { formationSlots, isFormation } from "./formations";
 import { fillGaps, type EditPlayer } from "./lineup-edit";
 import type { TableContent, TeamHistoryContent, TeamProjectionsContent } from "./graphics-teams";
+import type { MyGameweekContent, RevealStats } from "./graphics-manager";
 import type { GwPointsContent, PlayerHistoryContent, PlayerProjectionsContent, TopScorersContent } from "./graphics-players";
 import type { MatchPredictionsContent, MatchPreviewContent, MatchReportContent, MatchResultsContent } from "./graphics-matches";
 
 // ---------- templates, sizes, themes ----------
 
-export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report" | "player-projections" | "gw-top-scorers" | "gw-points" | "player-history" | "team-projections" | "projected-table" | "league-table" | "team-history";
+export type TemplateId = "player-card" | "player-comparison" | "fixtures-comparison" | "price-change" | "top-differentials" | "predicted-lineup" | "team-reveal" | "my-gameweek" | "cover" | "player-news" | "captain-picks" | "fixture-ticker" | "transfer-trends" | "team-of-the-week" | "stat-leaders" | "availability-watch" | "match-predictions" | "match-results" | "match-preview" | "match-report" | "player-projections" | "gw-top-scorers" | "gw-points" | "player-history" | "team-projections" | "projected-table" | "league-table" | "team-history";
 
 export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; description: string; headline: string }> = [
   { id: "player-card", label: "Player Card", description: "One player: price, ownership, form, points, xPts and next fixtures", headline: "Player Card" },
@@ -24,7 +25,8 @@ export const GRAPHIC_TEMPLATES: Array<{ id: TemplateId; label: string; descripti
   { id: "price-change", label: "Price Change", description: "Confirmed risers and fallers for a day", headline: "Price Changes" },
   { id: "top-differentials", label: "Top Differentials", description: "Highest xPts among low-owned players", headline: "Top Differentials" },
   { id: "predicted-lineup", label: "Predicted Lineups", description: "Most likely XI for a club, from expected minutes", headline: "Predicted Lineup" },
-  { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with captain, bench and chip", headline: "Team Reveal" },
+  { id: "team-reveal", label: "Team Reveal", description: "Your 15-man squad on a pitch with fixtures, captain, vice, this week's transfers, overall points and rank", headline: "Team Reveal" },
+  { id: "my-gameweek", label: "My Gameweek", description: "Your team on a pitch with every player's points, your gameweek total and rank, overall points and rank", headline: "My Gameweek" },
   { id: "cover", label: "Cover Generator", description: "A bold cover image with your headline and up to 3 featured players", headline: "Gameweek Preview" },
   { id: "player-news", label: "Player News Quote", description: "A player's official FPL news, or your own quote, as a shareable card", headline: "Player News" },
   { id: "captain-picks", label: "Captain Picks", description: "Top captain options for a gameweek by our expected points", headline: "Captain Picks" },
@@ -163,6 +165,7 @@ export function footerNote(spec: GraphicSpec, gwLabel: string | null): string {
   if (spec.template === "cover") return "";
   // Player News Quote: say whose words these are
   if (spec.template === "player-news") return spec.quote.trim() ? "Quote entered by the creator" : "Source: official FPL player news";
+  if (spec.template === "my-gameweek") return [gwLabel, "Points and ranks as scored by FPL"].filter((p): p is string => !!p).join(" · ");
   // an edited lineup is the poster's own view, not our projection
   if (spec.template === "predicted-lineup" && spec.formation) return [gwLabel, "User-edited lineup"].filter((p): p is string => !!p).join(" · ");
   const parts = [gwLabel, usesProjections(spec) ? "Projections are estimates, not guarantees" : null].filter((p): p is string => !!p);
@@ -244,6 +247,8 @@ export interface GraphicSpec {
   top: number;
   /** Price Change: YYYY-MM-DD; empty means "the latest day with changes". */
   date: string;
+  /** Team Reveal / My Gameweek: the manager's FPL team id (0 = none), for their transfers, points and ranks. */
+  entry: number;
   /** Team Reveal: the 15 squad ids (order kept), the bench ids among them, captain / vice (0 = none), chip, manager name. */
   squad: number[];
   bench: number[];
@@ -315,6 +320,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   vice: 0,
   chip: "",
   manager: "",
+  entry: 0,
   subtitle: "",
   tag: "",
   quote: "",
@@ -330,7 +336,7 @@ export const DEFAULT_SPEC: GraphicSpec = {
   xi: [],
 };
 
-const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "gw-points": MAX_GW_POINTS_PLAYERS, "player-history": 1, "team-projections": 3, "projected-table": 3, "league-table": 3, "team-history": 3 };
+const MAX_PLAYERS: Record<TemplateId, number> = { "player-card": 1, "player-comparison": 3, "fixtures-comparison": 3, "price-change": 3, "top-differentials": 3, "predicted-lineup": 3, "team-reveal": 3, "my-gameweek": 3, cover: 3, "player-news": 1, "captain-picks": 3, "fixture-ticker": 3, "transfer-trends": 3, "team-of-the-week": 3, "stat-leaders": 3, "availability-watch": 3, "match-predictions": 3, "match-results": 3, "match-preview": 3, "match-report": 3, "player-projections": 3, "gw-top-scorers": 3, "gw-points": MAX_GW_POINTS_PLAYERS, "player-history": 1, "team-projections": 3, "projected-table": 3, "league-table": 3, "team-history": 3 };
 const MAX_TEAMS = 4;
 
 const intOrNull = (v: string | null): number | null => (v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null);
@@ -415,6 +421,7 @@ export function decodeSpec(search: string): GraphicSpec {
     vice,
     chip: (CHIP_IDS as string[]).includes(chipRaw) ? (chipRaw as ChipId) : "",
     manager: (q.get("mgr") ?? "").slice(0, MAX_MANAGER_NAME),
+    entry: intOrNull(q.get("en")) ?? 0,
     subtitle: (q.get("sub") ?? "").slice(0, MAX_SUBTITLE),
     tag: (q.get("tag") ?? "").slice(0, MAX_TAG),
     quote: (q.get("q") ?? "").slice(0, MAX_QUOTE),
@@ -457,6 +464,7 @@ export function encodeSpec(spec: GraphicSpec): string {
   if (spec.vice) add("vc", String(spec.vice));
   if (spec.chip) add("chip", spec.chip);
   if (spec.manager) add("mgr", spec.manager.slice(0, MAX_MANAGER_NAME));
+  if (spec.entry > 0) add("en", String(spec.entry));
   if (spec.subtitle) add("sub", spec.subtitle.slice(0, MAX_SUBTITLE));
   if (spec.tag) add("tag", spec.tag.slice(0, MAX_TAG));
   if (spec.quote) add("q", spec.quote.slice(0, MAX_QUOTE));
@@ -1587,7 +1595,8 @@ export type GraphicData =
   | { kind: "price-change"; prices: PriceChangeContent; dateLabel: string }
   | { kind: "top-differentials"; rows: DifferentialRow[]; gwLabel: string; subtitle: string }
   | { kind: "predicted-lineup"; lineup: PredictedLineupContent; gwLabel: string }
-  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string }
+  | { kind: "team-reveal"; reveal: TeamRevealContent; gwLabel: string; stats?: RevealStats | null }
+  | { kind: "my-gameweek"; mine: MyGameweekContent; gwLabel: string; subtitle: string }
   | { kind: "cover"; cover: CoverContent }
   | { kind: "player-news"; news: NewsQuoteContent }
   | { kind: "captain-picks"; rows: CaptainPickRow[]; gwLabel: string; subtitle: string }
@@ -1623,6 +1632,7 @@ const KIND_TAG: Partial<Record<GraphicData["kind"], string>> = {
   "top-differentials": "#Differentials",
   "team-of-the-week": "#TeamOfTheWeek",
   "team-reveal": "#TeamReveal",
+  "my-gameweek": "#MyGameweek",
   "predicted-lineup": "#PredictedLineup",
   "player-news": "#FPLNews",
   "availability-watch": "#FPLInjuries",
@@ -1653,6 +1663,9 @@ function finishCaption(body: string, spec: GraphicSpec, kind: GraphicData["kind"
   const text = body.length <= room ? body : `${body.slice(0, Math.max(0, room - 1)).replace(/[\s,;·:.\-–(]+$/, "")}…`;
   return `${text}${tail}`;
 }
+
+/** A whole number with thousands separators: 1234567 -> "1,234,567". */
+export const formatFull = (n: number): string => n.toLocaleString("en-GB");
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -1818,10 +1831,28 @@ export function buildCaption(data: GraphicData, spec: GraphicSpec): string {
       const vice = players.find((p) => p.isVice);
       const owner = spec.manager.trim();
       if (!reveal.complete) return done(`${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: squad not finished yet`, data.gwLabel);
+      const st = data.stats;
+      const extra = st
+        ? `${st.transfers.length === 0 ? ", no transfers" : `, ${plural(st.transfers.length, "transfer", "transfers")}`}${st.transferCost ? ` (-${st.transferCost})` : ""}${st.overallRank !== null ? `, overall rank ${formatFull(st.overallRank)}` : ""}`
+        : "";
       return done(
-        `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}`,
+        `${owner ? `${owner}'s team` : "Team"} reveal ${data.gwLabel}: ${reveal.formation}${captain ? `, captain ${captain.name}` : ""}${vice ? `, vice ${vice.name}` : ""}${reveal.chipLabel ? `, ${reveal.chipLabel}` : ""}${extra}`,
         data.gwLabel,
       );
+    }
+    case "my-gameweek": {
+      const { mine } = data;
+      const owner = spec.manager.trim();
+      const who = owner ? `${owner}'s ${data.gwLabel}` : `My ${data.gwLabel}`;
+      if (!mine.complete || mine.gwPoints === null) return done(`${who}: squad not available yet`, data.gwLabel);
+      const bits = [
+        `${mine.gwPoints} pts${mine.transferCost ? ` (after a -${mine.transferCost} hit)` : ""}`,
+        mine.gwRank !== null ? `GW rank ${formatFull(mine.gwRank)}` : null,
+        mine.overallPoints !== null ? `overall ${formatFull(mine.overallPoints)} pts` : null,
+        mine.overallRank !== null ? `overall rank ${formatFull(mine.overallRank)}` : null,
+        mine.chipLabel,
+      ].filter((b): b is string => !!b);
+      return done(`${who}: ${bits.join(" · ")}`, data.gwLabel);
     }
     case "predicted-lineup": {
       const { lineup } = data;
@@ -2075,6 +2106,8 @@ export function isEmptyGraphic(data: GraphicData): boolean {
       return data.scorers.rows.length === 0;
     case "gw-points":
       return data.points.rows.length === 0;
+    case "my-gameweek":
+      return !data.mine.complete;
     case "player-history":
       return data.history.bars.every((b) => b.points === null);
     case "team-projections":
