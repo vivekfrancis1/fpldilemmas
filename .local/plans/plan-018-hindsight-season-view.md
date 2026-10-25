@@ -1,6 +1,6 @@
 # Plan 018 — Hindsight: Season view
 
-Status: IMPLEMENTED locally (2026-10-25), not pushed. Season view + six What-if scenarios (set and forget, same captain, vice-captain, one goalkeeper, chip timing, hits); 85 tests across the hindsight files pass. Decisions: Season view only (transfers / bench swaps / chip timing deferred); own squad only, no GW-average or other-manager benchmarks.
+Status: IMPLEMENTED locally (2026-10-25), not pushed. Season view + ten What-if scenarios (set and forget, same captain, vice-captain, chase form, one goalkeeper, stop rotating by position, chip timing, hits, no Wildcard, no Free Hit); 98 tests across the hindsight files pass. Decisions: Season view only (transfers / bench swaps / chip timing deferred); own squad only, no GW-average or other-manager benchmarks.
 Builds on: plan-006 (Hindsight, single gameweek).
 
 Principle (unchanged): every number is official FPL data or exact arithmetic on it. No grade, no "you should have known".
@@ -39,3 +39,9 @@ Deferred ideas: no-hit (never take a transfer cost), never chip, always-best-of-
 5. **Chips: were they worth it** (`scenario=chips`): for each Bench Boost / Triple Captain you used, the gain (BB: points scored by your original bench; TC: the captain's points, i.e. the extra multiple) versus the best week for that chip among finished gameweeks in the same chip window (official `chips[].start_event/stop_event` from bootstrap-static; weeks where a different chip was played are excluded). Also total points your chips gave you. Wildcard / Free Hit are not evaluated (they change the squad, not the scoring multiples).
 6. **Hits: were they worth it** (`scenario=hits`): for every week with a transfer cost, players bought vs players sold (this week's squad vs the previous non-Free-Hit squad); raw points each side scored over that gameweek and the next 3 (whether or not they started), net of the hit. Hits with fewer than 4 gameweeks of data are flagged partial.
 Deferred: form captain (last week's top scorer), no-wildcard, same-position rotation.
+
+## Added 2026-10-25 (user: "build out all the ideas"): three more scenarios
+7. **Form captain** (`scenario=form-captain`): each week the armband goes to the player in your counted XI (multiplier > 0) who scored most in the previous gameweek (ties: lower id). Week 1, or a week with no previous gameweek on record, is unchanged. Delta = (his points this week - captain's) x (armband multiplier - 1).
+8. **No Wildcard / no Free Hit** (`scenario=wildcard`, `scenario=freehit`): for each chip played, keep the squad held the week before it (latest earlier non-Free-Hit week) for the chip gameweek and the next 3 (Free Hit: that week only); compare best XI (no chip) from that squad vs the squad you held. Delta = kept - actual. Chip in the first week (no earlier squad) is skipped; windows with fewer gameweeks played are flagged partial.
+9. **Stop rotating, any position** (`scenario=rotation&position=GKP|DEF|MID|FWD`): each week field, in that position, the same number of players you actually started (captain excluded and left in place) but chosen as the players of that position you started most weeks across the season (ties: lower id) who are in that week's squad. Delta = their points - the points of the players you started. Bench Boost weeks skipped. For GKP it reproduces the One goalkeeper scenario (when no keeper is captain).
+Pure functions in `shared/hindsight-what-if.ts`; tests first in `tests/hindsight-what-if.test.ts`.

@@ -359,3 +359,172 @@ export function hitsWorthIt(allWeeks: WhatIfWeek[], horizon = 4): HitsResult {
     },
   };
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Form captain: last week's top scorer wears the armband
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type FormCaptainStatus = "applied" | "already" | "no-previous" | "no-captain";
+
+export interface FormCaptainRow {
+  gameweek: number;
+  status: FormCaptainStatus;
+  /** The player who would have worn the armband (last gameweek's top scorer among those counted this week), with this week's points. */
+  player: { id: number; name: string; points: number; previousPoints: number } | null;
+  captain: { id: number; name: string; points: number } | null;
+  delta: number;
+}
+
+export interface FormCaptainResult {
+  scenario: "form-captain";
+  rows: FormCaptainRow[];
+  totals: { delta: number; weeksApplied: number; weeksAlready: number };
+}
+
+/** Each week the armband goes to the player in your counted XI who scored most in the previous gameweek (ties: lower id). */
+export function formCaptain(allWeeks: WhatIfWeek[]): FormCaptainResult {
+  const weeks = byWeek(allWeeks);
+  const rows: FormCaptainRow[] = weeks.map((w) => {
+    const c = w.picks.find((p) => p.isCaptain);
+    const captain = c ? { id: c.id, name: c.name, points: ptsOf(w, c.id) } : null;
+    const prev = weeks.find((x) => x.gameweek === w.gameweek - 1);
+    const row = (status: FormCaptainStatus, player: FormCaptainRow["player"] = null, delta = 0): FormCaptainRow => ({ gameweek: w.gameweek, status, player, captain, delta });
+    if (!prev) return row("no-previous");
+    const candidates = w.picks.filter((p) => p.multiplier > 0);
+    if (candidates.length === 0) return row("no-captain");
+    const top = [...candidates].sort((a, b) => ptsOf(prev, b.id) - ptsOf(prev, a.id) || a.id - b.id)[0];
+    const player = { id: top.id, name: top.name, points: ptsOf(w, top.id), previousPoints: ptsOf(prev, top.id) };
+    if (!c) return row("no-captain", player);
+    if (top.isCaptain) return row("already", player);
+    return row("applied", player, (player.points - captain!.points) * (c.multiplier - 1));
+  });
+  const count = (s: FormCaptainStatus) => rows.filter((r) => r.status === s).length;
+  return { scenario: "form-captain", rows, totals: { delta: rows.reduce((a, r) => a + r.delta, 0), weeksApplied: count("applied"), weeksAlready: count("already") } };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// No Wildcard / no Free Hit
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface NoChipRow {
+  gameweek: number;
+  /** Best possible XI (no chip) from the squad actually held that week. */
+  actualBest: number;
+  /** Best possible XI (no chip) from the squad held before the chip. */
+  fixedBest: number;
+  /** fixedBest - actualBest: positive means keeping the old squad would have scored more. */
+  delta: number;
+}
+
+export interface NoChipEntry {
+  gameweek: number;
+  /** The gameweek whose squad is kept. */
+  squadFrom: number;
+  rows: NoChipRow[];
+  /** Fewer gameweeks than the horizon have been played since the chip. */
+  partial: boolean;
+  totals: { delta: number };
+}
+
+export interface NoChipResult {
+  scenario: "wildcard" | "freehit";
+  horizon: number;
+  chips: NoChipEntry[];
+  totals: { delta: number };
+}
+
+/** For each Wildcard / Free Hit: keep the squad held the week before it (latest earlier non-Free-Hit week) for the chip week and the next `horizon - 1`. */
+export function noChip(allWeeks: WhatIfWeek[], chip: "wildcard" | "freehit", horizon: number): NoChipResult {
+  const weeks = byWeek(allWeeks);
+  const best = (squad: Array<{ id: number; elementType: 1 | 2 | 3 | 4 }>, w: WhatIfWeek) =>
+    bestPossible(squad.map((p) => ({ id: p.id, elementType: p.elementType, points: ptsOf(w, p.id) })), null).total;
+
+  const chips: NoChipEntry[] = [];
+  weeks.forEach((w, i) => {
+    if (w.chip !== chip) return;
+    const prev = [...weeks.slice(0, i)].reverse().find((x) => x.chip !== "freehit");
+    if (!prev) return;
+    const window = weeks.filter((x) => x.gameweek >= w.gameweek && x.gameweek < w.gameweek + horizon);
+    const rows: NoChipRow[] = window.map((x) => {
+      const actualBest = best(x.picks, x);
+      const fixedBest = best(prev.picks, x);
+      return { gameweek: x.gameweek, actualBest, fixedBest, delta: fixedBest - actualBest };
+    });
+    chips.push({ gameweek: w.gameweek, squadFrom: prev.gameweek, rows, partial: rows.length < horizon, totals: { delta: rows.reduce((a, r) => a + r.delta, 0) } });
+  });
+  return { scenario: chip, horizon, chips, totals: { delta: chips.reduce((a, c) => a + c.totals.delta, 0) } };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Stop rotating (any position)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type RotationPosition = "GKP" | "DEF" | "MID" | "FWD";
+export type RotationStatus = "same" | "changed" | "bench-boost";
+
+export interface RotationRow {
+  gameweek: number;
+  status: RotationStatus;
+  /** The players of this position you started (captain excluded). */
+  started: Array<{ id: number; name: string; points: number }>;
+  /** The players you would have started instead. */
+  instead: Array<{ id: number; name: string; points: number }>;
+  delta: number;
+}
+
+export interface RotationResult {
+  scenario: "rotation";
+  position: RotationPosition;
+  /** Players of this position you started, most weeks first. */
+  core: Array<{ id: number; name: string; weeks: number }>;
+  rows: RotationRow[];
+  totals: { delta: number; weeksChanged: number };
+}
+
+const POSITION_CODE: Record<RotationPosition, 1 | 2 | 3 | 4> = { GKP: 1, DEF: 2, MID: 3, FWD: 4 };
+
+/** Every week field the position's most-started players (as many as you started, captain left alone) instead of your actual picks. */
+export function stopRotating(allWeeks: WhatIfWeek[], position: RotationPosition): RotationResult | null {
+  const weeks = byWeek(allWeeks);
+  const code = POSITION_CODE[position];
+
+  const counts = new Map<number, { id: number; name: string; weeks: number }>();
+  for (const w of weeks) {
+    if (w.chip === "bboost") continue;
+    for (const p of w.picks) {
+      if (p.elementType !== code || !p.started) continue;
+      const c = counts.get(p.id) ?? { id: p.id, name: p.name, weeks: 0 };
+      c.weeks++;
+      counts.set(p.id, c);
+    }
+  }
+  if (counts.size === 0) return null;
+  const core = [...counts.values()].sort((a, b) => b.weeks - a.weeks || a.id - b.id);
+  const startedWeeks = (id: number) => counts.get(id)?.weeks ?? 0;
+
+  const view = (w: WhatIfWeek) => (p: WhatIfPick) => ({ id: p.id, name: p.name, points: ptsOf(w, p.id) });
+  const rows: RotationRow[] = weeks.map((w) => {
+    if (w.chip === "bboost") return { gameweek: w.gameweek, status: "bench-boost", started: [], instead: [], delta: 0 };
+    const actual = w.picks.filter((p) => p.elementType === code && p.started && !p.isCaptain);
+    const pool = w.picks.filter((p) => p.elementType === code && !p.isCaptain);
+    const chosen = [...pool].sort((a, b) => startedWeeks(b.id) - startedWeeks(a.id) || a.id - b.id).slice(0, actual.length);
+    const actualIds = new Set(actual.map((p) => p.id));
+    const same = chosen.every((p) => actualIds.has(p.id));
+    const total = (ps: WhatIfPick[]) => ps.reduce((a, p) => a + ptsOf(w, p.id), 0);
+    return {
+      gameweek: w.gameweek,
+      status: same ? "same" : "changed",
+      started: actual.map(view(w)),
+      instead: chosen.map(view(w)),
+      delta: same ? 0 : total(chosen) - total(actual),
+    };
+  });
+
+  return {
+    scenario: "rotation",
+    position,
+    core,
+    rows,
+    totals: { delta: rows.reduce((a, r) => a + r.delta, 0), weeksChanged: rows.filter((r) => r.status === "changed").length },
+  };
+}

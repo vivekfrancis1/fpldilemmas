@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { setAndForget, captainEveryWeek, stickWithKeeper, viceEveryWeek, chipTiming, hitsWorthIt, type WhatIfWeek, type WhatIfPick } from "../shared/hindsight-what-if";
+import { setAndForget, captainEveryWeek, stickWithKeeper, viceEveryWeek, chipTiming, hitsWorthIt, formCaptain, noChip, stopRotating, type WhatIfWeek, type WhatIfPick } from "../shared/hindsight-what-if";
 import { bestPossible } from "../shared/hindsight";
 
 // 15-man squads: ids 1-2 GKP, 11-15 DEF, 21-25 MID, 31-33 FWD
@@ -276,6 +276,128 @@ describe("hitsWorthIt", () => {
   });
 });
 
+describe("formCaptain", () => {
+  it("week 1 and weeks with no previous gameweek on record are unchanged", () => {
+    const out = formCaptain([week(1, pts()), week(3, pts())]);
+    expect(out.rows.map((r) => r.status)).toEqual(["no-previous", "no-previous"]);
+    expect(out.totals.delta).toBe(0);
+  });
+
+  it("the armband goes to last week's top scorer among the players counted this week", () => {
+    const out = formCaptain([week(1, pts({ 24: 9 })), week(2, pts({ 24: 3, 31: 6 }), { captain: 31 })]);
+    const r = out.rows[1];
+    expect(r.status).toBe("applied");
+    expect(r.player?.id).toBe(24);
+    expect(r.delta).toBe(3 - 6);
+  });
+
+  it("a player on the bench this week is not a candidate", () => {
+    const out = formCaptain([week(1, pts({ 25: 20, 21: 7 })), week(2, pts({ 21: 4, 31: 1 }), { captain: 31 })]);
+    expect(out.rows[1].player?.id).toBe(21); // 25 scored most but sits on the bench in week 2
+    expect(out.rows[1].delta).toBe(3);
+  });
+
+  it("ties on last week's points go to the lower id; already the captain means no change", () => {
+    const tie = formCaptain([week(1, pts({ 21: 8, 22: 8, 31: 2 })), week(2, pts({ 21: 5, 22: 20 }))]);
+    expect(tie.rows[1].player?.id).toBe(21);
+    const same = formCaptain([week(1, pts({ 31: 15 })), week(2, pts())]);
+    expect(same.rows[1].status).toBe("already");
+    expect(same.rows[1].delta).toBe(0);
+  });
+
+  it("Triple Captain weeks use the x3 armband; totals add up", () => {
+    const out = formCaptain([week(1, pts({ 24: 9 })), week(2, pts({ 24: 3, 31: 6 }), { chip: "3xc" }), week(3, pts({ 24: 1 })), week(4, pts({ 24: 12, 31: 2 }))]);
+    expect(out.rows[1].delta).toBe((3 - 6) * 2);
+    expect(out.totals.delta).toBe(out.rows.reduce((a, r) => a + r.delta, 0));
+    expect(out.totals.weeksApplied).toBe(out.rows.filter((r) => r.status === "applied").length);
+  });
+});
+
+describe("noChip", () => {
+  const swapped = (out: number, inn: number) => SQUAD.map((id) => (id === out ? inn : id));
+
+  it("Wildcard: compares the squad held before it with the squad you played, for the wildcard week and the next three", () => {
+    const sq = swapped(24, 26);
+    const weeks = [
+      week(1, pts()),
+      week(2, pts()),
+      week(3, { ...pts({ 24: 9 }), 26: 1 }, { squad: sq, chip: "wildcard" }), // old squad (with 24) would have scored more
+      week(4, { ...pts({ 24: 2 }), 26: 7 }, { squad: sq }),
+    ];
+    const out = noChip(weeks, "wildcard", 4);
+    expect(out.chips).toHaveLength(1);
+    const c = out.chips[0];
+    expect(c.gameweek).toBe(3);
+    expect(c.rows.map((r) => r.gameweek)).toEqual([3, 4]);
+    expect(c.rows[0].delta).toBe(c.rows[0].fixedBest - c.rows[0].actualBest);
+    expect(c.rows[0].delta).toBeGreaterThan(0);
+    expect(c.rows[1].delta).toBeLessThan(0);
+    expect(c.partial).toBe(true);
+    expect(c.totals.delta).toBe(c.rows[0].delta + c.rows[1].delta);
+    expect(out.totals.delta).toBe(c.totals.delta);
+  });
+
+  it("the squad before a chip skips an earlier Free Hit week", () => {
+    const sq = swapped(24, 26);
+    const weeks = [week(1, pts()), week(2, pts(), { squad: sq, chip: "freehit" }), week(3, { ...pts(), 26: 5 }, { squad: sq, chip: "wildcard" })];
+    const c = noChip(weeks, "wildcard", 1).chips[0];
+    expect(c.squadFrom).toBe(1);
+  });
+
+  it("Free Hit covers only its own week; no chip or a chip in the first week gives nothing", () => {
+    const sq = swapped(24, 26);
+    const weeks = [week(1, pts()), week(2, { ...pts({ 24: 9 }), 26: 0 }, { squad: sq, chip: "freehit" }), week(3, pts())];
+    const out = noChip(weeks, "freehit", 1);
+    expect(out.chips[0].rows.map((r) => r.gameweek)).toEqual([2]);
+    expect(out.chips[0].partial).toBe(false);
+    expect(noChip([week(1, pts(), { chip: "wildcard" })], "wildcard", 4).chips).toEqual([]);
+    expect(noChip([week(1, pts()), week(2, pts())], "wildcard", 4).chips).toEqual([]);
+  });
+});
+
+describe("stopRotating", () => {
+  const defStart = (defs: number[]) => [1, ...defs, 21, 22, 23, 24, 31, 32];
+  const w = (gw: number, defs: number[], points: Record<number, number>, o: Parameters<typeof week>[2] = {}) => week(gw, points, { start: defStart(defs), ...o });
+
+  it("fields the position's most-started players every week: delta = their points - the ones you started", () => {
+    const p = pts({ 14: 6, 15: 1 });
+    const out = stopRotating([w(1, [11, 12, 13, 14], p), w(2, [11, 12, 13, 15], p), w(3, [11, 12, 13, 14], p)], "DEF")!;
+    expect(out.core.map((c) => c.id).slice(0, 4)).toEqual([11, 12, 13, 14]);
+    expect(out.rows.map((r) => r.delta)).toEqual([0, 5, 0]);
+    expect(out.rows.map((r) => r.status)).toEqual(["same", "changed", "same"]);
+    expect(out.totals.delta).toBe(5);
+    expect(out.totals.weeksChanged).toBe(1);
+  });
+
+  it("a core player who is not in that week's squad is skipped and the next in rank is used", () => {
+    const p = pts({ 14: 6, 15: 1 });
+    const gone = w(2, [11, 12, 13, 15], p, { squad: SQUAD.filter((id) => id !== 14) });
+    const out = stopRotating([w(1, [11, 12, 13, 14], p), gone, w(3, [11, 12, 13, 14], p)], "DEF")!;
+    expect(out.rows[1].status).toBe("same");
+    expect(out.rows[1].delta).toBe(0);
+  });
+
+  it("the captain stays where he is and is not part of the rotation", () => {
+    const p = pts({ 11: 10, 14: 6, 15: 1 });
+    const out = stopRotating([w(1, [11, 12, 13, 14], p, { captain: 11 }), w(2, [11, 12, 13, 15], p, { captain: 11 }), w(3, [11, 12, 13, 14], p, { captain: 11 })], "DEF")!;
+    expect(out.rows[1].delta).toBe(6 - 1);
+    expect(out.rows[0].delta).toBe(0);
+  });
+
+  it("Bench Boost weeks are skipped; no starters in the position gives null", () => {
+    const out = stopRotating([w(1, [11, 12, 13, 14], pts()), w(2, [11, 12, 13, 15], pts(), { chip: "bboost" })], "DEF")!;
+    expect(out.rows[1].status).toBe("bench-boost");
+    expect(out.rows[1].delta).toBe(0);
+    expect(stopRotating([], "MID")).toBeNull();
+  });
+
+  it("for goalkeepers it reproduces the One goalkeeper scenario", () => {
+    const rot = START.map((id) => (id === 1 ? 2 : id));
+    const weeks = [week(1, pts({ 1: 6, 2: 1 })), week(2, pts({ 1: 6, 2: 1 }), { start: rot }), week(3, pts({ 1: 2, 2: 9 }), { start: rot })];
+    expect(stopRotating(weeks, "GKP")!.totals.delta).toBe(stickWithKeeper(weeks)!.totals.delta);
+  });
+});
+
 const BASE_URL = process.env.TEST_BASE_URL ?? `http://localhost:5050`;
 async function getJson(path: string) {
   const res = await fetch(`${BASE_URL}${path}`);
@@ -325,6 +447,26 @@ describe("GET /api/hindsight/:managerId/what-if (against real finished gameweeks
     expect(hits.status).toBe(200);
     expect(hits.body.totals.hits).toBe(hits.body.rows.length);
     for (const r of hits.body.rows) expect(r.net).toBe(r.pointsBought - r.pointsSold - r.cost);
+  }, 120000);
+
+  it("form-captain, wildcard, freehit and rotation scenarios respond with consistent totals", async () => {
+    const form = await getJson(`/api/hindsight/${managerId}/what-if?scenario=form-captain`);
+    expect(form.status).toBe(200);
+    expect(form.body.totals.delta).toBe(form.body.rows.reduce((a: number, r: any) => a + r.delta, 0));
+    for (const scenario of ["wildcard", "freehit"]) {
+      const { status, body } = await getJson(`/api/hindsight/${managerId}/what-if?scenario=${scenario}`);
+      expect(status).toBe(200);
+      expect(body.totals.delta).toBe(body.chips.reduce((a: number, c: any) => a + c.totals.delta, 0));
+    }
+    expect((await getJson(`/api/hindsight/${managerId}/what-if?scenario=rotation`)).status).toBe(400);
+    expect((await getJson(`/api/hindsight/${managerId}/what-if?scenario=rotation&position=XYZ`)).status).toBe(400);
+    const rot = await getJson(`/api/hindsight/${managerId}/what-if?scenario=rotation&position=DEF`);
+    expect(rot.status).toBe(200);
+    expect(rot.body.position).toBe("DEF");
+    expect(rot.body.totals.delta).toBe(rot.body.rows.reduce((a: number, r: any) => a + r.delta, 0));
+    const gk = (await getJson(`/api/hindsight/${managerId}/what-if?scenario=rotation&position=GKP`)).body;
+    const keeper = (await getJson(`/api/hindsight/${managerId}/what-if?scenario=keeper`)).body;
+    expect(gk.totals.delta).toBe(keeper.totals.delta);
   }, 120000);
 
   it("rejects an unknown scenario and a bad manager id", async () => {

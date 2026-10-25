@@ -5,15 +5,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pill, SectionCard } from "@/components/tool-ui";
 import { CHIP_LABEL, useSeason, type SeasonPlayer } from "@/components/hindsight-season";
 
-type Scenario = "set-and-forget" | "captain" | "vice" | "keeper" | "chips" | "hits";
+type Scenario = "set-and-forget" | "captain" | "vice" | "form-captain" | "keeper" | "rotation" | "chips" | "hits" | "wildcard" | "freehit";
 
 const SCENARIOS: Array<{ id: Scenario; title: string; question: string }> = [
   { id: "set-and-forget", title: "Set and forget", question: "What if you never made a transfer after a gameweek?" },
   { id: "captain", title: "Same captain every week", question: "What if you captained one player every game?" },
   { id: "vice", title: "Vice-captain instead", question: "What if you always gave the armband to your vice-captain?" },
+  { id: "form-captain", title: "Chase form", question: "What if you captained last week's top scorer in your XI?" },
   { id: "keeper", title: "One goalkeeper", question: "What if you stopped rotating your goalkeeper?" },
+  { id: "rotation", title: "Stop rotating", question: "What if you stuck with your regulars in a position?" },
   { id: "chips", title: "Chip timing", question: "Were your Bench Boost and Triple Captain well timed?" },
   { id: "hits", title: "Transfer hits", question: "Were the hits you took worth it?" },
+  { id: "wildcard", title: "No Wildcard", question: "What if you kept your old squad instead of wildcarding?" },
+  { id: "freehit", title: "No Free Hit", question: "What if you hadn't played your Free Hit?" },
 ];
 
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
@@ -45,6 +49,7 @@ function Row({ gw, children, delta }: { gw: number; children: ReactNode; delta?:
 }
 
 const moreFewer = (n: number) => (n === 0 ? "the same number of points" : `${Math.abs(n)} ${n > 0 ? "more" : "fewer"} point${Math.abs(n) === 1 ? "" : "s"}`);
+const POSITION_WORD: Record<string, string> = { GKP: "goalkeepers", DEF: "defenders", MID: "midfielders", FWD: "forwards" };
 const pts = (n: number) => `${n} pt${n === 1 ? "" : "s"}`;
 
 export function WhatIfView({ managerId }: { managerId: string }) {
@@ -52,6 +57,7 @@ export function WhatIfView({ managerId }: { managerId: string }) {
   const [from, setFrom] = useState<string>("");
   const [playerId, setPlayerId] = useState<string>("");
   const [keeperId, setKeeperId] = useState<string>("");
+  const [position, setPosition] = useState<string>("DEF");
 
   const season = useSeason(managerId, true);
   const players: SeasonPlayer[] = season.data?.players ?? [];
@@ -69,6 +75,7 @@ export function WhatIfView({ managerId }: { managerId: string }) {
   if (scenario === "set-and-forget") params.from = from || undefined;
   if (scenario === "captain") params.player = playerId;
   if (scenario === "keeper") params.player = keeperId || undefined;
+  if (scenario === "rotation") params.position = position;
 
   const ready = !!season.data && (!needsPlayer || !!playerId);
   const { data, error, isFetching } = useQuery<any>({
@@ -99,6 +106,18 @@ export function WhatIfView({ managerId }: { managerId: string }) {
             <SelectTrigger className="h-10 w-[220px] rounded-xl" data-testid="select-player"><SelectValue placeholder="Choose a player" /></SelectTrigger>
             <SelectContent className="max-h-72">
               {players.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name} · {p.position} · {p.weeks} wk{p.weeks === 1 ? "" : "s"}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Picker>
+      );
+    }
+    if (scenario === "rotation") {
+      return (
+        <Picker label="Position">
+          <Select value={position} onValueChange={setPosition}>
+            <SelectTrigger className="h-10 w-[170px] rounded-xl" data-testid="select-position"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[["DEF", "Defenders"], ["MID", "Midfielders"], ["FWD", "Forwards"], ["GKP", "Goalkeepers"]].map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
         </Picker>
@@ -198,6 +217,41 @@ function Result({ scenario, d }: { scenario: Scenario; d: any }) {
           Giving the armband to your vice-captain every week: {moreFewer(t.delta)} over {t.weeksApplied} week{t.weeksApplied === 1 ? "" : "s"}.
         </Headline>
       );
+    case "form-captain":
+      return (
+        <Headline testId="text-whatif-headline">
+          Giving the armband to last week's top scorer in your XI: {moreFewer(t.delta)} over {t.weeksApplied} week{t.weeksApplied === 1 ? "" : "s"}.
+          <span className="mt-1 block text-sm font-medium text-gray-600">{t.weeksAlready} week{t.weeksAlready === 1 ? "" : "s"} he was already your captain. The first gameweek is unchanged.</span>
+        </Headline>
+      );
+    case "rotation":
+      return d.totals.weeksChanged === 0 ? (
+        <Headline testId="text-whatif-headline">You already started the same {POSITION_WORD[d.position]} every week, so nothing would change.</Headline>
+      ) : (
+        <>
+          <Headline testId="text-whatif-headline">
+            Sticking with your regular {POSITION_WORD[d.position]}: {moreFewer(t.delta)} across {t.weeksChanged} week{t.weeksChanged === 1 ? "" : "s"} where you chose differently.
+          </Headline>
+          <p className="text-sm text-gray-600">Most-started: {d.core.slice(0, 6).map((p: any) => `${p.name} (${p.weeks})`).join(", ")}. The captain is left where he was.</p>
+        </>
+      );
+    case "wildcard":
+    case "freehit": {
+      const label = scenario === "wildcard" ? "Wildcard" : "Free Hit";
+      return d.chips.length === 0 ? (
+        <Headline testId="text-whatif-headline">You haven't played a {label} in a finished gameweek (or it was your first week, with no earlier squad to keep).</Headline>
+      ) : (
+        <>
+          <Headline testId="text-whatif-headline">
+            Without your {label}: {moreFewer(t.delta)} from the best XI {scenario === "wildcard" ? "over the weeks counted" : "that week"}.
+          </Headline>
+          <p className="text-sm text-gray-600">
+            Both sides use the best XI from the squad held (no chips). Positive means keeping the earlier squad would have scored more.
+            {scenario === "wildcard" ? ` Counts the Wildcard week and the next ${d.horizon - 1}.` : ""}
+          </p>
+        </>
+      );
+    }
     case "keeper":
       return (
         <>
@@ -253,6 +307,31 @@ function Rows({ scenario, d }: { scenario: Scenario; d: any }) {
         </Row>
       ));
     }
+    case "form-captain":
+      return d.rows.map((r: any) => (
+        <Row key={r.gameweek} gw={r.gameweek} delta={r.status === "applied" ? r.delta : undefined}>
+          {r.status === "applied"
+            ? `${r.player.name} (${r.player.previousPoints} last week) ${r.player.points} vs your captain ${r.captain.name} ${r.captain.points}`
+            : r.status === "already" ? `${r.player.name} was already your captain`
+            : r.status === "no-previous" ? "no earlier gameweek to chase" : "no captain on record"}
+        </Row>
+      ));
+    case "rotation":
+      return d.rows.map((r: any) => (
+        <Row key={r.gameweek} gw={r.gameweek} delta={r.status === "changed" ? r.delta : undefined}>
+          {r.status === "changed"
+            ? `${r.instead.map((p: any) => `${p.name} ${p.points}`).join(", ")} instead of ${r.started.map((p: any) => `${p.name} ${p.points}`).join(", ")}`
+            : r.status === "bench-boost" ? "Bench Boost week (all players count)" : "same as your regulars"}
+        </Row>
+      ));
+    case "wildcard":
+    case "freehit":
+      return d.chips.flatMap((c: any) => c.rows.map((r: any, i: number) => (
+        <Row key={`${c.gameweek}-${r.gameweek}`} gw={r.gameweek} delta={r.delta}>
+          {i === 0 ? `${scenario === "wildcard" ? "Wildcard" : "Free Hit"} week: ` : ""}best XI from your GW{c.squadFrom} squad {r.fixedBest} vs from the squad you held {r.actualBest}
+          {i === c.rows.length - 1 && c.partial ? " · more gameweeks to come" : ""}
+        </Row>
+      )));
     case "keeper":
       return d.rows.map((r: any) => (
         <Row key={r.gameweek} gw={r.gameweek} delta={r.status === "changed" ? r.delta : undefined}>

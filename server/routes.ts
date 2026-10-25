@@ -44,7 +44,7 @@ import { registerSharedGraphicsRoutes } from "./shared-graphics-routes";
 import { buildDeadlineBrief } from "@shared/deadline-brief";
 import { buildGameweekHindsight } from "@shared/hindsight";
 import { summarizeSeason, type SeasonRow } from "@shared/hindsight-season";
-import { setAndForget, captainEveryWeek, stickWithKeeper, viceEveryWeek, chipTiming, hitsWorthIt, type ChipWindow, type WhatIfWeek } from "@shared/hindsight-what-if";
+import { setAndForget, captainEveryWeek, stickWithKeeper, viceEveryWeek, chipTiming, hitsWorthIt, formCaptain, noChip, stopRotating, type ChipWindow, type WhatIfWeek } from "@shared/hindsight-what-if";
 import { buildLeagueOwnership, selectableGameweeks } from "@shared/league-ownership";
 import { parseSubscription } from "@shared/deadline-reminders";
 import { pushConfigured, saveSubscription, removeSubscription, countSubscriptions, MAX_SUBSCRIPTIONS } from "./push-reminders";
@@ -1686,14 +1686,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // scenario=set-and-forget[&from=GW] | captain&player=ID | keeper[&player=ID] | vice | chips | hits
+  // scenario=set-and-forget[&from=GW] | captain&player=ID | keeper[&player=ID] | vice | chips | hits | form-captain | wildcard | freehit | rotation&position=GKP|DEF|MID|FWD
   app.get("/api/hindsight/:managerId/what-if", async (req, res) => {
     if (seasonGuard(req, res)) return;
     try {
       const { managerId } = req.params;
       if (!/^\d+$/.test(managerId)) return res.status(400).json({ error: "Invalid manager ID" });
       const scenario = String(req.query.scenario ?? "");
-      if (!["set-and-forget", "captain", "keeper", "vice", "chips", "hits"].includes(scenario)) return res.status(400).json({ error: "Unknown scenario" });
+      if (!["set-and-forget", "captain", "keeper", "vice", "chips", "hits", "form-captain", "wildcard", "freehit", "rotation"].includes(scenario)) return res.status(400).json({ error: "Unknown scenario" });
       const intParam = (name: string): number | null | "bad" => {
         const v = req.query[name];
         if (v === undefined || v === "") return null;
@@ -1704,6 +1704,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (player === "bad") return res.status(400).json({ error: "Invalid player" });
       if (from === "bad") return res.status(400).json({ error: "Invalid gameweek" });
       if (scenario === "captain" && player === null) return res.status(400).json({ error: "Choose a player to captain" });
+      const position = String(req.query.position ?? "");
+      if (scenario === "rotation" && !["GKP", "DEF", "MID", "FWD"].includes(position)) return res.status(400).json({ error: "Choose a position" });
 
       const { weeks, players, chipWindows } = await loadSeason(managerId);
       const whatIfWeeks = weeks.map((w) => w.what);
@@ -1722,6 +1724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (scenario === "vice") return res.json({ managerId: Number(managerId), ...viceEveryWeek(whatIfWeeks) });
       if (scenario === "chips") return res.json({ managerId: Number(managerId), ...chipTiming(whatIfWeeks, chipWindows) });
       if (scenario === "hits") return res.json({ managerId: Number(managerId), ...hitsWorthIt(whatIfWeeks) });
+      if (scenario === "form-captain") return res.json({ managerId: Number(managerId), ...formCaptain(whatIfWeeks) });
+      if (scenario === "wildcard") return res.json({ managerId: Number(managerId), ...noChip(whatIfWeeks, "wildcard", 4) });
+      if (scenario === "freehit") return res.json({ managerId: Number(managerId), ...noChip(whatIfWeeks, "freehit", 1) });
+      if (scenario === "rotation") {
+        const rotation = stopRotating(whatIfWeeks, position as "GKP" | "DEF" | "MID" | "FWD");
+        if (!rotation) return res.status(400).json({ error: "You never started a player in that position" });
+        return res.json({ managerId: Number(managerId), ...rotation });
+      }
       const result = stickWithKeeper(whatIfWeeks, player ?? undefined);
       if (!result) return res.status(400).json({ error: "No such goalkeeper in your squads" });
       res.json({ managerId: Number(managerId), ...result });
