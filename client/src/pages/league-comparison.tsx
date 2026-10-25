@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Search, Users } from "lucide-react";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { readToolManagerId, saveToolManagerId } from "@/lib/manager-id-storage";
@@ -10,6 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LeagueOwnershipView from "@/components/league-ownership-view";
 import LeagueStandingsView from "@/components/league-standings-view";
 import { InputPanel } from "@/components/tool-ui";
+
+const GROUP_LINKS = [
+  { href: "/top-managers", label: "All time Top 100" },
+  { href: "/elite-64", label: "Elite 64" },
+  { href: "/analytics-elite-64", label: "Analytics Elite 64" },
+  { href: "/content-creators", label: "Content creators" },
+];
 
 type ClassicLeague = { id: number; name: string; league_type?: string };
 
@@ -186,6 +194,15 @@ export default function LeagueComparisonPage() {
               <p className="text-xs text-gray-500">The number in the URL when you open the league's standings page on the FPL site.</p>
             </div>
           )}
+          <p className="text-xs text-gray-500">
+            Or compare against:{" "}
+            {GROUP_LINKS.map((g, i) => (
+              <span key={g.href}>
+                {i > 0 && " · "}
+                <Link href={g.href} className="underline">{g.label}</Link>
+              </span>
+            ))}
+          </p>
         </InputPanel>
 
         {query && <LeagueStandingsView key={`standings:${query.league}:${query.manager}`} leagueId={query.league} managerId={query.manager} />}
