@@ -54,6 +54,7 @@ import { resolveActiveChip } from "./fpl-chip-utils";
 import { buildWildcardSquad, type SquadCandidate } from "./wildcard-squad-builder";
 import { CURRENT_SEASON, managerSeasonStandings } from "@shared/schema";
 import { TOP_MANAGERS } from "@shared/top-managers";
+import { leagueRowsFromStandings, type LeagueRow, type StandingsRow } from "@shared/group-placement";
 import { ELITE_GROUPS, isEliteGroupId, membersFromStandings, type EliteGroupId, type EliteMember } from "@shared/elite-groups";
 import bcrypt from "bcrypt";
 import session from "express-session";
@@ -1690,6 +1691,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error building league ownership:", error);
       res.status(500).json({ error: "Failed to build league ownership" });
+    }
+  });
+
+  // Any classic league's standings (every manager's total and gameweek points), so a team can be ranked against it
+  // whether or not it is a member. Reads up to LEAGUE_STANDINGS_MAX_PAGES pages of 50; a bigger league (Overall, countries)
+  // comes back `capped: true` with just those top managers. Placement itself lives in shared/group-placement.ts.
+  const LEAGUE_STANDINGS_MAX_PAGES = 20;
+  const leagueRankCache = createTtlCache<{ league: { id: number; name: string }; capped: boolean; rows: LeagueRow[] }>(5 * 60 * 1000, 50);
+  const leagueRankGuard = makeIpGuard(30);
+  app.get("/api/league-standings/:leagueId", async (req, res) => {
+    if (leagueRankGuard(req, res)) return;
+    try {
+      const { leagueId } = req.params;
+      if (!/^\d+$/.test(leagueId)) return res.status(400).json({ error: "Invalid league ID" });
+      const cached = leagueRankCache.get(leagueId);
+      if (cached) return res.json(cached);
+
+      const fetchPage = async (page: number) => {
+        const response = await fetchWithTimeout(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=${page}`, 10_000, { headers: FPL_HEADERS });
+        if (response.status === 404) throw Object.assign(new Error("League not found"), { status: 404 });
+        if (!response.ok) throw Object.assign(new Error(`FPL responded ${response.status}`), { status: 502 });
+        return response.json();
+      };
+
+      const pages: StandingsRow[][] = [];
+      let name = "";
+      let hasMore = true;
+      for (let start = 1; hasMore && start <= LEAGUE_STANDINGS_MAX_PAGES; start += 5) {
+        const numbers = Array.from({ length: Math.min(5, LEAGUE_STANDINGS_MAX_PAGES - start + 1) }, (_, i) => start + i);
+        const bodies = await Promise.all(numbers.map(fetchPage));
+        for (const body of bodies) pages.push(body?.standings?.results ?? []);
+        name = name || bodies[0]?.league?.name || "";
+        hasMore = !!bodies[bodies.length - 1]?.standings?.has_next;
+        if (bodies.some((b) => !b?.standings?.has_next)) hasMore = false;
+      }
+
+      const result = { league: { id: Number(leagueId), name }, capped: hasMore, rows: leagueRowsFromStandings(pages) };
+      leagueRankCache.set(leagueId, result);
+      res.json(result);
+    } catch (error: any) {
+      if (error?.status === 404) return res.status(404).json({ error: "League not found" });
+      console.error("Error reading league standings:", error);
+      res.status(error?.status === 502 ? 502 : 500).json({ error: "Could not load this league from FPL" });
     }
   });
 

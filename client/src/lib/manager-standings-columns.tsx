@@ -25,6 +25,8 @@ export interface ManagerStandingsData {
   name: string;
   managerId: number;
   rankChange?: number | null;
+  /** Place by total points among the rows shown (the Position column), ties sharing a place. */
+  position?: number | null;
   historyData?: {
     current: GWHistory[];
     chips: ChipUsage[];
@@ -316,6 +318,8 @@ export function getSharedSortValue<T extends ManagerStandingsData>(
   switch (field) {
     case 'latestTracking.overallRank':
       return item.latestTracking?.overallRank || Number.MAX_SAFE_INTEGER;
+    case 'position':
+      return item.position ?? Number.MAX_SAFE_INTEGER;
     case 'rankChange':
       return item.rankChange || 0;
     case 'latestTracking.overallPoints':
@@ -401,4 +405,20 @@ export function sortManagerData<T extends ManagerStandingsData>(
       ? (aVal as number) - (bVal as number)
       : (bVal as number) - (aVal as number);
   });
+}
+
+/** The Position column: each manager's place by total points among the rows in the table. */
+export function getPositionColumn<T extends ManagerStandingsData>(): ResponsiveTableColumn<T> {
+  return {
+    key: 'position',
+    header: 'Position',
+    priority: 'essential',
+    align: 'center',
+    mobileLabel: 'Position',
+    cardOrder: 6,
+    sortable: true,
+    render: (_value, row) => (
+      <span className="text-sm font-semibold tabular-nums" data-testid={`position-${row.managerId}`}>{row.position ?? "-"}</span>
+    ),
+  };
 }

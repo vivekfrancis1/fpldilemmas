@@ -33,18 +33,21 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TopTeamAnalysis from "./top-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
-import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
+import { getSharedColumns, getPositionColumn, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
 import { TOP_MANAGERS as TOP_MANAGERS_BASE } from "@shared/top-managers";
 import { CURRENT_SEASON } from "@shared/schema";
 import { ELITE_GROUPS, type EliteGroupId } from "@shared/elite-groups";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { positionsByTotal } from "@shared/group-placement";
+import { MyTeamPlacementPanel, YouBadge, useMyEntry, withMyTeam, type MyEntry } from "@/components/my-team-placement";
 
 type TopManagerRow = {
   rank: number;
   name: string;
   managerId: number;
   rankChange?: number | null;
+  position?: number | null;
   historyData?: {
     current: GWHistory[];
     chips: ChipUsage[];
@@ -68,6 +71,24 @@ type TopManagerRow = {
 
 const TOP_MANAGERS: TopManagerRow[] = TOP_MANAGERS_BASE;
 
+// The visitor's own team as a row of this table (rank 0 shows the "You" badge); the figures are FPL's entry summary, the same source as the other rows.
+const myTeamRow = (e: MyEntry): TopManagerRow => ({
+  rank: 0,
+  name: e.teamName,
+  managerId: e.managerId,
+  rankChange: null,
+  latestTracking: {
+    gameweek: e.currentEvent,
+    overallRank: e.overallRank ?? 0,
+    overallPoints: e.totalPoints,
+    gameweekPoints: e.gameweekPoints,
+    gameweekRank: e.gameweekRank ?? undefined,
+    teamValue: e.teamValue,
+    bank: e.bank,
+    totalTransfers: e.totalTransfers,
+  },
+});
+
 const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<TopManagerRow>[] => {
   const allTimeRankCol: ResponsiveTableColumn<TopManagerRow> = {
     key: 'rank',
@@ -78,7 +99,7 @@ const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Reco
     cardOrder: 5,
     sortable: true,
     render: (value, manager) => (
-      <span className="font-semibold text-sm">{manager.rank}</span>
+      manager.rank === 0 ? <YouBadge /> : <span className="font-semibold text-sm">{manager.rank}</span>
     )
   };
 
@@ -122,7 +143,7 @@ const getTopManagerRowColumns = (currentGameweek?: number, gwTransfersMap?: Reco
   });
 
   // Column order: Rank | Manager | Total Pts | Overall Rank | Rank Gain | Pts (GW) | Chip (GW) | ...rest
-  return [allTimeRankCol, nameCol, sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
+  return [allTimeRankCol, nameCol, getPositionColumn<TopManagerRow>(), sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
 };
 
 interface BootstrapData {
@@ -361,16 +382,28 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
     }
   };
 
+  // The visitor's own team, added to the table (unless already a member) so they can see where they would sit
+  const my = useMyEntry();
+  const rowsWithMe = useMemo(() => {
+    const rows = withMyTeam(managersWithData, my.entry, myTeamRow);
+    const positions = positionsByTotal(rows.map(m => ({ managerId: m.managerId, totalPoints: m.latestTracking?.overallPoints ?? null, gameweekPoints: null })));
+    return rows.map(m => ({ ...m, position: positions.get(m.managerId) ?? null }));
+  }, [managersWithData, my.entry]);
+  const placementMembers = useMemo(
+    () => managersWithData.map(m => ({ managerId: m.managerId, totalPoints: m.latestTracking?.overallPoints ?? null, gameweekPoints: m.latestTracking?.gameweekPoints ?? null })),
+    [managersWithData],
+  );
+
   // Sort the managers data
   const sortedManagersData = useMemo(() => {
     if (sortField === 'rank') {
-      const sorted = [...managersWithData].sort((a, b) => {
+      const sorted = [...rowsWithMe].sort((a, b) => {
         return sortDirection === 'asc' ? a.rank - b.rank : b.rank - a.rank;
       });
       return sorted;
     }
-    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
-  }, [managersWithData, sortField, sortDirection, currentGameweek, upcomingGameweek]);
+    return sortManagerData(rowsWithMe, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
+  }, [rowsWithMe, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
   const pastSeasonList: { managerId: number; name: string }[] = group ? (cachedData?.managers ?? []) : TOP_MANAGERS;
   const { data: pastSeasonsData, isLoading: isPastSeasonsLoading } = useQuery<{ seasons: string[]; managers: any[] }>({
@@ -488,6 +521,8 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
           <TabsContent value="managers">
             {viewSeason === CURRENT_SEASON ? (
               <>
+                <MyTeamPlacementPanel my={my} members={placementMembers} groupLabel={eliteGroup ? eliteGroup.name : "the All time Top 100"} />
+
                 {/* Controls */}
                 <div className="fpl-controls">
                   <div className="fpl-controls-right">
@@ -515,8 +550,9 @@ export default function TopManagers({ group }: { group?: EliteGroupId } = {}) {
                       mobileCardTitle={(manager) => manager.name}
                       loading={isRefreshing}
                       emptyMessage="No manager data available"
+                      highlightRow={(manager) => manager.managerId === my.entry?.managerId}
                       onRowClick={(manager) => {
-                        navigate(group ? `/manager-team/${manager.managerId}` : `/top-managers/${manager.rank}/team`);
+                        navigate(group || manager.rank === 0 ? `/manager-team/${manager.managerId}` : `/top-managers/${manager.rank}/team`);
                       }}
                       onSort={handleSort}
                       sortField={sortField}

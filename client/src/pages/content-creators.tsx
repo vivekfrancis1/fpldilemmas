@@ -61,10 +61,12 @@ import {
   PieChart,
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
-import { getSharedColumns, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig, getChipLabel } from "@/lib/manager-standings-columns";
+import { getSharedColumns, getPositionColumn, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig, getChipLabel } from "@/lib/manager-standings-columns";
 import { CURRENT_SEASON } from "@shared/schema";
 import { SeasonBadge } from "@/components/season-badge";
 import { SeasonSelector, PREVIOUS_SEASON } from "@/components/season-selector";
+import { positionsByTotal } from "@shared/group-placement";
+import { MyTeamPlacementPanel, YouBadge, useMyEntry, withMyTeam, type MyEntry } from "@/components/my-team-placement";
 
 interface GWHistory {
   event: number;
@@ -91,6 +93,7 @@ type FPLCreator = {
   addedDate: string;
   lastUpdated: string;
   rankChange?: number;
+  position?: number | null;
   latestTracking?: FPLCreatorTracking;
   historyData?: {
     current: GWHistory[];
@@ -120,6 +123,31 @@ type FPLCreatorTracking = {
 };
 
 type CreatorWithLatestData = FPLCreator;
+
+// The visitor's own team as a row of the creators table (id -1 marks it; the "You" badge shows in the name cell)
+const MY_TEAM_ROW_ID = -1;
+const myTeamRow = (e: MyEntry): FPLCreator => ({
+  id: MY_TEAM_ROW_ID,
+  name: e.teamName,
+  managerId: e.managerId,
+  managerName: e.name,
+  isActive: true,
+  addedDate: "",
+  lastUpdated: "",
+  latestTracking: {
+    id: 0,
+    creatorId: MY_TEAM_ROW_ID,
+    gameweek: e.currentEvent,
+    overallRank: e.overallRank ?? 0,
+    overallPoints: e.totalPoints,
+    gameweekPoints: e.gameweekPoints,
+    gameweekRank: e.gameweekRank ?? undefined,
+    teamValue: e.teamValue / 10,
+    bank: e.bank / 10,
+    totalTransfers: e.totalTransfers,
+    recordedAt: "",
+  },
+});
 
 // Team analysis types
 interface TeamPick {
@@ -266,7 +294,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     render: (value, creator) => (
       <div className="flex items-center gap-3">
         <div>
-          <div className="font-medium">{creator.name}</div>
+          <div className="font-medium">{creator.id === MY_TEAM_ROW_ID && <YouBadge />}{creator.name}</div>
           <div className="flex flex-wrap gap-3 mt-2 hidden md:flex">
             {creator.twitterHandle && (
               <a
@@ -327,7 +355,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
   });
 
   // Column order: Creator | Total Pts | Overall Rank | Rank Gain | Pts (GW) | Chip (GW) | ...rest
-  return [nameColumn, sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
+  return [nameColumn, getPositionColumn<CreatorWithLatestData>(), sharedCols[2], sharedCols[0], sharedCols[1], sharedCols[3], chipCol, ...sharedCols.slice(4)];
 };
 
 // Main Content Creators Component
@@ -851,10 +879,22 @@ export default function ContentCreators() {
       });
   }, [pastSeasonsData, selectedSeason, historicalSortField, historicalSortDirection]);
 
+  // The visitor's own team, added to the table (unless already one of the creators) so they can see where they would sit
+  const my = useMyEntry();
+  const creatorRows = useMemo(
+    () => (creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[]),
+    [creatorsWithHistory, creators],
+  );
+  const placementMembers = useMemo(
+    () => creatorRows.map(c => ({ managerId: c.managerId, totalPoints: c.latestTracking?.overallPoints ?? null, gameweekPoints: c.latestTracking?.gameweekPoints ?? null })),
+    [creatorRows],
+  );
   const sortedCreators = useMemo(() => {
-    const data = creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[];
+    const withMe = withMyTeam(creatorRows, my.entry, myTeamRow);
+    const positions = positionsByTotal(withMe.map(c => ({ managerId: c.managerId, totalPoints: c.latestTracking?.overallPoints ?? null, gameweekPoints: null })));
+    const data = withMe.map(c => ({ ...c, position: positions.get(c.managerId) ?? null }));
     return sortManagerData(data, sortBy, sortOrder, currentGameweek, 'millions', upcomingGameweek);
-  }, [creatorsWithHistory, creators, sortBy, sortOrder, currentGameweek, upcomingGameweek]);
+  }, [creatorRows, my.entry, sortBy, sortOrder, currentGameweek, upcomingGameweek]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -952,6 +992,8 @@ export default function ContentCreators() {
           {/* Content Creators Tab */}
           <TabsContent value="creators">
             {viewSeason === CURRENT_SEASON ? (
+              <>
+              <MyTeamPlacementPanel my={my} members={placementMembers} groupLabel="the content creators" />
               <div className="fpl-table-container">
                 <ResponsiveTable
                   data={sortedCreators || []}
@@ -961,8 +1003,9 @@ export default function ContentCreators() {
                   mobileCardTitle={(creator) => creator.name}
                   loading={isLoading}
                   emptyMessage="No content creators available"
+                  highlightRow={(creator) => creator.managerId === my.entry?.managerId}
                   onRowClick={(creator) => {
-                    navigate(`/content-creators/${creator.id}/team`);
+                    navigate(creator.id === MY_TEAM_ROW_ID ? `/manager-team/${creator.managerId}` : `/content-creators/${creator.id}/team`);
                   }}
                   onSort={handleSort}
                   sortField={sortBy}
@@ -974,6 +1017,7 @@ export default function ContentCreators() {
                   data-testid="content-creators-table"
                 />
               </div>
+              </>
             ) : (
               <Card className="border-0 shadow-lg" data-testid="content-creators-final-standings">
                 <CardHeader className="pb-3">

@@ -24,6 +24,7 @@ const RateMyTeam = lazy(() => import("./pages/rate-my-team"));
 const DeadlineBrief = lazy(() => import("./pages/deadline-brief"));
 const Hindsight = lazy(() => import("./pages/hindsight"));
 const LeagueOwnership = lazy(() => import("./pages/league-ownership"));
+const LeagueRank = lazy(() => import("./pages/league-rank"));
 const GoalShare = lazy(() => import("./pages/goal-share"));
 const AssistShare = lazy(() => import("./pages/assist-share"));
 const PlayerGoalsScoredProjections = lazy(() => import("./pages/player-goals-scored-projections"));
@@ -135,6 +136,7 @@ function Router() {
         <Route path="/deadline-brief" component={DeadlineBrief} />
         <Route path="/hindsight" component={Hindsight} />
         <Route path="/league-ownership" component={LeagueOwnership} />
+        <Route path="/league-rank" component={LeagueRank} />
         <Route path="/my-team" component={MyTeam} />
         <Route path="/transfer-planner" component={TransferPlanner} />
         <Route path="/pick-team">
