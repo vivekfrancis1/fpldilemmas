@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Calendar, ArrowLeft } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PosChip, TeamChip, asPos } from "@/components/tool-ui";
 import { BootstrapData } from "@shared/schema";
 import { getFixtureDifficultyColor } from "@/lib/heatmap-colors";
 
@@ -59,16 +58,6 @@ const getPositionName = (elementType: number) => {
     case 3: return "MID";
     case 4: return "FWD";
     default: return "UNK";
-  }
-};
-
-const getPositionColor = (elementType: number) => {
-  switch (elementType) {
-    case 1: return "bg-yellow-100 text-yellow-800";
-    case 2: return "bg-green-100 text-green-800";
-    case 3: return "bg-blue-100 text-blue-800";
-    case 4: return "bg-red-100 text-red-800";
-    default: return "bg-gray-100 text-gray-800";
   }
 };
 
@@ -136,36 +125,36 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
       { label: 'Matches Played', value: gamesPlayed, color: 'text-gray-700' },
       { label: 'Starts', value: player.starts || 0, color: 'text-gray-600' },
       { label: 'Minutes', value: player.minutes || 0, color: 'text-gray-700' },
-      { label: 'Total Points', value: player.total_points || 0, color: 'text-purple-700' },
-      { label: 'PPG', value: player.points_per_game || '0.0', color: 'text-blue-700' },
-      { label: 'Form', value: player.form || '0.0', color: 'text-indigo-700' },
-      { label: 'Price', value: `£${((player.now_cost || 0) / 10).toFixed(1)}m`, color: 'text-emerald-700' },
-      { label: 'Value', value: player.value_season || '0.0', color: 'text-teal-700' },
+      { label: 'Total Points', value: player.total_points || 0, color: 'text-indigo-700 dark:text-indigo-300' },
+      { label: 'PPG', value: player.points_per_game || '0.0', color: 'text-sky-700 dark:text-sky-300' },
+      { label: 'Form', value: player.form || '0.0', color: 'text-indigo-700 dark:text-indigo-300' },
+      { label: 'Price', value: `£${((player.now_cost || 0) / 10).toFixed(1)}m`, color: 'text-emerald-700 dark:text-emerald-300' },
+      { label: 'Value', value: player.value_season || '0.0', color: 'text-teal-700 dark:text-teal-300' },
       { label: 'Own%', value: `${player.selected_by_percent || '0'}%`, color: 'text-gray-700' },
-      { label: 'Goals', value: player.goals_scored || 0, color: 'text-green-700' },
-      { label: 'Assists', value: player.assists || 0, color: 'text-blue-600' },
-      { label: 'DC', value: player.defensive_contribution || 0, color: 'text-orange-600' },
-      { label: 'xG', value: player.expected_goals ? parseFloat(player.expected_goals).toFixed(2) : '0.00', color: 'text-purple-600' },
-      { label: 'xA', value: player.expected_assists ? parseFloat(player.expected_assists).toFixed(2) : '0.00', color: 'text-blue-600' },
-      { label: 'xGI', value: player.expected_goal_involvements ? parseFloat(player.expected_goal_involvements).toFixed(2) : '0.00', color: 'text-indigo-600' },
+      { label: 'Goals', value: player.goals_scored || 0, color: 'text-emerald-700 dark:text-emerald-300' },
+      { label: 'Assists', value: player.assists || 0, color: 'text-sky-600 dark:text-sky-300' },
+      { label: 'DC', value: player.defensive_contribution || 0, color: 'text-amber-600 dark:text-amber-300' },
+      { label: 'xG', value: player.expected_goals ? parseFloat(player.expected_goals).toFixed(2) : '0.00', color: 'text-indigo-600 dark:text-indigo-300' },
+      { label: 'xA', value: player.expected_assists ? parseFloat(player.expected_assists).toFixed(2) : '0.00', color: 'text-sky-600 dark:text-sky-300' },
+      { label: 'xGI', value: player.expected_goal_involvements ? parseFloat(player.expected_goal_involvements).toFixed(2) : '0.00', color: 'text-indigo-600 dark:text-indigo-300' },
     ];
 
     if ([1, 2].includes(elementType)) {
-      stats.push({ label: 'Goals Conceded', value: player.goals_conceded || 0, color: 'text-red-600' });
-      stats.push({ label: 'xGC', value: player.expected_goals_conceded ? parseFloat(player.expected_goals_conceded).toFixed(2) : '0.00', color: 'text-red-600' });
+      stats.push({ label: 'Goals Conceded', value: player.goals_conceded || 0, color: 'text-red-600 dark:text-red-300' });
+      stats.push({ label: 'xGC', value: player.expected_goals_conceded ? parseFloat(player.expected_goals_conceded).toFixed(2) : '0.00', color: 'text-red-600 dark:text-red-300' });
     }
     if ([1, 2, 3].includes(elementType)) {
-      stats.push({ label: 'Clean Sheets', value: player.clean_sheets || 0, color: 'text-green-600' });
+      stats.push({ label: 'Clean Sheets', value: player.clean_sheets || 0, color: 'text-emerald-600 dark:text-emerald-300' });
     }
     if (elementType === 1) {
-      stats.push({ label: 'Saves', value: player.saves || 0, color: 'text-blue-600' });
-      stats.push({ label: 'Pen Saved', value: player.penalties_saved || 0, color: 'text-green-700' });
+      stats.push({ label: 'Saves', value: player.saves || 0, color: 'text-sky-600 dark:text-sky-300' });
+      stats.push({ label: 'Pen Saved', value: player.penalties_saved || 0, color: 'text-emerald-700 dark:text-emerald-300' });
     }
 
     stats.push(
-      { label: 'Bonus', value: player.bonus || 0, color: 'text-purple-600' },
-      { label: 'YC', value: player.yellow_cards || 0, color: 'text-yellow-600' },
-      { label: 'RC', value: player.red_cards || 0, color: 'text-red-600' },
+      { label: 'Bonus', value: player.bonus || 0, color: 'text-indigo-600 dark:text-indigo-300' },
+      { label: 'YC', value: player.yellow_cards || 0, color: 'text-amber-600 dark:text-amber-300' },
+      { label: 'RC', value: player.red_cards || 0, color: 'text-red-600 dark:text-red-300' },
     );
 
     return stats;
@@ -176,7 +165,7 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
       <div className="space-y-3">
         <button
           onClick={() => setViewMode('default')}
-          className="flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors"
+          className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 font-bold transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -184,18 +173,16 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
 
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-base">{player.web_name}</span>
-          <Badge className={`text-xs ${getPositionColor(elementType)}`}>{getPositionName(elementType)}</Badge>
-          <span className="text-xs text-gray-500">{teamName}</span>
+          <PosChip pos={asPos(getPositionName(elementType))} />
+          <TeamChip>{teamName}</TeamChip>
         </div>
 
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {statsGrid.map((stat, idx) => (
-            <Card key={idx} className="border-0 bg-white/80 backdrop-blur-sm shadow-sm">
-              <CardContent className="p-1.5 sm:p-2 text-center">
-                <div className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5 leading-tight truncate">{stat.label}</div>
-                <div className={`text-xs sm:text-sm font-bold ${stat.color}`}>{stat.value}</div>
-              </CardContent>
-            </Card>
+            <div key={idx} className="rounded-xl border border-gray-200 bg-white p-1.5 text-center shadow-sm sm:p-2">
+              <div className="mb-0.5 truncate text-[9px] font-bold uppercase leading-tight tracking-wide text-gray-500 sm:text-[10px]">{stat.label}</div>
+              <div className={`text-xs font-extrabold tabular-nums sm:text-sm ${stat.color}`}>{stat.value}</div>
+            </div>
           ))}
         </div>
       </div>
@@ -207,7 +194,7 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
       <div className="space-y-3">
         <button
           onClick={() => setViewMode('default')}
-          className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-800 font-medium transition-colors"
+          className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 font-bold transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -215,8 +202,8 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
 
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-base">{player.web_name}</span>
-          <Badge className={`text-xs ${getPositionColor(elementType)}`}>{getPositionName(elementType)}</Badge>
-          <span className="text-xs text-gray-500">{teamName}</span>
+          <PosChip pos={asPos(getPositionName(elementType))} />
+          <TeamChip>{teamName}</TeamChip>
         </div>
 
         <div className="space-y-1.5">
@@ -228,7 +215,7 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
                   {gw.fixtures.map((fix, fIdx) => (
                     <span
                       key={fIdx}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(fix.difficulty)}`}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${getDifficultyColor(fix.difficulty)}`}
                     >
                       {fix.opponent}
                       <span className="text-[10px] opacity-70">({fix.isHome ? 'H' : 'A'})</span>
@@ -252,14 +239,14 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
       <div className={`flex gap-2 ${children ? 'pt-2 border-t border-gray-200' : ''}`}>
         <button
           onClick={() => setViewMode('stats')}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-xs sm:text-sm font-bold hover:from-indigo-500 hover:to-violet-500 transition-all"
         >
           <BarChart3 className="h-3.5 w-3.5" />
           Season Statistics
         </button>
         <button
           onClick={() => setViewMode('fixtures')}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs sm:text-sm font-bold hover:bg-indigo-500/20 transition-all"
         >
           <Calendar className="h-3.5 w-3.5" />
           Upcoming Fixtures
